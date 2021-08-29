@@ -1,0 +1,6 @@
+#ifndef NOCTURNE_LIBRARY_H
+#define NOCTURNE_LIBRARY_H
+
+#include "nocturne_bits/Simulation.hpp"
+
+#endif
