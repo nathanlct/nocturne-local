@@ -1,0 +1,9 @@
+# CMake
+build/
+bin/
+
+# OS X
+.DS_STORE
+
+# IDE
+.vscode
