@@ -14,7 +14,18 @@ jobs:
             - name: List files in the repository
               run: |
                   ls ${{ github.workspace }}
+            - uses: conda-incubator/setup-miniconda@v2
+              with:
+                  activate-environment: nocturne
+                  python-version: 3.8.11
+            - name: Test Conda env
+              shell: bash -l {0}
+              run: |
+                  conda info
+                  conda env list
+                  which python
             - name: Build Python library
+              shell: bash -l {0}
               run: |
                   cd ${{ github.workspace }}
                   mkdir build
@@ -24,6 +35,7 @@ jobs:
                   make
                   make install
             - name: Run Python tests
+              shell: bash -l {0}
               run: |
                   cd ${{ github.workspace }}/tests
                   for file in ./*
