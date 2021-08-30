@@ -25,6 +25,7 @@ jobs:
                   make install
             - name: Build C++ tests
               run: |
+                  export LIB_INSTALL_DIR=${{ github.workspace }}/build_usr_local
                   cd ${{ github.workspace }}/cpp/tests
                   mkdir build
                   cd build
