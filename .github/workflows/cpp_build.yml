@@ -1,0 +1,43 @@
+name: Build and test C++
+on: [push]
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+            - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+            - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+            - name: Check out repository code
+              uses: actions/checkout@v2
+            - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
+            - run: echo "🖥️ The workflow is now ready to test your code on the runner."
+            - name: List files in the repository
+              run: |
+                  ls ${{ github.workspace }}
+            - name: Build C++ library
+              run: |
+                  export LIB_INSTALL_DIR=${{ github.workspace }}/build_usr_local
+                  cd ${{ github.workspace }}/cpp
+                  mkdir build
+                  cd build
+                  cmake .. -DCMAKE_INSTALL_PREFIX=${LIB_INSTALL_DIR}
+                  make
+                  make install
+            - name: Build C++ tests
+              run: |
+                  export LIB_INSTALL_DIR=${{ github.workspace }}/build_usr_local
+                  cd ${{ github.workspace }}/cpp/tests
+                  mkdir build
+                  cd build
+                  cmake .. -DCMAKE_LIBRARY_PATH=${LIB_INSTALL_DIR}/lib/ -DADDITIONAL_INCLUDE_DIR=${LIB_INSTALL_DIR}/include/
+                  make
+            - name: Run C++ tests
+              run: |
+                  cd ${{ github.workspace }}/cpp/tests/bin
+                  for file in ./*
+                  do 
+                    echo ""
+                    echo "Running test $file"
+                    ./$file
+                  done
+            - run: echo "🍏 This job's status is ${{ job.status }}."
