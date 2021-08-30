@@ -16,10 +16,11 @@ jobs:
                   ls ${{ github.workspace }}
             - name: Build C++ library
               run: |
+                  export LIB_INSTALL_DIR=${{ github.workspace }}/build_usr_local
                   cd ${{ github.workspace }}/cpp
                   mkdir build
                   cd build
-                  cmake .. -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/build_usr_local
+                  cmake .. -DCMAKE_INSTALL_PREFIX=${LIB_INSTALL_DIR}
                   make
                   make install
             - name: Build C++ tests
@@ -27,7 +28,7 @@ jobs:
                   cd ${{ github.workspace }}/cpp/tests
                   mkdir build
                   cd build
-                  cmake ..
+                  cmake .. -DCMAKE_LIBRARY_PATH=${LIB_INSTALL_DIR}/lib/ -DADDITIONAL_INCLUDE_DIR=${LIB_INSTALL_DIR}/include/
                   make
             - name: Run C++ tests
               run: |
