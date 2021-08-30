@@ -19,7 +19,7 @@ jobs:
                   cd ${{ github.workspace }}/cpp
                   mkdir build
                   cd build
-                  cmake ..
+                  cmake .. -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/build_usr_local
                   make
                   make install
             - name: Build C++ tests
