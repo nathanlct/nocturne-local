@@ -36,7 +36,8 @@ jobs:
                   cd ${{ github.workspace }}/cpp/tests/bin
                   for file in ./*
                   do 
-                    echo "\nRunning test $file"
+                    echo ""
+                    echo "Running test $file"
                     ./$file
                   done
             - run: echo "🍏 This job's status is ${{ job.status }}."
