@@ -2,22 +2,35 @@ Nocturne is a 2D driving simulator, built in C++ for speed and exported as a Pyt
 
 ## Installation
 
-Run the following to download the repo, build the Python library and install it. The paths in the `cmake` command should be replaced by the path where the Python library file should be installed, and the path of the Python executable (in this case, a conda environment named "nocturne" is used).
+Start by downloading the repo:
 
-``` 
+```bash
 git clone https://github.com/nathanlct/nocturne.git
 cd nocturne
-mkdir build
+```
+
+If using Conda, first activate the environment where the Python library should be installed, then run the following to build and install the library:
+
+```bash
+# path to Python's libraries folder (site-packages)
+# eg. /path/to/anaconda3/envs/nocturne/lib/python3.8/site-packages
+DPYTHON_LIBRARY_DIR=$(python -c "import site; print(site.getsitepackages()[0])")
+# path to Python executable
+# eg. /path/to/anaconda3/envs/nocturne/bin/python3
+DPYTHON_EXECUTABLE=$(which python)
+
+mkdir build  # create build folder
 cd build
-cmake .. -DPYTHON_LIBRARY_DIR="/path/to/anaconda3/envs/nocturne/lib/python3.8/site-packages/" -DPYTHON_EXECUTABLE="/path/to/miniconda3/envs/nocturne/bin/python3"
-make
-make install
+cmake .. -DPYTHON_LIBRARY_DIR="${DPYTHON_LIBRARY_DIR}" -DPYTHON_EXECUTABLE="${DPYTHON_EXECUTABLE}"  # create makefiles
+make  # build library
+make install  # install library in Python's path
 ```
 
 You should then be all set to use that library from your Python executable:
 
-```
-python
+```python
+> python
+Python 3.8.11
 >>> from nocturne import Simulation
 >>> sim = Simulation()
 >>> sim.reset()
@@ -30,7 +43,7 @@ Python tests can also be ran from `nocturne/tests`.
 
 To build the C++ library independently of the Python one, run the following:
 
-```
+```bash
 cd nocturne/cpp
 mkdir build
 cd build
@@ -41,7 +54,7 @@ make install
 
 Subsequently, the tests can be built using:
 
-```
+```bash
 cd nocturne/cpp/tests
 mkdir build
 cd build
