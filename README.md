@@ -21,7 +21,9 @@ DPYTHON_EXECUTABLE=$(which python)
 
 mkdir build  # create build folder
 cd build
-cmake .. -DPYTHON_LIBRARY_DIR="${DPYTHON_LIBRARY_DIR}" -DPYTHON_EXECUTABLE="${DPYTHON_EXECUTABLE}"  # create makefiles
+# create Makefiles and download pybind11
+cmake .. -DPYTHON_LIBRARY_DIR="${DPYTHON_LIBRARY_DIR}" \
+    -DPYTHON_EXECUTABLE="${DPYTHON_EXECUTABLE}"
 make  # build library
 make install  # install library in Python's path
 ```
