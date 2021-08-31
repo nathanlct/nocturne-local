@@ -13,6 +13,7 @@ jobs:
             - run: echo "🖥️ The workflow is now ready to test your code on the runner."
             - name: Install dependencies
               run: |
+                  sudo apt-get update
                   sudo apt-get install libsfml-dev
             - name: List files in the repository
               run: |
