@@ -9,7 +9,12 @@ git clone https://github.com/nathanlct/nocturne.git
 cd nocturne
 ```
 
-If using Conda, first activate the environment where the Python library should be installed, then run the following to build and install the library:
+Nocturne uses [SFML](https://github.com/SFML/SFML) for visualization, it can be installed with:
+
+-   Linux: `sudo apt-get install libsfml-dev`
+-   MacOS: `brew install sfml`
+
+Once done, if using Conda, first activate the environment where the Python library should be installed, then run the following to build and install the library:
 
 ```bash
 # path to Python's libraries folder (site-packages)

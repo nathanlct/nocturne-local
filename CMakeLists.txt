@@ -24,6 +24,7 @@ file (GLOB PYTHON_FILES "python/*.cpp" "python/*.hpp")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_FILES} ${HEADER_FILES} ${PYTHON_FILES} )
 
 find_package(pybind11 REQUIRED)
+find_package(SFML 2.5 COMPONENTS window system graphics audio REQUIRED)
 
 pybind11_add_module(nocturne 
 	${SOURCE_FILES}
@@ -32,6 +33,7 @@ pybind11_add_module(nocturne
 )
 
 target_link_libraries(nocturne PUBLIC)
+target_link_libraries(nocturne PUBLIC sfml-window sfml-system sfml-graphics sfml-audio)
 
 install(TARGETS nocturne
   COMPONENT python

@@ -27,6 +27,8 @@ add_library(nocturne SHARED ${SOURCE_FILES})
 
 # Include directories
 target_include_directories(nocturne PRIVATE include/nocturne_bits)
+find_package(SFML 2.5 COMPONENTS window system graphics audio REQUIRED)
+target_link_libraries(nocturne PUBLIC sfml-window sfml-system sfml-graphics sfml-audio)
 
 # Install
 install(TARGETS nocturne DESTINATION lib)
