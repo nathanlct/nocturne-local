@@ -14,7 +14,7 @@ jobs:
             - name: Install dependencies
               run: |
                   sudo apt-get update
-                  sudo apt-get install xorg openbox
+                  export DISPLAY=:0.0
                   sudo apt-get install libsfml-dev
             - name: List files in the repository
               run: |
@@ -42,6 +42,7 @@ jobs:
             - name: Run Python tests
               shell: bash -l {0}
               run: |
+                  export DISPLAY=:0.0
                   cd ${{ github.workspace }}/tests
                   for file in ./*
                   do 
