@@ -13,6 +13,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 project(nocturne)
 
+# Find project files
 include_directories("${CMAKE_SOURCE_DIR}/cpp/include/nocturne_bits")
 include_directories("${CMAKE_SOURCE_DIR}/python")
 
@@ -20,19 +21,22 @@ file (GLOB SOURCE_FILES "cpp/src/*.cpp")
 file (GLOB HEADER_FILES "cpp/include/nocturne_bits/*.hpp")
 file (GLOB PYTHON_FILES "python/*.cpp" "python/*.hpp")
 
-# Set up such that XCode organizes the files
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_FILES} ${HEADER_FILES} ${PYTHON_FILES} )
-
+# Find pybind and SFML
 find_package(pybind11 REQUIRED)
+find_package(SFML 2.5 COMPONENTS window system graphics audio REQUIRED)
 
+# Create Python module for nocturne
 pybind11_add_module(nocturne 
 	${SOURCE_FILES}
 	${HEADER_FILES}
 	${PYTHON_FILES}
 )
 
+# Link nocturne and SFML
 target_link_libraries(nocturne PUBLIC)
+target_link_libraries(nocturne PUBLIC sfml-window sfml-system sfml-graphics sfml-audio)
 
+# Install Python module for nocturne
 install(TARGETS nocturne
   COMPONENT python
   LIBRARY DESTINATION "${PYTHON_LIBRARY_DIR}"
