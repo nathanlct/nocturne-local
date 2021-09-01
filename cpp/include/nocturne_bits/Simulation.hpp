@@ -1,8 +1,17 @@
 #pragma once
 
-class Simulation {
 
+class Scenario;
+
+class Simulation {
 public:
     Simulation();
-    void reset() const;
+
+    void reset();
+    void step();
+
+    void getCircle() const; // tmp
+
+private:
+    Scenario scenario;
 };
