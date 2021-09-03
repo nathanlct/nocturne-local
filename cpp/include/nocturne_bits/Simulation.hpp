@@ -1,11 +1,11 @@
 #pragma once
 
+#include "Scenario.hpp"
 
-class Scenario;
 
 class Simulation {
 public:
-    Simulation();
+    Simulation(bool render);
 
     void reset();
     void step();
@@ -14,4 +14,6 @@ public:
 
 private:
     Scenario scenario;
+
+    bool render;
 };

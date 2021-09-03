@@ -1,0 +1,116 @@
+#include <Road.hpp>
+
+
+Road::Road() : geometry(
+        { Vector2D(80, 50), Vector2D(300, 460), Vector2D(300, 600), Vector2D(400, 700), Vector2D(700, 300)}
+    ), nLanes(3), laneWidth(20.0f), initialAngleDelta(pi / 2.0f), finalAngleDelta(pi / 2.0f),
+    angles(), anglesDelta(), lanesGeometry()
+{
+    buildLanes();
+    buildRoadGraphics();
+}
+
+void Road::buildLanes() {
+    angles.clear();
+    lanesGeometry.clear();
+    
+    float initialAngle = (geometry[1] - geometry[0]).angle();
+    angles.push_back(initialAngle - initialAngleDelta);
+    for (int i = 0; i < geometry.size() - 2; ++i) {
+        Vector2D ptA = geometry[i];
+        Vector2D ptB = geometry[i + 1];
+        Vector2D ptC = geometry[i + 2];
+
+        float angleAB = (ptB - ptA).angle();
+        float angleBC = (ptC - ptB).angle();
+        float angleDelta = (angleAB + pi - angleBC) / 2.0f;
+
+        anglesDelta.push_back(angleDelta);
+        angles.push_back(angleAB - angleDelta);
+
+        std::cout << "intersection " << i << ", angleAB " << angleAB*180/pi << ", angleBC " << angleBC*180/pi <<
+            ", angleDelta " << angleDelta*180/pi << ", angle " << angleAB*180/pi - angleDelta*180/pi << std::endl;
+    }
+    float finalAngle = (geometry[geometry.size() - 1] - geometry[geometry.size() - 2]).angle();
+    angles.push_back(finalAngle - finalAngleDelta);
+
+    for (int i = 0; i < geometry.size(); ++i) {
+        Vector2D pt = geometry[i];
+        float angle = angles[i];
+        // float angleDelta = anglesDelta[i];
+
+        std::vector<Vector2D> points;
+
+        float modifiedLaneWidth = (i == 0 || i == geometry.size() - 1) ? laneWidth : 
+            laneWidth / std::abs(std::sin(anglesDelta[i-1]));
+        if (i != 0 && i != geometry.size()-1)
+            std::cout << laneWidth << " -> " << modifiedLaneWidth << " ; " << anglesDelta[i-1]*180/pi << std::endl;
+
+        for (int lane = 0; lane < nLanes; ++lane) {
+            
+            float shift = lane * modifiedLaneWidth - nLanes * modifiedLaneWidth / 2.0f;
+
+            float dx = shift * std::cos(angle);
+            float dy = shift * std::sin(angle);
+
+            points.push_back(Vector2D(pt.x + dx, pt.y + dy));
+            points.push_back(Vector2D(pt.x - dx, pt.y - dy));
+        }
+
+        lanesGeometry.push_back(points);
+    }
+}
+
+void Road::buildRoadGraphics() {
+    // build lane quads
+    laneQuads.clear();
+    for (int segment = 0; segment < lanesGeometry.size() - 1; ++segment) {
+        for (int lane = 0; lane < nLanes; ++lane) {
+            sf::ConvexShape quad;
+            quad.setPointCount(4);
+            // quad.setPosition(lanesGeometry[segment][lane].toVector2f());
+            quad.setFillColor(sf::Color::Black);
+
+            quad.setPoint(0, lanesGeometry[segment][lane].toVector2f());
+            quad.setPoint(1, lanesGeometry[segment + 1][lane].toVector2f());
+            quad.setPoint(2, lanesGeometry[segment + 1][lane + 1].toVector2f());
+            quad.setPoint(3, lanesGeometry[segment][lane + 1].toVector2f());
+
+            laneQuads.push_back(quad);
+        }
+    }
+
+    // build road lines
+    roadLines.clear();
+    for (int segment = 0; segment < lanesGeometry.size() - 1; ++segment) {
+        for (int lane = 0; lane < nLanes + 1; ++lane) {
+            roadLines.push_back(
+                sf::Vertex(lanesGeometry[segment][lane].toVector2f(), sf::Color::White)
+            );
+            roadLines.push_back(
+                sf::Vertex(lanesGeometry[segment + 1][lane].toVector2f(), sf::Color::White)
+            );
+        }
+    }
+}
+
+
+void Road::draw(sf::RenderTarget& target, sf::RenderStates states) const {
+    for (const sf::ConvexShape& quad : laneQuads) {
+        target.draw(quad, states);
+    }
+    target.draw(&roadLines[0], roadLines.size(), sf::Lines, states);
+
+    for (const std::vector<Vector2D>& line : lanesGeometry) {
+        for (const Vector2D& point : line) {
+            sf::CircleShape ptShape(3);
+            ptShape.setOrigin(3, 3);
+            ptShape.setFillColor(sf::Color::Red);
+            ptShape.setPosition(point.x, point.y);
+            target.draw(ptShape, states);
+        }
+    }
+    // for (const Lane& lane : lanes) {
+    //     target.draw(lane, states);
+    // }
+}

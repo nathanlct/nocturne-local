@@ -1,11 +1,11 @@
 #pragma once
 
+#include "Network.hpp"
 #include <string>
+#include <SFML/Graphics.hpp>
 
-class Network;
 
-
-class Scenario {
+class Scenario : public sf::Drawable {
 public:
     Scenario();
 
@@ -13,5 +13,6 @@ public:
     void create();  // needs to insert vehicles etc from XML config
 
 private:
+    virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
     Network roadNetwork;
 };
