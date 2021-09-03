@@ -27,25 +27,20 @@ void Road::buildLanes() {
 
         anglesDelta.push_back(angleDelta);
         angles.push_back(angleAB - angleDelta);
-
-        std::cout << "intersection " << i << ", angleAB " << angleAB*180/pi << ", angleBC " << angleBC*180/pi <<
-            ", angleDelta " << angleDelta*180/pi << ", angle " << angleAB*180/pi - angleDelta*180/pi << std::endl;
     }
+
     float finalAngle = (geometry[geometry.size() - 1] - geometry[geometry.size() - 2]).angle();
     angles.push_back(finalAngle - finalAngleDelta);
 
     for (int i = 0; i < geometry.size(); ++i) {
         Vector2D pt = geometry[i];
         float angle = angles[i];
-        // float angleDelta = anglesDelta[i];
 
         std::vector<Vector2D> points;
 
         float modifiedLaneWidth = (i == 0 || i == geometry.size() - 1) ? laneWidth : 
             laneWidth / std::abs(std::sin(anglesDelta[i-1]));
-        if (i != 0 && i != geometry.size()-1)
-            std::cout << laneWidth << " -> " << modifiedLaneWidth << " ; " << anglesDelta[i-1]*180/pi << std::endl;
-
+ 
         for (int lane = 0; lane < nLanes; ++lane) {
             
             float shift = lane * modifiedLaneWidth - nLanes * modifiedLaneWidth / 2.0f;
@@ -68,7 +63,6 @@ void Road::buildRoadGraphics() {
         for (int lane = 0; lane < nLanes; ++lane) {
             sf::ConvexShape quad;
             quad.setPointCount(4);
-            // quad.setPosition(lanesGeometry[segment][lane].toVector2f());
             quad.setFillColor(sf::Color::Black);
 
             quad.setPoint(0, lanesGeometry[segment][lane].toVector2f());
@@ -110,7 +104,4 @@ void Road::draw(sf::RenderTarget& target, sf::RenderStates states) const {
             target.draw(ptShape, states);
         }
     }
-    // for (const Lane& lane : lanes) {
-    //     target.draw(lane, states);
-    // }
 }
