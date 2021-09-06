@@ -41,14 +41,12 @@ void Road::buildLanes() {
         float modifiedLaneWidth = (i == 0 || i == geometry.size() - 1) ? laneWidth : 
             laneWidth / std::abs(std::sin(anglesDelta[i-1]));
  
-        for (int lane = 0; lane < nLanes; ++lane) {
-            
+        for (int lane = 0; lane < nLanes + 1; ++lane) {
             float shift = lane * modifiedLaneWidth - nLanes * modifiedLaneWidth / 2.0f;
 
             float dx = shift * std::cos(angle);
             float dy = shift * std::sin(angle);
 
-            points.push_back(Vector2D(pt.x + dx, pt.y + dy));
             points.push_back(Vector2D(pt.x - dx, pt.y - dy));
         }
 
