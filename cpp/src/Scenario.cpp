@@ -3,6 +3,9 @@
 
 Scenario::Scenario(std::string path) : roadNetwork(), roadObjects() {
     std::ifstream data(path);
+    if (!data.is_open()) {
+        throw std::invalid_argument("Scenario file couldn't be opened: " + path);
+    }
     json j;
     data >> j;
 

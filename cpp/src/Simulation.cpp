@@ -5,7 +5,7 @@
 
 
 Simulation::Simulation(bool render) : 
-    scenario("/Users/nathan/Desktop/projects/nocturne/scenarios/basic.json"),
+    scenario("../../../scenarios/basic.json"),
     render(render)
 {
     if (render) {

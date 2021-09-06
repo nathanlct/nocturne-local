@@ -7,6 +7,7 @@
 #include <string>
 #include <fstream>
 #include <SFML/Graphics.hpp>
+#include <stdexcept>
 
 #include "json.hpp"
 using json = nlohmann::json;
