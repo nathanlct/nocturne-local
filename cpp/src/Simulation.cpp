@@ -13,6 +13,8 @@ Simulation::Simulation(bool render) : scenario(), render(render) {
 
         while (window.isOpen())
         {
+            scenario.step(0.1); 
+
             sf::Event event;
             while (window.pollEvent(event))
             {

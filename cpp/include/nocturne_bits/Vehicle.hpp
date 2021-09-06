@@ -1,22 +1,26 @@
 #pragma once
 
 
-class Object;
+#include "Object.hpp"
+#include <iostream>
+#include "Vector2D.hpp"
+#include <cmath>
+
 
 class Vehicle : public Object {
 public:
     Vehicle();
 
-    // Input is speed or accel, for longitudinal/steering
-    // This could be a pedestrian, or an object with a hardcoded movement (move that into Object)
-    // Vehicle with bicycle dynamics inherits from this
     void act(float acceleration, float steering);
-    void step();
+    virtual void step(float dt);
 
 private:
-    float width;
-    float length;
+    void kinematicsUpdate(float dt);
+    // void dynamicsUpdate(float dt);
 
-    float minSpeed;
-    float maxSpeed;
+    float accelAction;
+    float steeringAction;
+
+    float lateralSpeed;
+    float yawRate;
 };
