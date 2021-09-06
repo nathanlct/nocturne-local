@@ -29,10 +29,10 @@ void Vehicle::step(float dt) {
     }
 
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-        steeringAction = -30.0f * pi / 180.0f;
+        steeringAction = -15.0f * pi / 180.0f;
     }
     else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-        steeringAction = 30.0f * pi / 180.0f;
+        steeringAction = 15.0f * pi / 180.0f;
     }
     else {
         steeringAction = 0.0f;
