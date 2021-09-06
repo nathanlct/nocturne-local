@@ -12,6 +12,7 @@ public:
 
     void addRoad(std::vector<Vector2D> geometry, int lanes, float laneWidth);
 
+    sf::FloatRect getBoundingBox() const;
 
 private:
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;

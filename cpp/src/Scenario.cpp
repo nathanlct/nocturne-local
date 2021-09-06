@@ -48,3 +48,7 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
         target.draw(*object, states);
     }
 }
+
+sf::FloatRect Scenario::getBoundingBox() const {
+    return roadNetwork.getBoundingBox();
+}

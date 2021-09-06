@@ -9,9 +9,13 @@ Simulation::Simulation(bool render) :
     render(render)
 {
     if (render) {
+        float winWidth = 1500;
+        float winHeight = 800;
+
         sf::ContextSettings settings;
         settings.antialiasingLevel = 8;
-        sf::RenderWindow window(sf::VideoMode(800, 800), "Nocturne", sf::Style::Default, settings);
+        sf::RenderWindow window(sf::VideoMode(winWidth, winHeight), "Nocturne", sf::Style::Default, settings);
+
         window.setFramerateLimit(30);
 
         while (window.isOpen())
@@ -21,20 +25,45 @@ Simulation::Simulation(bool render) :
             sf::Event event;
             while (window.pollEvent(event))
             {
-                if (event.type == sf::Event::Closed)
+                if (event.type == sf::Event::Closed) {
                     window.close();
-            }
+                } else if (event.type == sf::Event::Resized) {
+                    window.setView(getView(sf::Vector2u(event.size.width, event.size.height)));
+                }
+           }
 
             window.clear(sf::Color(50, 50, 50));
 
-            sf::Transform flipHorizontally;
-            flipHorizontally.scale(1, -1);
-            flipHorizontally.translate(0, -800);
-            window.draw(scenario, flipHorizontally);
+            window.setView(getView(window.getSize()));
+
+            sf::Transform transform;
+            transform.scale(1, -1); // horizontal flip
+            window.draw(scenario, transform);
+
+            window.setView(window.getDefaultView());
+            // draw GUI
 
             window.display();
         }
     }
+}
+
+sf::View Simulation::getView(sf::Vector2u winSize) const {
+    sf::FloatRect scenarioBounds = scenario.getBoundingBox();
+    scenarioBounds.top = - scenarioBounds.top - scenarioBounds.height;
+    
+    float padding = 100;
+    scenarioBounds.top -= padding;
+    scenarioBounds.left -= padding;
+    scenarioBounds.width += 2 * padding;
+    scenarioBounds.height += 2 * padding;
+
+    sf::Vector2f center = sf::Vector2f(scenarioBounds.left + scenarioBounds.width / 2.0f, scenarioBounds.top + scenarioBounds.height / 2.0f);
+    sf::Vector2f size = sf::Vector2f(winSize.x, winSize.y) *
+        std::max(scenarioBounds.width / winSize.x, scenarioBounds.height / winSize.y);
+    sf::View view(center, size);
+    
+    return view;
 }
 
 void Simulation::reset() {

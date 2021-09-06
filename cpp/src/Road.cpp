@@ -85,9 +85,24 @@ void Road::buildRoadGraphics() {
                 sf::Vertex(lanesGeometry[segment + 1][lane].toVector2f(), sf::Color::White)
             );
         }
-    }
-}
 
+sf::FloatRect Road::getBoundingBox() const {
+    float minX = 1e10;
+    float minY = 1e10;
+    float maxX = -1e10;
+    float maxY = -1e10;
+
+    for (const auto& segment : lanesGeometry) {
+        for (const auto& lane : segment) {
+            minX = std::min(minX, lane.x);
+            minY = std::min(minY, lane.y);
+            maxX = std::max(maxX, lane.x);
+            maxY = std::max(maxY, lane.y);
+        }
+    }
+
+    return sf::FloatRect(minX, minY, maxX - minX, maxY - minY);
+}
 
 void Road::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     for (const sf::ConvexShape& quad : laneQuads) {
