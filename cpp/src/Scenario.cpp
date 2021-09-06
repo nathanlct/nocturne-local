@@ -16,7 +16,7 @@ Scenario::Scenario(std::string path) : roadNetwork(), roadObjects() {
         Vector2D pos(obj["position"]["x"], obj["position"]["y"]);
         float width = obj["width"];
         float length = obj["length"];
-        float heading = obj["heading"];
+        float heading = (float)obj["heading"] * pi / 180.0f;
 
         if (type == "vehicle") {
             Vehicle* veh = new Vehicle(pos, width, length, heading);

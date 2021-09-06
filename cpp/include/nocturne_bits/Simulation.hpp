@@ -2,6 +2,11 @@
 
 #include "Scenario.hpp"
 
+#include <iostream>
+#include <string>
+#include <vector>
+#include <stdexcept>
+#include <fstream>
 
 class Simulation {
 public:

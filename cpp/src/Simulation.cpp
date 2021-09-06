@@ -1,5 +1,4 @@
 #include <Simulation.hpp>
-#include <iostream>
 
 #include <SFML/Graphics.hpp>
 
@@ -16,11 +15,39 @@ Simulation::Simulation(bool render) :
         settings.antialiasingLevel = 8;
         sf::RenderWindow window(sf::VideoMode(winWidth, winHeight), "Nocturne", sf::Style::Default, settings);
 
-        window.setFramerateLimit(30);
+        window.setFramerateLimit(60);
+
+        sf::Clock clock;
+
+        std::string fontName = "Arial.ttf";
+        std::vector<std::string> fontPaths = {
+            // OS X
+            "/System/Library/Fonts/Supplemental/",
+            "~/Library/Fonts/",
+            // Linux
+            "/usr/share/fonts",
+            "/usr/local/share/fonts",
+            "~/.fonts/"
+        };
+        std::string fontPath = "";
+        for (std::string& fp: fontPaths) {
+            std::string path = fp + fontName;
+            std::ifstream data(path);
+            if (data.is_open()) {
+                fontPath = path;
+                break;
+            }
+        }
+        sf::Font font;
+        if (fontPath == "" || !font.loadFromFile(fontPath)) {
+            throw std::invalid_argument("Couldn't load a font file.");
+        }
 
         while (window.isOpen())
         {
-            scenario.step(0.1); 
+            sf::Time elapsed = clock.restart();
+            scenario.step(elapsed.asSeconds());
+            float fps = 1.0f / elapsed.asSeconds();
 
             sf::Event event;
             while (window.pollEvent(event))
@@ -40,8 +67,17 @@ Simulation::Simulation(bool render) :
             transform.scale(1, -1); // horizontal flip
             window.draw(scenario, transform);
 
-            window.setView(window.getDefaultView());
-            // draw GUI
+            window.setView(sf::View(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y)));
+
+            sf::RectangleShape guiBackground(sf::Vector2f(window.getSize().x, 35));
+            guiBackground.setPosition(0, 0);
+            guiBackground.setFillColor(sf::Color(0, 0, 0, 100));
+            window.draw(guiBackground);
+
+            sf::Text text(std::to_string((int)fps) + " fps", font, 20);
+            text.setPosition(10, 5);
+            text.setFillColor(sf::Color::White);
+            window.draw(text);
 
             window.display();
         }
