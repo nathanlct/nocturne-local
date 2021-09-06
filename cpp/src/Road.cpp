@@ -1,11 +1,17 @@
 #include <Road.hpp>
 
 
-Road::Road() : geometry(
-        { Vector2D(80, 50), Vector2D(300, 460), Vector2D(300, 600), Vector2D(400, 700), Vector2D(700, 300)}
-    ), nLanes(3), laneWidth(20.0f), initialAngleDelta(pi / 2.0f), finalAngleDelta(pi / 2.0f),
-    angles(), anglesDelta(), lanesGeometry()
+Road::Road(std::vector<Vector2D> geometry, int lanes, float laneWidth) : 
+    geometry(geometry), nLanes(lanes), laneWidth(laneWidth),
+    initialAngleDelta(pi / 2.0f), finalAngleDelta(pi / 2.0f),
+    angles(), anglesDelta(), lanesGeometry(),
+    lineTypes()
 {
+    lineTypes.push_back(LineType::continuous);
+    for (int i = 0; i < nLanes - 1; ++i)
+        lineTypes.push_back(LineType::stripped);
+    lineTypes.push_back(LineType::continuous);
+
     buildLanes();
     buildRoadGraphics();
 }
@@ -74,15 +80,44 @@ void Road::buildRoadGraphics() {
 
     // build road lines
     roadLines.clear();
-    for (int segment = 0; segment < lanesGeometry.size() - 1; ++segment) {
-        for (int lane = 0; lane < nLanes + 1; ++lane) {
-            roadLines.push_back(
-                sf::Vertex(lanesGeometry[segment][lane].toVector2f(), sf::Color::White)
-            );
-            roadLines.push_back(
-                sf::Vertex(lanesGeometry[segment + 1][lane].toVector2f(), sf::Color::White)
-            );
+
+    for (int lane = 0; lane < nLanes + 1; ++lane) {
+        LineType lineType = lineTypes[lane];
+        float lineLength = 15.0f;
+
+        bool penDown = true;
+        float nextLineLength = lineLength;
+
+        for (int segment = 0; segment < lanesGeometry.size() - 1; ++segment) {
+            Vector2D current = lanesGeometry[segment][lane];
+            Vector2D end = lanesGeometry[segment + 1][lane];
+            Vector2D nextCurrent;
+
+            while (current != end) {
+                float lengthLeft = (end - current).norm();
+                
+                if (lengthLeft < nextLineLength) {
+                    nextCurrent = end;
+                    nextLineLength -= lengthLeft;
+                } else {
+                    nextCurrent = current + (end - current) * nextLineLength / lengthLeft;
+                    nextLineLength = lineLength;
+                }
+                
+                if (penDown) {
+                    roadLines.push_back(sf::Vertex(current.toVector2f(), sf::Color::White));
+                    roadLines.push_back(sf::Vertex(nextCurrent.toVector2f(), sf::Color::White));
+                }
+
+                if (lineType != LineType::continuous && nextLineLength == lineLength) {
+                    penDown = !penDown;
+                }
+                
+                current = nextCurrent;
+            }
         }
+    }
+}
 
 sf::FloatRect Road::getBoundingBox() const {
     float minX = 1e10;

@@ -30,6 +30,8 @@ private:
     std::vector<float> angles;
     std::vector<float> anglesDelta;
 
+    std::vector<LineType> lineTypes;
+
     std::vector<std::vector<Vector2D>> lanesGeometry;
 
     std::vector<sf::ConvexShape> laneQuads;

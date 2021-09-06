@@ -61,6 +61,12 @@ public:
         lhs /= rhs; return lhs;
     }
 
+    friend bool operator==(const Vector2D& lhs, const Vector2D& rhs){ 
+        return lhs.x == rhs.x && lhs.y == rhs.y; 
+    }
+    friend bool operator!=(const Vector2D& lhs, const Vector2D& rhs){ return !(lhs == rhs); }
+
+
     float norm() {
         return std::sqrt(x * x + y * y);
     }
