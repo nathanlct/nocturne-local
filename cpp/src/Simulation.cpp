@@ -18,9 +18,12 @@ Simulation::Simulation(bool render) :
 
         window.setFramerateLimit(30);
 
+        sf::Clock clock;
+
         while (window.isOpen())
         {
-            scenario.step(0.1); 
+            sf::Time elapsed = clock.restart();
+            scenario.step(elapsed.asSeconds()); 
 
             sf::Event event;
             while (window.pollEvent(event))
