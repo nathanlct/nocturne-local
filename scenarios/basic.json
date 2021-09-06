@@ -6,14 +6,14 @@
             "position": { "x": 200, "y": 200 },
             "width": 10,
             "length": 20,
-            "heading": 1.2
+            "heading": 90
         },
         {
             "type": "vehicle",
             "position": { "x": 400, "y": 200 },
             "width": 10,
             "length": 20,
-            "heading": 2.0
+            "heading": 130
         }
     ],
     "roads": [
