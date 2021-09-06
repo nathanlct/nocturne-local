@@ -2,14 +2,17 @@
 
 #include <vector>
 #include <iostream>
+#include <cmath>
 
 #include <SFML/Graphics.hpp>
 #include "Vector2D.hpp"
+#include "LineType.hpp"
 
 
 class Road : public sf::Drawable {
 public:
-    Road();
+    Road(std::vector<Vector2D> geometry, int lanes, float laneWidth);
+
 
 private:
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;

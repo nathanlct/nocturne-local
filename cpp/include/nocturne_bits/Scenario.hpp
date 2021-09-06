@@ -3,21 +3,24 @@
 #include "Network.hpp"
 #include "Object.hpp"
 #include "Vehicle.hpp"
+#include "Vector2D.hpp"
 #include <string>
+#include <fstream>
 #include <SFML/Graphics.hpp>
 
+#include "json.hpp"
+using json = nlohmann::json;
 
 class Scenario : public sf::Drawable {
 public:
-    Scenario();
-
-    void load_from_xml(std::string path);
-    void create();  // needs to insert vehicles etc from XML config
+    Scenario(std::string path);
 
     void step(float dt);
 
 private:
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
+
+    std::string name;
     Network roadNetwork;
     std::vector<Object*> roadObjects;
 };

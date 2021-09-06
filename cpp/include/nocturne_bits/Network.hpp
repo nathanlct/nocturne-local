@@ -1,18 +1,17 @@
 #pragma once
 
 #include "Road.hpp"
+#include "Vector2D.hpp"
 #include <vector>
 #include <SFML/Graphics.hpp>
-
-// class Vehicle;
-
 
 
 class Network : public sf::Drawable {
 public:
     Network();
 
-    // Lane* getVehicleLane(Vehicle veh);
+    void addRoad(std::vector<Vector2D> geometry, int lanes, float laneWidth);
+
 
 private:
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;

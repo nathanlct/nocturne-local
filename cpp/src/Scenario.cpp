@@ -1,9 +1,39 @@
 #include <Scenario.hpp>
 
 
-Scenario::Scenario() : roadNetwork(), roadObjects() {
-    Vehicle* veh = new Vehicle();
-    roadObjects.push_back(veh);
+Scenario::Scenario(std::string path) : roadNetwork(), roadObjects() {
+    std::ifstream data(path);
+    json j;
+    data >> j;
+
+    name = j["name"];
+
+    for (const auto& obj : j["objects"]) {
+        std::string type = obj["type"];
+        Vector2D pos(obj["position"]["x"], obj["position"]["y"]);
+        float width = obj["width"];
+        float length = obj["length"];
+        float heading = obj["heading"];
+
+        if (type == "vehicle") {
+            Vehicle* veh = new Vehicle(pos, width, length, heading);
+            roadObjects.push_back(veh);
+        } else {
+            std::cerr << "Unknown object type: " << type << std::endl;
+        }
+    }
+
+    for (const auto& road : j["roads"]) {
+        std::vector<Vector2D> geometry;
+        for (const auto& pt : road["geometry"]) {
+            geometry.emplace_back(pt["x"], pt["y"]);
+        }
+        
+        int lanes = road["lanes"];
+        float laneWidth = road["laneWidth"];
+
+        roadNetwork.addRoad(geometry, lanes, laneWidth);
+    }
 }
 
 void Scenario::step(float dt) {

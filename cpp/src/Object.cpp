@@ -1,8 +1,8 @@
 #include <Object.hpp>
 
 
-Object::Object() :
-    position(200, 200), width(10), length(20), heading(1.2),
+Object::Object(Vector2D position, float width, float length, float heading) :
+    position(position), width(width), length(length), heading(heading),
     speed(0)
 {
 

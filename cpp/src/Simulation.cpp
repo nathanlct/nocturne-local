@@ -4,7 +4,10 @@
 #include <SFML/Graphics.hpp>
 
 
-Simulation::Simulation(bool render) : scenario(), render(render) {
+Simulation::Simulation(bool render) : 
+    scenario("/Users/nathan/Desktop/projects/nocturne/scenarios/basic.json"),
+    render(render)
+{
     if (render) {
         sf::ContextSettings settings;
         settings.antialiasingLevel = 8;

@@ -9,7 +9,7 @@ class Point;
 
 class Object : public sf::Drawable {
 public:
-    Object();
+    Object(Vector2D position, float width, float length, float heading);
 
     // bool intersectsWith(Object* other) const; // fast spherical pre-check, then accurate rectangular check
     // std::vector<Point> getCorners() const;

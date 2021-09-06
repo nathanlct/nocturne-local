@@ -9,14 +9,14 @@
 
 class Vehicle : public Object {
 public:
-    Vehicle();
+    Vehicle(Vector2D position, float width, float length, float heading);
 
     void act(float acceleration, float steering);
     virtual void step(float dt);
 
 private:
     void kinematicsUpdate(float dt);
-    // void dynamicsUpdate(float dt);
+    void dynamicsUpdate(float dt);
 
     float accelAction;
     float steeringAction;

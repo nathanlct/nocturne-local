@@ -1,7 +1,8 @@
 #include <Vehicle.hpp>
 
 
-Vehicle::Vehicle() : Object(),
+Vehicle::Vehicle(Vector2D position, float width, float length, float heading) :
+    Object(position, width, length, heading),
     accelAction(0), steeringAction(0),
     lateralSpeed(0), yawRate(0)
 {
@@ -54,4 +55,8 @@ void Vehicle::kinematicsUpdate(float dt) {
     heading += dHeading * dt;
     position += Vector2D(dX, dY) * dt;
     speed += accel * dt;
+}
+
+void Vehicle::dynamicsUpdate(float dt) {
+
 }
