@@ -17,6 +17,13 @@ public:
     // void move(); // move according to pos, heading and speed
     virtual void step(float dt);
 
+    Vector2D getPosition() const;
+    float getHeading() const;
+    float getWidth() const;
+    float getLength() const;
+    std::vector<Vector2D> getCorners() const;
+    std::vector<std::pair<Vector2D,Vector2D>> getLines() const;
+
 protected:
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 

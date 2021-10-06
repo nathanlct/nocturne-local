@@ -21,6 +21,9 @@ Scenario::Scenario(std::string path) : roadNetwork(), roadObjects() {
         if (type == "vehicle") {
             Vehicle* veh = new Vehicle(pos, width, length, heading);
             roadObjects.push_back(veh);
+        } else if (type == "object") {
+            Object* obj = new Object(pos, width, length, heading);
+            roadObjects.push_back(obj);
         } else {
             std::cerr << "Unknown object type: " << type << std::endl;
         }
@@ -54,4 +57,8 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
 
 sf::FloatRect Scenario::getBoundingBox() const {
     return roadNetwork.getBoundingBox();
+}
+
+std::vector<Object*> Scenario::getRoadObjects() const { 
+    return roadObjects; 
 }

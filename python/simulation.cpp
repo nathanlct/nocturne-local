@@ -5,6 +5,5 @@ namespace py = pybind11;
 
 void init_simulation(py::module &m) {
     py::class_<Simulation>(m, "Simulation")
-    .def(py::init<>())
-    .def("reset", &Simulation::reset);
+    .def(py::init<bool>());
 }
