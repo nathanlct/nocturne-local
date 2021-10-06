@@ -1,7 +1,7 @@
 #include <nocturne>
 
 int main() {
-    Simulation sim(false);
+    Simulation sim(true);
 
     return 0;
 }
