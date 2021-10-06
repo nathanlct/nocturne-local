@@ -1,0 +1,15 @@
+name: nocturne
+channels:
+  - defaults
+dependencies:
+  - python=3.8
+  - pip=21.1.3
+  - numpy=1.19.2
+  - jupyterlab=3.0.14
+  - pybind11=2.6.1
+  - pip:
+    - hydra-core==1.1.0
+    - hydra-submitit-launcher==1.1.5
+    - ipdb==0.13.9
+    - seaborn
+

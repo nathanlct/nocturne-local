@@ -70,3 +70,7 @@ make
 ```
 
 after which the executables can be found in `nocturne/cpp/tests/bin`.
+
+## Common errors:
+### CMAKE can't find SFML library.
+Make sure the path to SFML is included in CMAKE_PREFIX_PATH.
