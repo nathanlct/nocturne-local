@@ -1,4 +1,3 @@
 from nocturne import Simulation
 
-sim = Simulation()
-sim.reset()
+sim = Simulation(True)

@@ -4,6 +4,10 @@ bin/
 
 # OS X
 .DS_STORE
+.DS_Store
 
 # IDE
 .vscode
+
+# videos
+*.mov
