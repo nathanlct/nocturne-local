@@ -211,7 +211,7 @@ void Simulation::renderCone(Vector2D center, float heading, float viewAngle, con
                     float angle2 = (pt2 - center).angle();
                     while (angle2 > angle1) angle2 -= 2.0f * pi;
 
-                    std::cout << angle1 << " " << angle2 << std::endl;
+                    // std::cout << angle1 << " " << angle2 << std::endl;
 
                     int nPoints = 80; // todo function of angle
                     hiddenArea.setPointCount(nPoints + 2);
