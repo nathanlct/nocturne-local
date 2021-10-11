@@ -13,7 +13,7 @@
 
 class Simulation {
 public:
-    Simulation(bool render);
+    Simulation(bool render = false, std::string scenarioPath = "");
 
     void reset();
     void step();

@@ -3,8 +3,8 @@
 #include <SFML/Graphics.hpp>
 
 
-Simulation::Simulation(bool render) : 
-    scenario("../../../scenarios/basic.json"),
+Simulation::Simulation(bool render, std::string scenarioPath) : 
+    scenario(scenarioPath),
     render(render),
     renderTransform()
 {

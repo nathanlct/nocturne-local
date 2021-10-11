@@ -1,3 +1,3 @@
 from nocturne import Simulation
 
-sim = Simulation(True)
+sim = Simulation(render=True, scenarioPath='./scenarios/basic.json')

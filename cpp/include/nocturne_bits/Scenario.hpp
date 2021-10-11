@@ -16,6 +16,8 @@ class Scenario : public sf::Drawable {
 public:
     Scenario(std::string path);
 
+    void loadScenario(std::string path);
+
     void step(float dt);
     sf::FloatRect getBoundingBox() const;
 
