@@ -14,7 +14,7 @@ Nocturne uses [SFML](https://github.com/SFML/SFML) for visualization, it can be 
 -   Linux: `sudo apt-get install libsfml-dev`
 -   MacOS: `brew install sfml`
 
-Once done, if using Conda, first activate the environment where the Python library should be installed, then run the following to build and install the library:
+Once done, if using Conda, first activate the environment where the Python library should be installed (eg. `conda activate nocturne`), then run the following to build and install the library:
 
 ```bash
 # path to Python's libraries folder (site-packages)
@@ -32,6 +32,8 @@ cmake .. -DPYTHON_LIBRARY_DIR="${DPYTHON_LIBRARY_DIR}" \
 make  # build library
 make install  # install library in Python's path
 ```
+
+Note: if you are getting errors with pybind11, install it directly in your conda environment (eg. `conda install -c conda-forge pybind11` or `pip install pybind11`, cf. https://pybind11.readthedocs.io/en/latest/installing.html for more info).
 
 You should then be all set to use that library from your Python executable:
 
