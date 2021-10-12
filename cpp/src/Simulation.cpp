@@ -6,7 +6,8 @@
 Simulation::Simulation(bool render, std::string scenarioPath) : 
     scenario(scenarioPath),
     render(render),
-    renderTransform()
+    renderTransform(),
+    renderWindow(nullptr)
 {
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
@@ -25,9 +26,9 @@ Simulation::Simulation(bool render, std::string scenarioPath) :
 
         sf::ContextSettings settings;
         settings.antialiasingLevel = 8;
-        sf::RenderWindow window(sf::VideoMode(winWidth, winHeight), "Nocturne", sf::Style::Default, settings);
+        renderWindow = new sf::RenderWindow(sf::VideoMode(winWidth, winHeight), "Nocturne", sf::Style::Default, settings);
 
-        // window.setFramerateLimit(15);
+        // renderWindow->setFramerateLimit(15);
 
         sf::Clock clock;
 
@@ -55,51 +56,51 @@ Simulation::Simulation(bool render, std::string scenarioPath) :
             throw std::invalid_argument("Couldn't load a font file.");
         }
 
-        while (window.isOpen())
+        while (renderWindow->isOpen())
         {
             sf::Time elapsed = clock.restart();
             scenario.step(elapsed.asSeconds());
             float fps = 1.0f / elapsed.asSeconds();
 
             sf::Event event;
-            while (window.pollEvent(event))
+            while (renderWindow->pollEvent(event))
             {
                 if (event.type == sf::Event::Closed) {
-                    window.close();
+                    renderWindow->close();
                 } else if (event.type == sf::Event::Resized) {
-                    window.setView(getView(sf::Vector2u(event.size.width, event.size.height)));
+                    renderWindow->setView(getView(sf::Vector2u(event.size.width, event.size.height)));
                 }
            }
 
-            window.clear(sf::Color(50, 50, 50));
+            renderWindow->clear(sf::Color(50, 50, 50));
 
-            window.setView(getView(window.getSize()));
+            renderWindow->setView(getView(renderWindow->getSize()));
 
-            window.draw(scenario, renderTransform);
+            renderWindow->draw(scenario, renderTransform);
 
-            window.setView(sf::View(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y)));
+            renderWindow->setView(sf::View(sf::FloatRect(0, 0, renderWindow->getSize().x, renderWindow->getSize().y)));
 
-            sf::RectangleShape guiBackgroundTop(sf::Vector2f(window.getSize().x, 35));
+            sf::RectangleShape guiBackgroundTop(sf::Vector2f(renderWindow->getSize().x, 35));
             guiBackgroundTop.setPosition(0, 0);
             guiBackgroundTop.setFillColor(sf::Color(0, 0, 0, 100));
-            window.draw(guiBackgroundTop);
+            renderWindow->draw(guiBackgroundTop);
 
             sf::Text text(std::to_string((int)fps) + " fps", font, 20);
             text.setPosition(10, 5);
             text.setFillColor(sf::Color::White);
-            window.draw(text);
+            renderWindow->draw(text);
 
-            sf::RectangleShape guiBackgroundRight(sf::Vector2f(renderedCircleRadius + 2.0f * renderedCircleRadius + 40, window.getSize().y));
-            guiBackgroundRight.setPosition(window.getSize().x - 2.0f * renderedCircleRadius - 40, 0);
+            sf::RectangleShape guiBackgroundRight(sf::Vector2f(renderedCircleRadius + 2.0f * renderedCircleRadius + 40, renderWindow->getSize().y));
+            guiBackgroundRight.setPosition(renderWindow->getSize().x - 2.0f * renderedCircleRadius - 40, 0);
             guiBackgroundRight.setFillColor(sf::Color(0, 0, 0));
-            window.draw(guiBackgroundRight);
+            renderWindow->draw(guiBackgroundRight);
 
             renderCone(roadObjects[0], 80.0f * pi / 180.0f, 0.0f * pi / 180.0f);
             sf::Sprite sprite(circleTexture.getTexture());
-            sprite.setPosition(window.getSize().x - 2.0f * renderedCircleRadius - 20, 20);
-            window.draw(sprite);
+            sprite.setPosition(renderWindow->getSize().x - 2.0f * renderedCircleRadius - 20, 20);
+            renderWindow->draw(sprite);
 
-            window.display();
+            renderWindow->display();
         }
     }
 }
@@ -257,42 +258,24 @@ void Simulation::renderCone(const Object* object, float viewAngle, float headTil
     renderCone(object->getPosition(), object->getHeading() + headTilt, viewAngle, object);
 }
 
-// sf::Texture text = texture.getTexture();
-
-// sf::Image img = text.copyToImage();
-
-// // img.saveToFile("test.png");
-
-// const unsigned char* pixels = img.getPixelsPtr();
-
-// for (int i = 0; i < 80; i++)
-//     std::cout << (int)pixels[i] << std::endl;
-
-// cf https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html convert to a numpy array
-/*
-sf::Texture texture;
-texture.create(render_window.getSize().x, render_window.getSize().y);
-texture.update(render_window);
-if (texture.copyToImage().saveToFile(filename))
-{
-    std::cout << "screenshot saved to " << filename << std::endl;
+std::vector<Object*> Simulation::getRoadObjects() {
+    return scenario.getRoadObjects();
 }
-*/
 
-/* 
-to draw a circle
+ImageMatrix Simulation::getConePixels() {
+    renderCone(getRoadObjects()[0], 80.0f * pi / 180.0f, 0.0f * pi / 180.0f);
+    sf::Image img = circleTexture.getTexture().copyToImage();
+    unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
+    return ImageMatrix(
+        pixelsArr,
+        400, 400 , 4
+    );
+}
 
-Rendering masks are still to be implemented (see issue #1 on github),
- but there's a workaround. Draw your background on a sf::RenderTexture,
- then draw the mask with a transparent color (anything with alpha = 0) 
- on top of it with the sf::BlendNone blending mode. The result is a 
- masked image that you can then draw on your regular scene.
-
- https://en.sfml-dev.org/forums/index.php?topic=7427.0
-
-sf::BlendMode
-sf::Shader
-
-google "sfml render mask"
-
-*/
+void Simulation::saveScreenshot() {
+    std::string filename = "./screenshot.png";
+    sf::Texture texture;
+    texture.create(renderWindow->getSize().x, renderWindow->getSize().y);
+    texture.update(*renderWindow);
+    texture.copyToImage().saveToFile(filename);
+}
