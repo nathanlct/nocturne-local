@@ -74,3 +74,5 @@ after which the executables can be found in `nocturne/cpp/tests/bin`.
 ## Common errors:
 ### CMAKE can't find SFML library.
 Make sure the path to SFML is included in CMAKE_PREFIX_PATH.
+### ImportError: libsfml-graphics.so.2.5: cannot open shared object file: No such file or directory
+Make sure SFML/lib is included in LD_LIBRARY_PATH if you're on a linux machine 
