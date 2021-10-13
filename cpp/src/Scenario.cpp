@@ -2,6 +2,16 @@
 
 
 Scenario::Scenario(std::string path) : roadNetwork(), roadObjects() {
+    if (path.size() > 0) {
+        loadScenario(path);
+    } else {        
+        throw std::invalid_argument("No scenario file inputted.");
+        // TODO(nl) right now an empty scenario crashes, expectedly
+        std::cout << "No scenario path inputted. Defaulting to an empty scenario." << std::endl;
+    }
+}
+
+void Scenario::loadScenario(std::string path) {
     std::ifstream data(path);
     if (!data.is_open()) {
         throw std::invalid_argument("Scenario file couldn't be opened: " + path);
