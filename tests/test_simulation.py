@@ -1,7 +1,10 @@
+import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 from nocturne import Simulation
-import matplotlib.pyplot as plt
-import time
+
+# os.environ["DISPLAY"] = ":0.0"
 
 sim = Simulation(render=False, scenarioPath='./scenarios/basic.json')
 
@@ -14,4 +17,4 @@ print(arr.shape, np.max(arr), np.min(arr), arr.dtype)
 
 plt.figure()
 plt.imshow(arr)
-plt.show()
+plt.savefig('example.png')
