@@ -3,7 +3,7 @@
 
 Object::Object(Vector2D position, float width, float length, float heading) :
     position(position), width(width), length(length), heading(heading),
-    speed(0)
+    speed(0), coneTexture(nullptr)
 {
 
 }

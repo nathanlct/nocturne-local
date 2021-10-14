@@ -60,6 +60,16 @@ void Road::buildLanes() {
     }
 }
 
+std::vector<Vector2D> Road::getRoadPolygon() const {
+    size_t nPoints = 2 * geometry.size();
+    std::vector<Vector2D> roadPolygon(nPoints);
+    for (int i = 0; i < lanesGeometry.size(); ++i) {
+        roadPolygon[i] = lanesGeometry[i][0];
+        roadPolygon[nPoints - i - 1] = lanesGeometry[i][lanesGeometry[i].size() - 1];
+    }
+    return roadPolygon;
+}
+
 void Road::buildRoadGraphics() {
     // build lane quads
     laneQuads.clear();
@@ -117,24 +127,6 @@ void Road::buildRoadGraphics() {
             }
         }
     }
-}
-
-sf::FloatRect Road::getBoundingBox() const {
-    float minX = 1e10;
-    float minY = 1e10;
-    float maxX = -1e10;
-    float maxY = -1e10;
-
-    for (const auto& segment : lanesGeometry) {
-        for (const auto& lane : segment) {
-            minX = std::min(minX, lane.x);
-            minY = std::min(minY, lane.y);
-            maxX = std::max(maxX, lane.x);
-            maxY = std::max(maxY, lane.y);
-        }
-    }
-
-    return sf::FloatRect(minX, minY, maxX - minX, maxY - minY);
 }
 
 void Road::draw(sf::RenderTarget& target, sf::RenderStates states) const {
