@@ -12,6 +12,8 @@ sim.step(0.1)
 objects = scenario.getRoadObjects()
 print(objects)
 
+sim.saveScreenshot()
+
 for i, obj in enumerate(objects):
     cone = np.array(scenario.getCone(obj, 3.14/2.0, 0.0), copy=False)
     plt.figure()
