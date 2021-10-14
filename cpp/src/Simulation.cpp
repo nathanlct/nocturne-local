@@ -99,11 +99,13 @@ void Simulation::reset() {
 }
 
 void Simulation::saveScreenshot() {
-    std::string filename = "./screenshot.png";
-    sf::Texture texture;
-    texture.create(renderWindow->getSize().x, renderWindow->getSize().y);
-    texture.update(*renderWindow);
-    texture.copyToImage().saveToFile(filename);
+    if (renderWindow != nullptr) {
+        std::string filename = "./screenshot.png";
+        sf::Texture texture;
+        texture.create(renderWindow->getSize().x, renderWindow->getSize().y);
+        texture.update(*renderWindow);
+        texture.copyToImage().saveToFile(filename);
+    }
 }
 
 Scenario* Simulation::getScenario() const {
