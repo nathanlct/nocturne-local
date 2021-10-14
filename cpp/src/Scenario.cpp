@@ -220,7 +220,7 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
     texture->display();
 
     sf::Image img = texture->getTexture().copyToImage();
-    img.saveToFile('save_cpp.png');
+    img.saveToFile("save_cpp.png");
     unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
     return ImageMatrix(pixelsArr, 400, 400, 4);
