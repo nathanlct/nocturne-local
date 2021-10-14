@@ -9,5 +9,6 @@ bin/
 # IDE
 .vscode
 
-# videos
+# media
 *.mov
+*.png

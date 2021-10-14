@@ -11,6 +11,6 @@ void init_object(py::module &m) {
     py::class_<Object>(m, "Object")
         .def("getWidth", &Object::getWidth, "Get object width");
 
-    py::class_<Vehicle>(m, "Vehicle")
+    py::class_<Vehicle, Object>(m, "Vehicle")
         .def("getWidth", &Vehicle::getWidth, "Get vehicle width");
 }

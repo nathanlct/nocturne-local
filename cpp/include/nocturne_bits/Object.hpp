@@ -24,6 +24,8 @@ public:
     std::vector<Vector2D> getCorners() const;
     std::vector<std::pair<Vector2D,Vector2D>> getLines() const;
 
+    sf::RenderTexture* coneTexture;
+
 protected:
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
