@@ -105,7 +105,7 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
 
     if (object->coneTexture == nullptr) {
         sf::ContextSettings settings;
-        settings.antialiasingLevel = 8;
+        settings.antialiasingLevel = 1;
 
         object->coneTexture = new sf::RenderTexture();
         object->coneTexture->create(2.0f * renderedCircleRadius, 2.0f * renderedCircleRadius, settings);

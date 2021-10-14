@@ -21,7 +21,7 @@ void Simulation::render() {
         float winHeight = 800;
 
         sf::ContextSettings settings;
-        settings.antialiasingLevel = 8;
+        settings.antialiasingLevel = 1;
         renderWindow = new sf::RenderWindow(sf::VideoMode(winWidth, winHeight), "Nocturne", sf::Style::Default, settings);
 
         font = getFont("Arial.ttf");
