@@ -182,7 +182,9 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
     float heading = object->getHeading() + headTilt;
 
     texture->clear(sf::Color(50, 50, 50));
-    texture->setView(sf::View(center.toVector2f(true), sf::Vector2f(2.0f * circleRadius, 2.0f * circleRadius)));
+    sf::View view(center.toVector2f(true), sf::Vector2f(2.0f * circleRadius, 2.0f * circleRadius));
+    view.rotate(- object->getHeading() * 180.0f / pi + 90.0f);
+    texture->setView(view);
 
     texture->draw(*this, renderTransform); // todo optimize with objects in range only (quadtree?)
 
@@ -208,7 +210,7 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
             outerCircle.push_back(sf::Vertex(pt.toVector2f(), sf::Color::Black));
         }
 
-        texture->draw(&outerCircle[0], outerCircle.size(), sf::TriangleFan, renderTransform);
+        texture->draw(&outerCircle[0], outerCircle.size(), sf::TriangleFan); //, renderTransform);
     }
 
     // draw cone
@@ -216,9 +218,8 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
         std::vector<sf::Vertex> innerCircle; // todo precompute just once
 
         innerCircle.push_back(sf::Vertex(sf::Vector2f(0.0f, 0.0f), sf::Color::Black));
-
-        float startAngle = heading + viewAngle / 2.0f;
-        float endAngle = heading + 2.0f * pi - viewAngle / 2.0f;
+        float startAngle = pi / 2.0f + headTilt + viewAngle / 2.0f;
+        float endAngle = pi / 2.0f + headTilt + 2.0f * pi - viewAngle / 2.0f;
 
         int nPoints = 80; // todo function of angle
         for (int i = 0; i < nPoints; ++i) {
@@ -229,6 +230,8 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
 
         texture->draw(&innerCircle[0], innerCircle.size(), sf::TriangleFan, renderTransform);
     }
+
+    renderTransform.rotate(- object->getHeading() * 180.0f / pi + 90.0f);
 
     // draw obstructions
     std::vector<Object*> roadObjects = getRoadObjects(); // todo optimize with objects in range only (quadtree?)
@@ -274,7 +277,6 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
                     hiddenArea.setFillColor(sf::Color::Black);
 
                     texture->draw(hiddenArea, renderTransform);
-
                 }
             }
         }
