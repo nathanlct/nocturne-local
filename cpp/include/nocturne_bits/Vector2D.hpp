@@ -86,6 +86,10 @@ public:
         return std::sqrt(x * x + y * y);
     }
 
+    static float dist(const Vector2D& v1, const Vector2D& v2) {
+        return (v1 - v2).norm();
+    }
+
     float angle() const {
         return std::atan2(y, x);
     }
@@ -108,6 +112,18 @@ public:
 
     float dot(const Vector2D& other) const {
         return x * other.x + y * other.y;
+    }
+
+    void normalize() {
+        float vNorm = norm();
+        x /= vNorm;
+        y /= vNorm; 
+    }
+
+    Vector2D normal() { // ie rotation of 90° clockwise + normalize
+        Vector2D n(-y, x);
+        n.normalize();
+        return n;
     }
 };
 

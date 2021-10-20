@@ -56,6 +56,69 @@ void Scenario::step(float dt) {
     for (auto* object : roadObjects) {
         object->step(dt);
     }
+
+    for (auto* object1 : roadObjects) {
+        for (auto* object2 : roadObjects) {
+            if (object1 != object2) {
+                bool collided = checkForCollision(object1, object2);
+                if (collided) {
+                    std::cout << "collision!" << std::endl;
+                }
+            }
+        }
+    }
+}
+
+bool Scenario::checkForCollision(const Object* object1, const Object* object2) {
+    // note: right now objects are rectangles but this code works for any pair of convex polygons
+
+    // first check for circles collision
+    float dist = Vector2D::dist(object1->getPosition(), object2->getPosition());
+    float minDist = object1->getRadius() + object2->getRadius();
+    if (dist > minDist) {
+        return false;
+    }
+
+    // then for exact collision
+
+    // if the polygons don't intersect, then there exists a line, parallel
+    // to a side of one of the two polygons, that entirely separate the two polygons
+
+    // go over both polygons
+    for (const Object* polygon : {object1, object2}) {
+        // go over all of their sides 
+        for (const std::pair<Vector2D,Vector2D>& line : polygon->getLines()) {
+            // vector perpendicular to current polygon line
+            const Vector2D normal = (line.second - line.first).normal(); 
+
+            // project all corners of polygon 1 onto that line
+            // min and max represent the boundaries of the polygon's projection on the line
+            double min1 = std::numeric_limits<double>::max();
+            double max1 = std::numeric_limits<double>::min();
+            for (const Vector2D& pt : object1->getCorners()) {
+                const double projected = normal.dot(pt);
+                if (projected < min1) min1 = projected;
+                if (projected > max1) max1 = projected;
+            }
+
+            // same for polygon 2
+            double min2 = std::numeric_limits<double>::max();
+            double max2 = std::numeric_limits<double>::min();
+            for (const Vector2D& pt : object2->getCorners()) {
+                const double projected = normal.dot(pt);
+                if (projected < min2) min2 = projected;
+                if (projected > max2) max2 = projected;
+            }
+
+            if (max1 < min2 || max2 < min1) {
+                // we have a line separating both polygons
+                return false;
+            }
+         }
+    }
+
+    // we didn't find any line separating both polygons
+    return true;
 }
 
 void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
