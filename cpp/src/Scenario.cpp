@@ -56,6 +56,69 @@ void Scenario::step(float dt) {
     for (auto* object : roadObjects) {
         object->step(dt);
     }
+
+    for (auto* object1 : roadObjects) {
+        for (auto* object2 : roadObjects) {
+            if (object1 != object2) {
+                bool collided = checkForCollision(object1, object2);
+                if (collided) {
+                    std::cout << "collision!" << std::endl;
+                }
+            }
+        }
+    }
+}
+
+bool Scenario::checkForCollision(const Object* object1, const Object* object2) {
+    // note: right now objects are rectangles but this code works for any pair of convex polygons
+
+    // first check for circles collision
+    float dist = Vector2D::dist(object1->getPosition(), object2->getPosition());
+    float minDist = object1->getRadius() + object2->getRadius();
+    if (dist > minDist) {
+        return false;
+    }
+
+    // then for exact collision
+
+    // if the polygons don't intersect, then there exists a line, parallel
+    // to a side of one of the two polygons, that entirely separate the two polygons
+
+    // go over both polygons
+    for (const Object* polygon : {object1, object2}) {
+        // go over all of their sides 
+        for (const std::pair<Vector2D,Vector2D>& line : polygon->getLines()) {
+            // vector perpendicular to current polygon line
+            const Vector2D normal = (line.second - line.first).normal(); 
+
+            // project all corners of polygon 1 onto that line
+            // min and max represent the boundaries of the polygon's projection on the line
+            double min1 = std::numeric_limits<double>::max();
+            double max1 = std::numeric_limits<double>::min();
+            for (const Vector2D& pt : object1->getCorners()) {
+                const double projected = normal.dot(pt);
+                if (projected < min1) min1 = projected;
+                if (projected > max1) max1 = projected;
+            }
+
+            // same for polygon 2
+            double min2 = std::numeric_limits<double>::max();
+            double max2 = std::numeric_limits<double>::min();
+            for (const Vector2D& pt : object2->getCorners()) {
+                const double projected = normal.dot(pt);
+                if (projected < min2) min2 = projected;
+                if (projected > max2) max2 = projected;
+            }
+
+            if (max1 < min2 || max2 < min1) {
+                // we have a line separating both polygons
+                return false;
+            }
+         }
+    }
+
+    // we didn't find any line separating both polygons
+    return true;
 }
 
 void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
@@ -119,7 +182,9 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
     float heading = object->getHeading() + headTilt;
 
     texture->clear(sf::Color(50, 50, 50));
-    texture->setView(sf::View(center.toVector2f(true), sf::Vector2f(2.0f * circleRadius, 2.0f * circleRadius)));
+    sf::View view(center.toVector2f(true), sf::Vector2f(2.0f * circleRadius, 2.0f * circleRadius));
+    view.rotate(- object->getHeading() * 180.0f / pi + 90.0f);
+    texture->setView(view);
 
     texture->draw(*this, renderTransform); // todo optimize with objects in range only (quadtree?)
 
@@ -145,7 +210,7 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
             outerCircle.push_back(sf::Vertex(pt.toVector2f(), sf::Color::Black));
         }
 
-        texture->draw(&outerCircle[0], outerCircle.size(), sf::TriangleFan, renderTransform);
+        texture->draw(&outerCircle[0], outerCircle.size(), sf::TriangleFan); //, renderTransform);
     }
 
     // draw cone
@@ -153,9 +218,8 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
         std::vector<sf::Vertex> innerCircle; // todo precompute just once
 
         innerCircle.push_back(sf::Vertex(sf::Vector2f(0.0f, 0.0f), sf::Color::Black));
-
-        float startAngle = heading + viewAngle / 2.0f;
-        float endAngle = heading + 2.0f * pi - viewAngle / 2.0f;
+        float startAngle = pi / 2.0f + headTilt + viewAngle / 2.0f;
+        float endAngle = pi / 2.0f + headTilt + 2.0f * pi - viewAngle / 2.0f;
 
         int nPoints = 80; // todo function of angle
         for (int i = 0; i < nPoints; ++i) {
@@ -166,6 +230,8 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
 
         texture->draw(&innerCircle[0], innerCircle.size(), sf::TriangleFan, renderTransform);
     }
+
+    renderTransform.rotate(- object->getHeading() * 180.0f / pi + 90.0f);
 
     // draw obstructions
     std::vector<Object*> roadObjects = getRoadObjects(); // todo optimize with objects in range only (quadtree?)
@@ -211,7 +277,6 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
                     hiddenArea.setFillColor(sf::Color::Black);
 
                     texture->draw(hiddenArea, renderTransform);
-
                 }
             }
         }

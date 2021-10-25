@@ -21,6 +21,7 @@ public:
     float getHeading() const;
     float getWidth() const;
     float getLength() const;
+    float getRadius() const;  // radius of the minimal circle of center {position} that includes the whole polygon
     std::vector<Vector2D> getCorners() const;
     std::vector<std::pair<Vector2D,Vector2D>> getLines() const;
 

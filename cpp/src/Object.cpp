@@ -47,6 +47,9 @@ float Object::getWidth() const {
 float Object::getLength() const {
     return length;
 }
+float Object::getRadius() const {
+    return std::sqrt(width * width + length * length) / 2.0f;
+}
 std::vector<Vector2D> Object::getCorners() const {
     std::vector<Vector2D> corners;
     // create points
@@ -68,7 +71,7 @@ std::vector<std::pair<Vector2D,Vector2D>> Object::getLines() const {
     std::vector<Vector2D> corners = getCorners();
     std::vector<std::pair<Vector2D,Vector2D>> lines;
     for (int i = 0; i < corners.size(); ++i) {
-        lines.emplace_back(corners[i], corners[(i+1)%corners.size()]);
+        lines.emplace_back(corners[i], corners[(i+1) % corners.size()]);
     }
     return lines;
 }

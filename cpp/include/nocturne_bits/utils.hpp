@@ -16,7 +16,8 @@ inline sf::Font getFont(std::string fontName) {
         // Linux
         "/usr/share/fonts",
         "/usr/local/share/fonts",
-        "~/.fonts/"
+        "~/.fonts/",
+        "/private/home/eugenevinitsky/.fonts/"
     };
 
     std::string fontPath = "";
