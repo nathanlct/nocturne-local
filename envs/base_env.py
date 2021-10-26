@@ -7,11 +7,13 @@ from nocturne import Simulation
 from utils.subscribers import Subscriber
 
 
-class GoalEnv(object):
+class BaseEnv(object):
     def __init__(self, scenario_path, cfg):
+        
         self.simulation = Simulation(scenario_path)
         self.subscriber = Subscriber(cfg.subscriber)
         self.cfg = cfg
+        self.t = 0
 
     def observation_space(self):
         pass
@@ -19,12 +21,7 @@ class GoalEnv(object):
     def action_space(self):
         pass
 
-    def step(self, action_dict):
-        obs_dict = {}
-        rew_dict = {}
-        done_dict = {'__all__': False}
-        info_dict = {}
-        rew_cfg = self.cfg.rew_cfg
+    def apply_actions(self, action_dict):
         for veh_id, veh_obj in self.simulation.getVehicles():
             if veh_id in action_dict.keys():
                 action = action_dict[veh_id]
@@ -34,7 +31,16 @@ class GoalEnv(object):
                     self.simulation.applyTurn(action['turn'])
                 if 'tilt_view' in action.keys():
                     self.simulation.applyViewTilt(action['tilt_view'])
+
+    def step(self, action_dict):
+        obs_dict = {}
+        rew_dict = {}
+        done_dict = {'__all__': False}
+        info_dict = {}
+        rew_cfg = self.cfg.rew_cfg
+        self.apply_actions(action_dict)
         self.simulation.step(self.cfg.dt)
+        self.t += self.cfg.dt
         for veh_id, veh_obj in self.simulation.getVehicles():
             obs_dict[veh_id] = self.subscriber.get_obs(veh_obj)
             rew_dict[veh_id] = 0
@@ -50,6 +56,7 @@ class GoalEnv(object):
         return obs_dict, rew_dict, done_dict, info_dict
 
     def reset(self):
+        self.t = 0
         self.simulation.reset()
         obs_dict = {}
         for veh_id, veh_obj in self.simulation.getVehicles():
