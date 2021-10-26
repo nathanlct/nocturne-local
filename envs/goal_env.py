@@ -6,6 +6,7 @@ import numpy as np
 from nocturne import Simulation
 from utils.subscribers import Subscriber
 
+
 class GoalEnv(object):
     def __init__(self, scenario_path, cfg):
         self.simulation = Simulation(scenario_path)
@@ -45,7 +46,7 @@ class GoalEnv(object):
                 rew_dict[veh_id] -= np.abs(rew_cfg.crossed_lanes_penalty)
             if self.simulation.goalAchieved(veh_obj):
                 rew_dict[veh_id] += np.abs(rew_cfg.goal_achieved_bonus)
-        
+
         return obs_dict, rew_dict, done_dict, info_dict
 
     def reset(self):

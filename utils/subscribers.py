@@ -10,9 +10,12 @@ class Subscriber(object):
         if self.cfg.include_ego_state:
             obs_dict.update(self.ego_subscriber.get_obs(object))
         if self.cfg.include_visible_object_state:
-            obs_dict['visible_objects'] = {obj_id: self.object_subscriber.get_obs(obj) for 
-                                           obj_id, obj in self.simulation.getVisibleObjects(object)}
-        return obs_dict 
+            obs_dict['visible_objects'] = {
+                obj_id: self.object_subscriber.get_obs(obj)
+                for obj_id, obj in self.simulation.getVisibleObjects(object)
+            }
+        return obs_dict
+
 
 class ObjectSubscriber(object):
     def __init__(self, cfg, simulation):
@@ -27,15 +30,17 @@ class ObjectSubscriber(object):
             obs_dict['xy'] = self.simulation.getXY(object)
         return obs_dict
 
+
 class EgoSubscriber(object):
     def __init__(self, cfg, simulation):
         self.cfg = cfg
         self.simulation = simulation
-    
+
     def get_obs(self, object):
         obs_dict = {}
         if self.cfg.img_view:
-            obs_dict['ego_image'] = self.simulation.getCone(object, self.cfg.view_angle, object.getHeadTilt())
+            obs_dict['ego_image'] = self.simulation.getCone(
+                object, self.cfg.view_angle, object.getHeadTilt())
         if self.cfg.include_speed:
             obs_dict['ego_speed'] = self.simulation.getSpeed(object)
         if self.cfg.include_goal_xy:
