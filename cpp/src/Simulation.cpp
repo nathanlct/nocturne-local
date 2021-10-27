@@ -95,6 +95,7 @@ void Simulation::updateView(float padding) const {
 }
 
 void Simulation::reset() {
+    renderWindow->close();
     std::cout << "Resetting simulation." << std::endl;
 }
 
