@@ -11,9 +11,12 @@ Vehicle::Vehicle(Vector2D position, float width, float length, float heading,
     
 }
 
-void Vehicle::act(float acceleration, float steering) {
+void Vehicle::setAccel(float acceleration) {
     accelAction = acceleration;
-    steeringAction = steering;
+}
+
+void Vehicle::setSteeringAngle(float steeringAngle) {
+    steeringAction = steeringAngle;
 }
 
 void Vehicle::step(float dt) {
