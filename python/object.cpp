@@ -12,5 +12,7 @@ void init_object(py::module &m) {
         .def("getWidth", &Object::getWidth, "Get object width");
 
     py::class_<Vehicle, Object>(m, "Vehicle")
-        .def("getWidth", &Vehicle::getWidth, "Get vehicle width");
+        .def("getWidth", &Vehicle::getWidth, "Get vehicle width")
+        .def("setAccel", &Vehicle::setAccel)
+        .def("setSteeringAngle", &Vehicle::setSteeringAngle);
 }
