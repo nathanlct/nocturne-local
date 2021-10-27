@@ -1,8 +1,10 @@
 #include <Object.hpp>
 
 
-Object::Object(Vector2D position, float width, float length, float heading) :
+Object::Object(Vector2D position, float width, float length, float heading,
+               bool occludes, bool collides, bool checkForCollisions) :
     position(position), width(width), length(length), heading(heading),
+    occludes(occludes), collides(collides), checkForCollisions(checkForCollisions),
     speed(0), coneTexture(nullptr)
 {
 
@@ -17,22 +19,34 @@ void Object::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     rect.setOrigin(length / 2.0f, width / 2.0f);
     rect.setPosition(position.toVector2f());
     rect.setRotation(heading * 180 / pi);
-    rect.setFillColor(sf::Color::Green);
+
+    sf::Color color;
+    if (occludes && collides) {
+        color = sf::Color::Red;
+    } else if (occludes && !collides) {
+        color = sf::Color::Blue;
+    } else if (!occludes && collides) {
+        color = sf::Color::White;
+    } else if (!occludes && !collides) {
+        color = sf::Color::Black;
+    }
+
+    rect.setFillColor(color);
     target.draw(rect, states);
 
-    sf::CircleShape circle(3);
-    circle.setOrigin(3, 3);
-    circle.setFillColor(sf::Color::Red);
-    circle.setPosition(position.toVector2f());
-    target.draw(circle, states);
+    // sf::CircleShape circle(3);
+    // circle.setOrigin(3, 3);
+    // circle.setFillColor(sf::Color::Red);
+    // circle.setPosition(position.toVector2f());
+    // target.draw(circle, states);
 
-    for (Vector2D corner : getCorners()) {
-        sf::CircleShape circle(2);
-        circle.setOrigin(2, 2);
-        circle.setFillColor(sf::Color::Red);
-        circle.setPosition(corner.toVector2f());
-        target.draw(circle, states);
-    }
+    // for (Vector2D corner : getCorners()) {
+    //     sf::CircleShape circle(2);
+    //     circle.setOrigin(2, 2);
+    //     circle.setFillColor(sf::Color::Red);
+    //     circle.setPosition(corner.toVector2f());
+    //     target.draw(circle, states);
+    // }
 }
 
 Vector2D Object::getPosition() const {

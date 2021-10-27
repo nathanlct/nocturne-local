@@ -9,7 +9,8 @@
 
 class Vehicle : public Object {
 public:
-    Vehicle(Vector2D position, float width, float length, float heading);
+    Vehicle(Vector2D position, float width, float length, float heading,
+            bool occludes, bool collides, bool checkForCollisions);
 
     void act(float acceleration, float steering);
     virtual void step(float dt);

@@ -135,13 +135,13 @@ void Road::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     }
     target.draw(&roadLines[0], roadLines.size(), sf::Lines, states);
 
-    for (const std::vector<Vector2D>& line : lanesGeometry) {
-        for (const Vector2D& point : line) {
-            sf::CircleShape ptShape(3);
-            ptShape.setOrigin(3, 3);
-            ptShape.setFillColor(sf::Color::Red);
-            ptShape.setPosition(point.x, point.y);
-            target.draw(ptShape, states);
-        }
-    }
+    // for (const std::vector<Vector2D>& line : lanesGeometry) {
+    //     for (const Vector2D& point : line) {
+    //         sf::CircleShape ptShape(3);
+    //         ptShape.setOrigin(3, 3);
+    //         ptShape.setFillColor(sf::Color::Red);
+    //         ptShape.setPosition(point.x, point.y);
+    //         target.draw(ptShape, states);
+    //     }
+    // }
 }

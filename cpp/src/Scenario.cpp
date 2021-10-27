@@ -28,11 +28,18 @@ void Scenario::loadScenario(std::string path) {
         float length = obj["length"];
         float heading = (float)obj["heading"] * pi / 180.0f;
 
+        bool occludes = obj["occludes"];
+        bool collides = obj["collides"];
+        std::cout << collides << std::endl;
+        bool checkForCollisions = obj["checkForCollisions"];
+
         if (type == "vehicle") {
-            Vehicle* veh = new Vehicle(pos, width, length, heading);
+            Vehicle* veh = new Vehicle(pos, width, length, heading,
+                                       occludes, collides, checkForCollisions);
             roadObjects.push_back(veh);
         } else if (type == "object") {
-            Object* obj = new Object(pos, width, length, heading);
+            Object* obj = new Object(pos, width, length, heading,
+                                     occludes, collides, checkForCollisions);
             roadObjects.push_back(obj);
         } else {
             std::cerr << "Unknown object type: " << type << std::endl;
@@ -48,7 +55,8 @@ void Scenario::loadScenario(std::string path) {
         int lanes = road["lanes"];
         float laneWidth = road["laneWidth"];
 
-        addRoad(geometry, lanes, laneWidth);
+        Road* roadObject = new Road(geometry, lanes, laneWidth);
+        roads.push_back(roadObject);
     }
 }
 
@@ -59,11 +67,15 @@ void Scenario::step(float dt) {
 
     for (auto* object1 : roadObjects) {
         for (auto* object2 : roadObjects) {
-            if (object1 != object2) {
-                bool collided = checkForCollision(object1, object2);
-                if (collided) {
-                    std::cout << "collision!" << std::endl;
-                }
+            if (object1 == object2)
+                continue;
+            if (!object1->checkForCollisions && !object2->checkForCollisions)
+                continue;
+            if (!object1->collides || !object2->collides)
+                continue;
+            bool collided = checkForCollision(object1, object2);
+            if (collided) {
+                std::cout << "collision!" << std::endl;
             }
         }
     }
@@ -132,10 +144,6 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
 
 std::vector<Object*> Scenario::getRoadObjects() const { 
     return roadObjects; 
-}
-
-void Scenario::addRoad(std::vector<Vector2D> geometry, int lanes, float laneWidth) {
-    roads.push_back(new Road(geometry, lanes, laneWidth));
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
@@ -237,7 +245,7 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
     std::vector<Object*> roadObjects = getRoadObjects(); // todo optimize with objects in range only (quadtree?)
     
     for (const Object* obj : roadObjects) {
-        if (obj != object) {
+        if (obj != object && obj->occludes) {
             auto lines = obj->getLines();
             for (const auto& [pt1, pt2] : lines) {
 
@@ -285,7 +293,6 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
     texture->display();
 
     sf::Image img = texture->getTexture().copyToImage();
-    img.saveToFile("save_cpp.png");
     unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
     return ImageMatrix(pixelsArr, 400, 400, 4);

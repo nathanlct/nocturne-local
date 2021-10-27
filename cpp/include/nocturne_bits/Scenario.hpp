@@ -21,9 +21,6 @@ public:
 
     void loadScenario(std::string path);
 
-
-    void addRoad(std::vector<Vector2D> geometry, int lanes, float laneWidth);
-
     void step(float dt);
 
     std::vector<Object*> getRoadObjects() const;
