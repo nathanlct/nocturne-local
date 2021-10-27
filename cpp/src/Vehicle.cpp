@@ -17,28 +17,28 @@ void Vehicle::act(float acceleration, float steering) {
 }
 
 void Vehicle::step(float dt) {
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-        accelAction = 100.0f;
-    }
-    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-        if (speed > 0.0f) accelAction = -200.0f;
-        else accelAction = -100.0f;
-    }
-    else {
-        if (speed > 0.0f) accelAction = -15.0f;
-        else if (speed < 0.0f) accelAction = 15.0f;
-        else accelAction = 0.0f;
-    }
+    // if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+    //     accelAction = 100.0f;
+    // }
+    // else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+    //     if (speed > 0.0f) accelAction = -200.0f;
+    //     else accelAction = -100.0f;
+    // }
+    // else {
+    //     if (speed > 0.0f) accelAction = -15.0f;
+    //     else if (speed < 0.0f) accelAction = 15.0f;
+    //     else accelAction = 0.0f;
+    // }
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-        steeringAction = -10.0f * pi / 180.0f;
-    }
-    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-        steeringAction = 10.0f * pi / 180.0f;
-    }
-    else {
-        steeringAction = 0.0f;
-    }
+    // if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+    //     steeringAction = -10.0f * pi / 180.0f;
+    // }
+    // else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+    //     steeringAction = 10.0f * pi / 180.0f;
+    // }
+    // else {
+    //     steeringAction = 0.0f;
+    // }
     
     kinematicsUpdate(dt);
 }
