@@ -29,6 +29,8 @@ public:
     sf::FloatRect getRoadNetworkBoundaries() const;
 
     ImageMatrix getCone(Object* object, float viewAngle = pi / 2.0f, float headTilt = 0.0f);
+    ImageMatrix getGoalImage(Object* object);
+
     bool checkForCollision(const Object* object1, const Object* object2);
 
 private:

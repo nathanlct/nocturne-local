@@ -3,16 +3,6 @@
     "objects": [
         {
             "type": "object",
-            "position": { "x": 0, "y": 0 },
-            "width": 80,
-            "length": 80,
-            "heading": 0,
-            "occludes": false,
-            "collides": false,
-            "checkForCollisions": false
-        },
-        {
-            "type": "object",
             "position": { "x": 42, "y": -220 },
             "width": 4,
             "length": 360,
@@ -99,7 +89,8 @@
             "heading": 90,
             "occludes": true,
             "collides": true,
-            "checkForCollisions": true
+            "checkForCollisions": true,
+            "goalPosition": { "x": 380, "y": -20 }
         }
     ],
     "roads": [
@@ -134,6 +125,15 @@
             ],
             "lanes": 2,
             "laneWidth": 40.0
+        },
+        {
+            "geometry": [
+                { "x": -40, "y": 0 },
+                { "x": 40, "y": 0 }
+            ],
+            "lanes": 1,
+            "laneWidth": 80.0,
+            "hasLines": false
         }
     ]
 }

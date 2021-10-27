@@ -1,16 +1,21 @@
 #include <Road.hpp>
 
 
-Road::Road(std::vector<Vector2D> geometry, int lanes, float laneWidth) : 
+Road::Road(std::vector<Vector2D> geometry, int lanes, float laneWidth, bool hasLines) : 
     geometry(geometry), nLanes(lanes), laneWidth(laneWidth),
     initialAngleDelta(pi / 2.0f), finalAngleDelta(pi / 2.0f),
-    angles(), anglesDelta(), lanesGeometry(),
+    angles(), anglesDelta(), lanesGeometry(), hasLines(hasLines),
     lineTypes()
 {
-    lineTypes.push_back(LineType::continuous);
-    for (int i = 0; i < nLanes - 1; ++i)
-        lineTypes.push_back(LineType::stripped);
-    lineTypes.push_back(LineType::continuous);
+    if (hasLines) {
+        lineTypes.push_back(LineType::continuous);
+        for (int i = 0; i < nLanes - 1; ++i)
+            lineTypes.push_back(LineType::stripped);
+        lineTypes.push_back(LineType::continuous);
+    } else {
+        for (int i = 0; i < nLanes + 1; ++i)
+            lineTypes.push_back(LineType::none);
+    }
 
     buildLanes();
     buildRoadGraphics();
@@ -93,6 +98,9 @@ void Road::buildRoadGraphics() {
 
     for (int lane = 0; lane < nLanes + 1; ++lane) {
         LineType lineType = lineTypes[lane];
+        if (lineType == LineType::none)
+            continue;
+
         float lineLength = 15.0f;
 
         bool penDown = true;

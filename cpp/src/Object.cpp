@@ -2,10 +2,11 @@
 
 
 Object::Object(Vector2D position, float width, float length, float heading,
-               bool occludes, bool collides, bool checkForCollisions) :
+               bool occludes, bool collides, bool checkForCollisions,
+               Vector2D goalPosition) :
     position(position), width(width), length(length), heading(heading),
     occludes(occludes), collides(collides), checkForCollisions(checkForCollisions),
-    speed(0), coneTexture(nullptr)
+    speed(0), coneTexture(nullptr), goalTexture(nullptr), goalPosition(goalPosition)
 {
 
 }

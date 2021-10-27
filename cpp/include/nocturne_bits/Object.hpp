@@ -10,7 +10,8 @@ class Point;
 class Object : public sf::Drawable {
 public:
     Object(Vector2D position, float width, float length, float heading,
-           bool occludes, bool collides, bool checkForCollisions);
+           bool occludes, bool collides, bool checkForCollisions,
+           Vector2D goalPosition);
 
     // bool intersectsWith(Object* other) const; // fast spherical pre-check, then accurate rectangular check
     // std::vector<Point> getCorners() const;
@@ -27,6 +28,7 @@ public:
     std::vector<std::pair<Vector2D,Vector2D>> getLines() const;
 
     sf::RenderTexture* coneTexture;
+    sf::RenderTexture* goalTexture;
 
 protected:
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
@@ -40,8 +42,11 @@ protected:
 
     float speed;
 
+
 public: // tmp
     bool occludes;
     bool collides;
     bool checkForCollisions;
+
+    Vector2D goalPosition;
 };

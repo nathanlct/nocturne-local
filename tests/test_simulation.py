@@ -6,18 +6,26 @@ import time
 sim = Simulation(scenarioPath='./scenarios/intersection.json')
 scenario = sim.getScenario()
 
-while True:
-    sim.step(0.01)
-    sim.render()
+sim.step(0.1)
+# while True:
+#     sim.step(0.01)
+#     sim.render()
 
 objects = scenario.getRoadObjects()
 print(objects)
 
-for i, obj in enumerate(objects):
-    cone = np.array(scenario.getCone(obj, 3.14/2.0, 0.0), copy=False)
-    plt.figure()
-    plt.imshow(cone)
-    plt.savefig(f'{i}_.png')
+# for i, obj in enumerate(objects):
+#     cone = np.array(scenario.getCone(obj, 3.14/2.0, 0.0), copy=False)
+#     plt.figure()
+#     plt.imshow(cone)
+#     plt.savefig(f'{i}_.png')
+
+obj = objects[-1]
+img = np.array(scenario.getGoalImage(obj), copy=False)
+plt.figure()
+plt.imshow(img)
+plt.savefig('goalImg.png')
+print('saved at ./goalImg.png')
 
 # objects = sim.getRoadObjects()
 # print(objects)

@@ -2,8 +2,9 @@
 
 
 Vehicle::Vehicle(Vector2D position, float width, float length, float heading,
-        bool occludes, bool collides, bool checkForCollisions) :
-    Object(position, width, length, heading, occludes, collides, checkForCollisions),
+        bool occludes, bool collides, bool checkForCollisions,
+        Vector2D goalPosition) :
+    Object(position, width, length, heading, occludes, collides, checkForCollisions, goalPosition),
     accelAction(0), steeringAction(0),
     lateralSpeed(0), yawRate(0)
 {

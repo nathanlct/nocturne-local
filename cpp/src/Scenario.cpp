@@ -30,16 +30,23 @@ void Scenario::loadScenario(std::string path) {
 
         bool occludes = obj["occludes"];
         bool collides = obj["collides"];
-        std::cout << collides << std::endl;
         bool checkForCollisions = obj["checkForCollisions"];
+
+        Vector2D goalPos;
+        if (obj.contains("goalPosition")) {
+            goalPos.x = obj["goalPosition"]["x"];
+            goalPos.y = obj["goalPosition"]["y"];
+        }
 
         if (type == "vehicle") {
             Vehicle* veh = new Vehicle(pos, width, length, heading,
-                                       occludes, collides, checkForCollisions);
+                                       occludes, collides, checkForCollisions,
+                                       goalPos);
             roadObjects.push_back(veh);
         } else if (type == "object") {
             Object* obj = new Object(pos, width, length, heading,
-                                     occludes, collides, checkForCollisions);
+                                     occludes, collides, checkForCollisions,
+                                     goalPos);
             roadObjects.push_back(obj);
         } else {
             std::cerr << "Unknown object type: " << type << std::endl;
@@ -54,8 +61,9 @@ void Scenario::loadScenario(std::string path) {
         
         int lanes = road["lanes"];
         float laneWidth = road["laneWidth"];
+        bool hasLines = road.value("hasLines", true);
 
-        Road* roadObject = new Road(geometry, lanes, laneWidth);
+        Road* roadObject = new Road(geometry, lanes, laneWidth, hasLines);
         roads.push_back(roadObject);
     }
 }
@@ -296,4 +304,62 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
     unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
     return ImageMatrix(pixelsArr, 400, 400, 4);
+}   
+
+
+ImageMatrix Scenario::getGoalImage(Object* object) {
+    int squareSide = 300;
+
+    if (object->goalTexture == nullptr) {
+        sf::ContextSettings settings;
+        settings.antialiasingLevel = 1;
+        object->goalTexture = new sf::RenderTexture();
+        object->goalTexture->create(squareSide, squareSide, settings);
+    }
+    sf::RenderTexture* texture = object->goalTexture;
+
+    sf::Transform renderTransform;
+    renderTransform.scale(1, -1); // horizontal flip
+
+    texture->clear(sf::Color(50, 50, 50));
+
+    // same as in Simulation.cpp
+    float padding = 50.0f;
+    sf::FloatRect scenarioBounds = getRoadNetworkBoundaries();
+    scenarioBounds.top = - scenarioBounds.top - scenarioBounds.height;
+    scenarioBounds.top -= padding;
+    scenarioBounds.left -= padding;
+    scenarioBounds.width += 2 * padding;
+    scenarioBounds.height += 2 * padding;
+    sf::Vector2f center = sf::Vector2f(
+        scenarioBounds.left + scenarioBounds.width / 2.0f, 
+        scenarioBounds.top + scenarioBounds.height / 2.0f
+    );
+    sf::Vector2f size = sf::Vector2f(squareSide, squareSide) 
+        * std::max(scenarioBounds.width / squareSide, scenarioBounds.height / squareSide);
+    sf::View view(center, size);
+
+    texture->setView(view);
+
+    for (const Road* road : roads) {
+        texture->draw(*road, renderTransform);
+    }
+    texture->draw(*object, renderTransform);
+
+    // draw goal destination
+    float radius = 10;
+    sf::CircleShape ptShape(radius);
+    ptShape.setOrigin(radius, radius);
+    ptShape.setFillColor(sf::Color::Green);
+    ptShape.setPosition(object->goalPosition.toVector2f());
+    texture->draw(ptShape, renderTransform);
+
+
+    // render texture and return
+    texture->display();
+
+    sf::Image img = texture->getTexture().copyToImage();
+    unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
+
+    return ImageMatrix(pixelsArr, squareSide, squareSide, 4);
 }   

@@ -11,7 +11,7 @@
 
 class Road : public sf::Drawable {
 public:
-    Road(std::vector<Vector2D> geometry, int lanes, float laneWidth);
+    Road(std::vector<Vector2D> geometry, int lanes, float laneWidth, bool hasLines);
 
     std::vector<Vector2D> getRoadPolygon() const;
 
@@ -24,6 +24,7 @@ private:
     std::vector<Vector2D> geometry;
     float laneWidth;
     int nLanes;
+    bool hasLines;
 
     float initialAngleDelta;
     float finalAngleDelta;
