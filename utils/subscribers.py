@@ -1,52 +1,62 @@
+import numpy as np
+
 class Subscriber(object):
-    def __init__(self, cfg, simulation):
+    # TODO(eugenevinitsky) just pass the simulation
+    def __init__(self, cfg, scenario, simulation):
         self.simulation = simulation
+        self.scenario = scenario
         self.cfg = cfg
-        self.object_subscriber(cfg.object_subscriber_cfg, simulation)
-        self.ego_subscriber(cfg.ego_subscriber, simulation)
+        self.object_subscriber = ObjectSubscriber(cfg.object_subscriber, scenario, simulation)
+        self.ego_subscriber = EgoSubscriber(cfg.ego_subscriber, scenario, simulation)
 
     def get_obs(self, object):
         obs_dict = {}
         if self.cfg.include_ego_state:
             obs_dict.update(self.ego_subscriber.get_obs(object))
+        # TODO(eugenevinitsky) add this method
         if self.cfg.include_visible_object_state:
             obs_dict['visible_objects'] = {
                 obj_id: self.object_subscriber.get_obs(obj)
-                for obj_id, obj in self.simulation.getVisibleObjects(object)
+                for obj_id, obj in self.scenario.getVisibleObjects(object)
             }
         return obs_dict
 
 
 class ObjectSubscriber(object):
-    def __init__(self, cfg, simulation):
+    def __init__(self, cfg, scenario, simulation):
         self.cfg = cfg
+        self.scenario = scenario
         self.simulation = simulation
 
     def get_obs(self, object):
         obs_dict = {}
         if self.cfg.include_speed:
-            obs_dict['curr_speed'] = self.simulation.getSpeed(object)
-        if self.cfg.include_xy:
-            obs_dict['xy'] = self.simulation.getXY(object)
+            obs_dict['curr_speed'] = object.getSpeed()
+        if self.cfg.include_pos:
+            obs_dict['pos'] = object.getPosition()
         return obs_dict
 
 
 class EgoSubscriber(object):
-    def __init__(self, cfg, simulation):
+    def __init__(self, cfg, scenario, simulation):
         self.cfg = cfg
+        self.scenario = scenario
         self.simulation = simulation
 
     def get_obs(self, object):
         obs_dict = {}
         if self.cfg.img_view:
-            obs_dict['ego_image'] = self.simulation.getCone(
-                object, self.cfg.view_angle, object.getHeadTilt())
+            # TODO(eugenevinitsky) include head tilt instead 0.0
+            obs_dict['ego_image'] = np.array(self.scenario.getCone(
+                object, self.cfg.view_angle, 0.0), copy=False)
         if self.cfg.include_speed:
-            obs_dict['ego_speed'] = self.simulation.getSpeed(object)
-        if self.cfg.include_goal_xy:
-            obs_dict['goal_xy'] = self.simulation.getGoalXY(object)
+            obs_dict['ego_speed'] = object.getSpeed()
+        if self.cfg.include_pos:
+            obs_dict['ego_pos'] = object.getPosition()
+        if self.cfg.include_goal_pos:
+            obs_dict['goal_pos'] = object.getGoalPosition()
         if self.cfg.include_goal_img:
-            obs_dict['goal_img'] = self.simulation.getGoalXY(object)
-        if self.cfg.include_lane_pos:
-            obs_dict['lane_pos'] = self.simulation.getLanePos(object)
+            obs_dict['goal_img'] = self.scenario.getGoalImage(object)
+        # if self.cfg.include_lane_pos:
+        #     obs_dict['lane_pos'] = self.simulation.getLanePos(object)
         return obs_dict

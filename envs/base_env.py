@@ -8,10 +8,11 @@ from utils.subscribers import Subscriber
 
 
 class BaseEnv(object):
-    def __init__(self, scenario_path, cfg):
+    def __init__(self, cfg):
         
-        self.simulation = Simulation(scenario_path)
-        self.subscriber = Subscriber(cfg.subscriber)
+        self.simulation = Simulation(cfg.scenario_path)
+        self.scenario = self.simulation.getScenario()
+        self.subscriber = Subscriber(cfg.subscriber, self.scenario, self.simulation)
         self.cfg = cfg
         self.t = 0
 
@@ -22,15 +23,17 @@ class BaseEnv(object):
         pass
 
     def apply_actions(self, action_dict):
-        for veh_id, veh_obj in self.simulation.getVehicles():
+        import ipdb; ipdb.set_trace()
+        for veh_obj in self.scenario.getVehicles():
+            veh_id = veh_obj.getID()
             if veh_id in action_dict.keys():
                 action = action_dict[veh_id]
                 if 'accel' in action.keys():
-                    self.simulation.applyAccel(action['accel'])
+                    self.simulation.setAccel(action['accel'])
                 if 'turn' in action.keys():
-                    self.simulation.applyTurn(action['turn'])
-                if 'tilt_view' in action.keys():
-                    self.simulation.applyViewTilt(action['tilt_view'])
+                    self.simulation.setSteeringAngle(action['turn'])
+                # if 'tilt_view' in action.keys():
+                #     self.simulation.applyViewTilt(action['tilt_view'])
 
     def step(self, action_dict):
         obs_dict = {}
@@ -41,16 +44,18 @@ class BaseEnv(object):
         self.apply_actions(action_dict)
         self.simulation.step(self.cfg.dt)
         self.t += self.cfg.dt
-        for veh_id, veh_obj in self.simulation.getVehicles():
+        for veh_obj in self.simulation.getScenario().getVehicles():
+            veh_id = veh_obj.getID()
             obs_dict[veh_id] = self.subscriber.get_obs(veh_obj)
             rew_dict[veh_id] = 0
             done_dict[veh_id] = False
             if self.simulation.hasCollided(veh_obj):
                 rew_dict[veh_id] -= np.abs(rew_cfg.collision_penalty)
                 done_dict[veh_id] = True
-            if self.simulation.crossedLaneLines(veh_obj):
-                rew_dict[veh_id] -= np.abs(rew_cfg.crossed_lanes_penalty)
-            if self.simulation.goalAchieved(veh_obj):
+            # if self.simulation.crossedLaneLines(veh_obj):
+            #     rew_dict[veh_id] -= np.abs(rew_cfg.crossed_lanes_penalty)
+            # TODO(eugenevinitsky) 
+            if np.abs(self.simulation.getPosition(veh_obj) - self.simulation.getGoalPosition(veh_obj)) < rew_cfg.goal_tolerance:
                 rew_dict[veh_id] += np.abs(rew_cfg.goal_achieved_bonus)
 
         return obs_dict, rew_dict, done_dict, info_dict
@@ -59,6 +64,7 @@ class BaseEnv(object):
         self.t = 0
         self.simulation.reset()
         obs_dict = {}
-        for veh_id, veh_obj in self.simulation.getVehicles():
+        for veh_obj in self.simulation.getScenario().getVehicles():
+            veh_id = veh_obj.getID()
             obs_dict[veh_id] = self.subscriber.get_obs(veh_obj)
         return obs_dict
