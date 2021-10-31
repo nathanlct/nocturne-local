@@ -8,6 +8,10 @@ namespace py = pybind11;
 void init_maths(py::module &m) {
     m.doc() = "nocturne documentation for classes Vector2D, ImageMatrix";
 
+    py::class_<Vector2D>(m, "Vector2D")
+        .def_readonly("x", &Vector2D::x)
+        .def_readonly("y", &Vector2D::y);
+
     py::class_<ImageMatrix>(m, "ImageMatrix", py::buffer_protocol())
         .def_buffer([](ImageMatrix &m) -> py::buffer_info {
             return py::buffer_info(

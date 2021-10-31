@@ -8,7 +8,7 @@ Vehicle::Vehicle(Vector2D position, float width, float length, float heading,
     accelAction(0), steeringAction(0),
     lateralSpeed(0), yawRate(0)
 {
-    
+    type = "Vehicle";
 }
 
 void Vehicle::setAccel(float acceleration) {

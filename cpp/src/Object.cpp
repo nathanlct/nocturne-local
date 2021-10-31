@@ -1,12 +1,15 @@
 #include <Object.hpp>
 
 
+int Object::nextID = 0;
+
 Object::Object(Vector2D position, float width, float length, float heading,
                bool occludes, bool collides, bool checkForCollisions,
                Vector2D goalPosition) :
     position(position), width(width), length(length), heading(heading),
     occludes(occludes), collides(collides), checkForCollisions(checkForCollisions),
-    speed(0), coneTexture(nullptr), goalTexture(nullptr), goalPosition(goalPosition)
+    speed(0), coneTexture(nullptr), goalTexture(nullptr), goalPosition(goalPosition),
+    id(nextID++), type("Object"), hasCollided(false)
 {
 
 }
@@ -53,6 +56,12 @@ void Object::draw(sf::RenderTarget& target, sf::RenderStates states) const {
 Vector2D Object::getPosition() const {
     return position;
 }
+Vector2D Object::getGoalPosition() const {
+    return goalPosition;
+}
+float Object::getSpeed() const {
+    return speed;
+}
 float Object::getHeading() const {
     return heading;
 }
@@ -65,6 +74,13 @@ float Object::getLength() const {
 float Object::getRadius() const {
     return std::sqrt(width * width + length * length) / 2.0f;
 }
+int Object::getID() const {
+    return id;
+}
+std::string Object::getType() const {
+    return type;
+}
+
 std::vector<Vector2D> Object::getCorners() const {
     std::vector<Vector2D> corners;
     // create points
@@ -89,4 +105,12 @@ std::vector<std::pair<Vector2D,Vector2D>> Object::getLines() const {
         lines.emplace_back(corners[i], corners[(i+1) % corners.size()]);
     }
     return lines;
+}
+
+void Object::setCollided(bool collided) {
+    hasCollided = collided;
+}
+
+bool Object::getCollided() const {
+    return hasCollided;
 }

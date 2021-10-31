@@ -24,6 +24,7 @@ public:
     void step(float dt);
 
     std::vector<Object*> getRoadObjects() const;
+    std::vector<Vehicle*> getVehicles() const;
     std::vector<Road*> getRoads() const;
 
     sf::FloatRect getRoadNetworkBoundaries() const;
@@ -38,5 +39,6 @@ private:
 
     std::string name;
     std::vector<Object*> roadObjects;
+    std::vector<Vehicle*> vehicles;
     std::vector<Road*> roads;
 };

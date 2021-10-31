@@ -1,7 +1,7 @@
 #include <Scenario.hpp>
 
 
-Scenario::Scenario(std::string path) : roadObjects(), roads() {
+Scenario::Scenario(std::string path) : roadObjects(), vehicles(), roads() {
     if (path.size() > 0) {
         loadScenario(path);
     } else {        
@@ -43,6 +43,7 @@ void Scenario::loadScenario(std::string path) {
                                        occludes, collides, checkForCollisions,
                                        goalPos);
             roadObjects.push_back(veh);
+            vehicles.push_back(veh);
         } else if (type == "object") {
             Object* obj = new Object(pos, width, length, heading,
                                      occludes, collides, checkForCollisions,
@@ -83,7 +84,8 @@ void Scenario::step(float dt) {
                 continue;
             bool collided = checkForCollision(object1, object2);
             if (collided) {
-                std::cout << "collision!" << std::endl;
+                object1->setCollided(true);
+                object2->setCollided(true);
             }
         }
     }
@@ -152,6 +154,10 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
 
 std::vector<Object*> Scenario::getRoadObjects() const { 
     return roadObjects; 
+}
+
+std::vector<Vehicle*> Scenario::getVehicles() const { 
+    return vehicles; 
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
