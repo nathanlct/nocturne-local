@@ -9,8 +9,24 @@ void init_object(py::module &m) {
     m.doc() = "nocturne documentation for class Object and subclass Vehicle";
 
     py::class_<Object>(m, "Object")
-        .def("getWidth", &Object::getWidth, "Get object width");
+        .def("getWidth", &Object::getWidth)
+        .def("getPosition", &Object::getPosition)
+        .def("getGoalPosition", &Object::getGoalPosition)
+        .def("getSpeed", &Object::getSpeed)
+        .def("getHeading", &Object::getHeading)
+        .def("getID", &Object::getID)
+        .def("getType", &Object::getType)
+        .def("getCollided", &Object::getCollided);
 
     py::class_<Vehicle, Object>(m, "Vehicle")
-        .def("getWidth", &Vehicle::getWidth, "Get vehicle width");
+        .def("getWidth", &Vehicle::getWidth)
+        .def("getPosition", &Vehicle::getPosition)
+        .def("getGoalPosition", &Vehicle::getGoalPosition)
+        .def("getSpeed", &Vehicle::getSpeed)
+        .def("getHeading", &Vehicle::getHeading)
+        .def("getID", &Vehicle::getID)
+        .def("getType", &Vehicle::getType)
+        .def("getCollided", &Vehicle::getCollided)
+        .def("setAccel", &Vehicle::setAccel)
+        .def("setSteeringAngle", &Vehicle::setSteeringAngle);
 }

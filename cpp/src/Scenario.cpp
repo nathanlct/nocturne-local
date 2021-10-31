@@ -1,7 +1,7 @@
 #include <Scenario.hpp>
 
 
-Scenario::Scenario(std::string path) : roadObjects(), roads() {
+Scenario::Scenario(std::string path) : roadObjects(), vehicles(), roads() {
     if (path.size() > 0) {
         loadScenario(path);
     } else {        
@@ -28,11 +28,26 @@ void Scenario::loadScenario(std::string path) {
         float length = obj["length"];
         float heading = (float)obj["heading"] * pi / 180.0f;
 
+        bool occludes = obj["occludes"];
+        bool collides = obj["collides"];
+        bool checkForCollisions = obj["checkForCollisions"];
+
+        Vector2D goalPos;
+        if (obj.contains("goalPosition")) {
+            goalPos.x = obj["goalPosition"]["x"];
+            goalPos.y = obj["goalPosition"]["y"];
+        }
+
         if (type == "vehicle") {
-            Vehicle* veh = new Vehicle(pos, width, length, heading);
+            Vehicle* veh = new Vehicle(pos, width, length, heading,
+                                       occludes, collides, checkForCollisions,
+                                       goalPos);
             roadObjects.push_back(veh);
+            vehicles.push_back(veh);
         } else if (type == "object") {
-            Object* obj = new Object(pos, width, length, heading);
+            Object* obj = new Object(pos, width, length, heading,
+                                     occludes, collides, checkForCollisions,
+                                     goalPos);
             roadObjects.push_back(obj);
         } else {
             std::cerr << "Unknown object type: " << type << std::endl;
@@ -47,8 +62,10 @@ void Scenario::loadScenario(std::string path) {
         
         int lanes = road["lanes"];
         float laneWidth = road["laneWidth"];
+        bool hasLines = road.value("hasLines", true);
 
-        addRoad(geometry, lanes, laneWidth);
+        Road* roadObject = new Road(geometry, lanes, laneWidth, hasLines);
+        roads.push_back(roadObject);
     }
 }
 
@@ -59,11 +76,16 @@ void Scenario::step(float dt) {
 
     for (auto* object1 : roadObjects) {
         for (auto* object2 : roadObjects) {
-            if (object1 != object2) {
-                bool collided = checkForCollision(object1, object2);
-                if (collided) {
-                    std::cout << "collision!" << std::endl;
-                }
+            if (object1 == object2)
+                continue;
+            if (!object1->checkForCollisions && !object2->checkForCollisions)
+                continue;
+            if (!object1->collides || !object2->collides)
+                continue;
+            bool collided = checkForCollision(object1, object2);
+            if (collided) {
+                object1->setCollided(true);
+                object2->setCollided(true);
             }
         }
     }
@@ -134,8 +156,8 @@ std::vector<Object*> Scenario::getRoadObjects() const {
     return roadObjects; 
 }
 
-void Scenario::addRoad(std::vector<Vector2D> geometry, int lanes, float laneWidth) {
-    roads.push_back(new Road(geometry, lanes, laneWidth));
+std::vector<Vehicle*> Scenario::getVehicles() const { 
+    return vehicles; 
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
@@ -237,7 +259,7 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
     std::vector<Object*> roadObjects = getRoadObjects(); // todo optimize with objects in range only (quadtree?)
     
     for (const Object* obj : roadObjects) {
-        if (obj != object) {
+        if (obj != object && obj->occludes) {
             auto lines = obj->getLines();
             for (const auto& [pt1, pt2] : lines) {
 
@@ -285,8 +307,65 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
     texture->display();
 
     sf::Image img = texture->getTexture().copyToImage();
-    img.saveToFile("save_cpp.png");
     unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
     return ImageMatrix(pixelsArr, 400, 400, 4);
+}   
+
+
+ImageMatrix Scenario::getGoalImage(Object* object) {
+    int squareSide = 300;
+
+    if (object->goalTexture == nullptr) {
+        sf::ContextSettings settings;
+        settings.antialiasingLevel = 1;
+        object->goalTexture = new sf::RenderTexture();
+        object->goalTexture->create(squareSide, squareSide, settings);
+    }
+    sf::RenderTexture* texture = object->goalTexture;
+
+    sf::Transform renderTransform;
+    renderTransform.scale(1, -1); // horizontal flip
+
+    texture->clear(sf::Color(50, 50, 50));
+
+    // same as in Simulation.cpp
+    float padding = 50.0f;
+    sf::FloatRect scenarioBounds = getRoadNetworkBoundaries();
+    scenarioBounds.top = - scenarioBounds.top - scenarioBounds.height;
+    scenarioBounds.top -= padding;
+    scenarioBounds.left -= padding;
+    scenarioBounds.width += 2 * padding;
+    scenarioBounds.height += 2 * padding;
+    sf::Vector2f center = sf::Vector2f(
+        scenarioBounds.left + scenarioBounds.width / 2.0f, 
+        scenarioBounds.top + scenarioBounds.height / 2.0f
+    );
+    sf::Vector2f size = sf::Vector2f(squareSide, squareSide) 
+        * std::max(scenarioBounds.width / squareSide, scenarioBounds.height / squareSide);
+    sf::View view(center, size);
+
+    texture->setView(view);
+
+    for (const Road* road : roads) {
+        texture->draw(*road, renderTransform);
+    }
+    texture->draw(*object, renderTransform);
+
+    // draw goal destination
+    float radius = 10;
+    sf::CircleShape ptShape(radius);
+    ptShape.setOrigin(radius, radius);
+    ptShape.setFillColor(sf::Color::Green);
+    ptShape.setPosition(object->goalPosition.toVector2f());
+    texture->draw(ptShape, renderTransform);
+
+
+    // render texture and return
+    texture->display();
+
+    sf::Image img = texture->getTexture().copyToImage();
+    unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
+
+    return ImageMatrix(pixelsArr, squareSide, squareSide, 4);
 }   

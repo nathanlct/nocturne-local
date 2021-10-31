@@ -14,6 +14,7 @@ void init_simulation(py::module &m) {
             py::arg("scenarioPath") = "")
         .def("step", &Simulation::step)
         .def("render", &Simulation::render)
+        .def("reset", &Simulation::reset)
         .def("saveScreenshot", &Simulation::saveScreenshot)
         .def("getScenario", &Simulation::getScenario);
 }
