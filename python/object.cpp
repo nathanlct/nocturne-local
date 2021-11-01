@@ -8,7 +8,7 @@ namespace py = pybind11;
 void init_object(py::module &m) {
     m.doc() = "nocturne documentation for class Object and subclass Vehicle";
 
-    py::class_<Object>(m, "Object")
+    py::class_<Object, std::shared_ptr<Object>>(m, "Object")
         .def("getWidth", &Object::getWidth)
         .def("getPosition", &Object::getPosition)
         .def("getGoalPosition", &Object::getGoalPosition)
@@ -18,7 +18,7 @@ void init_object(py::module &m) {
         .def("getType", &Object::getType)
         .def("getCollided", &Object::getCollided);
 
-    py::class_<Vehicle, Object>(m, "Vehicle")
+    py::class_<Vehicle, std::shared_ptr<Vehicle>, Object>(m, "Vehicle")
         .def("getWidth", &Vehicle::getWidth)
         .def("getPosition", &Vehicle::getPosition)
         .def("getGoalPosition", &Vehicle::getGoalPosition)
