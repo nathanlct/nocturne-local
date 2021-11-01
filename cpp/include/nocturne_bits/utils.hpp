@@ -9,6 +9,7 @@
  * @throw std::invalid_argument if font file is not found
  */
 inline sf::Font getFont(std::string fontName) {
+    std::string username = getenv("USER");
     std::vector<std::string> fontPaths = {
         // OS X
         "/System/Library/Fonts/Supplemental/",
@@ -17,7 +18,7 @@ inline sf::Font getFont(std::string fontName) {
         "/usr/share/fonts",
         "/usr/local/share/fonts",
         "~/.fonts/",
-        "/private/home/eugenevinitsky/.fonts/"
+        "/private/home/" + username + "/.fonts/"
     };
 
     std::string fontPath = "";
