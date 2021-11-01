@@ -16,9 +16,11 @@ class BaseEnv(object):
         self.cfg = cfg
         self.t = 0
 
+    @property
     def observation_space(self):
         pass
 
+    @property
     def action_space(self):
         pass
 
