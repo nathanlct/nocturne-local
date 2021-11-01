@@ -72,3 +72,11 @@ make
 ```
 
 after which the executables can be found in `nocturne/cpp/tests/bin`.
+
+## Common errors:
+### CMAKE can't find SFML library.
+Make sure the path to SFML is included in CMAKE_PREFIX_PATH.
+### ImportError: libsfml-graphics.so.2.5: cannot open shared object file: No such file or directory
+Make sure SFML/lib is included in LD_LIBRARY_PATH if you're on a linux machine 
+### ImportError: libudev.so.0: cannot open shared object file
+Do this really dumb thing. Make a folder, run ```ln -s /usr/lib/x86_64-linux-gnu/libudev.so.1 libudev.so.0``` then add that folder to the LD_LIBRARY_PATH

@@ -1,0 +1,40 @@
+defaults:
+  - override hydra/launcher: submitit_local
+
+# TODO(eugenevinitsky) don't hardcode this
+scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/intersection.json'
+view_angle: 1.56
+dt: 0.1
+rew_cfg:
+  goal_tolerance: 0.05
+  collision_penalty: -1.0
+subscriber:
+  include_ego_state: True
+  # TODO(eugenevinitsky) this should be true
+  include_visible_object_state: False
+  object_subscriber:
+    include_speed: True
+    include_pos: True
+  ego_subscriber:
+    img_view: True
+    view_angle: ${view_angle}
+    include_speed: True
+    include_pos: True
+    include_goal_pos: True
+    include_goal_img: True
+    # include_lane_pos: True
+
+hydra:
+  run:
+    dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
+  sweep:
+    dir: ./exp/${now:%Y.%m.%d}/${now:%H%M}_${experiment}
+    subdir: ${hydra.job.num}
+  launcher:
+    timeout_min: 4300
+    cpus_per_task: 10
+    gpus_per_node: 1
+    tasks_per_node: 1
+    mem_gb: 160
+    nodes: 1
+    submitit_folder: ./exp/${now:%Y.%m.%d}/${now:%H%M%S}_${experiment}/.slurm

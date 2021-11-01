@@ -1,8 +1,12 @@
+import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 from nocturne import Simulation
-import matplotlib.pyplot as plt
+
 import time
 
+os.environ["DISPLAY"] = ":0.0"
 sim = Simulation(scenarioPath='./scenarios/intersection.json')
 scenario = sim.getScenario()
 
