@@ -23,7 +23,6 @@ class BaseEnv(object):
         pass
 
     def apply_actions(self, action_dict):
-        import ipdb; ipdb.set_trace()
         for veh_obj in self.scenario.getVehicles():
             veh_id = veh_obj.getID()
             if veh_id in action_dict.keys():
@@ -49,13 +48,17 @@ class BaseEnv(object):
             obs_dict[veh_id] = self.subscriber.get_obs(veh_obj)
             rew_dict[veh_id] = 0
             done_dict[veh_id] = False
-            if self.simulation.hasCollided(veh_obj):
+            if veh_obj.getCollided():
                 rew_dict[veh_id] -= np.abs(rew_cfg.collision_penalty)
                 done_dict[veh_id] = True
             # if self.simulation.crossedLaneLines(veh_obj):
             #     rew_dict[veh_id] -= np.abs(rew_cfg.crossed_lanes_penalty)
             # TODO(eugenevinitsky) 
-            if np.abs(self.simulation.getPosition(veh_obj) - self.simulation.getGoalPosition(veh_obj)) < rew_cfg.goal_tolerance:
+            obj_pos = veh_obj.getPosition()
+            obj_pos = np.array([obj_pos.x, obj_pos.y])
+            goal_pos = veh_obj.getGoalPosition()
+            goal_pos = np.array([goal_pos.x, goal_pos.y])
+            if np.linalg.norm(goal_pos - obj_pos) < rew_cfg.goal_tolerance:
                 rew_dict[veh_id] += np.abs(rew_cfg.goal_achieved_bonus)
 
         return obs_dict, rew_dict, done_dict, info_dict

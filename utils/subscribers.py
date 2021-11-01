@@ -33,7 +33,8 @@ class ObjectSubscriber(object):
         if self.cfg.include_speed:
             obs_dict['curr_speed'] = object.getSpeed()
         if self.cfg.include_pos:
-            obs_dict['pos'] = object.getPosition()
+            pos = object.getPosition()
+            obs_dict['pos'] = np.array([pos.x, pos.y])
         return obs_dict
 
 
@@ -52,9 +53,11 @@ class EgoSubscriber(object):
         if self.cfg.include_speed:
             obs_dict['ego_speed'] = object.getSpeed()
         if self.cfg.include_pos:
-            obs_dict['ego_pos'] = object.getPosition()
+            pos = object.getPosition()
+            obs_dict['ego_pos'] = np.array([pos.x, pos.y])
         if self.cfg.include_goal_pos:
-            obs_dict['goal_pos'] = object.getGoalPosition()
+            pos = object.getGoalPosition()
+            obs_dict['goal_pos'] = np.array([pos.x, pos.y])
         if self.cfg.include_goal_img:
             obs_dict['goal_img'] = self.scenario.getGoalImage(object)
         # if self.cfg.include_lane_pos:

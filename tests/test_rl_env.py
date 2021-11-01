@@ -10,7 +10,6 @@ os.environ["DISPLAY"] = ":0.0"
 def main(cfg):
     env = BaseEnv(cfg)
     env.reset()
-    import ipdb; ipdb.set_trace()
     env.step({'8': {'accel': 2.0, 'turn': 1.0}})
 
 if __name__ == '__main__':
