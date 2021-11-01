@@ -23,9 +23,8 @@ public:
 
     void step(float dt);
 
-    std::vector<Object*> getRoadObjects() const;
-    std::vector<Vehicle*> getVehicles() const;
-    std::vector<Road*> getRoads() const;
+    std::vector<std::shared_ptr<Object>> getRoadObjects();
+    std::vector<std::shared_ptr<Vehicle>> getVehicles();
 
     sf::FloatRect getRoadNetworkBoundaries() const;
 
@@ -38,7 +37,7 @@ private:
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
     std::string name;
-    std::vector<Object*> roadObjects;
-    std::vector<Vehicle*> vehicles;
-    std::vector<Road*> roads;
+    std::vector<std::shared_ptr<Object>> roadObjects;
+    std::vector<std::shared_ptr<Vehicle>> vehicles;
+    std::vector<std::shared_ptr<Road>> roads;
 };

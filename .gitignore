@@ -12,3 +12,10 @@ bin/
 # media
 *.mov
 *.png
+
+# Python
+__pycache__/
+*.pyc
+
+# packaging
+*.egg-info/

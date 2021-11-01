@@ -42,13 +42,14 @@ void Scenario::loadScenario(std::string path) {
             Vehicle* veh = new Vehicle(pos, width, length, heading,
                                        occludes, collides, checkForCollisions,
                                        goalPos);
-            roadObjects.push_back(veh);
-            vehicles.push_back(veh);
+            auto ptr = std::shared_ptr<Vehicle>(veh);
+            roadObjects.push_back(ptr);
+            vehicles.push_back(ptr);
         } else if (type == "object") {
             Object* obj = new Object(pos, width, length, heading,
                                      occludes, collides, checkForCollisions,
                                      goalPos);
-            roadObjects.push_back(obj);
+            roadObjects.push_back(std::shared_ptr<Object>(obj));
         } else {
             std::cerr << "Unknown object type: " << type << std::endl;
         }
@@ -65,24 +66,24 @@ void Scenario::loadScenario(std::string path) {
         bool hasLines = road.value("hasLines", true);
 
         Road* roadObject = new Road(geometry, lanes, laneWidth, hasLines);
-        roads.push_back(roadObject);
+        roads.push_back(std::shared_ptr<Road>(roadObject));
     }
 }
 
 void Scenario::step(float dt) {
-    for (auto* object : roadObjects) {
+    for (auto& object : roadObjects) {
         object->step(dt);
     }
 
-    for (auto* object1 : roadObjects) {
-        for (auto* object2 : roadObjects) {
+    for (auto& object1 : roadObjects) {
+        for (auto& object2 : roadObjects) {
             if (object1 == object2)
                 continue;
             if (!object1->checkForCollisions && !object2->checkForCollisions)
                 continue;
             if (!object1->collides || !object2->collides)
                 continue;
-            bool collided = checkForCollision(object1, object2);
+            bool collided = checkForCollision(object1.get(), object2.get());
             if (collided) {
                 object1->setCollided(true);
                 object2->setCollided(true);
@@ -144,19 +145,20 @@ bool Scenario::checkForCollision(const Object* object1, const Object* object2) {
 }
 
 void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
-    for (const Road* road : roads) {
+    for (const auto& road : roads) {
         target.draw(*road, states);
     }
-    for (const Object* object : roadObjects) {
+    for (const auto& object : roadObjects) {
         target.draw(*object, states);
     }
 }
 
-std::vector<Object*> Scenario::getRoadObjects() const { 
+// std::vector<std::unique_ptr<Object, py::nodelete>> Scenario::getRoadObjects() { 
+std::vector<std::shared_ptr<Object>> Scenario::getRoadObjects() { 
     return roadObjects; 
 }
 
-std::vector<Vehicle*> Scenario::getVehicles() const { 
+std::vector<std::shared_ptr<Vehicle>> Scenario::getVehicles() { 
     return vehicles; 
 }
 
@@ -164,7 +166,7 @@ sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
     float minX, minY, maxX, maxY;
     bool first = true;
 
-    for (const auto* road : roads) {
+    for (const auto& road : roads) {
         for (const auto& point : road->getRoadPolygon()) {
             if (first) {
                 minX = maxX = point.x;
@@ -256,10 +258,10 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
     renderTransform.rotate(- object->getHeading() * 180.0f / pi + 90.0f);
 
     // draw obstructions
-    std::vector<Object*> roadObjects = getRoadObjects(); // todo optimize with objects in range only (quadtree?)
+    std::vector<std::shared_ptr<Object>> roadObjects = getRoadObjects(); // todo optimize with objects in range only (quadtree?)
     
-    for (const Object* obj : roadObjects) {
-        if (obj != object && obj->occludes) {
+    for (const auto& obj : roadObjects) {
+        if (obj.get() != object && obj->occludes) {
             auto lines = obj->getLines();
             for (const auto& [pt1, pt2] : lines) {
 
@@ -347,7 +349,7 @@ ImageMatrix Scenario::getGoalImage(Object* object) {
 
     texture->setView(view);
 
-    for (const Road* road : roads) {
+    for (const auto& road : roads) {
         texture->draw(*road, renderTransform);
     }
     texture->draw(*object, renderTransform);
