@@ -111,7 +111,8 @@ class ReplayBuffer:
         observations = self.env.observation(self._states[traj_idxs,
                                                          time_state_idxs])
         actions = self._actions[traj_idxs, time_state_idxs]
-        goals = self.env.extract_goal(self._states[traj_idxs, time_goal_idxs])
+        # TODO(eugenevinitsky) changed the goal extraction here and I'm not certain it's correct
+        goals = self.env.extract_achieved_goal(self._states[traj_idxs, time_goal_idxs])
 
         lengths = time_goal_idxs - time_state_idxs
         horizons = np.tile(np.arange(self.max_trajectory_length),

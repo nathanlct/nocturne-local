@@ -23,6 +23,7 @@ subscriber:
     view_angle: ${view_angle}
     include_speed: True
     include_pos: True
+    include_heading: True
     include_goal_pos: True
     include_goal_img: True
     # include_lane_pos: True

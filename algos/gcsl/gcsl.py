@@ -124,6 +124,7 @@ class GCSL:
         horizons_torch = torch.tensor(horizons, dtype=obs_dtype)
         weights_torch = torch.tensor(weights, dtype=torch.float32)
 
+        # print(goals_torch[0])
         conditional_nll = self.policy.nll(observations_torch,
                                           goals_torch,
                                           actions_torch,

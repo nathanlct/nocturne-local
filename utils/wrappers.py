@@ -175,6 +175,9 @@ class GoalEnvWrapper(BaseEnv):
         """
         return state[..., -2:]
 
+    def extract_achieved_goal(self, state):
+        return state[..., 1:3]
+
     def goal_distance(self, state, goal_state):
         if self.goal_metric == 'euclidean':
             try:

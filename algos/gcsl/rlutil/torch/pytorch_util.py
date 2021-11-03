@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 USE_GPU = torch.cuda.is_available()
-CUDA_DEVICE = torch.device('cuda')
+CUDA_DEVICE = torch.device('cuda:1')
 CPU_DEVICE = torch.device('cpu')
 
 def set_gpu(enable=True):
