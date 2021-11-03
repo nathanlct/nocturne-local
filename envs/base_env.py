@@ -30,9 +30,9 @@ class BaseEnv(object):
             if veh_id in action_dict.keys():
                 action = action_dict[veh_id]
                 if 'accel' in action.keys():
-                    self.simulation.setAccel(action['accel'])
+                    veh_obj.setAccel(action['accel'])
                 if 'turn' in action.keys():
-                    self.simulation.setSteeringAngle(action['turn'])
+                    veh_obj.setSteeringAngle(action['turn'])
                 # if 'tilt_view' in action.keys():
                 #     self.simulation.applyViewTilt(action['tilt_view'])
 

@@ -10,8 +10,11 @@ os.environ["DISPLAY"] = ":0.0"
 @hydra.main(config_path='../cfgs/', config_name='config')
 def main(cfg):
     env = create_env(cfg)
-    env.reset()
-    env.step({'8': {'accel': 2.0, 'turn': 1.0}})
+    obs = env.reset()
+    print(obs)
+    for i in range(10):
+        obs, rew, done, info = env.step({8: {'accel': 2.0, 'turn': 1.0}})
+        print(obs)
 
 if __name__ == '__main__':
     main()
