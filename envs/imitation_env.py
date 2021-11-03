@@ -25,7 +25,8 @@ class WaymoImitationEnv(BaseEnv):
         obs_dict = {}
         expert_actions = {}
         for veh_id, veh_obj in self.simulation.getVehicles():
-            expert_actions[veh_id] = get_actions_from_protobuf(self.protobuf, veh_id, self.t)
+            expert_actions[veh_id] = get_actions_from_protobuf(
+                self.protobuf, veh_id, self.t)
         # either we use the expert or we roll out the actions returned by the imitator
         if self.cfg.dagger:
             self.apply_actions(action_dict)

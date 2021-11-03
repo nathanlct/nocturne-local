@@ -1,14 +1,17 @@
 from collections import OrderedDict
 import numpy as np
 
+
 class Subscriber(object):
     # TODO(eugenevinitsky) just pass the simulation
     def __init__(self, cfg, scenario, simulation):
         self.simulation = simulation
         self.scenario = scenario
         self.cfg = cfg
-        self.object_subscriber = ObjectSubscriber(cfg.object_subscriber, scenario, simulation)
-        self.ego_subscriber = EgoSubscriber(cfg.ego_subscriber, scenario, simulation)
+        self.object_subscriber = ObjectSubscriber(cfg.object_subscriber,
+                                                  scenario, simulation)
+        self.ego_subscriber = EgoSubscriber(cfg.ego_subscriber, scenario,
+                                            simulation)
 
     def get_obs(self, object):
         obs_dict = OrderedDict()
@@ -50,7 +53,8 @@ class EgoSubscriber(object):
         if self.cfg.img_view:
             # TODO(eugenevinitsky) include head tilt instead 0.0
             obs_dict['ego_image'] = np.array(self.scenario.getCone(
-                object, self.cfg.view_angle, 0.0), copy=False)
+                object, self.cfg.view_angle, 0.0),
+                                             copy=False)
         if self.cfg.include_speed:
             obs_dict['ego_speed'] = np.array([object.getSpeed()])
         if self.cfg.include_pos:
@@ -60,7 +64,8 @@ class EgoSubscriber(object):
             pos = object.getGoalPosition()
             obs_dict['goal_pos'] = np.array([pos.x, pos.y])
         if self.cfg.include_goal_img:
-            obs_dict['goal_img'] = np.array(self.scenario.getGoalImage(object), copy=False)
+            obs_dict['goal_img'] = np.array(self.scenario.getGoalImage(object),
+                                            copy=False)
         # if self.cfg.include_lane_pos:
         #     obs_dict['lane_pos'] = self.simulation.getLanePos(object)
         return obs_dict

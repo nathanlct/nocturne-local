@@ -9,10 +9,11 @@ from utils.subscribers import Subscriber
 
 class BaseEnv(object):
     def __init__(self, cfg):
-        
+
         self.simulation = Simulation(cfg.scenario_path)
         self.scenario = self.simulation.getScenario()
-        self.subscriber = Subscriber(cfg.subscriber, self.scenario, self.simulation)
+        self.subscriber = Subscriber(cfg.subscriber, self.scenario,
+                                     self.simulation)
         self.cfg = cfg
         self.t = 0
 
@@ -30,9 +31,9 @@ class BaseEnv(object):
             if veh_id in action_dict.keys():
                 action = action_dict[veh_id]
                 if 'accel' in action.keys():
-                    self.simulation.setAccel(action['accel'])
+                    veh_obj.setAccel(action['accel'])
                 if 'turn' in action.keys():
-                    self.simulation.setSteeringAngle(action['turn'])
+                    veh_obj.setSteeringAngle(action['turn'])
                 # if 'tilt_view' in action.keys():
                 #     self.simulation.applyViewTilt(action['tilt_view'])
 
@@ -55,13 +56,14 @@ class BaseEnv(object):
                 done_dict[veh_id] = True
             # if self.simulation.crossedLaneLines(veh_obj):
             #     rew_dict[veh_id] -= np.abs(rew_cfg.crossed_lanes_penalty)
-            # TODO(eugenevinitsky) 
+            # TODO(eugenevinitsky)
             obj_pos = veh_obj.getPosition()
             obj_pos = np.array([obj_pos.x, obj_pos.y])
             goal_pos = veh_obj.getGoalPosition()
             goal_pos = np.array([goal_pos.x, goal_pos.y])
             if np.linalg.norm(goal_pos - obj_pos) < rew_cfg.goal_tolerance:
                 rew_dict[veh_id] += np.abs(rew_cfg.goal_achieved_bonus)
+                done_dict[veh_id] = True
 
         return obs_dict, rew_dict, done_dict, info_dict
 

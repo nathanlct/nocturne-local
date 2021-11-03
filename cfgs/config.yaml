@@ -1,6 +1,9 @@
 defaults:
   - override hydra/launcher: submitit_local
 
+seed: 0
+device: 'cuda:1'
+
 # TODO(eugenevinitsky) don't hardcode this
 scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/intersection.json'
 view_angle: 1.56
