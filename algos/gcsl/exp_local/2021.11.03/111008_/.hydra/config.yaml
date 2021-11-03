@@ -1,0 +1,21 @@
+seed: 0
+device: cuda:1
+scenario_path: /private/home/eugenevinitsky/Code/nocturne/scenarios/intersection.json
+view_angle: 1.56
+dt: 0.1
+rew_cfg:
+  goal_tolerance: 0.05
+  collision_penalty: -1.0
+subscriber:
+  include_ego_state: true
+  include_visible_object_state: false
+  object_subscriber:
+    include_speed: true
+    include_pos: true
+  ego_subscriber:
+    img_view: true
+    view_angle: ${view_angle}
+    include_speed: true
+    include_pos: true
+    include_goal_pos: true
+    include_goal_img: true
