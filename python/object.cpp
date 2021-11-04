@@ -16,7 +16,11 @@ void init_object(py::module &m) {
         .def("getHeading", &Object::getHeading)
         .def("getID", &Object::getID)
         .def("getType", &Object::getType)
-        .def("getCollided", &Object::getCollided);
+        .def("getCollided", &Object::getCollided)
+        .def("setPosition", &Object::setPosition)
+        .def("setGoalPosition", &Object::setGoalPosition)
+        .def("setSpeed", &Object::setSpeed)
+        .def("setHeading", &Object::setHeading);
 
     py::class_<Vehicle, std::shared_ptr<Vehicle>, Object>(m, "Vehicle")
         .def("getWidth", &Vehicle::getWidth)
@@ -28,5 +32,9 @@ void init_object(py::module &m) {
         .def("getType", &Vehicle::getType)
         .def("getCollided", &Vehicle::getCollided)
         .def("setAccel", &Vehicle::setAccel)
-        .def("setSteeringAngle", &Vehicle::setSteeringAngle);
+        .def("setSteeringAngle", &Vehicle::setSteeringAngle)
+        .def("setPosition", &Vehicle::setPosition)
+        .def("setGoalPosition", &Vehicle::setGoalPosition)
+        .def("setSpeed", &Vehicle::setSpeed)
+        .def("setHeading", &Vehicle::setHeading);
 }

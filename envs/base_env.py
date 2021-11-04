@@ -12,8 +12,8 @@ class BaseEnv(object):
 
         self.simulation = Simulation(cfg.scenario_path)
         self.scenario = self.simulation.getScenario()
-        self.subscriber = Subscriber(cfg.subscriber, self.scenario,
-                                     self.simulation)
+        self.vehicles = self.scenario.getVehicles()
+        self.subscriber = Subscriber(cfg.subscriber, self.scenario, self.simulation)
         self.cfg = cfg
         self.t = 0
 
@@ -69,7 +69,11 @@ class BaseEnv(object):
 
     def reset(self):
         self.t = 0
-        self.simulation.reset()
+        # TODO(eugenevinitsky) remove this once there is a scenario reset method
+        self.simulation = Simulation(self.cfg.scenario_path)
+        self.scenario = self.simulation.getScenario()
+        self.vehicles = self.scenario.getVehicles()
+        self.subscriber = Subscriber(self.cfg.subscriber, self.scenario, self.simulation)
         obs_dict = {}
         for veh_obj in self.simulation.getScenario().getVehicles():
             veh_id = veh_obj.getID()
