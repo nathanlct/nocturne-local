@@ -1,8 +1,9 @@
 #include <Simulation.hpp>
 
 
-Simulation::Simulation(std::string scenarioPath) : 
-    scenario(new Scenario(scenarioPath)),
+Simulation::Simulation(std::string scenarioFilePath) :
+    scenario(new Scenario(scenarioFilePath)),
+    scenarioPath(scenarioFilePath),
     renderTransform(),
     renderWindow(nullptr),
     font(),
@@ -95,7 +96,7 @@ void Simulation::updateView(float padding) const {
 }
 
 void Simulation::reset() {
-    std::cout << "Resetting simulation." << std::endl;
+    scenario = new Scenario(scenarioPath);
 }
 
 void Simulation::saveScreenshot() {
