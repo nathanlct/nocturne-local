@@ -9,7 +9,7 @@ from envs.base_env import BaseEnv
 
 
 class DictToVecWrapper(object):
-    def __init__(self, env, no_img_concat=True):
+    def __init__(self, env, no_img_concat=True, normalize_value=400):
         """Takes a dictionary state space and returns a flattened vector in the 'state' key of the dict
 
         Args:
@@ -18,6 +18,7 @@ class DictToVecWrapper(object):
         """
         self._env = env
         self._no_img_concat = no_img_concat
+        self.normalize_value = normalize_value
 
     @property
     def observation_space(self):
@@ -43,7 +44,7 @@ class DictToVecWrapper(object):
                     else:
                         features.append(val.ravel())
             obs_dict[agent_id]['features'] = np.concatenate(
-                features, axis=0).astype(np.float32)
+                features, axis=0).astype(np.float32) / self.normalize_value
         return obs_dict
 
     def reset(self):
@@ -176,21 +177,17 @@ class GoalEnvWrapper(BaseEnv):
         return state[..., -2:]
 
     def extract_achieved_goal(self, state):
-        return state[..., 1:3]
+        return state[..., 2:4]
 
     def goal_distance(self, state, goal_state):
         if self.goal_metric == 'euclidean':
-            try:
-                # TODO(eugenevinitsky) fix hardcoding
-                if len(state.shape) > 1:
-                    achieved_goal = state[:, 1:3]
-                else:
-                    achieved_goal = state[1:3]
-                desired_goal = self.extract_goal(goal_state)
-                diff = achieved_goal - desired_goal
-            except:
-                import ipdb
-                ipdb.set_trace()
+            # TODO(eugenevinitsky) fix hardcoding
+            if len(state.shape) > 1:
+                achieved_goal = state[:, 2:4]
+            else:
+                achieved_goal = state[2:4]
+            desired_goal = self.extract_goal(goal_state)
+            diff = achieved_goal - desired_goal
             return np.linalg.norm(diff, axis=-1)
         else:
             raise ValueError('Unknown goal metric %s' % self.goal_metric)
