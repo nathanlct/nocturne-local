@@ -16,7 +16,7 @@
 
 class Simulation {
 public:
-    Simulation(std::string scenarioPath = "");
+    Simulation(std::string scenarioFilePath = "");
 
     void reset();
     void step(float dt);
@@ -39,4 +39,6 @@ private:
 
     sf::Font font;
     sf::Clock clock;
+
+    std::string scenarioPath;
 };

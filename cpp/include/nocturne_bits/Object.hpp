@@ -32,6 +32,11 @@ public:
     std::vector<Vector2D> getCorners() const;
     std::vector<std::pair<Vector2D,Vector2D>> getLines() const;
 
+    void setPosition(float x, float y);
+    void setGoalPosition(float x, float y);
+    void setSpeed(float speed);
+    void setHeading(float heading);
+
     void setCollided(bool collided);
     bool getCollided() const;
 

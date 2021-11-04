@@ -81,6 +81,21 @@ std::string Object::getType() const {
     return type;
 }
 
+void Object::setPosition(float x, float y) {
+    position.x = x;
+    position.y = y;
+}
+void Object::setGoalPosition(float x, float y) {
+    goalPosition.x = x;
+    goalPosition.y = y;
+}
+void Object::setSpeed(float newSpeed) {
+    speed = newSpeed;
+}
+void Object::setHeading(float newHeading) {
+    heading = newHeading;
+}
+
 std::vector<Vector2D> Object::getCorners() const {
     std::vector<Vector2D> corners;
     // create points
