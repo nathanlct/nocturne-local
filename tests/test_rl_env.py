@@ -14,8 +14,8 @@ def main(cfg):
     env = create_env(cfg)
     obs = env.reset()
     for _ in range(10):
-        obs, rew, done, info = env.step({8: {'accel': 2.0, 'turn': 1.0}})
-    goal_img = obs[9]['goal_img']
+        obs, rew, done, info = env.step({18: {'accel': 2.0, 'turn': 1.0}})
+    goal_img = obs[19]['goal_img']
     plt.figure()
     plt.imshow(goal_img)
     plt.savefig('./goal_img.png')

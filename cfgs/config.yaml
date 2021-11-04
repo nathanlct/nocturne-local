@@ -19,6 +19,7 @@ subscriber:
     img_view: True
     view_angle: ${view_angle}
     include_speed: True
+    include_heading: True
     include_pos: True
     include_goal_pos: True
     include_goal_img: True

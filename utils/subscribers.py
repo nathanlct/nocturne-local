@@ -53,6 +53,8 @@ class EgoSubscriber(object):
                 object, self.cfg.view_angle, 0.0), copy=False)
         if self.cfg.include_speed:
             obs_dict['ego_speed'] = np.array([object.getSpeed()])
+        if self.cfg.include_heading:
+            obs_dict['heading'] = np.array([object.getHeading()*180/3.14])
         if self.cfg.include_pos:
             pos = object.getPosition()
             obs_dict['ego_pos'] = np.array([pos.x, pos.y])
