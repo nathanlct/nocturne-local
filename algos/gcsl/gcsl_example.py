@@ -32,8 +32,8 @@ def main(cfg):
     np.random.seed(cfg.seed)
 
     env = create_goal_env(cfg)
-    env_params = dict(eval_freq=10000,
-                      eval_episodes=50,
+    env_params = dict(eval_freq=2000,
+                      eval_episodes=10,
                       max_trajectory_length=50,
                       max_timesteps=1e6,
                       goal_threshold=cfg.rew_cfg.goal_tolerance)
@@ -41,6 +41,7 @@ def main(cfg):
 
     env, policy, replay_buffer, gcsl_kwargs = variants.get_params(
         env, env_params)
+    gcsl_kwargs['save_video'] = True
     algo = gcsl.GCSL(env, policy, replay_buffer, **gcsl_kwargs)
 
     exp_prefix = 'example/%s/gcsl/' % ('intersection', )

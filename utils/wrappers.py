@@ -52,6 +52,12 @@ class DictToVecWrapper(object):
         self.transform_obs(obses)
         return obses
 
+    def render(self):
+        return self._env.render()
+
+    def __getattr__(self, name):
+        return getattr(self._env, name)
+
 
 class GoalEnvWrapper(BaseEnv):
     """
@@ -217,6 +223,13 @@ class GoalEnvWrapper(BaseEnv):
             ('mean final l2 dist', np.mean(distances[:, -1])),
             ('median final l2 dist', np.median(distances[:, -1])),
         ])
+
+    def render(self):
+        return self._env.render()
+
+    def __getattr__(self, name):
+        return getattr(self._env, name)
+
 
 
 def create_env(cfg):

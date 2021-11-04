@@ -79,3 +79,7 @@ class BaseEnv(object):
             veh_id = veh_obj.getID()
             obs_dict[veh_id] = self.subscriber.get_obs(veh_obj)
         return obs_dict
+
+    def render(self):
+        # TODO(eugenevinitsky) this should eventually return a global image instead of this hack
+        return np.array(self.scenario.getGoalImage(self.vehicles[0]), copy=False)

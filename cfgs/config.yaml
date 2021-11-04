@@ -7,7 +7,7 @@ device: 'cuda:1'
 # TODO(eugenevinitsky) don't hardcode this
 scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/intersection.json'
 view_angle: 1.56
-dt: 0.1
+dt: 1.0
 rew_cfg:
   goal_tolerance: 0.05
   collision_penalty: -1.0
@@ -24,7 +24,6 @@ subscriber:
     include_speed: True
     include_heading: True
     include_pos: True
-    include_heading: True
     include_goal_pos: True
     include_goal_img: True
     # include_lane_pos: True

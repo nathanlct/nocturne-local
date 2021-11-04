@@ -1,4 +1,6 @@
+from celluloid import Camera
 import numpy as np
+import matplotlib.pyplot as plt
 from rlutil.logging import logger
 
 import rlutil.torch as torch
@@ -79,6 +81,7 @@ class GCSL:
             policy_updates_per_step=1,
             train_policy_freq=None,
             demonstrations_kwargs=dict(),
+            save_video=False,
             lr=5e-4,
     ):
         self.env = env
@@ -113,6 +116,7 @@ class GCSL:
 
         self.log_tensorboard = log_tensorboard and tensorboard_enabled
         self.summary_writer = None
+        self.save_video = save_video
 
     def loss_fn(self, observations, goals, actions, horizons, weights):
         obs_dtype = torch.float32
@@ -140,11 +144,16 @@ class GCSL:
 
         states = []
         actions = []
+        if render and self.save_video:
+            fig = plt.figure()
+            camera = Camera(fig)
 
         state = self.env.reset()
         for t in range(self.max_path_length):
-            if render:
-                self.env.render()
+            if render and self.save_video:
+                img = self.env.render()
+                plt.imshow(img)
+                camera.snap()
 
             states.append(state)
 
@@ -165,6 +174,9 @@ class GCSL:
             actions.append(action)
             state, _, _, _ = self.env.step(action)
 
+        if render and self.save_video:
+            animation = camera.animate()
+            animation.save('/private/home/eugenevinitsky/Code/nocturne/animation.mp4')
         return np.stack(states), np.array(actions), goal_state
 
     def take_policy_step(self, buffer=None):
@@ -377,8 +389,13 @@ class GCSL:
         success_vec = np.zeros(eval_episodes)
 
         for index in tqdm.trange(eval_episodes, leave=True):
+            if index == eval_episodes - 1:
+                save_video = True
+            else:
+                save_video = False
             states, actions, goal_state = self.sample_trajectory(noise=0,
-                                                                 greedy=greedy)
+                                                                 greedy=greedy,
+                                                                 render=save_video)
             all_actions.extend(actions)
             all_states.append(states)
             all_goal_states.append(goal_state)
