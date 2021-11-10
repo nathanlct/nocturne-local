@@ -57,13 +57,13 @@ class ReplayBuffer:
             None
         """
 
-        assert actions.shape == self._actions[0].shape
-        assert states.shape == self._states[0].shape
+        # assert actions.shape == self._actions[0].shape
+        # assert states.shape == self._states[0].shape
 
-        self._actions[self.pointer] = actions
-        self._states[self.pointer] = states
-        self._internal_goals[self.pointer] = self.env._extract_sgoal(states)
-        self._desired_states[self.pointer] = desired_state
+        self._actions[self.pointer][0:actions.shape[0]] = actions
+        self._states[self.pointer][0:states.shape[0]] = states
+        self._internal_goals[self.pointer][0:states.shape[0]] = self.env._extract_sgoal(states)
+        self._desired_states[self.pointer][0:states.shape[0]] = desired_state
         if length_of_traj is None:
             length_of_traj = self.max_trajectory_length
         self._length_of_traj[self.pointer] = length_of_traj

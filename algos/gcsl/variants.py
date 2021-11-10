@@ -13,7 +13,8 @@ def get_params(env, env_params):
     buffer_kwargs = dict(
         env=env,
         max_trajectory_length=get_horizon(env_params),
-        buffer_size=20000,
+        #buffer_size=20000,
+        buffer_size=100000,
     )
     replay_buffer = buffer.ReplayBuffer(**buffer_kwargs)
     gcsl_kwargs = default_gcsl_params(env, env_params)
@@ -67,4 +68,6 @@ def default_gcsl_params(env, env_params):
         policy_updates_per_step=1,
         train_policy_freq=None,
         lr=5e-4,
+        support_termination=env_params.get('support_termination', False),
+        save_video=env_params.get('save_video', False)
     )

@@ -36,12 +36,16 @@ def main(cfg):
                       eval_episodes=10,
                       max_trajectory_length=50,
                       max_timesteps=1e6,
-                      goal_threshold=cfg.rew_cfg.goal_tolerance)
+                      # warning, use odd granularities so that zero is included
+                      action_granularity=11,
+                      expl_noise=0.3,
+                      goal_threshold=cfg.rew_cfg.goal_tolerance,
+                      support_termination=True,
+                      save_video=True)
     print(env_params)
 
     env, policy, replay_buffer, gcsl_kwargs = variants.get_params(
         env, env_params)
-    gcsl_kwargs['save_video'] = True
     algo = gcsl.GCSL(env, policy, replay_buffer, **gcsl_kwargs)
 
     exp_prefix = 'example/%s/gcsl/' % ('intersection', )

@@ -53,6 +53,7 @@ class GCSL:
         train_policy_freq: int, How frequently to actually do the gradient updates.
             Number of gradient updates is dictated by `policy_updates_per_step`
             but when these updates are done is controlled by train_policy_freq
+        support_termination: bool, whether we respect an environment returning done
         lr: float, Learning rate for Adam.
         demonstration_kwargs: Arguments specifying pretraining with demos.
             See GCSL.pretrain_demos for exact details of parameters        
@@ -82,6 +83,7 @@ class GCSL:
             train_policy_freq=None,
             demonstrations_kwargs=dict(),
             save_video=False,
+            support_termination=False,
             lr=5e-4,
     ):
         self.env = env
@@ -113,6 +115,7 @@ class GCSL:
         self.policy_updates_per_step = policy_updates_per_step
         self.policy_optimizer = torch.optim.Adam(self.policy.parameters(),
                                                  lr=lr)
+        self.support_termination = support_termination
 
         self.log_tensorboard = log_tensorboard and tensorboard_enabled
         self.summary_writer = None
@@ -172,7 +175,9 @@ class GCSL:
                                  self.env.action_space.high)
 
             actions.append(action)
-            state, _, _, _ = self.env.step(action)
+            state, _, done, _ = self.env.step(action)
+            if self.support_termination and done: 
+                break
 
         if render and self.save_video:
             animation = camera.animate()
@@ -288,10 +293,10 @@ class GCSL:
                 if self.validation_buffer is not None and np.random.rand(
                 ) < 0.2:
                     self.validation_buffer.add_trajectory(
-                        states, actions, goal_state)
+                        states, actions, goal_state, length_of_traj=states.shape[0])
                 else:
                     self.replay_buffer.add_trajectory(states, actions,
-                                                      goal_state)
+                                                      goal_state, length_of_traj=states.shape[0])
 
                 total_timesteps += self.max_path_length
                 timesteps_since_train += self.max_path_length

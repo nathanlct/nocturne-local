@@ -92,7 +92,7 @@ class GoalEnvWrapper(BaseEnv):
 
     @property
     def action_space(self):
-        return Box(low=np.array([-1, -0.2]), high=np.array([1, 0.2]))
+        return Box(low=np.array([-1, -0.4]), high=np.array([1, 0.4]))
 
     @property
     def observation_space(self):

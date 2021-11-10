@@ -1,15 +1,24 @@
 defaults:
+  - algo: ppo
   - override hydra/launcher: submitit_local
 
 seed: 0
 device: 'cuda:1'
+experiment: intersection
+
+# WANDB things
+wandb: True
+wandb_name: nocturne
+wandb_id: null
+wandb_group: debug
+debug: False
 
 # TODO(eugenevinitsky) don't hardcode this
 scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/intersection.json'
 view_angle: 1.56
 dt: 1.0
 rew_cfg:
-  goal_tolerance: 0.05
+  goal_tolerance: 5.0
   collision_penalty: -1.0
 subscriber:
   include_ego_state: True
@@ -30,9 +39,9 @@ subscriber:
 
 hydra:
   run:
-    dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
+    dir: /checkpoint/eugenevinitsky/nocturne/test/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
   sweep:
-    dir: ./exp/${now:%Y.%m.%d}/${now:%H%M}_${experiment}
+    dir: /checkpoint/eugenevinitsky/nocturne/sweep/${now:%Y.%m.%d}/${now:%H%M}_${experiment}
     subdir: ${hydra.job.num}
   launcher:
     timeout_min: 4300
@@ -41,4 +50,4 @@ hydra:
     tasks_per_node: 1
     mem_gb: 160
     nodes: 1
-    submitit_folder: ./exp/${now:%Y.%m.%d}/${now:%H%M%S}_${experiment}/.slurm
+    submitit_folder: /checkpoint/eugenevinitsky/nocturne/sweep/${now:%Y.%m.%d}/${now:%H%M}_${experiment}/.slurm

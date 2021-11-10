@@ -90,7 +90,7 @@
             "occludes": true,
             "collides": true,
             "checkForCollisions": true,
-            "goalPosition": { "x": 380, "y": -20 }
+            "goalPosition": { "x": 60, "y": -20 }
         }
     ],
     "roads": [

@@ -5,8 +5,8 @@ import numpy as np
 
 from envs.base_env import BaseEnv
 from nocturne import Simulation
-from utils.subscribers import Subscriber
-from utils.waymo_scenario_construction import waymo_to_scenario, load_protobuf, get_actions_from_protobuf
+from nocturne_utils.subscribers import Subscriber
+from nocturne_utils.waymo_scenario_construction import waymo_to_scenario, load_protobuf, get_actions_from_protobuf
 
 
 class WaymoImitationEnv(BaseEnv):

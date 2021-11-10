@@ -12,4 +12,5 @@ dependencies:
     - hydra-submitit-launcher==1.1.5
     - ipdb==0.13.9
     - seaborn
-
+    - wandb==0.12.6
+    - setproctitle==1.2.2
