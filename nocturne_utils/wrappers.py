@@ -1,11 +1,90 @@
 from collections import OrderedDict
 
 from algos.gcsl.env_utils import ImageandProprio
-from gym.spaces import Box
+from gym.spaces import Box, Discrete
 
 import numpy as np
 
 from envs.base_env import BaseEnv
+
+class PPOWrapper(object):
+    def __init__(self, env):
+        """Wrapper that adds the appropriate observation spaces
+
+        Args:
+            env ([type]): [description]
+            no_img_concat (bool, optional): If true, we don't concat images into the 'state' key
+        """
+        self._env = env
+
+        self.action_discretization = 5
+        self.accel_grid = np.linspace(-1, 1, self.action_discretization)
+        self.steering_grid = np.linspace(-.4, .4, self.action_discretization)
+
+        # TODO(eugenevinitsky) this is a hack that assumes that we have a fixed number of agents
+        self.n = len(self.vehicles)
+        obs_dict = self.reset()
+        # tracker used to match observations to actions
+        self.agent_ids = []
+        # TODO(eugenevinitsky this does not work if images are in the observation)
+
+        self.feature_shape = obs_dict[0].shape[0]
+        # TODO(eugenevinitsky) this is a hack that assumes that we have a fixed number of agents
+        self.share_observation_space = [Box(
+            low=-np.inf, high=+np.inf, shape=(self.feature_shape,), dtype=np.float32) for _ in range(self.n)]
+
+    # TODO(eugenevinitsky this does not work if images are in the observation)
+    @property
+    def observation_space(self):
+        return [Box(low=-np.inf,
+                       high=np.inf,
+                       shape=(self.feature_shape,))]
+    @property
+    # TODO(eugenevinitsky) put back the box once we figure out how to make it compatible with the code
+    def action_space(self):
+        # return [Box(low=np.array([-1, -0.4]), high=np.array([1, 0.4]))]
+        return [Discrete(self.action_discretization ** 2)]
+
+    def step(self, actions):
+        agent_actions = {}
+        for action, agent_id in zip(actions, self.agent_ids):
+            one_hot = np.argmax(action)
+            accel_action = self.accel_grid[int(one_hot // self.action_discretization)]
+            steering_action = self.steering_grid[one_hot % self.action_discretization]
+            agent_actions[agent_id] = {'accel': accel_action, 'turn': steering_action}
+        next_obses, rew, done, info = self._env.step(agent_actions)
+        obs_n = []
+        rew_n = []
+        done_n = []
+        info_n = []
+        self.agent_ids = []
+        for key in next_obses.keys():
+            self.agent_ids.append(key)
+            obs_n.append(next_obses[key]['features'])
+            rew_n.append(rew[key])
+            done_n.append(done[key])
+            info = {'individual_reward': rew[key]}
+            info_n.append(info)
+        return obs_n, rew_n, done_n, info_n
+
+    def reset(self):
+        obses = self._env.reset()
+        # TODO(eugenevinitsky) I'm a little worried that there's going to be a key mismatch here
+        obs_n = []
+        self.agent_ids = []
+        for key in obses.keys():
+            self.agent_ids.append(key)
+            if not hasattr(self, 'agent_key'):
+                self.agent_key = key
+            obs_n.append(obses[key]['features'])
+        return obs_n
+
+    def render(self):
+        return self._env.render()
+
+    def __getattr__(self, name):
+        return getattr(self._env, name)
+
 
 
 class DictToVecWrapper(object):
@@ -235,6 +314,11 @@ class GoalEnvWrapper(BaseEnv):
 def create_env(cfg):
     env = BaseEnv(cfg)
     return DictToVecWrapper(env)
+
+def create_ppo_env(cfg):
+    env = BaseEnv(cfg)
+    env = DictToVecWrapper(env)
+    return PPOWrapper(env)
 
 
 def create_goal_env(cfg):

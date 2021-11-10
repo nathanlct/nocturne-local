@@ -12,8 +12,9 @@ import wandb
 from algos.ppo.base_runner import Runner
 from algos.ppo.env_wrappers import SubprocVecEnv, DummyVecEnv
 
-from envs.base_env import BaseEnv
-from nocturne_utils.wrappers import DictToVecWrapper
+from nocturne_utils.wrappers import create_ppo_env
+
+os.environ["DISPLAY"] = ":0.0"
 
 def _t2n(x):
     """Convert torch tensor to a numpy array."""
@@ -23,8 +24,7 @@ def _t2n(x):
 def make_train_env(cfg):
     def get_env_fn(rank):
         def init_env():
-            env = BaseEnv(cfg)
-            env = DictToVecWrapper(env)
+            env = create_ppo_env(cfg)
             # TODO(eugenevinitsky) implement this
             env.seed(cfg.seed + rank * 1000)
             return env
@@ -38,8 +38,7 @@ def make_train_env(cfg):
 def make_eval_env(cfg):
     def get_env_fn(rank):
         def init_env():
-            env = BaseEnv(cfg)
-            env = DictToVecWrapper(env)
+            env = create_ppo_env(cfg)
             # TODO(eugenevinitsky) implement this
             env.seed(cfg.seed + rank * 1000)
             return env
@@ -53,6 +52,7 @@ class NocturneSharedRunner(Runner):
     """Runner class to perform training, evaluation. and data collection for the Nocturne envs. Assumes a shared policy."""
     def __init__(self, config):
         super(NocturneSharedRunner, self).__init__(config)
+        self.cfg = config
 
     def run(self):
         self.warmup()   
@@ -90,9 +90,8 @@ class NocturneSharedRunner(Runner):
             # log information
             if episode % self.log_interval == 0:
                 end = time.time()
-                print("\n Scenario {} Algo {} Exp {} updates {}/{} episodes, total num timesteps {}/{}, FPS {}.\n"
-                        .format(self.all_args.scenario_name,
-                                self.algorithm_name,
+                print("\n Algo {} Exp {} updates {}/{} episodes, total num timesteps {}/{}, FPS {}.\n"
+                        .format(self.algorithm_name,
                                 self.experiment_name,
                                 episode,
                                 episodes,
@@ -231,6 +230,7 @@ class NocturneSharedRunner(Runner):
         for episode in range(self.all_args.render_episodes):
             obs = envs.reset()
             if self.all_args.save_gifs:
+                import ipdb; ipdb.set_trace()
                 image = envs.render('rgb_array')[0][0]
                 all_frames.append(image)
             else:
@@ -347,10 +347,10 @@ def main(cfg):
     np.random.seed(cfg.algo.seed)
 
     # env init
-    import ipdb; ipdb.set_trace()
     envs = make_train_env(cfg)
     eval_envs = make_eval_env(cfg) if cfg.algo.use_eval else None
-    num_agents = cfg.algo.num_agents
+    # TODO(eugenevinitsky) hacky
+    num_agents = len(envs.reset())
 
     config = {
         "cfg.algo": cfg.algo,

@@ -17,30 +17,13 @@ class BaseEnv(object):
         self.cfg = cfg
         self.t = 0
 
-        import ipdb; ipdb.set_trace()
-        # TODO(eugenevinitsky) this is a hack that assumes that we have a fixed number of agents
-        self.n = len(self.vehicles)
-        obs_dict = self.reset()
-        self.agent_key = list(obs_dict.keys())[0]
-        # TODO(eugenevinitsky this does not work if images are in the observation)
-        self.feature_shape = obs_dict[self.agent_key]['features'].shape[0]
-        # TODO(eugenevinitsky) this is a hack that assumes that we have a fixed number of agents
-        self.share_observation_space = [Box(
-            low=-np.inf, high=+np.inf, shape=(self.feature_shape,), dtype=np.float32) for _ in range(self.n)]
-
-    # TODO(eugenevinitsky this does not work if images are in the observation)
     @property
     def observation_space(self):
-        return Box(low=-np.inf,
-                       high=np.inf,
-                       shape=(self.feature_shape,))
+        pass
 
-    # @property
-    # def action_space(self):
-    #     pass
     @property
     def action_space(self):
-        return Box(low=np.array([-1, -0.4]), high=np.array([1, 0.4]))
+        pass
 
     def apply_actions(self, action_dict):
         for veh_obj in self.scenario.getVehicles():
@@ -83,6 +66,8 @@ class BaseEnv(object):
             if np.linalg.norm(goal_pos - obj_pos) < rew_cfg.goal_tolerance:
                 rew_dict[veh_id] += np.abs(rew_cfg.goal_achieved_bonus)
                 done_dict[veh_id] = True
+            if rew_cfg.shaped_goal_distance:
+                rew_dict[veh_id] -= np.linalg.norm(goal_pos - obj_pos) / 2000
 
         return obs_dict, rew_dict, done_dict, info_dict
 

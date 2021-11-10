@@ -13,7 +13,7 @@ use_obs_instead_of_state: True # Whether to use global state or concatenated obs
 episode_length: 200 # Max length for any episode
 share_policy: True # Whether all agents share the same policy
 use_centralized_V: False # Whether to use a centralized value function
-stacked_frames: 2 # number of stacked observations
+stacked_frames: 1 # number of stacked observations
 use_stacked_frames: True # whether to use stacked frames
 hidden_size: 64 # Dimension of hidden layers for actor/critic networks
 layer_N: 2 # "Number of layers for actor/critic networks"
@@ -21,7 +21,7 @@ use_ReLU: True # Whether to use ReLU activation or Tanh
 use_popart: False # Use PopART to normalize rewards
 use_valuenorm: True # use running mean and std to normalize rewards
 use_feature_normalization: True # Whether to apply layernorm to the inputs
-use_orthogonal: True Whether to use Orthogonal initialization for weights and 0 initialization for biases
+use_orthogonal: True # Whether to use Orthogonal initialization for weights and 0 initialization for biases
 gain: 0.01 # The gain # of last action layer
 # recurrent parameters
 use_naive_recurrent_policy: False # Whether to use a naive recurrent policy by stacking states I believe?
@@ -31,7 +31,7 @@ data_chunk_length: 10 # Time length of chunks used to train a recurrent_policy
 
 # optimizer parameters
 lr: 5e-4 # learning rate
-critic_l4: 5e-4 # critic LR
+critic_lr: 5e-4 # critic LR
 opti_eps: 1e-5 # RMSprop optimizer epsilon
 weight_decay: 0 
 
@@ -49,7 +49,7 @@ gamma: 0.99 # discount factor
 gae_lambda: 0.95
 use_proper_time_limits: False # compute returns taking into account time limits
 use_huber_loss: True 
-use_value_activate_masks: True # whether to mask useless data in value loss
+use_value_active_masks: True # whether to mask useless data in value loss
 use_policy_active_masks: True # whether to mask useless data in policy loss
 huber_delta: 10.0 # coefficient of huber loss
 use_linear_lr_decay: False

@@ -16,7 +16,7 @@ class Runner(object):
     """
     def __init__(self, config):
 
-        self.all_args = config['all_args']
+        self.all_args = config['cfg.algo']
         self.envs = config['envs']
         self.eval_envs = config['eval_envs']
         self.device = config['device']
@@ -25,9 +25,9 @@ class Runner(object):
             self.render_envs = config['render_envs']       
 
         # parameters
-        self.env_name = self.all_args.env_name
+        # self.env_name = self.all_args.env_name
         self.algorithm_name = self.all_args.algorithm_name
-        self.experiment_name = self.all_args.experiment_name
+        self.experiment_name = self.all_args.experiment
         self.use_centralized_V = self.all_args.use_centralized_V
         self.use_obs_instead_of_state = self.all_args.use_obs_instead_of_state
         self.num_env_steps = self.all_args.num_env_steps
@@ -37,7 +37,7 @@ class Runner(object):
         self.n_render_rollout_threads = self.all_args.n_render_rollout_threads
         self.use_linear_lr_decay = self.all_args.use_linear_lr_decay
         self.hidden_size = self.all_args.hidden_size
-        self.use_wandb = self.all_args.use_wandb
+        self.use_wandb = self.all_args.wandb
         self.use_render = self.all_args.use_render
         self.recurrent_N = self.all_args.recurrent_N
 
@@ -54,7 +54,7 @@ class Runner(object):
             self.save_dir = str(wandb.run.dir)
             self.run_dir = str(wandb.run.dir)
         else:
-            self.run_dir = config["run_dir"]
+            self.run_dir = config["logdir"]
             self.log_dir = str(self.run_dir / 'logs')
             if not os.path.exists(self.log_dir):
                 os.makedirs(self.log_dir)
@@ -63,9 +63,8 @@ class Runner(object):
             if not os.path.exists(self.save_dir):
                 os.makedirs(self.save_dir)
 
-        from onpolicy.algorithms.r_mappo.r_mappo import R_MAPPO as TrainAlgo
-        from onpolicy.algorithms.r_mappo.algorithm.rMAPPOPolicy import R_MAPPOPolicy as Policy
-
+        from algos.ppo.r_mappo.r_mappo import R_MAPPO as TrainAlgo
+        from algos.ppo.r_mappo.algorithm.rMAPPOPolicy import R_MAPPOPolicy as Policy
         share_observation_space = self.envs.share_observation_space[0] if self.use_centralized_V else self.envs.observation_space[0]
 
         # policy network
