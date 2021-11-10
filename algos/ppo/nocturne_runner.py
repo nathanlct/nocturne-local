@@ -350,7 +350,7 @@ def main(cfg):
     envs = make_train_env(cfg)
     eval_envs = make_eval_env(cfg) if cfg.algo.use_eval else None
     # TODO(eugenevinitsky) hacky
-    num_agents = len(envs.reset())
+    num_agents = envs.reset().shape[1]
 
     config = {
         "cfg.algo": cfg.algo,

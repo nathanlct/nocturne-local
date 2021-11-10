@@ -38,12 +38,12 @@ class PPOWrapper(object):
     def observation_space(self):
         return [Box(low=-np.inf,
                        high=np.inf,
-                       shape=(self.feature_shape,))]
+                       shape=(self.feature_shape,)) for _ in range(self.n)]
     @property
     # TODO(eugenevinitsky) put back the box once we figure out how to make it compatible with the code
     def action_space(self):
         # return [Box(low=np.array([-1, -0.4]), high=np.array([1, 0.4]))]
-        return [Discrete(self.action_discretization ** 2)]
+        return [Discrete(self.action_discretization ** 2) for _ in range(self.n)]
 
     def step(self, actions):
         agent_actions = {}
@@ -61,7 +61,7 @@ class PPOWrapper(object):
         for key in next_obses.keys():
             self.agent_ids.append(key)
             obs_n.append(next_obses[key]['features'])
-            rew_n.append(rew[key])
+            rew_n.append([rew[key]])
             done_n.append(done[key])
             info = {'individual_reward': rew[key]}
             info_n.append(info)
