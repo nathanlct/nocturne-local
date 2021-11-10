@@ -19,8 +19,9 @@ view_angle: 1.56
 dt: 1.0
 rew_cfg:
   goal_tolerance: 5.0
-  collision_penalty: -1.0
+  collision_penalty: -100.0
   shaped_goal_distance: True
+  goal_achieved_bonus: 1.0
 subscriber:
   include_ego_state: True
   # TODO(eugenevinitsky) this should be true

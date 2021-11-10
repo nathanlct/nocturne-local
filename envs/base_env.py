@@ -54,6 +54,7 @@ class BaseEnv(object):
             if veh_obj.getCollided():
                 rew_dict[veh_id] -= np.abs(rew_cfg.collision_penalty)
                 done_dict[veh_id] = True
+                print('collision')
                 # veh_obj.setSpeed(0)
             # TODO(eugenevinitsky)
             # if self.simulation.crossedLaneLines(veh_obj):
@@ -65,9 +66,14 @@ class BaseEnv(object):
             # TODO(eugenevinitsky) this is never achieved because this is in meters but the goal tolerance is in pixels or something pixel-y
             if np.linalg.norm(goal_pos - obj_pos) < rew_cfg.goal_tolerance:
                 rew_dict[veh_id] += np.abs(rew_cfg.goal_achieved_bonus)
+                print('we made it to the goal!')
+                # done_dict[veh_id] = True
+            # we have gone off-screen!
+            if obj_pos[0] < -400 or obj_pos[0] > 400 or obj_pos[1] < -400 or obj_pos[1] > 400:
                 done_dict[veh_id] = True
             if rew_cfg.shaped_goal_distance:
-                rew_dict[veh_id] -= np.linalg.norm(goal_pos - obj_pos) / 2000
+                # the minus one is to ensure that it's worth remaining alive
+                rew_dict[veh_id] -= ((np.linalg.norm(goal_pos - obj_pos) / 2000) - 1)
 
         return obs_dict, rew_dict, done_dict, info_dict
 

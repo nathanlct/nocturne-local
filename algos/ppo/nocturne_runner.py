@@ -58,30 +58,31 @@ class NocturneSharedRunner(Runner):
         self.warmup()   
 
         start = time.time()
-        episodes = int(self.num_env_steps) // self.episode_length // self.n_rollout_threads
+        episodes = int(self.num_env_steps) // self.episode_length // self.n_rollout_threads // self.episodes_per_thread
 
         for episode in range(episodes):
             if self.use_linear_lr_decay:
                 self.trainer.policy.lr_decay(episode, episodes)
 
-            for step in range(self.episode_length):
-                # Sample actions
-                values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env = self.collect(step)
-                    
-                # Obser reward and next obs
-                obs, rewards, dones, infos = self.envs.step(actions_env)
+            for _ in range(self.episodes_per_thread):
+                for step in range(self.episode_length):
+                    # Sample actions
+                    values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env = self.collect(step)
+                        
+                    # Obser reward and next obs
+                    obs, rewards, dones, infos = self.envs.step(actions_env)
 
-                data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
+                    data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
 
-                # insert data into buffer
-                self.insert(data)
+                    # insert data into buffer
+                    self.insert(data)
 
             # compute return and update network
             self.compute()
             train_infos = self.train()
             
             # post process
-            total_num_steps = (episode + 1) * self.episode_length * self.n_rollout_threads
+            total_num_steps = (episode + 1) * self.episode_length * self.n_rollout_threads * self.episodes_per_thread
             
             # save model
             if (episode % self.save_interval == 0 or episode == episodes - 1):
@@ -93,8 +94,8 @@ class NocturneSharedRunner(Runner):
                 print("\n Algo {} Exp {} updates {}/{} episodes, total num timesteps {}/{}, FPS {}.\n"
                         .format(self.algorithm_name,
                                 self.experiment_name,
-                                episode,
-                                episodes,
+                                episode * self.episodes_per_thread,
+                                episodes * self.episodes_per_thread,
                                 total_num_steps,
                                 self.num_env_steps,
                                 int(total_num_steps / (end - start))))
