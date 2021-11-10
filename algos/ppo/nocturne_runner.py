@@ -289,7 +289,7 @@ class NocturneSharedRunner(Runner):
 
 @hydra.main(config_path='../../cfgs/', config_name='config')
 def main(cfg):
-    logdir = os.getcwd()
+    logdir = Path(os.getcwd())
     if cfg.wandb_id is not None:
         wandb_id = cfg.wandb_id
     else:
