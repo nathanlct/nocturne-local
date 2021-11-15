@@ -1,9 +1,12 @@
 """Each agent receives its observation, a goal position, and tries to get there without colliding."""
 
+from collections import defaultdict
+
 from gym.spaces import Box
 import numpy as np
 
 from nocturne import Simulation
+from traitlets.traitlets import default
 from nocturne_utils.subscribers import Subscriber
 
 
@@ -41,7 +44,7 @@ class BaseEnv(object):
         obs_dict = {}
         rew_dict = {}
         done_dict = {'__all__': False}
-        info_dict = {}
+        info_dict = defaultdict(dict)
         rew_cfg = self.cfg.rew_cfg
         self.apply_actions(action_dict)
         self.simulation.step(self.cfg.dt)
@@ -51,14 +54,10 @@ class BaseEnv(object):
             obs_dict[veh_id] = self.subscriber.get_obs(veh_obj)
             rew_dict[veh_id] = 0
             done_dict[veh_id] = False
+            info_dict[veh_id]['goal_achieved'] = False
             if veh_obj.getCollided():
                 rew_dict[veh_id] -= np.abs(rew_cfg.collision_penalty)
                 done_dict[veh_id] = True
-                print('collision')
-                # veh_obj.setSpeed(0)
-            # TODO(eugenevinitsky)
-            # if self.simulation.crossedLaneLines(veh_obj):
-            #     rew_dict[veh_id] -= np.abs(rew_cfg.crossed_lanes_penalty)
             obj_pos = veh_obj.getPosition()
             obj_pos = np.array([obj_pos.x, obj_pos.y])
             goal_pos = veh_obj.getGoalPosition()
@@ -66,8 +65,9 @@ class BaseEnv(object):
             # TODO(eugenevinitsky) this is never achieved because this is in meters but the goal tolerance is in pixels or something pixel-y
             if np.linalg.norm(goal_pos - obj_pos) < rew_cfg.goal_tolerance:
                 rew_dict[veh_id] += np.abs(rew_cfg.goal_achieved_bonus)
-                print('we made it to the goal!')
+                # TODO(eugenevinitsky) temporarily disabled the done condition as this crushes exploration around a goal
                 # done_dict[veh_id] = True
+                info_dict[veh_id]['goal_achieved'] = True
             # we have gone off-screen!
             if obj_pos[0] < -400 or obj_pos[0] > 400 or obj_pos[1] < -400 or obj_pos[1] > 400:
                 done_dict[veh_id] = True
@@ -88,6 +88,7 @@ class BaseEnv(object):
         for veh_obj in self.simulation.getScenario().getVehicles():
             veh_id = veh_obj.getID()
             obs_dict[veh_id] = self.subscriber.get_obs(veh_obj)
+            veh_obj.setSpeed(self.cfg.initial_speed)
         return obs_dict
 
     def render(self):

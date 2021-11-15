@@ -5,7 +5,7 @@ import gym
 import numpy as np
 from rlutil.logging import log_utils, logger
 
-from utils.wrappers import create_goal_env
+from nocturne_utils.wrappers import create_goal_env
 
 import rlutil.torch as torch
 import rlutil.torch.pytorch_util as ptu
@@ -32,15 +32,16 @@ def main(cfg):
     np.random.seed(cfg.seed)
 
     env = create_goal_env(cfg)
-    env_params = dict(eval_freq=2000,
-                      eval_episodes=10,
+    env_params = dict(eval_freq=10000,
+                      eval_episodes=2,
                       max_trajectory_length=50,
                       max_timesteps=1e6,
-                      # warning, use odd granularities so that zero is included
-                      action_granularity=11,
-                      expl_noise=0.3,
+                      # warning, use odd, not even, granularities so that zero is included
+                      action_granularity=5,
+                      expl_noise=0.1,
                       goal_threshold=cfg.rew_cfg.goal_tolerance,
                       support_termination=True,
+                      go_explore=True,
                       save_video=True)
     print(env_params)
 

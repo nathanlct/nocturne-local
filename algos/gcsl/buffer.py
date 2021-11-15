@@ -63,7 +63,7 @@ class ReplayBuffer:
         self._actions[self.pointer][0:actions.shape[0]] = actions
         self._states[self.pointer][0:states.shape[0]] = states
         self._internal_goals[self.pointer][0:states.shape[0]] = self.env._extract_sgoal(states)
-        self._desired_states[self.pointer][0:states.shape[0]] = desired_state
+        self._desired_states[self.pointer][0:states.shape[1]] = desired_state
         if length_of_traj is None:
             length_of_traj = self.max_trajectory_length
         self._length_of_traj[self.pointer] = length_of_traj

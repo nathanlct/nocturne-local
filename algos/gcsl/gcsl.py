@@ -54,6 +54,7 @@ class GCSL:
             Number of gradient updates is dictated by `policy_updates_per_step`
             but when these updates are done is controlled by train_policy_freq
         support_termination: bool, whether we respect an environment returning done
+        go_explore: bool, if true, we take random actions after the goal is achieved
         lr: float, Learning rate for Adam.
         demonstration_kwargs: Arguments specifying pretraining with demos.
             See GCSL.pretrain_demos for exact details of parameters        
@@ -84,6 +85,7 @@ class GCSL:
             demonstrations_kwargs=dict(),
             save_video=False,
             support_termination=False,
+            go_explore=False,
             lr=5e-4,
     ):
         self.env = env
@@ -116,6 +118,7 @@ class GCSL:
         self.policy_optimizer = torch.optim.Adam(self.policy.parameters(),
                                                  lr=lr)
         self.support_termination = support_termination
+        self.go_explore = go_explore
 
         self.log_tensorboard = log_tensorboard and tensorboard_enabled
         self.summary_writer = None
@@ -144,6 +147,7 @@ class GCSL:
 
         goal_state = self.env.sample_goal()
         goal = self.env.extract_goal(goal_state)
+        goal_achieved = False
 
         states = []
         actions = []
@@ -164,6 +168,9 @@ class GCSL:
             horizon = np.arange(
                 self.max_path_length) >= (self.max_path_length - 1 - t
                                           )  # Temperature encoding of horizon
+            if goal_achieved and self.go_explore:
+                noise = 1.0
+                greedy = False
             action = self.policy.act_vectorized(observation[None],
                                                 goal[None],
                                                 horizon=horizon[None],
@@ -175,13 +182,16 @@ class GCSL:
                                  self.env.action_space.high)
 
             actions.append(action)
-            state, _, done, _ = self.env.step(action)
+            state, _, done, info = self.env.step(action)
+            if info['goal_achieved']:
+                goal_achieved = True
             if self.support_termination and done: 
                 break
 
         if render and self.save_video:
             animation = camera.animate()
             animation.save('/private/home/eugenevinitsky/Code/nocturne/animation.mp4')
+            plt.close(fig)
         return np.stack(states), np.array(actions), goal_state
 
     def take_policy_step(self, buffer=None):
@@ -400,7 +410,7 @@ class GCSL:
                 save_video = False
             states, actions, goal_state = self.sample_trajectory(noise=0,
                                                                  greedy=greedy,
-                                                                 render=save_video)
+                                                                 render=save_video,)
             all_actions.extend(actions)
             all_states.append(states)
             all_goal_states.append(goal_state)
@@ -410,7 +420,7 @@ class GCSL:
             final_dist_vec[index] = final_dist
             success_vec[index] = (final_dist < self.goal_threshold)
 
-        all_states = np.stack(all_states)
+        # all_states = np.stack(all_states)
         all_goal_states = np.stack(all_goal_states)
 
         logger.record_tabular('%s num episodes' % prefix, eval_episodes)
@@ -425,8 +435,8 @@ class GCSL:
             self.summary_writer.add_scalar('%s/success ratio' % prefix,
                                            np.mean(success_vec),
                                            total_timesteps)
-        diagnostics = env.get_diagnostics(all_states, all_goal_states)
-        for key, value in diagnostics.items():
-            logger.record_tabular('%s %s' % (prefix, key), value)
+        # diagnostics = env.get_diagnostics(all_states, all_goal_states)
+        # for key, value in diagnostics.items():
+        #     logger.record_tabular('%s %s' % (prefix, key), value)
 
         return all_states, all_goal_states

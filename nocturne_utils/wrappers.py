@@ -166,8 +166,26 @@ class GoalEnvWrapper(BaseEnv):
             self.features_key = 'ego_image'
         else:
             self.features_key = 'features'
-        self.initialized_obs_spaces = False
-        self.reset()
+
+        # initialize some obs dicts
+        obs_dict = self._env.reset()
+        self.agent_key = list(obs_dict.keys())[0]
+        for value in obs_dict.values():
+            obs = value
+        self.feature_shape = obs['features'].shape[0]
+        if self.use_images:
+            print('Using Images')
+            self.state_space = ImageandProprio((300, 300, 4),
+                                                obs['features'].shape)
+        else:
+            # TODO(eugenevinitsky) remove this once we actually vary the set of possible goals and sample instead of returning reset state
+            self.curr_goal = obs['features']
+            self.state_space = Box(low=-np.inf,
+                                    high=np.inf,
+                                    shape=obs['features'].shape)
+        self.goal_space = Box(low=-np.inf,
+                                high=np.inf,
+                                shape=obs['goal_pos'].shape)
 
     @property
     def action_space(self):
@@ -193,22 +211,6 @@ class GoalEnvWrapper(BaseEnv):
         self.agent_key = list(obs_dict.keys())[0]
         for value in obs_dict.values():
             obs = value
-        if not self.initialized_obs_spaces:
-            self.initialized_obs_spaces = True
-            self.feature_shape = obs['features'].shape[0]
-            if self.use_images:
-                print('Using Images')
-                self.state_space = ImageandProprio((300, 300, 4),
-                                                   obs['features'].shape)
-            else:
-                # TODO(eugenevinitsky) remove this once we actually vary the set of possible goals and sample instead of returning reset state
-                self.curr_goal = obs['features']
-                self.state_space = Box(low=-np.inf,
-                                       high=np.inf,
-                                       shape=obs['features'].shape)
-            self.goal_space = Box(low=-np.inf,
-                                  high=np.inf,
-                                  shape=obs['goal_pos'].shape)
         if self.use_images:
             return self.state_space.to_flat(obs[self.features_key],
                                             obs['features'])
@@ -225,11 +227,12 @@ class GoalEnvWrapper(BaseEnv):
             obs = obs_dict[key]
             rew = rew_dict[key]
             done = done_dict[key]
+            info = info_dict[key]
         if self.use_images:
             return self.state_space.to_flat(
                 obs[self.features_key], obs['features']), rew, done, info_dict
         else:
-            return obs[self.features_key], rew, done, info_dict
+            return obs[self.features_key], rew, done, info
 
     def observation(self, state):
         """
@@ -309,7 +312,83 @@ class GoalEnvWrapper(BaseEnv):
     def __getattr__(self, name):
         return getattr(self._env, name)
 
+class CurriculumGoalEnvWrapper(GoalEnvWrapper):
+    '''Test a curriculum for a single agent to go to a goal on either the vertical strip or the right hand horizontal strip'''
+    def __init__(self, env, use_images=False):
+        super(CurriculumGoalEnvWrapper, self).__init__(env, use_images)
+        self.valid_goals = []
+        discretization = 10
 
+        # construction of the goal space
+        y_goals = np.linspace(-180, -20, discretization)
+        vertical_goals = np.vstack((20 * np.ones(discretization), y_goals)).T
+        x_goals = np.linspace(20, 240, discretization)
+        horizontal_goals = np.vstack((x_goals, -20 * np.ones(discretization))).T
+        self.valid_goals = np.vstack((vertical_goals, horizontal_goals))
+        # the last column is a counter of how many times this goal has been achieved
+        self.valid_goals = np.hstack((self.valid_goals, np.zeros((self.valid_goals.shape[0], 1))))
+        self.current_goal_counter = 0
+        # how many times we have to achieve this goal before we increment the counter
+        self.goals_to_increment = 10
+        self.achieved_during_episode = False
+
+    @property
+    def action_space(self):
+        return Box(low=np.array([-1, -0.4]), high=np.array([1, 0.4]))
+
+    @property
+    def observation_space(self):
+        # TODO(eugenevinitsky) remove hack
+        if self.use_images:
+            return ImageandProprio((3, 84, 84), (self.feature_shape - 2, ))
+        else:
+            return Box(low=-np.inf,
+                       high=np.inf,
+                       shape=(self.feature_shape - 2, ))
+
+    def step(self, action):
+        obs, rew, done, info = super().step(action)
+        # we don't want to keep incrementing if the agent just sits on the goal during the episode
+        if info['goal_achieved'] and self.achieved_during_episode == False:
+            self.achieved_during_episode = True
+            # increment the count of the goal that was sampleds
+            self.valid_goals[self.sampled_goal_index, -1] += 1
+            if self.current_goal_counter == self.sampled_goal_index:
+                print('incrementing the count on desired goal')
+            # we only want to increment if the goal on the boundary is the one being achieved
+            if self.valid_goals[self.current_goal_counter, -1] >= self.goals_to_increment:
+                print('selecting a new goal!')
+                self.current_goal_counter += 1
+                if self.current_goal_counter == self.valid_goals.shape[0]:
+                    self.current_goal_counter -= 1
+                    print('we have hit our final set of goals!!!')
+        return obs, rew, done, info
+
+    def reset(self):
+        '''We sample a new goal position at each reset''' 
+        super().reset()
+        self.achieved_during_episode = False
+        vehicle_obj = self._env.vehicles[0]
+        # sample over all past achieved goals + the newest goal
+        # self.sampled_goal_index = np.random.randint(0, self.current_goal_counter + 1)
+        # new_goal = self.valid_goals[np.random.randint(0, self.current_goal_counter + 1)]
+
+        # sample either our current goal or the most recently achieved goal
+        self.sampled_goal_index = self.current_goal_counter
+        self.sampled_goal_index = max(np.random.choice([self.current_goal_counter, self.current_goal_counter - 1, 
+                                                        self.current_goal_counter - 2]), 0)
+        new_goal = self.valid_goals[self.sampled_goal_index]
+        vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
+        # TODO(eugenevinitsky) this is a hack since dict to vec wrapper expects a dict
+        new_obs = {'1': self.subscriber.get_obs(vehicle_obj)}
+        features = self.transform_obs(new_obs)[self.features_key]
+        self.curr_goal = features
+        return features
+
+    def transform_obs(self, obs_dict):
+         # TODO(eugenevinitsky) this is a hack since dict to vec wrapper expects a dict
+        return self._env.transform_obs(obs_dict)['1']
+    
 
 def create_env(cfg):
     env = BaseEnv(cfg)
@@ -323,4 +402,4 @@ def create_ppo_env(cfg):
 
 def create_goal_env(cfg):
     env = BaseEnv(cfg)
-    return GoalEnvWrapper(DictToVecWrapper(env))
+    return CurriculumGoalEnvWrapper(DictToVecWrapper(env))
