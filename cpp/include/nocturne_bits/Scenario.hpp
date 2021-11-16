@@ -26,6 +26,8 @@ public:
     std::vector<std::shared_ptr<Object>> getRoadObjects();
     std::vector<std::shared_ptr<Vehicle>> getVehicles();
 
+    void removeObject(Object* object);
+
     sf::FloatRect getRoadNetworkBoundaries() const;
 
     ImageMatrix getCone(Object* object, float viewAngle = pi / 2.0f, float headTilt = 0.0f);

@@ -11,7 +11,8 @@ void init_scenario(py::module &m) {
         .def("getRoadObjects", &Scenario::getRoadObjects)
         .def("getVehicles", &Scenario::getVehicles)
         .def("getCone", &Scenario::getCone)
-        .def("getGoalImage", &Scenario::getGoalImage);
+        .def("getGoalImage", &Scenario::getGoalImage)
+        .def("removeObject", &Scenario::removeObject);
         // .def(
         //     py::init<std::string>(), 
         //     "Constructor for Scenario",
