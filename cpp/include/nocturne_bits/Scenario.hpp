@@ -27,11 +27,10 @@ public:
     std::vector<std::shared_ptr<Vehicle>> getVehicles();
 
     void removeObject(Object* object);
-    
     sf::FloatRect getRoadNetworkBoundaries() const;
 
     ImageMatrix getCone(Object* object, float viewAngle = pi / 2.0f, float headTilt = 0.0f);
-    ImageMatrix getGoalImage(Object* object);
+    ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
 
     bool checkForCollision(const Object* object1, const Object* object2);
 
@@ -42,4 +41,6 @@ private:
     std::vector<std::shared_ptr<Object>> roadObjects;
     std::vector<std::shared_ptr<Vehicle>> vehicles;
     std::vector<std::shared_ptr<Road>> roads;
+
+    sf::RenderTexture* imageTexture;
 };
