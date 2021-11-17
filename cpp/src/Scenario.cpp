@@ -170,11 +170,7 @@ void Scenario::removeObject(Object* object) {
             it++;
         }
     }
-<<<<<<< HEAD
-
-=======
     
->>>>>>> 2e8cb224ec410cf3bf668756a7d36c4cb0aaafdb
     for (auto it = roadObjects.begin(); it != roadObjects.end(); ) {
         if ((*it).get() == object) {
             it = roadObjects.erase(it);
