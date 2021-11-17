@@ -379,7 +379,7 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
                 float radius = 10;
                 sf::CircleShape ptShape(radius);
                 ptShape.setOrigin(radius, radius);
-                ptShape.setFillColor(sf::Color::Green);
+                ptShape.setFillColor(obj->color);
                 ptShape.setPosition(obj->goalPosition.toVector2f());
                 texture->draw(ptShape, renderTransform);
             }
@@ -392,7 +392,7 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
             float radius = 10;
             sf::CircleShape ptShape(radius);
             ptShape.setOrigin(radius, radius);
-            ptShape.setFillColor(sf::Color::Green);
+            ptShape.setFillColor(object->color);
             ptShape.setPosition(object->goalPosition.toVector2f());
             texture->draw(ptShape, renderTransform);
         }
