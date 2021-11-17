@@ -1,2 +1,0 @@
-Eval num episodes,Eval avg final dist,Eval success ratio,Eval mean final l2 dist,Eval median final l2 dist,policy loss,timesteps,epoch time (s),total time (s)
-50,402.49224853515625,0.0,402.49222,402.49225,0,0,21.000231981277466,21.0002384185791
