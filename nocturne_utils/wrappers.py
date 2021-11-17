@@ -7,6 +7,7 @@ import numpy as np
 from algos.gcsl.env_utils import ImageandProprio
 from gym.spaces import Box, Discrete
 from envs.base_env import BaseEnv
+from nocturne_utils.density_estimators import RawKernelDensity
 
 class PPOWrapper(object):
     def __init__(self, env):
@@ -362,65 +363,89 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
     def __init__(self, env):
         super(CurriculumGoalEnvWrapper, self).__init__(env)
         self.valid_goals = []
-        discretization = 10
+        # discretization = 10
 
-        # construction of the goal space
-        y_goals = np.linspace(-180, -20, discretization)
-        vertical_goals = np.vstack((20 * np.ones(discretization), y_goals)).T
-        x_goals = np.linspace(20, 240, discretization)
-        horizontal_goals = np.vstack((x_goals, -20 * np.ones(discretization))).T
-        self.valid_goals = np.vstack((vertical_goals, horizontal_goals))
-        # the last column is a counter of how many times this goal has been achieved
-        self.valid_goals = np.hstack((self.valid_goals, np.zeros((self.valid_goals.shape[0], 1))))
-        self.current_goal_counter = 0
-        # how many times we have to achieve this goal before we increment the counter
-        self.goals_to_increment = 10
+        # # construction of the goal space
+        # y_goals = np.linspace(-180, -20, discretization)
+        # vertical_goals = np.vstack((20 * np.ones(discretization), y_goals)).T
+        # x_goals = np.linspace(20, 240, discretization)
+        # horizontal_goals = np.vstack((x_goals, -20 * np.ones(discretization))).T
+        # self.valid_goals = np.vstack((vertical_goals, horizontal_goals))
+        # # the last column is a counter of how many times this goal has been achieved
+        # self.valid_goals = np.hstack((self.valid_goals, np.zeros((self.valid_goals.shape[0], 1))))
+        # self.current_goal_counter = 0
+        # # how many times we have to achieve this goal before we increment the counter
+        # self.goals_to_increment = 10
         self.achieved_during_episode = False
+
+        # TODO(eugenevinitsky) make this not hardcoded
+        num_agents = 2
+        self.density_estimators = [RawKernelDensity(samples=2000, log_entropy=True, kernel='tophat') for _ in range(num_agents)]
 
     @property
     def action_space(self):
         return Box(low=np.array([-1, -0.4]), high=np.array([1, 0.4]))
 
     def step(self, action):
-        t = time.time()
         obs, rew, done, info = super().step(action)
-        # TODO(eugenevinitsky) extend this to work properly with many agents
-        agent_key = list(obs.keys())[0]
-        # we don't want to keep incrementing if the agent just sits on the goal during the episode
-        if info[agent_key]['goal_achieved'] and self.achieved_during_episode == False:
-            self.achieved_during_episode = True
-            # increment the count of the goal that was sampleds
-            self.valid_goals[self.sampled_goal_index, -1] += 1
-            if self.current_goal_counter == self.sampled_goal_index:
-                print('incrementing the count on desired goal')
-            # we only want to increment if the goal on the boundary is the one being achieved
-            if self.valid_goals[self.current_goal_counter, -1] >= self.goals_to_increment:
-                print('selecting a new goal!')
-                self.current_goal_counter += 1
-                if self.current_goal_counter == self.valid_goals.shape[0]:
-                    self.current_goal_counter -= 1
-                    print('we have hit our final set of goals!!!')
+        for info_dict in info.values():
+            if info_dict['goal_achieved'] and self.achieved_during_episode == False:
+                self.achieved_during_episode = True
+                print('goal achieved')
+        # # TODO(eugenevinitsky) extend this to work properly with many agents
+        # agent_key = list(obs.keys())[0]
+        # # we don't want to keep incrementing if the agent just sits on the goal during the episode
+        # if info[agent_key]['goal_achieved'] and self.achieved_during_episode == False:
+        #     self.achieved_during_episode = True
+        #     # increment the count of the goal that was sampleds
+        #     self.valid_goals[self.sampled_goal_index, -1] += 1
+        #     if self.current_goal_counter == self.sampled_goal_index:
+        #         print('incrementing the count on desired goal')
+        #     # we only want to increment if the goal on the boundary is the one being achieved
+        #     if self.valid_goals[self.current_goal_counter, -1] >= self.goals_to_increment:
+        #         print('selecting a new goal!')
+        #         self.current_goal_counter += 1
+        #         if self.current_goal_counter == self.valid_goals.shape[0]:
+        #             self.current_goal_counter -= 1
+        #             print('we have hit our final set of goals!!!')
+        # t = time.time()
+        for val, rkd in zip(obs.values(), self.density_estimators):
+            achieved_goal = self.extract_achieved_goal(val)
+            rkd.add_sample(achieved_goal)
+            rkd._optimize()
+        # print(f'time to optimize kernel {time.time() - t}')
         return obs, rew, done, info
 
     def reset(self):
         '''We sample a new goal position at each reset''' 
         obs = super().reset()
-        # TODO(eugenevinitsky) this will not work for many agents
-        agent_key = list(obs.keys())[0]
         self.achieved_during_episode = False
-        vehicle_obj = self._env.vehicles[0]
+        # TODO(eugenevinitsky) this will not work for many agents
+        # self.achieved_during_episode = False
+        vehicle_objs = self._env.vehicles
         # sample over all past achieved goals + the newest goal
         # self.sampled_goal_index = np.random.randint(0, self.current_goal_counter + 1)
         # new_goal = self.valid_goals[np.random.randint(0, self.current_goal_counter + 1)]
 
         # sample either our current goal or the most recently achieved goal
-        self.sampled_goal_index = self.current_goal_counter
-        self.sampled_goal_index = max(np.random.choice([self.current_goal_counter, self.current_goal_counter - 1, 
-                                                        self.current_goal_counter - 2]), 0)
-        new_goal = self.valid_goals[self.sampled_goal_index]
-        vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
+        # self.sampled_goal_index = self.current_goal_counter
+        # self.sampled_goal_index = max(np.random.choice([self.current_goal_counter, self.current_goal_counter - 1, 
+        #                                                 self.current_goal_counter - 2]), 0)
+        # new_goal = self.valid_goals[self.sampled_goal_index]
+        # t = time.time()
+        for rkd, vehicle_obj in zip(self.density_estimators, vehicle_objs):
+            # TODO(eugenevinitsky) remove hardcoding
+            if rkd.ready:
+                new_goal = rkd.draw_min_sample(1000) * self.normalize_value
+                # print(f'new goal is {new_goal}')
+                if (new_goal[0] < -42 and new_goal[1] > 42) or (new_goal[0] > 42 and new_goal[1] > 42) or \
+                    (new_goal[0] < -42 and new_goal[1] < -42) or (new_goal[0] > 42 and new_goal[1] < -42):
+                    print('the goal is not actually on the road, dangit.')
+                    print(new_goal)
+                vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
+        # print(f'time to draw new goals {time.time() - t}')
         # TODO(eugenevinitsky) this is a hack since dict to vec wrapper expects a dict
-        new_obs = {agent_key: self.subscriber.get_obs(vehicle_obj)}
+        new_obs = {vehicle_obj.getID(): self.subscriber.get_obs(vehicle_obj) for vehicle_obj in vehicle_objs}
         features = self.transform_obs(new_obs)
         self.curr_goal = features
         return features
@@ -443,4 +468,4 @@ def create_ppo_env(cfg):
 def create_goal_env(cfg):
     env = BaseEnv(cfg)
     # return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False))
-    return GoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False))
+    return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False))

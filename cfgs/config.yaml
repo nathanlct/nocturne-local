@@ -32,13 +32,13 @@ subscriber:
     include_pos: True
     include_heading: True
   ego_subscriber:
-    img_view: True
+    img_view: False
     view_angle: ${view_angle}
     include_speed: True
     include_heading: True
     include_pos: True
     include_goal_pos: True
-    include_goal_img: True
+    include_goal_img: False
     # include_lane_pos: True
 
 hydra:

@@ -103,7 +103,7 @@ class BaseEnv(object):
 
     def render(self):
         # TODO(eugenevinitsky) this should eventually return a global image instead of this hack
-        return np.array(self.scenario.getGoalImage(self.vehicles[0]), copy=False)
+        return np.array(self.scenario.getImage(object=None, renderGoals=True), copy=False)
 
     def seed(self, seed=None):
         if seed is None:

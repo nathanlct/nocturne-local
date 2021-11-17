@@ -26,7 +26,7 @@ class Subscriber(object):
             # concatenate all the objects together but don't duplicate yourself
             # TODO(eugenevinitsky) you want this to be only visible objects
             # TODO(eugenevinitsky) instead of all objects
-            obs_dict['visible_objects'] = np.zeros(self.max_num_vehicles * self.num_vehicle_elem)
+            obs_dict['visible_objects'] = np.zeros((self.max_num_vehicles - 1) * self.num_vehicle_elem)
             if len(self.scenario.getVehicles()) > 1:
                 visible_obs_feat = np.concatenate([np.hstack(list(self.object_subscriber.get_obs(obj).values())) for obj in 
                         self.scenario.getVehicles() if obj.getID() != object.getID()])
@@ -77,8 +77,7 @@ class EgoSubscriber(object):
             pos = object.getGoalPosition()
             obs_dict['goal_pos'] = np.array([pos.x, pos.y])
         if self.cfg.include_goal_img:
-            obs_dict['goal_img'] = np.array(self.scenario.getGoalImage(object),
-                                            copy=False)
+            obs_dict['goal_img'] = np.array(self.scenario.getImage(object=object, renderGoals=True), copy=False)
         # if self.cfg.include_lane_pos:
         #     obs_dict['lane_pos'] = self.simulation.getLanePos(object)
         return obs_dict

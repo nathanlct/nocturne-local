@@ -14,3 +14,4 @@ dependencies:
     - seaborn
     - wandb==0.12.6
     - setproctitle==1.2.2
+    - sklearn==1.0.1
