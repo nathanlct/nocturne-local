@@ -8,7 +8,7 @@ Object::Object(Vector2D position, float width, float length, float heading,
                Vector2D goalPosition) :
     position(position), width(width), length(length), heading(heading),
     occludes(occludes), collides(collides), checkForCollisions(checkForCollisions),
-    speed(0), coneTexture(nullptr), goalTexture(nullptr), goalPosition(goalPosition),
+    speed(0), coneTexture(nullptr), goalPosition(goalPosition),
     id(nextID++), type("Object"), hasCollided(false)
 {
 

@@ -1,7 +1,7 @@
 #include <Scenario.hpp>
 
 
-Scenario::Scenario(std::string path) : roadObjects(), vehicles(), roads() {
+Scenario::Scenario(std::string path) : roadObjects(), vehicles(), roads(), imageTexture(nullptr) {
     if (path.size() > 0) {
         loadScenario(path);
     } else {        
@@ -333,16 +333,16 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
 }   
 
 
-ImageMatrix Scenario::getGoalImage(Object* object) {
+ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
     int squareSide = 300;
 
-    if (object->goalTexture == nullptr) {
+    if (imageTexture == nullptr) {
         sf::ContextSettings settings;
         settings.antialiasingLevel = 1;
-        object->goalTexture = new sf::RenderTexture();
-        object->goalTexture->create(squareSide, squareSide, settings);
+        imageTexture = new sf::RenderTexture();
+        imageTexture->create(squareSide, squareSide, settings);
     }
-    sf::RenderTexture* texture = object->goalTexture;
+    sf::RenderTexture* texture = imageTexture;
 
     sf::Transform renderTransform;
     renderTransform.scale(1, -1); // horizontal flip
@@ -370,16 +370,33 @@ ImageMatrix Scenario::getGoalImage(Object* object) {
     for (const auto& road : roads) {
         texture->draw(*road, renderTransform);
     }
-    texture->draw(*object, renderTransform);
+    if (object == nullptr) {            
+        for (const auto& obj : roadObjects) {
+            texture->draw(*obj, renderTransform);
+            
+            if (renderGoals && obj->getType() == "Vehicle") {
+                // draw goal destination
+                float radius = 10;
+                sf::CircleShape ptShape(radius);
+                ptShape.setOrigin(radius, radius);
+                ptShape.setFillColor(sf::Color::Green);
+                ptShape.setPosition(obj->goalPosition.toVector2f());
+                texture->draw(ptShape, renderTransform);
+            }
+        }
+    } else {
+        texture->draw(*object, renderTransform);
 
-    // draw goal destination
-    float radius = 10;
-    sf::CircleShape ptShape(radius);
-    ptShape.setOrigin(radius, radius);
-    ptShape.setFillColor(sf::Color::Green);
-    ptShape.setPosition(object->goalPosition.toVector2f());
-    texture->draw(ptShape, renderTransform);
-
+        if (renderGoals) {
+            // draw goal destination
+            float radius = 10;
+            sf::CircleShape ptShape(radius);
+            ptShape.setOrigin(radius, radius);
+            ptShape.setFillColor(sf::Color::Green);
+            ptShape.setPosition(object->goalPosition.toVector2f());
+            texture->draw(ptShape, renderTransform);
+        }
+    }
 
     // render texture and return
     texture->display();

@@ -41,7 +41,6 @@ public:
     bool getCollided() const;
 
     sf::RenderTexture* coneTexture;
-    sf::RenderTexture* goalTexture;
 
     static int nextID;
 

@@ -11,7 +11,9 @@ void init_scenario(py::module &m) {
         .def("getRoadObjects", &Scenario::getRoadObjects)
         .def("getVehicles", &Scenario::getVehicles)
         .def("getCone", &Scenario::getCone)
-        .def("getGoalImage", &Scenario::getGoalImage)
+        .def("getImage", &Scenario::getImage, 
+             "Return a numpy array of dimension (w, h, 4) representing the scene",
+             py::arg("object") = nullptr, py::arg("renderGoals") = false)
         .def("removeObject", &Scenario::removeObject);
         // .def(
         //     py::init<std::string>(), 
