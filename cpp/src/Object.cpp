@@ -11,7 +11,14 @@ Object::Object(Vector2D position, float width, float length, float heading,
     speed(0), coneTexture(nullptr), goalPosition(goalPosition),
     id(nextID++), type("Object"), hasCollided(false)
 {
-
+    // generate random color for vehicle
+    std::srand(std::time(nullptr) + id); // use current time as seed for random generator
+    std::vector<int> colors;
+    for (int i = 0; i < 3; i++) {
+        colors.push_back(std::rand()/((RAND_MAX + 1u)/255));
+    }
+    colors[std::rand()/((RAND_MAX + 1u)/2)] = 255;
+    color = sf::Color(colors[0], colors[1], colors[2]);
 }
 
 void Object::step(float dt) {
@@ -24,18 +31,18 @@ void Object::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     rect.setPosition(position.toVector2f());
     rect.setRotation(heading * 180 / pi);
 
-    sf::Color color;
+    sf::Color col;
     if (occludes && collides) {
-        color = sf::Color::Red;
+        col = color; // sf::Color::Red;
     } else if (occludes && !collides) {
-        color = sf::Color::Blue;
+        col = sf::Color::Blue;
     } else if (!occludes && collides) {
-        color = sf::Color::White;
+        col = sf::Color::White;
     } else if (!occludes && !collides) {
-        color = sf::Color::Black;
+        col = sf::Color::Black;
     }
 
-    rect.setFillColor(color);
+    rect.setFillColor(col);
     target.draw(rect, states);
 
     // sf::CircleShape circle(3);

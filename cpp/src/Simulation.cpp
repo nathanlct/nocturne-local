@@ -96,6 +96,7 @@ void Simulation::updateView(float padding) const {
 }
 
 void Simulation::reset() {
+    Object::nextID = 0;
     scenario = new Scenario(scenarioPath);
 }
 

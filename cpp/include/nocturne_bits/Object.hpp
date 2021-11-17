@@ -5,6 +5,8 @@
 #include <string>
 #include "Vector2D.hpp"
 #include <SFML/Graphics.hpp>
+#include <cstdlib>
+#include <ctime>
 
 class Point;
 
@@ -66,4 +68,6 @@ public: // tmp
     bool checkForCollisions;
 
     Vector2D goalPosition;
+
+    sf::Color color;
 };
