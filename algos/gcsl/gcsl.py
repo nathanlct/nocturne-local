@@ -1,16 +1,17 @@
-from celluloid import Camera
-import numpy as np
-import matplotlib.pyplot as plt
-from rlutil.logging import logger
-
-import rlutil.torch as torch
-import rlutil.torch.pytorch_util as ptu
-
+from collections import defaultdict
 import time
 import tqdm
 import os.path as osp
-import copy
 import pickle
+
+from celluloid import Camera
+import numpy as np
+import matplotlib.pyplot as plt
+import tqdm
+
+from rlutil.logging import logger
+import rlutil.torch as torch
+import rlutil.torch.pytorch_util as ptu
 try:
     from torch.utils.tensorboard import SummaryWriter
     tensorboard_enabled = True
@@ -18,6 +19,7 @@ except:
     print('Tensorboard not installed!')
     tensorboard_enabled = False
 
+DUMMY_KEY = 'CONSTANT'
 
 class GCSL:
     """Goal-conditioned Supervised Learning (GCSL).
@@ -147,52 +149,89 @@ class GCSL:
 
         goal_state = self.env.sample_goal()
         goal = self.env.extract_goal(goal_state)
-        goal_achieved = False
 
-        states = []
-        actions = []
+        states = defaultdict(list)
+        actions = defaultdict(list)
         if render and self.save_video:
             fig = plt.figure()
             camera = Camera(fig)
 
         state = self.env.reset()
+        # TODO(eugenevinitsky) this is horrible and needs to be fixed once the IDs don't
+        # change with every reset call. Also could be a source of bugs!
+        goal_state = {key: val for key, val in zip(state.keys(), goal_state.values())}
+        goal = {key: val for key, val in zip(state.keys(), goal.values())}
+
+        noise_dict = {key: torch.tensor([noise]) for key in state.keys()}
+        goal_achieved = {key: False for key in state.keys()} # defaults to False
         for t in range(self.max_path_length):
+            # filter out goal achieved elements for agents that might no longer be there
+            noise_dict = {key: val for key, val in noise_dict.items() if key in state.keys()}
+            goal_achieved = {key: val for key, val in goal_achieved.items() if key in state.keys()}
+            goal = {key: val for key, val in zip(state.keys(), goal.values()) if key in state.keys()}
+
             if render and self.save_video:
                 img = self.env.render()
                 plt.imshow(img)
                 camera.snap()
 
-            states.append(state)
+            if isinstance(state, dict):
+                for key, value in state.items():
+                    states[key].append(value)
+            else:
+                states[DUMMY_KEY].append(state)
 
             observation = self.env.observation(state)
             horizon = np.arange(
                 self.max_path_length) >= (self.max_path_length - 1 - t
                                           )  # Temperature encoding of horizon
-            if goal_achieved and self.go_explore:
-                noise = 1.0
-                greedy = False
-            action = self.policy.act_vectorized(observation[None],
-                                                goal[None],
-                                                horizon=horizon[None],
-                                                greedy=greedy,
-                                                noise=noise)[0]
+            
+            if self.go_explore:
+                # check if we have achieved our goal and hence should do go explore
+                # we want to update once, if it has been achieved, and then not reset
+                # it after.
+                for key, value in goal_achieved.items():
+                    if value:
+                        noise_dict[key] = torch.tensor([1.0])
 
+            t = time.time()
+            # stack observations, goals, horizon and noise appropriately. Here we rely on all
+            # the dicts having the same key so the order is unchanged
+            try:
+                obs = np.vstack(list(observation.values()))
+                goals = np.vstack(list(goal.values()))
+                noises = torch.vstack(list(noise_dict.values()))
+            except:
+                import ipdb; ipdb.set_trace()
+            try:
+                action = self.policy.act_vectorized(obs,
+                                                    goals,
+                                                    horizon=horizon[None],
+                                                    greedy=greedy,
+                                                    noise=noises)
+            except:
+                import ipdb; ipdb.set_trace()
             if not self.is_discrete_action:
                 action = np.clip(action, self.env.action_space.low,
                                  self.env.action_space.high)
 
-            actions.append(action)
-            state, _, done, info = self.env.step(action)
-            if info['goal_achieved']:
-                goal_achieved = True
-            if self.support_termination and done: 
+            action_dict = {}
+            for i, key in enumerate(list(observation.keys())):
+                action_dict[key] = action[i]
+                actions[key].append(action[i])
+            state, _, done, info = self.env.step(action_dict)
+            for key in info.keys():
+                if info[key]['goal_achieved']:
+                    goal_achieved[key] = True
+            if self.support_termination and done['__all__']: 
                 break
 
         if render and self.save_video:
             animation = camera.animate()
             animation.save('/private/home/eugenevinitsky/Code/nocturne/animation.mp4')
             plt.close(fig)
-        return np.stack(states), np.array(actions), goal_state
+        return {key: np.stack(state) for key, state in states.items()}, \
+            {key: np.array(action) for key, action in actions.items()}, goal_state
 
     def take_policy_step(self, buffer=None):
         if buffer is None:
@@ -293,20 +332,23 @@ class GCSL:
 
                 # Interact in environmenta according to exploration strategy.
                 if total_timesteps < self.explore_timesteps:
-                    states, actions, goal_state = self.sample_trajectory(
+                    states_dict, actions_dict, goal_state_dict = self.sample_trajectory(
                         noise=1)
                 else:
-                    states, actions, goal_state = self.sample_trajectory(
+                    states_dict, actions_dict, goal_state_dict = self.sample_trajectory(
                         greedy=True, noise=self.expl_noise)
-
-                # With some probability, put this new trajectory into the validation buffer
-                if self.validation_buffer is not None and np.random.rand(
-                ) < 0.2:
-                    self.validation_buffer.add_trajectory(
-                        states, actions, goal_state, length_of_traj=states.shape[0])
-                else:
-                    self.replay_buffer.add_trajectory(states, actions,
-                                                      goal_state, length_of_traj=states.shape[0])
+                for key in states_dict.keys():
+                    states = states_dict[key]
+                    actions = actions_dict[key]
+                    goal_state = goal_state_dict[key]
+                    # With some probability, put this new trajectory into the validation buffer
+                    if self.validation_buffer is not None and np.random.rand(
+                    ) < 0.2:
+                        self.validation_buffer.add_trajectory(
+                            states, actions, goal_state, length_of_traj=states.shape[0])
+                    else:
+                        self.replay_buffer.add_trajectory(states, actions,
+                                                        goal_state, length_of_traj=states.shape[0])
 
                 total_timesteps += self.max_path_length
                 timesteps_since_train += self.max_path_length
@@ -397,9 +439,8 @@ class GCSL:
                         total_timesteps=0):
         env = self.env
 
-        all_states = []
-        all_goal_states = []
-        all_actions = []
+        # all_states = []
+        # all_goal_states = []
         final_dist_vec = np.zeros(eval_episodes)
         success_vec = np.zeros(eval_episodes)
 
@@ -408,20 +449,19 @@ class GCSL:
                 save_video = True
             else:
                 save_video = False
-            states, actions, goal_state = self.sample_trajectory(noise=0,
+            states_dict, _, goal_state_dict = self.sample_trajectory(noise=0,
                                                                  greedy=greedy,
                                                                  render=save_video,)
-            all_actions.extend(actions)
-            all_states.append(states)
-            all_goal_states.append(goal_state)
+            # all_states.append(states)
+            # all_goal_states.append(goal_state)
             # print(states[-1], goal_state)
-            final_dist = env.goal_distance(states[-1], goal_state)
+            final_dist = env.goal_distance(states_dict, goal_state_dict)
 
             final_dist_vec[index] = final_dist
             success_vec[index] = (final_dist < self.goal_threshold)
 
         # all_states = np.stack(all_states)
-        all_goal_states = np.stack(all_goal_states)
+        # all_goal_states = np.stack(all_goal_states)
 
         logger.record_tabular('%s num episodes' % prefix, eval_episodes)
         logger.record_tabular('%s avg final dist' % prefix,
@@ -435,8 +475,8 @@ class GCSL:
             self.summary_writer.add_scalar('%s/success ratio' % prefix,
                                            np.mean(success_vec),
                                            total_timesteps)
-        # diagnostics = env.get_diagnostics(all_states, all_goal_states)
-        # for key, value in diagnostics.items():
-        #     logger.record_tabular('%s %s' % (prefix, key), value)
+        # # diagnostics = env.get_diagnostics(all_states, all_goal_states)
+        # # for key, value in diagnostics.items():
+        # #     logger.record_tabular('%s %s' % (prefix, key), value)
 
-        return all_states, all_goal_states
+        # return all_states, all_goal_states

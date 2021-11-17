@@ -13,7 +13,7 @@ def get_params(env, env_params):
     buffer_kwargs = dict(
         env=env,
         max_trajectory_length=get_horizon(env_params),
-        #buffer_size=20000,
+        # buffer_size=2000,
         buffer_size=100000,
     )
     replay_buffer = buffer.ReplayBuffer(**buffer_kwargs)
@@ -55,7 +55,7 @@ def default_markov_policy(env, env_params):
 def default_gcsl_params(env, env_params):
     return dict(
         max_path_length=env_params.get('max_trajectory_length', 50),
-        goal_threshold=env_params.get('goal_threshold', 0.05),
+        goal_threshold=env_params.get('goal_threshold', 10.0),
         explore_timesteps=10000,
         start_policy_timesteps=1000,
         eval_freq=env_params.get('eval_freq', 2000),

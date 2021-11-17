@@ -43,7 +43,7 @@ class BaseEnv(object):
     def step(self, action_dict):
         obs_dict = {}
         rew_dict = {}
-        done_dict = {'__all__': False}
+        done_dict = {}
         info_dict = defaultdict(dict)
         rew_cfg = self.cfg.rew_cfg
         self.apply_actions(action_dict)
@@ -55,9 +55,6 @@ class BaseEnv(object):
             rew_dict[veh_id] = 0
             done_dict[veh_id] = False
             info_dict[veh_id]['goal_achieved'] = False
-            if veh_obj.getCollided():
-                rew_dict[veh_id] -= np.abs(rew_cfg.collision_penalty)
-                done_dict[veh_id] = True
             obj_pos = veh_obj.getPosition()
             obj_pos = np.array([obj_pos.x, obj_pos.y])
             goal_pos = veh_obj.getGoalPosition()
@@ -68,12 +65,25 @@ class BaseEnv(object):
                 # TODO(eugenevinitsky) temporarily disabled the done condition as this crushes exploration around a goal
                 # done_dict[veh_id] = True
                 info_dict[veh_id]['goal_achieved'] = True
-            # we have gone off-screen!
-            if obj_pos[0] < -400 or obj_pos[0] > 400 or obj_pos[1] < -400 or obj_pos[1] > 400:
-                done_dict[veh_id] = True
             if rew_cfg.shaped_goal_distance:
                 # the minus one is to ensure that it's worth remaining alive
                 rew_dict[veh_id] -= ((np.linalg.norm(goal_pos - obj_pos) / 2000) - 1)
+            ######################## Handle potential done conditions #######################
+            # we have gone off-screen!
+            if obj_pos[0] < -400 or obj_pos[0] > 400 or obj_pos[1] < -400 or obj_pos[1] > 400:
+                done_dict[veh_id] = True
+            if veh_obj.getCollided():
+                rew_dict[veh_id] -= np.abs(rew_cfg.collision_penalty)
+                done_dict[veh_id] = True
+            # remove the vehicle so that its trajectory doesn't continue. This is important
+            # in the multi-agent setting.
+            if done_dict[veh_id]:
+                self.scenario.removeObject(veh_obj)
+        
+        all_done = True
+        for value in done_dict.values():
+            all_done *= value
+        done_dict['__all__'] = all_done
 
         return obs_dict, rew_dict, done_dict, info_dict
 

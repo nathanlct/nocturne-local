@@ -14,7 +14,7 @@ wandb_group: debug
 debug: False
 
 # TODO(eugenevinitsky) don't hardcode this
-scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/intersection.json'
+scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/two_car_intersection.json'
 view_angle: 1.56
 dt: 1.0
 initial_speed: 8.0
@@ -26,10 +26,11 @@ rew_cfg:
 subscriber:
   include_ego_state: True
   # TODO(eugenevinitsky) this should be true
-  include_visible_object_state: False
+  include_visible_object_state: True
   object_subscriber:
     include_speed: True
     include_pos: True
+    include_heading: True
   ego_subscriber:
     img_view: True
     view_angle: ${view_angle}

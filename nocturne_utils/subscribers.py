@@ -12,6 +12,10 @@ class Subscriber(object):
                                                   scenario, simulation)
         self.ego_subscriber = EgoSubscriber(cfg.ego_subscriber, scenario,
                                             simulation)
+        # TODO(eugenevinitsky) this will change when there's a finite number of visible vehicles
+        self.max_num_vehicles = len(self.scenario.getVehicles())
+        object_cfg = cfg.object_subscriber
+        self.num_vehicle_elem = object_cfg.include_speed + 2 * object_cfg.include_pos + object_cfg.include_heading
 
     def get_obs(self, object):
         obs_dict = OrderedDict()
@@ -19,10 +23,15 @@ class Subscriber(object):
             obs_dict.update(self.ego_subscriber.get_obs(object))
         # TODO(eugenevinitsky) add this method
         if self.cfg.include_visible_object_state:
-            obs_dict['visible_objects'] = OrderedDict({
-                obj_id: self.object_subscriber.get_obs(obj)
-                for obj_id, obj in self.scenario.getVisibleObjects(object)
-            })
+            # concatenate all the objects together but don't duplicate yourself
+            # TODO(eugenevinitsky) you want this to be only visible objects
+            # TODO(eugenevinitsky) instead of all objects
+            obs_dict['visible_objects'] = np.zeros(self.max_num_vehicles * self.num_vehicle_elem)
+            if len(self.scenario.getVehicles()) > 1:
+                visible_obs_feat = np.concatenate([np.hstack(list(self.object_subscriber.get_obs(obj).values())) for obj in 
+                        self.scenario.getVehicles() if obj.getID() != object.getID()])
+                obs_dict['visible_objects'][0 : (len(self.scenario.getVehicles()) - 1) * self.num_vehicle_elem] = visible_obs_feat
+        
         return obs_dict
 
 
@@ -39,6 +48,8 @@ class ObjectSubscriber(object):
         if self.cfg.include_pos:
             pos = object.getPosition()
             obs_dict['pos'] = np.array([pos.x, pos.y])
+        if self.cfg.include_heading:
+            obs_dict['heading'] = np.array([object.getHeading()*180/3.14])
         return obs_dict
 
 

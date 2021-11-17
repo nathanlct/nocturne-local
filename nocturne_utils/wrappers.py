@@ -1,10 +1,11 @@
 from collections import OrderedDict
+import time
+
+import cv2
+import numpy as np
 
 from algos.gcsl.env_utils import ImageandProprio
 from gym.spaces import Box, Discrete
-
-import numpy as np
-
 from envs.base_env import BaseEnv
 
 class PPOWrapper(object):
@@ -86,18 +87,70 @@ class PPOWrapper(object):
         return getattr(self._env, name)
 
 
+class ActionWrapper(object):
+    '''Used to make sure actions conform to the expected format'''
+    def __init__(self, env):
+        self._env = env
+
+    def step(self, action_dict):
+        for key, action in action_dict.items():
+            if isinstance(action, np.ndarray):
+                new_action = {'accel': action[0], 'turn': action[1]}
+                action_dict[key] = new_action
+        obs_dict, rew_dict, done_dict, info_dict = self._env.step(action_dict)
+        return obs_dict, rew_dict, done_dict, info_dict
+
+    def reset(self):
+        return self._env.reset()
+
+    def render(self):
+        return self._env.render()
+
+    def __getattr__(self, name):
+        return getattr(self._env, name)
+
 
 class DictToVecWrapper(object):
-    def __init__(self, env, no_img_concat=True, normalize_value=400):
+    def __init__(self, env, use_images=False, normalize_value=400):
         """Takes a dictionary state space and returns a flattened vector in the 'state' key of the dict
 
         Args:
             env ([type]): [description]
-            no_img_concat (bool, optional): If true, we don't concat images into the 'state' key
+            use_images (bool): If true, images are going to be used and need to be prepared in the dict
         """
         self._env = env
-        self._no_img_concat = no_img_concat
         self.normalize_value = normalize_value
+
+        self.use_images = use_images
+        if self.use_images:
+            self.features_key = 'ego_image'
+        else:
+            self.features_key = 'features'
+
+        # snag an obs that we will use to create the observation spaces
+        obs_dict = self.transform_obs(self._env.reset())
+        example_obs = next(iter(obs_dict.values()))
+        self.feature_shape = example_obs['features'].shape[0]
+        self.goal_space = Box(low=-np.inf,
+                                high=np.inf,
+                                shape=example_obs['goal_pos'].shape)
+
+        if self.use_images:
+            print('Using Images')
+
+            self.state_space = ImageandProprio((84, 84, 4),
+                                                example_obs['features'].shape)
+        else:
+            self.state_space = Box(low=-np.inf,
+                                    high=np.inf,
+                                    shape=example_obs['features'].shape)
+        
+        # TODO(eugenevinitsky) remove this once we actually vary the set of possible goals and sample instead of returning reset state
+        # TODO(eugenevinitsky) this is handled bespoke in every env, make this more general or a wrapper
+        if self.use_images:
+            self.curr_goal = {key: self.state_space.to_flat(obs[self.features_key], obs['features']) for key, obs in obs_dict.items()}
+        else:
+            self.curr_goal = {key: obs[self.features_key] for key, obs in obs_dict.items()}
 
     @property
     def observation_space(self):
@@ -117,13 +170,19 @@ class DictToVecWrapper(object):
         for agent_id, next_obs in obs_dict.items():
             if isinstance(next_obs, dict):
                 features = []
-                for val in next_obs.values():
-                    if self._no_img_concat and len(val.shape) > 2:
+                for key, val in next_obs.items():
+                    if len(val.shape) > 2 or key == 'goal_pos':
                         continue
                     else:
                         features.append(val.ravel())
-            obs_dict[agent_id]['features'] = np.concatenate(
+                # we want to make sure that the goal is at the end
+                features.append(next_obs['goal_pos'])
+            agent_dict = obs_dict[agent_id]
+            agent_dict['features'] = np.concatenate(
                 features, axis=0).astype(np.float32) / self.normalize_value
+            if 'image' in self.features_key:
+                agent_dict[self.features_key] = (cv2.resize(agent_dict[self.features_key], 
+                                                (84, 84), interpolation = cv2.INTER_AREA) - 0.5) / 255.0
         return obs_dict
 
     def reset(self):
@@ -158,34 +217,9 @@ class GoalEnvWrapper(BaseEnv):
         GoalEnv.extract_goal(state)
             Returns the goal representation for a given state
     """
-    def __init__(self, env, use_images=False):
+    def __init__(self, env):
         self._env = env
         self.goal_metric = 'euclidean'
-        self.use_images = use_images
-        if self.use_images:
-            self.features_key = 'ego_image'
-        else:
-            self.features_key = 'features'
-
-        # initialize some obs dicts
-        obs_dict = self._env.reset()
-        self.agent_key = list(obs_dict.keys())[0]
-        for value in obs_dict.values():
-            obs = value
-        self.feature_shape = obs['features'].shape[0]
-        if self.use_images:
-            print('Using Images')
-            self.state_space = ImageandProprio((300, 300, 4),
-                                                obs['features'].shape)
-        else:
-            # TODO(eugenevinitsky) remove this once we actually vary the set of possible goals and sample instead of returning reset state
-            self.curr_goal = obs['features']
-            self.state_space = Box(low=-np.inf,
-                                    high=np.inf,
-                                    shape=obs['features'].shape)
-        self.goal_space = Box(low=-np.inf,
-                                high=np.inf,
-                                shape=obs['goal_pos'].shape)
 
     @property
     def action_space(self):
@@ -195,7 +229,7 @@ class GoalEnvWrapper(BaseEnv):
     def observation_space(self):
         # TODO(eugenevinitsky) remove hack
         if self.use_images:
-            return ImageandProprio((3, 84, 84), (self.feature_shape - 2, ))
+            return ImageandProprio((4, 84, 84), (self.feature_shape - 2, ))
         else:
             return Box(low=-np.inf,
                        high=np.inf,
@@ -208,33 +242,21 @@ class GoalEnvWrapper(BaseEnv):
             The initial state
         """
         obs_dict = self._env.reset()
-        self.agent_key = list(obs_dict.keys())[0]
-        for value in obs_dict.values():
-            obs = value
-        if self.use_images:
-            return self.state_space.to_flat(obs[self.features_key],
-                                            obs['features'])
-        else:
-            return obs[self.features_key]
+        return self.get_obs(obs_dict)
 
-    def step(self, a):
-        """Temporarily a single agent env, so we extract all the things from the wrappers. Assumes only one agent in env."""
-        accel = a[0]
-        steer = a[1]
-        action_dict = {self.agent_key: {'accel': accel, 'turn': steer}}
+    def step(self, action_dict):
+
         obs_dict, rew_dict, done_dict, info_dict = self._env.step(action_dict)
-        for key in obs_dict.keys():
-            obs = obs_dict[key]
-            rew = rew_dict[key]
-            done = done_dict[key]
-            info = info_dict[key]
-        if self.use_images:
-            return self.state_space.to_flat(
-                obs[self.features_key], obs['features']), rew, done, info_dict
-        else:
-            return obs[self.features_key], rew, done, info
+        return self.get_obs(obs_dict), rew_dict, done_dict, info_dict
 
-    def observation(self, state):
+    def get_obs(self, obs_dict):
+        if self.use_images:
+            return {key: self.state_space.to_flat(obs[self.features_key], obs['features']) for key, obs in obs_dict.items()}
+        else:
+            return {key: obs[self.features_key] for key, obs in obs_dict.items()}
+
+
+    def observation(self, states):
         """
         Returns the observation for a given state
         Args:
@@ -242,16 +264,27 @@ class GoalEnvWrapper(BaseEnv):
         Returns:
             obs: A numpy array representing observations
         """
-        if len(state.shape) > 1:
-            return state[..., :-2]
+        if isinstance(states, dict):
+            new_dict = {}
+            for key, state in states.items():
+                if len(state.shape) > 1:
+                    new_dict[key] = state[..., :-2]
+                else:
+                    new_dict[key] = state[:-2]
+            return new_dict
         else:
-            return state[:-2]
+            return states[..., :-2]
 
-    def _extract_sgoal(self, state):
-        if self.use_images:
-            return self.state_space.from_flat(state)[1][-2:]
+    def _extract_sgoal(self, states):
+        '''This method is used to get the goal shape and so does not return a dict but a vector.'''
+        # if self.use_images:
+        #     import ipdb; ipdb.set_trace()
+        #     return self.state_space.from_flat(state)[1][-2:]
+        # else:
+        if isinstance(states, dict):
+            return next(iter(states.values()))[..., -2:]
         else:
-            return state[..., -2:]
+            return states[..., -2:]
 
     def extract_goal(self, state):
         """
@@ -262,23 +295,35 @@ class GoalEnvWrapper(BaseEnv):
             obs: A numpy array representing observations
         (TODO) no hardcoding
         """
-        return state[..., -2:]
-
-    def extract_achieved_goal(self, state):
-        return state[..., 2:4]
-
-    def goal_distance(self, state, goal_state):
-        if self.goal_metric == 'euclidean':
-            # TODO(eugenevinitsky) fix hardcoding
-            if len(state.shape) > 1:
-                achieved_goal = state[:, 2:4]
-            else:
-                achieved_goal = state[2:4]
-            desired_goal = self.extract_goal(goal_state)
-            diff = achieved_goal - desired_goal
-            return np.linalg.norm(diff, axis=-1)
+        if isinstance(state, dict):
+            return {key: state_val[..., -2:] for key, state_val in state.items()}
         else:
-            raise ValueError('Unknown goal metric %s' % self.goal_metric)
+            return state[..., -2:]
+
+    def extract_achieved_goal(self, states):
+        # TODO(eugenevinitsky) hardcodiiiiiiiiing
+        if isinstance(states, dict):
+            return {key: state[..., 2:4] for key, state in states.items()}
+        else:
+            return states[..., 2:4]
+
+    def goal_distance(self, state_dict, goal_state_dict):
+        average_goal_dist = 0
+        for key in state_dict.keys():
+            state = state_dict[key][-1]
+            goal_state = goal_state_dict[key]
+            if self.goal_metric == 'euclidean':
+                # TODO(eugenevinitsky) fix hardcoding
+                if len(state.shape) > 1:
+                    achieved_goal = state[:, 2:4]
+                else:
+                    achieved_goal = state[2:4]
+                desired_goal = self.extract_goal(goal_state)
+                diff = achieved_goal - desired_goal
+                average_goal_dist += np.linalg.norm(diff * self.normalize_value, axis=-1)
+            else:
+                raise ValueError('Unknown goal metric %s' % self.goal_metric)
+        return average_goal_dist / len(state_dict)
 
     def sample_goal(self):
         # return self.goal_space.sample()
@@ -314,8 +359,8 @@ class GoalEnvWrapper(BaseEnv):
 
 class CurriculumGoalEnvWrapper(GoalEnvWrapper):
     '''Test a curriculum for a single agent to go to a goal on either the vertical strip or the right hand horizontal strip'''
-    def __init__(self, env, use_images=False):
-        super(CurriculumGoalEnvWrapper, self).__init__(env, use_images)
+    def __init__(self, env):
+        super(CurriculumGoalEnvWrapper, self).__init__(env)
         self.valid_goals = []
         discretization = 10
 
@@ -336,20 +381,13 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
     def action_space(self):
         return Box(low=np.array([-1, -0.4]), high=np.array([1, 0.4]))
 
-    @property
-    def observation_space(self):
-        # TODO(eugenevinitsky) remove hack
-        if self.use_images:
-            return ImageandProprio((3, 84, 84), (self.feature_shape - 2, ))
-        else:
-            return Box(low=-np.inf,
-                       high=np.inf,
-                       shape=(self.feature_shape - 2, ))
-
     def step(self, action):
+        t = time.time()
         obs, rew, done, info = super().step(action)
+        # TODO(eugenevinitsky) extend this to work properly with many agents
+        agent_key = list(obs.keys())[0]
         # we don't want to keep incrementing if the agent just sits on the goal during the episode
-        if info['goal_achieved'] and self.achieved_during_episode == False:
+        if info[agent_key]['goal_achieved'] and self.achieved_during_episode == False:
             self.achieved_during_episode = True
             # increment the count of the goal that was sampleds
             self.valid_goals[self.sampled_goal_index, -1] += 1
@@ -366,7 +404,9 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
 
     def reset(self):
         '''We sample a new goal position at each reset''' 
-        super().reset()
+        obs = super().reset()
+        # TODO(eugenevinitsky) this will not work for many agents
+        agent_key = list(obs.keys())[0]
         self.achieved_during_episode = False
         vehicle_obj = self._env.vehicles[0]
         # sample over all past achieved goals + the newest goal
@@ -380,19 +420,19 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         new_goal = self.valid_goals[self.sampled_goal_index]
         vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
         # TODO(eugenevinitsky) this is a hack since dict to vec wrapper expects a dict
-        new_obs = {'1': self.subscriber.get_obs(vehicle_obj)}
-        features = self.transform_obs(new_obs)[self.features_key]
+        new_obs = {agent_key: self.subscriber.get_obs(vehicle_obj)}
+        features = self.transform_obs(new_obs)
         self.curr_goal = features
         return features
 
     def transform_obs(self, obs_dict):
          # TODO(eugenevinitsky) this is a hack since dict to vec wrapper expects a dict
-        return self._env.transform_obs(obs_dict)['1']
+        return self.get_obs(self._env.transform_obs(obs_dict))
     
 
 def create_env(cfg):
     env = BaseEnv(cfg)
-    return DictToVecWrapper(env)
+    return ActionWrapper(DictToVecWrapper(env))
 
 def create_ppo_env(cfg):
     env = BaseEnv(cfg)
@@ -402,4 +442,5 @@ def create_ppo_env(cfg):
 
 def create_goal_env(cfg):
     env = BaseEnv(cfg)
-    return CurriculumGoalEnvWrapper(DictToVecWrapper(env))
+    # return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False))
+    return GoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False))

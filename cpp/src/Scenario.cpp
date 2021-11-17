@@ -159,7 +159,25 @@ std::vector<std::shared_ptr<Object>> Scenario::getRoadObjects() {
 }
 
 std::vector<std::shared_ptr<Vehicle>> Scenario::getVehicles() { 
-    return vehicles; 
+    return vehicles;
+}
+
+void Scenario::removeObject(Object* object) {
+    for (auto it = vehicles.begin(); it != vehicles.end(); ) {
+        if ((*it).get() == object) {
+            it = vehicles.erase(it);
+        } else {
+            it++;
+        }
+    }
+
+    for (auto it = roadObjects.begin(); it != roadObjects.end(); ) {
+        if ((*it).get() == object) {
+            it = roadObjects.erase(it);
+        } else {
+            it++;
+        }
+    }
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {

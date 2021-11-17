@@ -76,8 +76,8 @@ class DiscretizedActionEnv(ProxyEnv):
         self.action_space = Discretized(len(self.base_actions), n_dims,
                                         granularity)
 
-    def step(self, action):
-        return self.wrapped_env.step(self.base_actions[action])
+    def step(self, actions):
+        return self.wrapped_env.step({key: self.base_actions[action] for key, action in actions.items()})
 
 
 class ImageEnv(ProxyEnv, MultitaskEnv):
