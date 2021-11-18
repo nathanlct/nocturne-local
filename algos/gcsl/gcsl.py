@@ -187,12 +187,11 @@ class GCSL:
                                           )  # Temperature encoding of horizon
             
             if self.go_explore:
-                # check if we have achieved our goal and hence should do go explore
-                # we want to update once, if it has been achieved, and then not reset
-                # it after.
+                # check if we have achieved our current goal and hence should do go explore i.e. increment our exploration
                 for key, value in goal_achieved.items():
                     if value:
-                        noise_dict[key] = torch.tensor([1.0])
+                        # increment the noise a bit every time the goal is achieved
+                        noise_dict[key] = torch.tensor([noise_dict[key] + 0.1])
 
             t = time.time()
             # stack observations, goals, horizon and noise appropriately. Here we rely on all
@@ -221,8 +220,8 @@ class GCSL:
                 actions[key].append(action[i])
             state, _, done, info = self.env.step(action_dict)
             for key in info.keys():
-                if info[key]['goal_achieved']:
-                    goal_achieved[key] = True
+                # if info[key]['goal_achieved']:
+                goal_achieved[key] = info[key]['goal_achieved']
             if self.support_termination and done['__all__']: 
                 break
 

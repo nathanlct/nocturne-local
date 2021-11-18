@@ -14,12 +14,12 @@ wandb_group: debug
 debug: False
 
 # TODO(eugenevinitsky) don't hardcode this
-scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/two_car_intersection.json'
+scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/intersection.json'
 view_angle: 1.56
 dt: 1.0
-initial_speed: 8.0
+initial_speed: 5.0
 rew_cfg:
-  goal_tolerance: 20.0
+  goal_tolerance: 30.0
   collision_penalty: -10.0
   shaped_goal_distance: True
   goal_achieved_bonus: 1.0

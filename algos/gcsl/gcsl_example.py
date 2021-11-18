@@ -32,7 +32,7 @@ def main(cfg):
     np.random.seed(cfg.seed)
 
     env = create_goal_env(cfg)
-    env_params = dict(eval_freq=2000,
+    env_params = dict(eval_freq=10000,
                       eval_episodes=2,
                       max_trajectory_length=50,
                       max_timesteps=1e6,

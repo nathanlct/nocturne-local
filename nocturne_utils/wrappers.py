@@ -2,7 +2,10 @@ from collections import OrderedDict
 import time
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
+from numpy.lib import index_tricks
+import seaborn as sns
 
 from algos.gcsl.env_utils import ImageandProprio
 from gym.spaces import Box, Discrete
@@ -172,12 +175,13 @@ class DictToVecWrapper(object):
             if isinstance(next_obs, dict):
                 features = []
                 for key, val in next_obs.items():
-                    if len(val.shape) > 2 or key == 'goal_pos':
+                    if len(val.shape) > 2 or key == 'goal_pos' or key == 'ego_pos':
                         continue
                     else:
                         features.append(val.ravel())
                 # we want to make sure that the goal is at the end
-                features.append(next_obs['goal_pos'])
+                # and that the "achieved_goal" is between -4 and -2 from the end
+                features.extend([next_obs['ego_pos'], next_obs['goal_pos']])
             agent_dict = obs_dict[agent_id]
             agent_dict['features'] = np.concatenate(
                 features, axis=0).astype(np.float32) / self.normalize_value
@@ -304,9 +308,9 @@ class GoalEnvWrapper(BaseEnv):
     def extract_achieved_goal(self, states):
         # TODO(eugenevinitsky) hardcodiiiiiiiiing
         if isinstance(states, dict):
-            return {key: state[..., 2:4] for key, state in states.items()}
+            return {key: state[..., -4:-2] for key, state in states.items()}
         else:
-            return states[..., 2:4]
+            return states[..., -4:-2]
 
     def goal_distance(self, state_dict, goal_state_dict):
         average_goal_dist = 0
@@ -316,9 +320,9 @@ class GoalEnvWrapper(BaseEnv):
             if self.goal_metric == 'euclidean':
                 # TODO(eugenevinitsky) fix hardcoding
                 if len(state.shape) > 1:
-                    achieved_goal = state[:, 2:4]
+                    achieved_goal = state[:, -4:-2]
                 else:
-                    achieved_goal = state[2:4]
+                    achieved_goal = state[-4:-2]
                 desired_goal = self.extract_goal(goal_state)
                 diff = achieved_goal - desired_goal
                 average_goal_dist += np.linalg.norm(diff * self.normalize_value, axis=-1)
@@ -362,7 +366,9 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
     '''Test a curriculum for a single agent to go to a goal on either the vertical strip or the right hand horizontal strip'''
     def __init__(self, env):
         super(CurriculumGoalEnvWrapper, self).__init__(env)
-        self.valid_goals = []
+        self.achieved_goals = []
+        self.sampled_goals = []
+        self.num_episodes = 0
         # discretization = 10
 
         # # construction of the goal space
@@ -377,10 +383,11 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         # # how many times we have to achieve this goal before we increment the counter
         # self.goals_to_increment = 10
         self.achieved_during_episode = False
+        self.rkd_is_ready = False
 
         # TODO(eugenevinitsky) make this not hardcoded
-        num_agents = 2
-        self.density_estimators = [RawKernelDensity(samples=2000, log_entropy=True, kernel='tophat') for _ in range(num_agents)]
+        num_agents = 1
+        self.density_estimators = [RawKernelDensity(samples=10000, log_figure=True, kernel='gaussian', quartile_cutoff=0.0) for _ in range(num_agents)]
 
     @property
     def action_space(self):
@@ -388,36 +395,64 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
 
     def step(self, action):
         obs, rew, done, info = super().step(action)
-        for info_dict in info.values():
-            if info_dict['goal_achieved'] and self.achieved_during_episode == False:
-                self.achieved_during_episode = True
-                print('goal achieved')
-        # # TODO(eugenevinitsky) extend this to work properly with many agents
-        # agent_key = list(obs.keys())[0]
-        # # we don't want to keep incrementing if the agent just sits on the goal during the episode
-        # if info[agent_key]['goal_achieved'] and self.achieved_during_episode == False:
-        #     self.achieved_during_episode = True
-        #     # increment the count of the goal that was sampleds
-        #     self.valid_goals[self.sampled_goal_index, -1] += 1
-        #     if self.current_goal_counter == self.sampled_goal_index:
-        #         print('incrementing the count on desired goal')
-        #     # we only want to increment if the goal on the boundary is the one being achieved
-        #     if self.valid_goals[self.current_goal_counter, -1] >= self.goals_to_increment:
-        #         print('selecting a new goal!')
-        #         self.current_goal_counter += 1
-        #         if self.current_goal_counter == self.valid_goals.shape[0]:
-        #             self.current_goal_counter -= 1
-        #             print('we have hit our final set of goals!!!')
-        # t = time.time()
+        for key, info_dict in info.items():
+            if info_dict['goal_achieved']:
+                if self.achieved_during_episode == False:
+                    self.achieved_during_episode = True
+                    print('goal achieved')
+                # sample a new goal
+                vehicle_objs = self._env.vehicles
+                for rkd, vehicle_obj in zip(self.density_estimators, vehicle_objs):
+                    if vehicle_obj.getID() == key:
+                        # TODO(eugenevinitsky) remove hardcoding
+                        if rkd.ready:
+                            new_goal = rkd.draw_min_sample(1000) * self.normalize_value
+                            vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
+
         for val, rkd in zip(obs.values(), self.density_estimators):
             achieved_goal = self.extract_achieved_goal(val)
             rkd.add_sample(achieved_goal)
-            rkd._optimize()
+            # rkd._optimize()
         # print(f'time to optimize kernel {time.time() - t}')
         return obs, rew, done, info
 
     def reset(self):
         '''We sample a new goal position at each reset''' 
+        # this is just some temp logging for debugging
+        for vehicle in self._env.vehicles:
+            achieved_goal = vehicle.getPosition()
+            self.achieved_goals.append([achieved_goal.x, achieved_goal.y])
+            if self.rkd_is_ready:
+                desired_goal = vehicle.getGoalPosition()
+                self.sampled_goals.append([desired_goal.x, desired_goal.y])
+        if self.num_episodes % 200 == 0:
+            fig = plt.figure()
+            np_arr = np.array(self.achieved_goals)
+            idx = np.random.randint(low=0, high=np_arr.shape[0], size=2000)
+            sns.kdeplot(np_arr[idx, 0], np_arr[idx, 1], fill=True)
+            plt.hlines(42, -400, 400)
+            plt.hlines(-42, -400, 400)
+            plt.vlines(42, -400, 400)
+            plt.vlines(-42, -400, 400)
+            plt.xlim([-400, 400])
+            plt.ylim([-400, 400])
+            plt.savefig('/private/home/eugenevinitsky/Code/nocturne/achieved_goals.png')
+            plt.close(fig)
+
+            if self.rkd_is_ready:
+                fig = plt.figure()
+                np_arr = np.array(self.sampled_goals)
+                idx = np.random.randint(low=0, high=np_arr.shape[0], size=2000)
+                sns.kdeplot(np_arr[idx, 0], np_arr[idx, 1], fill=True)
+                plt.hlines(42, -400, 400)
+                plt.hlines(-42, -400, 400)
+                plt.vlines(42, -400, 400)
+                plt.vlines(-42, -400, 400)
+                plt.xlim([-400, 400])
+                plt.ylim([-400, 400])
+                plt.savefig('/private/home/eugenevinitsky/Code/nocturne/desired_goals.png')
+                plt.close(fig)
+
         obs = super().reset()
         self.achieved_during_episode = False
         # TODO(eugenevinitsky) this will not work for many agents
@@ -435,19 +470,23 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         # t = time.time()
         for rkd, vehicle_obj in zip(self.density_estimators, vehicle_objs):
             # TODO(eugenevinitsky) remove hardcoding
+            rkd._optimize()
             if rkd.ready:
+                self.rkd_is_ready = True
                 new_goal = rkd.draw_min_sample(1000) * self.normalize_value
+                vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
                 # print(f'new goal is {new_goal}')
                 if (new_goal[0] < -42 and new_goal[1] > 42) or (new_goal[0] > 42 and new_goal[1] > 42) or \
                     (new_goal[0] < -42 and new_goal[1] < -42) or (new_goal[0] > 42 and new_goal[1] < -42):
                     print('the goal is not actually on the road, dangit.')
                     print(new_goal)
-                vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
         # print(f'time to draw new goals {time.time() - t}')
         # TODO(eugenevinitsky) this is a hack since dict to vec wrapper expects a dict
         new_obs = {vehicle_obj.getID(): self.subscriber.get_obs(vehicle_obj) for vehicle_obj in vehicle_objs}
         features = self.transform_obs(new_obs)
         self.curr_goal = features
+        
+        self.num_episodes += 1
         return features
 
     def transform_obs(self, obs_dict):

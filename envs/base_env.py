@@ -90,7 +90,7 @@ class BaseEnv(object):
     def reset(self):
         self.t = 0
         # TODO(eugenevinitsky) remove this once there is a scenario reset method
-        self.simulation = Simulation(self.cfg.scenario_path)
+        self.simulation.reset()
         self.scenario = self.simulation.getScenario()
         self.vehicles = self.scenario.getVehicles()
         self.subscriber = Subscriber(self.cfg.subscriber, self.scenario, self.simulation)
