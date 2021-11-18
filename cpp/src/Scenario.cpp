@@ -70,6 +70,24 @@ void Scenario::loadScenario(std::string path) {
     }
 }
 
+void Scenario::createVehicle(float posX, float posY, float width, float length, float heading,
+    bool occludes, bool collides, bool checkForCollisions, float goalPosX, float goalPosY)
+{
+    Vehicle* veh = new Vehicle(
+        Vector2D(posX, posY), 
+        width, 
+        length, 
+        heading,
+        occludes, 
+        collides, 
+        checkForCollisions,
+        Vector2D(goalPosX, goalPosY)
+    );
+    auto ptr = std::shared_ptr<Vehicle>(veh);
+    roadObjects.push_back(ptr);
+    vehicles.push_back(ptr);
+}
+
 void Scenario::step(float dt) {
     for (auto& object : roadObjects) {
         object->step(dt);
