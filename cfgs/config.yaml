@@ -14,7 +14,7 @@ wandb_group: debug
 debug: False
 
 # TODO(eugenevinitsky) don't hardcode this
-scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/intersection.json'
+scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/scenario.json'
 view_angle: 1.56
 dt: 1.0
 initial_speed: 5.0

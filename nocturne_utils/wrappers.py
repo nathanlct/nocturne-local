@@ -386,8 +386,8 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         self.rkd_is_ready = False
 
         # TODO(eugenevinitsky) make this not hardcoded
-        num_agents = 1
-        self.density_estimators = [RawKernelDensity(samples=10000, log_figure=True, kernel='gaussian', quartile_cutoff=0.0) for _ in range(num_agents)]
+        vehicle_ids = [obj.getID() for obj in self._env.vehicles]
+        self.density_estimators = {key: RawKernelDensity(samples=10000, log_figure=True, kernel='gaussian', quartile_cutoff=0.0) for key in vehicle_ids}
 
     @property
     def action_space(self):
@@ -400,17 +400,19 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                 if self.achieved_during_episode == False:
                     self.achieved_during_episode = True
                     print('goal achieved')
-                # sample a new goal
-                vehicle_objs = self._env.vehicles
-                for rkd, vehicle_obj in zip(self.density_estimators, vehicle_objs):
-                    if vehicle_obj.getID() == key:
-                        # TODO(eugenevinitsky) remove hardcoding
-                        if rkd.ready:
-                            new_goal = rkd.draw_min_sample(1000) * self.normalize_value
-                            vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
+                # # sample a new goal
+                # vehicle_objs = self._env.vehicles
+                # for vehicle_obj in vehicle_objs:
+                #     if vehicle_obj.getID() == key:
+                #         rkd = self.density_estimators[key]
+                #         # TODO(eugenevinitsky) remove hardcoding
+                #         if rkd.ready:
+                #             new_goal = rkd.draw_min_sample(1000) * self.normalize_value
+                #             vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
 
-        for val, rkd in zip(obs.values(), self.density_estimators):
+        for key, val in obs.items():
             achieved_goal = self.extract_achieved_goal(val)
+            rkd = self.density_estimators[key]
             rkd.add_sample(achieved_goal)
             # rkd._optimize()
         # print(f'time to optimize kernel {time.time() - t}')
@@ -468,12 +470,14 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         #                                                 self.current_goal_counter - 2]), 0)
         # new_goal = self.valid_goals[self.sampled_goal_index]
         # t = time.time()
-        for rkd, vehicle_obj in zip(self.density_estimators, vehicle_objs):
+        for vehicle_obj in vehicle_objs:
+            veh_id = vehicle_obj.getID()
+            rkd = self.density_estimators[veh_id]
             # TODO(eugenevinitsky) remove hardcoding
             rkd._optimize()
             if rkd.ready:
                 self.rkd_is_ready = True
-                new_goal = rkd.draw_min_sample(1000) * self.normalize_value
+                new_goal = rkd.draw_min_sample(3000) * self.normalize_value
                 vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
                 # print(f'new goal is {new_goal}')
                 if (new_goal[0] < -42 and new_goal[1] > 42) or (new_goal[0] > 42 and new_goal[1] > 42) or \
