@@ -35,6 +35,8 @@ public:
 
     bool checkForCollision(const Object* object1, const Object* object2);
 
+    bool isVehicleOnRoad(const Object& object) const;
+
 private:
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
