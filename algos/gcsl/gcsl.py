@@ -169,6 +169,7 @@ class GCSL:
 
         noise_dict = {key: torch.tensor([noise]) for key in state.keys()}
         goal_achieved = {key: False for key in state.keys()} # defaults to False
+        goal_achieved_once = {key: False for key in state.keys()} 
         for t in range(self.max_path_length):
             # filter out goal achieved elements for agents that might no longer be there
             noise_dict = {key: val for key, val in noise_dict.items() if key in state.keys()}
@@ -205,9 +206,9 @@ class GCSL:
             # stack observations, goals, horizon and noise appropriately. Here we rely on all
             # the dicts having the same key so the order is unchanged
             try:
-                obs = np.vstack(list(observation.values()))
-                goals = np.vstack(list(goal.values()))
-                noises = torch.vstack(list(noise_dict.values()))
+                obs = np.vstack([observation[key] for key in observation.keys()])
+                goals = np.vstack([goal[key] for key in observation.keys()])
+                noises = torch.vstack([noise_dict[key] for key in observation.keys()])
             except:
                 import ipdb; ipdb.set_trace()
             try:
@@ -230,6 +231,7 @@ class GCSL:
             for key in info.keys():
                 # if info[key]['goal_achieved']:
                 goal_achieved[key] = info[key]['goal_achieved']
+                goal_achieved_once[key] = info[key]['goal_achieved'] or goal_achieved_once[key]
             if self.support_termination and done['__all__']: 
                 break
 
@@ -241,7 +243,7 @@ class GCSL:
             np_arr = np.stack(video_arr).transpose((0, 3, 1, 2))
             wandb.log({"video": wandb.Video(np_arr, fps=4, format="gif")})
         return {key: np.stack(state) for key, state in states.items()}, \
-            {key: np.array(action) for key, action in actions.items()}, goal_state
+            {key: np.array(action) for key, action in actions.items()}, goal_state, goal_achieved_once
 
     def take_policy_step(self, buffer=None):
         if buffer is None:
@@ -342,10 +344,10 @@ class GCSL:
 
                 # Interact in environmenta according to exploration strategy.
                 if total_timesteps < self.explore_timesteps:
-                    states_dict, actions_dict, goal_state_dict = self.sample_trajectory(
+                    states_dict, actions_dict, goal_state_dict, _ = self.sample_trajectory(
                         noise=1)
                 else:
-                    states_dict, actions_dict, goal_state_dict = self.sample_trajectory(
+                    states_dict, actions_dict, goal_state_dict, _ = self.sample_trajectory(
                         greedy=True, noise=self.expl_noise)
                 for key in states_dict.keys():
                     states = states_dict[key]
@@ -386,6 +388,8 @@ class GCSL:
                             running_validation_loss = 0.9 * running_validation_loss + 0.1 * validation_loss
 
                     self.policy.eval()
+                    if self.wandb:
+                        wandb.log({'running_validation_loss': running_validation_loss})
                     ranger.set_description(
                         'Loss: %s Validation Loss: %s' %
                         (running_loss, running_validation_loss))
@@ -408,6 +412,11 @@ class GCSL:
                                          total_timesteps=total_timesteps,
                                          greedy=True,
                                          prefix='Eval')
+                    if self.wandb:
+                        wandb.log({'policy loss': running_loss})
+                        wandb.log({'timesteps': total_timesteps})
+                        wandb.log({'epoch time (s)': time.time() - last_time})
+                        wandb.log({'total time (s)': time.time() - start_time})
                     logger.record_tabular('policy loss', running_loss
                                           or 0)  # Handling None case
                     logger.record_tabular('timesteps', total_timesteps)
@@ -459,7 +468,7 @@ class GCSL:
                 save_video = True
             else:
                 save_video = False
-            states_dict, _, goal_state_dict = self.sample_trajectory(noise=0,
+            states_dict, _, goal_state_dict, goal_achieved_once = self.sample_trajectory(noise=0,
                                                                  greedy=greedy,
                                                                  render=save_video,)
             # all_states.append(states)
@@ -468,10 +477,14 @@ class GCSL:
             final_dist = env.goal_distance(states_dict, goal_state_dict)
 
             final_dist_vec[index] = final_dist
-            success_vec[index] = (final_dist < self.goal_threshold)
+            success_vec[index] = np.mean([goal_achieved_once[key] for key in goal_achieved_once.keys()])
 
         # all_states = np.stack(all_states)
         # all_goal_states = np.stack(all_goal_states)
+        if self.wandb:
+            wandb.log({'%s num episodes' % prefix: eval_episodes})
+            wandb.log({'%s avg final dist' % prefix: np.mean(final_dist_vec)})
+            wandb.log({'%s success ratio' % prefix: np.mean(success_vec)})
 
         logger.record_tabular('%s num episodes' % prefix, eval_episodes)
         logger.record_tabular('%s avg final dist' % prefix,

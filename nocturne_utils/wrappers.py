@@ -8,7 +8,7 @@ from numpy.lib import index_tricks
 import seaborn as sns
 import wandb
 
-from algos.gcsl.env_utils import ImageandProprio
+from algos.gcsl.env_utils import ImageandProprio, normalize_image
 from gym.spaces import Box, Discrete
 from envs.base_env import BaseEnv
 from nocturne_utils.density_estimators import RawKernelDensity
@@ -405,7 +405,7 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         vehicle_ids = [obj.getID() for obj in self._env.vehicles]
         self.density_estimators = {key: RawKernelDensity(samples=density_optim_samples, 
                                    log_figure=log_figure, kernel=kernel, quartile_cutoff=quartile_cutoff,
-                                   wandb=self.cfg.wandb) for key in vehicle_ids}
+                                   wandb=self.cfg.wandb, wandb_id=key) for key in vehicle_ids}
 
     @property
     def action_space(self):
@@ -532,7 +532,7 @@ def create_ppo_env(cfg):
 def create_goal_env(cfg):
     env = BaseEnv(cfg)
     # return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False))
-    return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False),
+    return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False, normalize_value=cfg.algo.normalize_value),
                                     density_optim_samples=cfg.algo.density_optim_samples,
                                     num_goal_samples=cfg.algo.num_goal_samples,
                                     log_figure=cfg.algo.log_figure,
