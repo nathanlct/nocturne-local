@@ -69,8 +69,8 @@ class BaseEnv(object):
                 # the minus one is to ensure that it's worth remaining alive
                 rew_dict[veh_id] -= ((np.linalg.norm(goal_pos - obj_pos) / 2000) - 1)
             ######################## Handle potential done conditions #######################
-            # we have gone off-screen!
-            if obj_pos[0] < -400 or obj_pos[0] > 400 or obj_pos[1] < -400 or obj_pos[1] > 400:
+            # we have gone off-screen or off road!
+            if not self.scenario.isVehicleOnRoad(veh_obj):
                 done_dict[veh_id] = True
             if veh_obj.getCollided():
                 rew_dict[veh_id] -= np.abs(rew_cfg.collision_penalty)

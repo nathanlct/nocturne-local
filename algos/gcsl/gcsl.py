@@ -1,6 +1,5 @@
 from collections import defaultdict
 import time
-import tqdm
 import os.path as osp
 import pickle
 
@@ -8,6 +7,7 @@ from celluloid import Camera
 import numpy as np
 import matplotlib.pyplot as plt
 import tqdm
+import wandb
 
 from rlutil.logging import logger
 import rlutil.torch as torch
@@ -55,6 +55,7 @@ class GCSL:
         train_policy_freq: int, How frequently to actually do the gradient updates.
             Number of gradient updates is dictated by `policy_updates_per_step`
             but when these updates are done is controlled by train_policy_freq
+        wandb: if true, log to wandb
         support_termination: bool, whether we respect an environment returning done
         go_explore: bool, if true, we take random actions after the goal is achieved
         lr: float, Learning rate for Adam.
@@ -86,6 +87,7 @@ class GCSL:
             train_policy_freq=None,
             demonstrations_kwargs=dict(),
             save_video=False,
+            wandb=False,
             support_termination=False,
             go_explore=False,
             lr=5e-4,
@@ -121,6 +123,7 @@ class GCSL:
                                                  lr=lr)
         self.support_termination = support_termination
         self.go_explore = go_explore
+        self.wandb = wandb
 
         self.log_tensorboard = log_tensorboard and tensorboard_enabled
         self.summary_writer = None
@@ -152,9 +155,11 @@ class GCSL:
 
         states = defaultdict(list)
         actions = defaultdict(list)
-        if render and self.save_video:
+        if render and self.save_video and not self.wandb:
             fig = plt.figure()
             camera = Camera(fig)
+        elif render and self.save_video and self.wandb:
+            video_arr = []
 
         state = self.env.reset()
         # TODO(eugenevinitsky) this is horrible and needs to be fixed once the IDs don't
@@ -172,8 +177,11 @@ class GCSL:
 
             if render and self.save_video:
                 img = self.env.render()
+            if not self.wandb:
                 plt.imshow(img)
                 camera.snap()
+            if render and self.save_video and self.wandb:
+                video_arr.append(img)
 
             if isinstance(state, dict):
                 for key, value in state.items():
@@ -225,10 +233,13 @@ class GCSL:
             if self.support_termination and done['__all__']: 
                 break
 
-        if render and self.save_video:
+        if render and self.save_video and not self.wandb:
             animation = camera.animate()
             animation.save('/private/home/eugenevinitsky/Code/nocturne/animation.mp4')
             plt.close(fig)
+        if render and self.save_video and self.wandb:
+            np_arr = np.stack(video_arr).transpose((0, 3, 1, 2))
+            wandb.log({"video": wandb.Video(np_arr, fps=4, format="gif")})
         return {key: np.stack(state) for key, state in states.items()}, \
             {key: np.array(action) for key, action in actions.items()}, goal_state
 

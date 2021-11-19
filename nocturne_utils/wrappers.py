@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.lib import index_tricks
 import seaborn as sns
+import wandb
 
 from algos.gcsl.env_utils import ImageandProprio
 from gym.spaces import Box, Discrete
@@ -363,12 +364,27 @@ class GoalEnvWrapper(BaseEnv):
         return getattr(self._env, name)
 
 class CurriculumGoalEnvWrapper(GoalEnvWrapper):
-    '''Test a curriculum for a single agent to go to a goal on either the vertical strip or the right hand horizontal strip'''
-    def __init__(self, env):
+    '''Test a curriculum for a single agent to go to a goal that evolves to minimize log entropy of the goal distribution'''
+    def __init__(self, env, density_optim_samples, num_goal_samples, log_figure, kernel, quartile_cutoff, wandb=False):
+        """[summary]
+
+        Args:
+            env: the environment we are wrapping
+            density_optim_samples (int): the number of samples that are drawn from updating the kernel density estimator
+            num_goal_samples (int): how many samples we draw from the achieved goals to find a potential new goal
+            log_figure (bool): whether the density estimators should be logging periodically 
+            kernel (str): the kernel for the density estimator. Options such as gaussian, tophat, linear, etc.
+            quartile_cutoff (float): if this is greater than zero, we will return the int(num_goal_samples * quartile_cutoff) 
+                goal with lowest entropy instead of the lowest i.e. if this is .1 we will return the goal with the highest entropy
+                from the set of goals in the 10% quartile of lowest entropy
+        """
         super(CurriculumGoalEnvWrapper, self).__init__(env)
         self.achieved_goals = []
         self.sampled_goals = []
         self.num_episodes = 0
+        self.num_goal_samples = num_goal_samples
+        self.log_figure = log_figure
+        self.wandb = wandb
         # discretization = 10
 
         # # construction of the goal space
@@ -387,7 +403,9 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
 
         # TODO(eugenevinitsky) make this not hardcoded
         vehicle_ids = [obj.getID() for obj in self._env.vehicles]
-        self.density_estimators = {key: RawKernelDensity(samples=10000, log_figure=True, kernel='gaussian', quartile_cutoff=0.0) for key in vehicle_ids}
+        self.density_estimators = {key: RawKernelDensity(samples=density_optim_samples, 
+                                   log_figure=log_figure, kernel=kernel, quartile_cutoff=quartile_cutoff,
+                                   wandb=self.cfg.wandb) for key in vehicle_ids}
 
     @property
     def action_space(self):
@@ -400,7 +418,7 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                 if self.achieved_during_episode == False:
                     self.achieved_during_episode = True
                     print('goal achieved')
-                # # sample a new goal
+                # # # sample a new goal
                 # vehicle_objs = self._env.vehicles
                 # for vehicle_obj in vehicle_objs:
                 #     if vehicle_obj.getID() == key:
@@ -411,9 +429,10 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                 #             vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
 
         for key, val in obs.items():
-            achieved_goal = self.extract_achieved_goal(val)
-            rkd = self.density_estimators[key]
-            rkd.add_sample(achieved_goal)
+            if not done[key]:
+                achieved_goal = self.extract_achieved_goal(val)
+                rkd = self.density_estimators[key]
+                rkd.add_sample(achieved_goal)
             # rkd._optimize()
         # print(f'time to optimize kernel {time.time() - t}')
         return obs, rew, done, info
@@ -424,35 +443,36 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         for vehicle in self._env.vehicles:
             achieved_goal = vehicle.getPosition()
             self.achieved_goals.append([achieved_goal.x, achieved_goal.y])
-            if self.rkd_is_ready:
-                desired_goal = vehicle.getGoalPosition()
-                self.sampled_goals.append([desired_goal.x, desired_goal.y])
-        if self.num_episodes % 200 == 0:
+        if self.num_episodes % 200 == 0 and self.log_figure:
             fig = plt.figure()
             np_arr = np.array(self.achieved_goals)
-            idx = np.random.randint(low=0, high=np_arr.shape[0], size=2000)
-            sns.kdeplot(np_arr[idx, 0], np_arr[idx, 1], fill=True)
+            sns.scatterplot(np_arr[-500:, 0], np_arr[-500:, 1])
             plt.hlines(42, -400, 400)
             plt.hlines(-42, -400, 400)
             plt.vlines(42, -400, 400)
             plt.vlines(-42, -400, 400)
             plt.xlim([-400, 400])
             plt.ylim([-400, 400])
-            plt.savefig('/private/home/eugenevinitsky/Code/nocturne/achieved_goals.png')
+            if self.wandb:
+                wandb.log({"final_goals": wandb.Image(fig)})
+            else:
+                plt.savefig('/private/home/eugenevinitsky/Code/nocturne/final_goals.png')
             plt.close(fig)
 
             if self.rkd_is_ready:
                 fig = plt.figure()
                 np_arr = np.array(self.sampled_goals)
-                idx = np.random.randint(low=0, high=np_arr.shape[0], size=2000)
-                sns.kdeplot(np_arr[idx, 0], np_arr[idx, 1], fill=True)
+                sns.scatterplot(np_arr[-500:, 0], np_arr[-500:, 1])
                 plt.hlines(42, -400, 400)
                 plt.hlines(-42, -400, 400)
                 plt.vlines(42, -400, 400)
                 plt.vlines(-42, -400, 400)
                 plt.xlim([-400, 400])
                 plt.ylim([-400, 400])
-                plt.savefig('/private/home/eugenevinitsky/Code/nocturne/desired_goals.png')
+                if self.wandb:
+                    wandb.log({"desired_goals": wandb.Image(fig)})
+                else:
+                    plt.savefig('/private/home/eugenevinitsky/Code/nocturne/desired_goals.png')
                 plt.close(fig)
 
         obs = super().reset()
@@ -477,7 +497,8 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
             rkd._optimize()
             if rkd.ready:
                 self.rkd_is_ready = True
-                new_goal = rkd.draw_min_sample(3000) * self.normalize_value
+                new_goal = rkd.draw_min_sample(self.num_goal_samples) * self.normalize_value
+                self.sampled_goals.append([new_goal[0], new_goal[1]])
                 vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
                 # print(f'new goal is {new_goal}')
                 if (new_goal[0] < -42 and new_goal[1] > 42) or (new_goal[0] > 42 and new_goal[1] > 42) or \
@@ -511,4 +532,10 @@ def create_ppo_env(cfg):
 def create_goal_env(cfg):
     env = BaseEnv(cfg)
     # return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False))
-    return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False))
+    return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False),
+                                    density_optim_samples=cfg.algo.density_optim_samples,
+                                    num_goal_samples=cfg.algo.num_goal_samples,
+                                    log_figure=cfg.algo.log_figure,
+                                    kernel=cfg.algo.kernel,
+                                    quartile_cutoff=cfg.algo.quartile_cutoff,
+                                    wandb=cfg.wandb)

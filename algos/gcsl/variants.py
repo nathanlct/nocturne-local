@@ -70,5 +70,6 @@ def default_gcsl_params(env, env_params):
         lr=5e-4,
         support_termination=env_params.get('support_termination', False),
         go_explore=env_params.get('go_explore', False),
-        save_video=env_params.get('save_video', False)
+        save_video=env_params.get('save_video', False),
+        wandb=env_params.get('wandb')
     )
