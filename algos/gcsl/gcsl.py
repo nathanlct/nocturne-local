@@ -197,8 +197,8 @@ class GCSL:
                 # check if we have achieved our current goal and hence should do go explore i.e. increment our exploration
                 for key, value in goal_achieved.items():
                     if value:
-                        # increment the noise a bit every time the goal is achieved
-                        noise_dict[key] = torch.tensor([noise_dict[key] + 0.1])
+                        # uniform sampling once the goal is achieved
+                        noise_dict[key] = torch.tensor([1.0])
 
             t = time.time()
             # stack observations, goals, horizon and noise appropriately. Here we rely on all

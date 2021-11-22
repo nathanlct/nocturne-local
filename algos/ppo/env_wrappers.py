@@ -675,7 +675,10 @@ class DummyVecEnv(ShareVecEnv):
                     obs[i] = self.envs[i].reset()
             else:
                 if np.all(done):
-                    obs[i] = self.envs[i].reset()
+                    try:
+                        obs[i] = self.envs[i].reset()
+                    except:
+                        import ipdb; ipdb.set_trace()
 
         self.actions = None
         return obs, rews, dones, infos

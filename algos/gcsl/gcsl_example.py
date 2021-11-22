@@ -64,7 +64,9 @@ def main(cfg):
                       go_explore=cfg.algo.go_explore,
                       save_video=cfg.algo.save_video,
                       wandb=cfg.algo.wandb,
-                      batch_size=cfg.algo.batch_size)
+                      explore_timesteps=cfg.algo.explore_timesteps,
+                      batch_size=cfg.algo.batch_size,
+                      buffer_size=cfg.algo.buffer_size)
     print(env_params)
 
     env, policy, replay_buffer, gcsl_kwargs = variants.get_params(

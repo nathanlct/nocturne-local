@@ -22,7 +22,7 @@ sims_per_step: 10
 initial_speed: 5.0
 rew_cfg:
   goal_tolerance: 30.0
-  collision_penalty: -10.0
+  collision_penalty: -100.0
   shaped_goal_distance: True
   goal_achieved_bonus: 1.0
 subscriber:

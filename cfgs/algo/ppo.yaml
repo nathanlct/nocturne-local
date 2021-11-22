@@ -58,11 +58,12 @@ use_linear_lr_decay: False
 # saving and logging
 save_interval: 1 # time duration between contiunous twice models saving
 log_interval: 5 # time duration between contiunous twice log printing
-use_eval: False 
+use_eval: True
 eval_interval: 25 
-eval_episodes: 32
-save_gifs: False
+eval_episodes: 1
+save_gifs: True
+render_interval: 5 # how often to render
 use_render: False
-render_episodes: False
+render_episodes: 1
 ifi: 0.1 # the play interval of each rendered image in saved video
 model_dir: null

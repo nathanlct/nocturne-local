@@ -14,7 +14,7 @@ def get_params(env, env_params):
         env=env,
         max_trajectory_length=get_horizon(env_params),
         # buffer_size=2000,
-        buffer_size=100000,
+        buffer_size=env_params['buffer_size'],
     )
     replay_buffer = buffer.ReplayBuffer(**buffer_kwargs)
     gcsl_kwargs = default_gcsl_params(env, env_params)
@@ -56,7 +56,7 @@ def default_gcsl_params(env, env_params):
     return dict(
         max_path_length=env_params.get('max_trajectory_length', 50),
         goal_threshold=env_params.get('goal_threshold', 10.0),
-        explore_timesteps=10000,
+        explore_timesteps=env_params.get('explore_timesteps'),
         start_policy_timesteps=1000,
         eval_freq=env_params.get('eval_freq', 2000),
         eval_episodes=env_params.get('eval_episodes', 50),

@@ -85,8 +85,8 @@ class PPOWrapper(object):
             obs_n.append(obses[key]['features'])
         return obs_n
 
-    def render(self):
-        return self._env.render()
+    def render(self, mode=None):
+        return self._env.render(mode)
 
     def __getattr__(self, name):
         return getattr(self._env, name)
@@ -196,7 +196,7 @@ class DictToVecWrapper(object):
         self.transform_obs(obses)
         return obses
 
-    def render(self):
+    def render(self, mode=None):
         return self._env.render()
 
     def __getattr__(self, name):
@@ -365,7 +365,8 @@ class GoalEnvWrapper(BaseEnv):
 
 class CurriculumGoalEnvWrapper(GoalEnvWrapper):
     '''Test a curriculum for a single agent to go to a goal that evolves to minimize log entropy of the goal distribution'''
-    def __init__(self, env, density_optim_samples, num_goal_samples, log_figure, kernel, quartile_cutoff, wandb=False,):
+    def __init__(self, env, density_optim_samples, num_goal_samples, log_figure, kernel, 
+                quartile_cutoff, wandb=False, share_goal_buffer=False):
         """[summary]
 
         Args:
@@ -377,21 +378,32 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
             quartile_cutoff (float): if this is greater than zero, we will return the int(num_goal_samples * quartile_cutoff) 
                 goal with lowest entropy instead of the lowest i.e. if this is .1 we will return the goal with the highest entropy
                 from the set of goals in the 10% quartile of lowest entropy
+            share_goal_buffer (bool): if true, instead of each agent having its own goal buffer that we sample from, all the agents
+                share the same goal buffer. 
         """
         super(CurriculumGoalEnvWrapper, self).__init__(env)
         self.num_episodes = 0
         self.num_goal_samples = num_goal_samples
         self.log_figure = log_figure
         self.wandb = wandb
+        self.share_goal_buffer = share_goal_buffer
         self.rkd_is_ready = False
 
         vehicle_ids = [obj.getID() for obj in self._env.vehicles]
         self.achieved_goals = [[] for _ in range(len(vehicle_ids))]
         self.sampled_goals = [[] for _ in range(len(vehicle_ids))]
         self.achieved_during_episode = {key: False for key in vehicle_ids}
-        self.density_estimators = {key: RawKernelDensity(samples=density_optim_samples, 
-                                   log_figure=log_figure, kernel=kernel, quartile_cutoff=quartile_cutoff,
-                                   wandb=self.cfg.wandb, wandb_id=key, optimize_every=50) for key in vehicle_ids}
+        if self.share_goal_buffer:
+            self.density_estimators = RawKernelDensity(num_optim_samples=density_optim_samples, 
+                                    log_figure=log_figure, kernel=kernel, quartile_cutoff=quartile_cutoff,
+                                    wandb=self.cfg.wandb, wandb_id='1', optimize_every=50,
+                                    buffer_size=self.cfg.algo.density_buffer_size, bandwidth=self.cfg.algo.bandwidth)
+        else:
+            self.density_estimators = {key: RawKernelDensity(num_optim_samples=density_optim_samples, 
+                                    log_figure=log_figure, kernel=kernel, quartile_cutoff=quartile_cutoff,
+                                    wandb=self.cfg.wandb, wandb_id=key, optimize_every=50,
+                                    buffer_size=self.cfg.algo.density_buffer_size, 
+                                    bandwidth=self.cfg.algo.bandwidth) for key in vehicle_ids}
 
     @property
     def action_space(self):
@@ -417,7 +429,10 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         for key, val in obs.items():
             if not done[key]:
                 achieved_goal = self.extract_achieved_goal(val)
-                rkd = self.density_estimators[key]
+                if self.share_goal_buffer:
+                    rkd = self.density_estimators
+                else:
+                    rkd = self.density_estimators[key]
                 rkd.add_sample(achieved_goal)
                 rkd._optimize()
             # rkd._optimize()
@@ -465,9 +480,14 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                 plt.close(fig)
 
                 fig, ax = plt.subplots()
-                for rkd in self.density_estimators.values():
+                if self.share_goal_buffer:
+                    rkd = self.density_estimators
                     color = next(ax._get_lines.prop_cycler)['color']
                     rkd.plot_density_info(self.num_goal_samples, color, self.normalize_value)
+                else:
+                    for rkd in self.density_estimators.values():
+                        color = next(ax._get_lines.prop_cycler)['color']
+                        rkd.plot_density_info(self.num_goal_samples, color, self.normalize_value)
                 plt.hlines(42, -400, 400)
                 plt.hlines(-42, -400, 400)
                 plt.vlines(42, -400, 400)
@@ -497,7 +517,10 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         # t = time.time()
         for i, vehicle_obj in enumerate(vehicle_objs):
             veh_id = vehicle_obj.getID()
-            rkd = self.density_estimators[veh_id]
+            if self.share_goal_buffer:
+                rkd = self.density_estimators
+            else:
+                rkd = self.density_estimators[veh_id]
             # TODO(eugenevinitsky) remove hardcoding
             if rkd.ready:
                 self.rkd_is_ready = True

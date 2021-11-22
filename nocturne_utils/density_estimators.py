@@ -14,14 +14,14 @@ class RawKernelDensity(object):
   """
   A KDE-based density model for raw items in the replay buffer (e.g., states/goals).
   """
-  def __init__(self, optimize_every=10, samples=10000, kernel='gaussian', bandwidth=0.1, normalize=True, 
+  def __init__(self, optimize_every=10, num_optim_samples=10000, kernel='gaussian', bandwidth=0.1, normalize=True, 
     log_entropy=False, log_figure=False, tag='', buffer_size=1000000,
-    quartile_cutoff=0.05, wandb=False, wandb_id=1):
+    quartile_cutoff=0.0, wandb=False, wandb_id=1):
     """[summary]
 
     Args:
         optimize_every (int, optional): [description]. Defaults to 10.
-        samples (int, optional): [description]. Defaults to 10000.
+        num_optim_samples (int, optional): [description]. Number of samples used to optimize the kde.
         kernel (str, optional): [description]. Defaults to 'gaussian'.
         bandwidth (float, optional): [description]. Defaults to 0.1.
         normalize (bool, optional): [description]. Defaults to True.
@@ -37,7 +37,7 @@ class RawKernelDensity(object):
     self.step = 0
     self.kde = KernelDensity(kernel=kernel, bandwidth=bandwidth)
     self.optimize_every = optimize_every
-    self.samples = samples
+    self.num_optim_samples = num_optim_samples
     self.kernel = kernel
     self.bandwidth = bandwidth
     self.normalize = normalize
@@ -83,9 +83,9 @@ class RawKernelDensity(object):
   def _optimize(self, force=False):
     self.step +=1
 
-    if force or (self.step % self.optimize_every == 0 and self.max_pointer_value > self.samples):
+    if force or (self.step % self.optimize_every == 0 and self.max_pointer_value > self.num_optim_samples):
       self.ready = True
-      kde_samples = self.draw_samples(self.samples)
+      kde_samples = self.draw_samples(self.num_optim_samples)
       #og_kde_samples = kde_samples
 
       if self.normalize:

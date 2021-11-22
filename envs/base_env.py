@@ -1,5 +1,6 @@
 """Each agent receives its observation, a goal position, and tries to get there without colliding."""
 
+from copy import copy
 from collections import defaultdict
 
 from gym.spaces import Box
@@ -12,13 +13,16 @@ from nocturne_utils.subscribers import Subscriber
 
 class BaseEnv(object):
     def __init__(self, cfg):
-
         self.simulation = Simulation(cfg.scenario_path)
         self.scenario = self.simulation.getScenario()
         self.vehicles = self.scenario.getVehicles()
         self.subscriber = Subscriber(cfg.subscriber, self.scenario, self.simulation)
         self.cfg = cfg
         self.t = 0
+        # TODO(eugenevinitsky) remove this once the PPO code doesn't have this restriction
+        # track dead agents for PPO.
+        self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
+        self.dead_feat =  self.subscriber.get_obs(self.vehicles[0])
 
     @property
     def observation_space(self):
@@ -80,6 +84,17 @@ class BaseEnv(object):
             if done_dict[veh_id]:
                 self.scenario.removeObject(veh_obj)
         
+        # TODO(eugenevinitsky) remove this once the PPO code doesn't have this restriction
+        # track dead agents for PPO.
+        for veh_id in self.all_vehicle_ids:
+            if veh_id in obs_dict.keys():
+                continue
+            else:
+                obs_dict[veh_id] = copy(self.dead_feat)
+                rew_dict[veh_id] = 0
+                done_dict[veh_id] = True
+                info_dict[veh_id] = {}
+        
         all_done = True
         for value in done_dict.values():
             all_done *= value
@@ -89,10 +104,12 @@ class BaseEnv(object):
 
     def reset(self):
         self.t = 0
-        # TODO(eugenevinitsky) remove this once there is a scenario reset method
+        # TODO(eugenevinitsky) remove this once the PPO code doesn't have this restriction
+        # track dead agents for PPO.
         self.simulation.reset()
         self.scenario = self.simulation.getScenario()
         self.vehicles = self.scenario.getVehicles()
+        self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
         self.subscriber = Subscriber(self.cfg.subscriber, self.scenario, self.simulation)
         obs_dict = {}
         for veh_obj in self.simulation.getScenario().getVehicles():
@@ -101,7 +118,7 @@ class BaseEnv(object):
             veh_obj.setSpeed(self.cfg.initial_speed)
         return obs_dict
 
-    def render(self):
+    def render(self, mode=None):
         # TODO(eugenevinitsky) this should eventually return a global image instead of this hack
         return np.array(self.scenario.getImage(object=None, renderGoals=True), copy=False)
 
