@@ -162,14 +162,12 @@ class GCSL:
             video_arr = []
 
         state = self.env.reset()
-        # TODO(eugenevinitsky) this is horrible and needs to be fixed once the IDs don't
-        # change with every reset call. Also could be a source of bugs!
         goal_state = {key: val for key, val in zip(state.keys(), goal_state.values())}
         goal = {key: val for key, val in zip(state.keys(), goal.values())}
 
         noise_dict = {key: torch.tensor([noise]) for key in state.keys()}
         goal_achieved = {key: False for key in state.keys()} # defaults to False
-        goal_achieved_once = {key: False for key in state.keys()} 
+        goal_achieved_once = {key: False for key in state.keys()} # track if a goal has ever been achieved
         for t in range(self.max_path_length):
             # filter out goal achieved elements for agents that might no longer be there
             noise_dict = {key: val for key, val in noise_dict.items() if key in state.keys()}
@@ -231,6 +229,7 @@ class GCSL:
             for key in info.keys():
                 # if info[key]['goal_achieved']:
                 goal_achieved[key] = info[key]['goal_achieved']
+                # this is tracking if a goal has ever been achieved in the episode
                 goal_achieved_once[key] = info[key]['goal_achieved'] or goal_achieved_once[key]
             if self.support_termination and done['__all__']: 
                 break

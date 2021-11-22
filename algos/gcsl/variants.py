@@ -63,7 +63,7 @@ def default_gcsl_params(env, env_params):
         save_every_iteration=False,
         max_timesteps=env_params.get('max_timesteps', 1e6),
         expl_noise=0.0,
-        batch_size=256,
+        batch_size=env_params.get('batch_size'),
         n_accumulations=1,
         policy_updates_per_step=1,
         train_policy_freq=None,

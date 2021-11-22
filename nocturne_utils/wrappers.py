@@ -365,7 +365,7 @@ class GoalEnvWrapper(BaseEnv):
 
 class CurriculumGoalEnvWrapper(GoalEnvWrapper):
     '''Test a curriculum for a single agent to go to a goal that evolves to minimize log entropy of the goal distribution'''
-    def __init__(self, env, density_optim_samples, num_goal_samples, log_figure, kernel, quartile_cutoff, wandb=False):
+    def __init__(self, env, density_optim_samples, num_goal_samples, log_figure, kernel, quartile_cutoff, wandb=False,):
         """[summary]
 
         Args:
@@ -379,33 +379,19 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                 from the set of goals in the 10% quartile of lowest entropy
         """
         super(CurriculumGoalEnvWrapper, self).__init__(env)
-        self.achieved_goals = []
-        self.sampled_goals = []
         self.num_episodes = 0
         self.num_goal_samples = num_goal_samples
         self.log_figure = log_figure
         self.wandb = wandb
-        # discretization = 10
-
-        # # construction of the goal space
-        # y_goals = np.linspace(-180, -20, discretization)
-        # vertical_goals = np.vstack((20 * np.ones(discretization), y_goals)).T
-        # x_goals = np.linspace(20, 240, discretization)
-        # horizontal_goals = np.vstack((x_goals, -20 * np.ones(discretization))).T
-        # self.valid_goals = np.vstack((vertical_goals, horizontal_goals))
-        # # the last column is a counter of how many times this goal has been achieved
-        # self.valid_goals = np.hstack((self.valid_goals, np.zeros((self.valid_goals.shape[0], 1))))
-        # self.current_goal_counter = 0
-        # # how many times we have to achieve this goal before we increment the counter
-        # self.goals_to_increment = 10
-        self.achieved_during_episode = False
         self.rkd_is_ready = False
 
-        # TODO(eugenevinitsky) make this not hardcoded
         vehicle_ids = [obj.getID() for obj in self._env.vehicles]
+        self.achieved_goals = [[] for _ in range(len(vehicle_ids))]
+        self.sampled_goals = [[] for _ in range(len(vehicle_ids))]
+        self.achieved_during_episode = {key: False for key in vehicle_ids}
         self.density_estimators = {key: RawKernelDensity(samples=density_optim_samples, 
                                    log_figure=log_figure, kernel=kernel, quartile_cutoff=quartile_cutoff,
-                                   wandb=self.cfg.wandb, wandb_id=key) for key in vehicle_ids}
+                                   wandb=self.cfg.wandb, wandb_id=key, optimize_every=50) for key in vehicle_ids}
 
     @property
     def action_space(self):
@@ -415,8 +401,8 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         obs, rew, done, info = super().step(action)
         for key, info_dict in info.items():
             if info_dict['goal_achieved']:
-                if self.achieved_during_episode == False:
-                    self.achieved_during_episode = True
+                if self.achieved_during_episode[key] == False:
+                    self.achieved_during_episode[key] = True
                     print('goal achieved')
                 # # # sample a new goal
                 # vehicle_objs = self._env.vehicles
@@ -433,6 +419,7 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                 achieved_goal = self.extract_achieved_goal(val)
                 rkd = self.density_estimators[key]
                 rkd.add_sample(achieved_goal)
+                rkd._optimize()
             # rkd._optimize()
         # print(f'time to optimize kernel {time.time() - t}')
         return obs, rew, done, info
@@ -440,13 +427,14 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
     def reset(self):
         '''We sample a new goal position at each reset''' 
         # this is just some temp logging for debugging
-        for vehicle in self._env.vehicles:
+        for i, vehicle in enumerate(self._env.vehicles):
             achieved_goal = vehicle.getPosition()
-            self.achieved_goals.append([achieved_goal.x, achieved_goal.y])
-        if self.num_episodes % 200 == 0 and self.log_figure:
+            self.achieved_goals[i].append([achieved_goal.x, achieved_goal.y])
+        if self.num_episodes % self.cfg.algo.log_every_n_episodes == 0 and self.log_figure:
             fig = plt.figure()
-            np_arr = np.array(self.achieved_goals)
-            sns.scatterplot(np_arr[-500:, 0], np_arr[-500:, 1])
+            for i in range(len(self.achieved_goals)):
+                np_arr = np.array(self.achieved_goals[i])
+                sns.scatterplot(np_arr[-500:, 0], np_arr[-500:, 1])
             plt.hlines(42, -400, 400)
             plt.hlines(-42, -400, 400)
             plt.vlines(42, -400, 400)
@@ -461,8 +449,9 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
 
             if self.rkd_is_ready:
                 fig = plt.figure()
-                np_arr = np.array(self.sampled_goals)
-                sns.scatterplot(np_arr[-500:, 0], np_arr[-500:, 1])
+                for i in range(len(self.sampled_goals)):
+                    np_arr = np.array(self.sampled_goals[i])
+                    sns.scatterplot(np_arr[-500:, 0], np_arr[-500:, 1])
                 plt.hlines(42, -400, 400)
                 plt.hlines(-42, -400, 400)
                 plt.vlines(42, -400, 400)
@@ -475,8 +464,24 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                     plt.savefig('/private/home/eugenevinitsky/Code/nocturne/desired_goals.png')
                 plt.close(fig)
 
+                fig, ax = plt.subplots()
+                for rkd in self.density_estimators.values():
+                    color = next(ax._get_lines.prop_cycler)['color']
+                    rkd.plot_density_info(self.num_goal_samples, color, self.normalize_value)
+                plt.hlines(42, -400, 400)
+                plt.hlines(-42, -400, 400)
+                plt.vlines(42, -400, 400)
+                plt.vlines(-42, -400, 400)
+                plt.xlim([-400, 400])
+                plt.ylim([-400, 400])
+                if self.wandb:
+                    wandb.log({"density_sample": wandb.Image(fig)})
+                else:
+                    plt.savefig('/private/home/eugenevinitsky/Code/nocturne/sampled_density.png')
+                plt.close(fig)
+
         obs = super().reset()
-        self.achieved_during_episode = False
+        self.achieved_during_episode = {key: False for key in self.achieved_during_episode.keys()}
         # TODO(eugenevinitsky) this will not work for many agents
         # self.achieved_during_episode = False
         vehicle_objs = self._env.vehicles
@@ -490,15 +495,14 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         #                                                 self.current_goal_counter - 2]), 0)
         # new_goal = self.valid_goals[self.sampled_goal_index]
         # t = time.time()
-        for vehicle_obj in vehicle_objs:
+        for i, vehicle_obj in enumerate(vehicle_objs):
             veh_id = vehicle_obj.getID()
             rkd = self.density_estimators[veh_id]
             # TODO(eugenevinitsky) remove hardcoding
-            rkd._optimize()
             if rkd.ready:
                 self.rkd_is_ready = True
                 new_goal = rkd.draw_min_sample(self.num_goal_samples) * self.normalize_value
-                self.sampled_goals.append([new_goal[0], new_goal[1]])
+                self.sampled_goals[i].append([new_goal[0], new_goal[1]])
                 vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
                 # print(f'new goal is {new_goal}')
                 if (new_goal[0] < -42 and new_goal[1] > 42) or (new_goal[0] > 42 and new_goal[1] > 42) or \

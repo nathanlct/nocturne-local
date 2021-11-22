@@ -10,6 +10,7 @@ import wandb
 from nocturne_utils.wrappers import create_goal_env
 
 import rlutil.torch as torch
+# torch.backends.cudnn.benchmark = True
 import rlutil.torch.pytorch_util as ptu
 
 
@@ -22,20 +23,20 @@ os.environ["DISPLAY"] = ":0.0"
 @hydra.main(config_path='../../cfgs/', config_name='config')
 def main(cfg):
     # setup wandb
-    logdir = Path(os.getcwd())
+    # logdir = Path(os.getcwd())
     if cfg.wandb_id is not None:
         wandb_id = cfg.wandb_id
     else:
         wandb_id = wandb.util.generate_id()
-        with open(os.path.join(logdir, 'wandb_id.txt'), 'w+') as f:
-            f.write(wandb_id)
+        # with open(os.path.join(logdir, 'wandb_id.txt'), 'w+') as f:
+        #     f.write(wandb_id)
     wandb_mode = "disabled" if (cfg.debug or not cfg.wandb) else "online"
 
     if cfg.wandb:
         run = wandb.init(config=cfg,
                         project=cfg.wandb_name,
-                        name=os.path.basename(logdir),
-                        group=cfg.wandb_group,
+                        name=wandb_id,
+                        group=cfg.experiment,
                         resume="allow",
                         settings=wandb.Settings(start_method="fork"),
                         mode=wandb_mode)
@@ -62,7 +63,8 @@ def main(cfg):
                       support_termination=cfg.algo.support_termination,
                       go_explore=cfg.algo.go_explore,
                       save_video=cfg.algo.save_video,
-                      wandb=cfg.algo.wandb)
+                      wandb=cfg.algo.wandb,
+                      batch_size=cfg.algo.batch_size)
     print(env_params)
 
     env, policy, replay_buffer, gcsl_kwargs = variants.get_params(
