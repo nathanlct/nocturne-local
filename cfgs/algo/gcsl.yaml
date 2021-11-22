@@ -1,0 +1,20 @@
+eval_freq: 10000
+batch_size: 256
+eval_episodes: 5
+max_trajectory_length: 150
+max_timesteps: 1e6
+# warning use odd not even granularities so that zero is included
+action_granularity: 5
+expl_noise: 0.1
+goal_threshold: cfg.rew_cfg.goal_tolerance
+support_termination: True
+go_explore: True
+save_video: True
+density_optim_samples: 10000
+num_goal_samples: 3000
+log_figure: True 
+kernel: 'gaussian' 
+quartile_cutoff: 0.0
+wandb: ${wandb}
+normalize_value: 400.0
+log_every_n_episodes: 200
