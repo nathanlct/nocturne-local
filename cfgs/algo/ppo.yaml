@@ -40,7 +40,7 @@ weight_decay: 0
 ppo_epoch: 15 # number of PPO epochs
 use_clipped_value_loss: True # clip loss value
 clip_param: 0.2 # PPO clipping parameter
-num_mini_batch: 4 # Number of minibatches of the colelcted data to use
+num_mini_batch: 4 # Number of minibatches of the collected data to use
 entropy_coef: 0.1 
 value_loss_coef: 0.5 # scaling on the value loss
 use_max_grad_norm: True # use max norm of gradients
@@ -67,3 +67,16 @@ use_render: False
 render_episodes: 1
 ifi: 0.1 # the play interval of each rendered image in saved video
 model_dir: null
+
+# goal env wrapper stuff
+density_buffer_size: 100000
+density_optim_samples: 1000
+num_goal_samples: 200
+bandwidth: 0.1
+log_figure: True
+kernel: 'gaussian' 
+quartile_cutoff: 0.0
+normalize_value: 400.0
+log_every_n_episodes: 50
+# if True, all the agents share the same goal buffer for sampling new goals
+share_goal_buffer: False

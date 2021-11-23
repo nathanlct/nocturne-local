@@ -12,17 +12,21 @@ from nocturne_utils.subscribers import Subscriber
 
 
 class BaseEnv(object):
-    def __init__(self, cfg):
+    def __init__(self, cfg, should_terminate=True, rank=0):
         self.simulation = Simulation(cfg.scenario_path)
         self.scenario = self.simulation.getScenario()
         self.vehicles = self.scenario.getVehicles()
         self.subscriber = Subscriber(cfg.subscriber, self.scenario, self.simulation)
         self.cfg = cfg
         self.t = 0
+        self.rank=rank
+        # If true, agents observations stop being sent back once they're dead
+        # If false, a vector of zeros will persist till the episode ends
+        self.should_terminate = should_terminate
         # TODO(eugenevinitsky) remove this once the PPO code doesn't have this restriction
         # track dead agents for PPO.
         self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
-        self.dead_feat =  self.subscriber.get_obs(self.vehicles[0])
+        self.dead_feat =  {key: np.zeros_like(value) for key, value in self.subscriber.get_obs(self.vehicles[0]).items()}
 
     @property
     def observation_space(self):
@@ -53,6 +57,7 @@ class BaseEnv(object):
         self.apply_actions(action_dict)
         self.simulation.step(self.cfg.dt)
         self.t += self.cfg.dt
+        objs_to_remove = []
         for veh_obj in self.simulation.getScenario().getVehicles():
             veh_id = veh_obj.getID()
             obs_dict[veh_id] = self.subscriber.get_obs(veh_obj)
@@ -70,8 +75,9 @@ class BaseEnv(object):
                 # done_dict[veh_id] = True
                 info_dict[veh_id]['goal_achieved'] = True
             if rew_cfg.shaped_goal_distance:
-                # the minus one is to ensure that it's worth remaining alive
-                rew_dict[veh_id] -= ((np.linalg.norm(goal_pos - obj_pos) / 2000) - 1)
+                # the minus one is to ensure that it's not beneficial to collide
+                # rew_dict[veh_id] -= ((np.linalg.norm(goal_pos - obj_pos) / 2000) - 1)
+                rew_dict[veh_id] -= ((np.linalg.norm(goal_pos - obj_pos) **2 / 801**2) - 1)
             ######################## Handle potential done conditions #######################
             # we have gone off-screen or off road!
             if not self.scenario.isVehicleOnRoad(veh_obj):
@@ -82,18 +88,22 @@ class BaseEnv(object):
             # remove the vehicle so that its trajectory doesn't continue. This is important
             # in the multi-agent setting.
             if done_dict[veh_id]:
-                self.scenario.removeObject(veh_obj)
+                objs_to_remove.append(veh_obj)
+        
+        for veh_obj in objs_to_remove:
+            self.scenario.removeObject(veh_obj)
         
         # TODO(eugenevinitsky) remove this once the PPO code doesn't have this restriction
         # track dead agents for PPO.
-        for veh_id in self.all_vehicle_ids:
-            if veh_id in obs_dict.keys():
-                continue
-            else:
-                obs_dict[veh_id] = copy(self.dead_feat)
-                rew_dict[veh_id] = 0
-                done_dict[veh_id] = True
-                info_dict[veh_id] = {}
+        if not self.should_terminate:
+            for veh_id in self.all_vehicle_ids:
+                if veh_id in obs_dict.keys():
+                    continue
+                else:
+                    obs_dict[veh_id] = copy(self.dead_feat)
+                    rew_dict[veh_id] = 0
+                    done_dict[veh_id] = True
+                    info_dict[veh_id] = {'goal_achieved': False}
         
         all_done = True
         for value in done_dict.values():

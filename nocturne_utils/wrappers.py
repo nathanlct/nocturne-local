@@ -63,10 +63,12 @@ class PPOWrapper(object):
         rew_n = []
         done_n = []
         info_n = []
-        self.agent_ids = []
-        for key in next_obses.keys():
-            self.agent_ids.append(key)
-            obs_n.append(next_obses[key]['features'])
+        # TODO(eugenevinitsky) I'm a little worried that there's going to be an order mismatch here
+        for key in self.agent_ids:
+            if isinstance(next_obses[key], dict):
+                obs_n.append(next_obses[key]['features'])
+            else:
+                obs_n.append(next_obses[key])
             rew_n.append([rew[key]])
             done_n.append(done[key])
             info = {'individual_reward': rew[key]}
@@ -76,13 +78,17 @@ class PPOWrapper(object):
     def reset(self):
         obses = self._env.reset()
         # TODO(eugenevinitsky) I'm a little worried that there's going to be a key mismatch here
+        # TODO(eugenevinitsky) this will break if the number of agents changes
         obs_n = []
         self.agent_ids = []
         for key in obses.keys():
             self.agent_ids.append(key)
             if not hasattr(self, 'agent_key'):
                 self.agent_key = key
-            obs_n.append(obses[key]['features'])
+            if isinstance(obses[key], dict):
+                obs_n.append(obses[key]['features'])
+            else:
+                obs_n.append(obses[key])
         return obs_n
 
     def render(self, mode=None):
@@ -108,7 +114,7 @@ class ActionWrapper(object):
     def reset(self):
         return self._env.reset()
 
-    def render(self):
+    def render(self, mode=None):
         return self._env.render()
 
     def __getattr__(self, name):
@@ -357,7 +363,7 @@ class GoalEnvWrapper(BaseEnv):
             ('median final l2 dist', np.median(distances[:, -1])),
         ])
 
-    def render(self):
+    def render(self, mode=None):
         return self._env.render()
 
     def __getattr__(self, name):
@@ -456,7 +462,7 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
             plt.vlines(-42, -400, 400)
             plt.xlim([-400, 400])
             plt.ylim([-400, 400])
-            if self.wandb:
+            if self.wandb and self.rank==0:
                 wandb.log({"final_goals": wandb.Image(fig)})
             else:
                 plt.savefig('/private/home/eugenevinitsky/Code/nocturne/final_goals.png')
@@ -473,7 +479,7 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                 plt.vlines(-42, -400, 400)
                 plt.xlim([-400, 400])
                 plt.ylim([-400, 400])
-                if self.wandb:
+                if self.wandb and self.rank==0:
                     wandb.log({"desired_goals": wandb.Image(fig)})
                 else:
                     plt.savefig('/private/home/eugenevinitsky/Code/nocturne/desired_goals.png')
@@ -494,7 +500,7 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                 plt.vlines(-42, -400, 400)
                 plt.xlim([-400, 400])
                 plt.ylim([-400, 400])
-                if self.wandb:
+                if self.wandb and self.rank==0:
                     wandb.log({"density_sample": wandb.Image(fig)})
                 else:
                     plt.savefig('/private/home/eugenevinitsky/Code/nocturne/sampled_density.png')
@@ -532,6 +538,7 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                     (new_goal[0] < -42 and new_goal[1] < -42) or (new_goal[0] > 42 and new_goal[1] < -42):
                     print('the goal is not actually on the road, dangit.')
                     print(new_goal)
+
         # print(f'time to draw new goals {time.time() - t}')
         # TODO(eugenevinitsky) this is a hack since dict to vec wrapper expects a dict
         new_obs = {vehicle_obj.getID(): self.subscriber.get_obs(vehicle_obj) for vehicle_obj in vehicle_objs}
@@ -550,14 +557,20 @@ def create_env(cfg):
     env = BaseEnv(cfg)
     return ActionWrapper(DictToVecWrapper(env))
 
-def create_ppo_env(cfg):
-    env = BaseEnv(cfg)
+def create_ppo_env(cfg, rank=0):
+    env = BaseEnv(cfg, should_terminate=False, rank=rank)
     env = DictToVecWrapper(env)
+    # env = CurriculumGoalEnvWrapper(env, density_optim_samples=cfg.algo.density_optim_samples,
+    #                             num_goal_samples=cfg.algo.num_goal_samples,
+    #                             log_figure=cfg.algo.log_figure,
+    #                             kernel=cfg.algo.kernel,
+    #                             quartile_cutoff=cfg.algo.quartile_cutoff,
+    #                             wandb=cfg.wandb)
     return PPOWrapper(env)
 
 
 def create_goal_env(cfg):
-    env = BaseEnv(cfg)
+    env = BaseEnv(cfg, should_terminate=True)
     # return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False))
     return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False, normalize_value=cfg.algo.normalize_value),
                                     density_optim_samples=cfg.algo.density_optim_samples,

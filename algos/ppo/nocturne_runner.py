@@ -10,7 +10,7 @@ import torch
 import wandb
 
 from algos.ppo.base_runner import Runner
-from algos.ppo.env_wrappers import SubprocVecEnv, DummyVecEnv
+from algos.ppo.env_wrappers import SubprocVecEnv, DummyVecEnv, ShareDummyVecEnv, ShareSubprocVecEnv
 
 from nocturne_utils.wrappers import create_ppo_env
 
@@ -24,7 +24,7 @@ def _t2n(x):
 def make_train_env(cfg):
     def get_env_fn(rank):
         def init_env():
-            env = create_ppo_env(cfg)
+            env = create_ppo_env(cfg, rank)
             # TODO(eugenevinitsky) implement this
             env.seed(cfg.seed + rank * 1000)
             return env
@@ -33,17 +33,6 @@ def make_train_env(cfg):
         return DummyVecEnv([get_env_fn(0)])
     else:
         return SubprocVecEnv([get_env_fn(i) for i in range(cfg.algo.n_rollout_threads)])
-
-
-def make_render_env(cfg):
-    def get_env_fn(rank):
-        def init_env():
-            env = create_ppo_env(cfg)
-            # TODO(eugenevinitsky) implement this
-            env.seed(cfg.seed + rank * 1000)
-            return env
-        return init_env
-    return DummyVecEnv([get_env_fn(0)])
 
 
 def make_eval_env(cfg):
@@ -61,10 +50,9 @@ def make_eval_env(cfg):
 
 class NocturneSharedRunner(Runner):
     """Runner class to perform training, evaluation. and data collection for the Nocturne envs. Assumes a shared policy."""
-    def __init__(self, config, render_env):
+    def __init__(self, config):
         super(NocturneSharedRunner, self).__init__(config)
         self.cfg = config['cfg.algo']
-        self.render_env = render_env
 
     def run(self):
         self.warmup()   
@@ -77,6 +65,7 @@ class NocturneSharedRunner(Runner):
                 self.trainer.policy.lr_decay(episode, episodes)
 
             for _ in range(self.episodes_per_thread):
+                done_initialized = False
                 for step in range(self.episode_length):
                     # Sample actions
                     values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env = self.collect(step)
@@ -84,7 +73,19 @@ class NocturneSharedRunner(Runner):
                     # Obser reward and next obs
                     obs, rewards, dones, infos = self.envs.step(actions_env)
 
-                    data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
+                    # the episode gets reset if all agents die so we need to persist the masks across the death
+                    # TODO(eugenevinitsky) remove this once it works more sensibly 
+                    if done_initialized:
+                        done_tracker = np.logical_or(dones, done_tracker)
+                    # TODO(eugenevinitsky) this assumes that the first time-step is never done
+                    if not done_initialized:
+                        done_initialized = True
+                        done_tracker = np.zeros_like(dones)
+
+                    # if np.all(dones):
+                    #     import ipdb; ipdb.set_trace()
+
+                    data = obs, rewards, done_tracker, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
 
                     # insert data into buffer
                     self.insert(data)
@@ -121,8 +122,9 @@ class NocturneSharedRunner(Runner):
                     agent_k = 'agent%i/individual_rewards' % agent_id
                     env_infos[agent_k] = idv_rews
 
-                train_infos["average_episode_rewards"] = np.mean(self.buffer.rewards) * self.episode_length
+                train_infos["average_episode_rewards"] = np.mean(self.buffer.rewards * self.buffer.masks[:-1]) * self.episode_length
                 print("average episode rewards is {}".format(train_infos["average_episode_rewards"]))
+                print(f"maximum per step reward is {np.max(self.buffer.rewards)}")
                 self.log_train(train_infos, total_num_steps)
                 self.log_env(env_infos, total_num_steps)
 
@@ -242,10 +244,11 @@ class NocturneSharedRunner(Runner):
     @torch.no_grad()
     def render(self, total_num_steps):
         """Visualize the env."""
-        envs = self.render_env
+        envs = self.envs
         
         all_frames = []
         for episode in range(self.cfg.render_episodes):
+            done_initialized = False
             obs = envs.reset()
             if self.cfg.save_gifs:
                 image = envs.render('rgb_array')[0]
@@ -253,21 +256,22 @@ class NocturneSharedRunner(Runner):
             else:
                 envs.render('human')
 
-            rnn_states = np.zeros((1, self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
-            masks = np.ones((1, self.num_agents, 1), dtype=np.float32)
+            rnn_states = np.zeros((self.n_rollout_threads, self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
+            masks = np.ones((self.n_rollout_threads, self.num_agents, 1), dtype=np.float32)
             
             episode_rewards = []
             
+            self.trainer.prep_rollout()
             for step in range(self.episode_length):
                 calc_start = time.time()
 
-                self.trainer.prep_rollout()
+                # TODO(eugenevinitsky) put back deterministic = True
                 action, rnn_states = self.trainer.policy.act(np.concatenate(obs),
                                                     np.concatenate(rnn_states),
                                                     np.concatenate(masks),
-                                                    deterministic=True)
-                actions = np.array(np.split(_t2n(action), 1))
-                rnn_states = np.array(np.split(_t2n(rnn_states), 1))
+                                                    deterministic=False)
+                actions = np.array(np.split(_t2n(action), self.n_rollout_threads))
+                rnn_states = np.array(np.split(_t2n(rnn_states), self.n_rollout_threads))
 
                 if envs.action_space[0].__class__.__name__ == 'MultiDiscrete':
                     for i in range(envs.action_space[0].shape):
@@ -285,8 +289,15 @@ class NocturneSharedRunner(Runner):
                 obs, rewards, dones, infos = envs.step(actions_env)
                 episode_rewards.append(rewards)
 
+                if done_initialized:
+                        done_tracker = np.logical_or(dones, done_tracker)
+                # TODO(eugenevinitsky) this assumes that the first time-step is never done
+                if not done_initialized:
+                    done_initialized = True
+                    done_tracker = np.zeros_like(dones)
+
                 rnn_states[dones == True] = np.zeros(((dones == True).sum(), self.recurrent_N, self.hidden_size), dtype=np.float32)
-                masks = np.ones((1, self.num_agents, 1), dtype=np.float32)
+                masks = np.ones((self.n_rollout_threads, self.num_agents, 1), dtype=np.float32)
                 masks[dones == True] = np.zeros(((dones == True).sum(), 1), dtype=np.float32)
 
                 if self.cfg.save_gifs:
@@ -298,8 +309,13 @@ class NocturneSharedRunner(Runner):
                         time.sleep(self.cfg.ifi - elapsed)
                 else:
                     envs.render('human')
+                
+                print(dones[0])
+                if np.all(dones[0]):
+                    print('exited rendering due to episode termination')
+                    break
 
-            print("average render episode rewards is: " + str(np.mean(np.sum(np.array(episode_rewards), axis=0))))
+            print("episode reward of rendered episode is: " + str(np.mean(np.sum(np.array(episode_rewards)[:, 0], axis=0))))
 
         if self.cfg.save_gifs:
             # if self.use_wandb:
@@ -370,7 +386,6 @@ def main(cfg):
     # env init
     envs = make_train_env(cfg)
     eval_envs = make_eval_env(cfg) if cfg.algo.use_eval else None
-    render_env = make_render_env(cfg)
     # TODO(eugenevinitsky) hacky
     num_agents = envs.reset().shape[1]
 
@@ -384,7 +399,7 @@ def main(cfg):
     }
 
     # run experiments
-    runner = NocturneSharedRunner(config, render_env)
+    runner = NocturneSharedRunner(config)
     runner.run()
     
     # post process
