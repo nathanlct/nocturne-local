@@ -150,6 +150,16 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     }
     for (const auto& object : roadObjects) {
         target.draw(*object, states);
+
+        if (object->getType() == "Vehicle") {
+            // draw goal destination
+            float radius = 10;
+            sf::CircleShape ptShape(radius);
+            ptShape.setOrigin(radius, radius);
+            ptShape.setFillColor(object->color);
+            ptShape.setPosition(object->goalPosition.toVector2f());
+            target.draw(ptShape, states);
+        }
     }
 }
 
