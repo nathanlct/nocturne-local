@@ -26,7 +26,7 @@ class BaseEnv(object):
         # TODO(eugenevinitsky) remove this once the PPO code doesn't have this restriction
         # track dead agents for PPO.
         self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
-        self.dead_feat =  {key: np.zeros_like(value) for key, value in self.subscriber.get_obs(self.vehicles[0]).items()}
+        self.dead_feat =  {key: -np.ones_like(value) for key, value in self.subscriber.get_obs(self.vehicles[0]).items()}
 
     @property
     def observation_space(self):

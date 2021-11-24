@@ -58,44 +58,65 @@ class NocturneSharedRunner(Runner):
         self.warmup()   
 
         start = time.time()
-        episodes = int(self.num_env_steps) // self.episode_length // self.n_rollout_threads // self.episodes_per_thread
+        # episodes = int(self.num_env_steps) // self.episode_length // self.n_rollout_threads // self.episodes_per_thread
 
+        episodes = int(self.num_env_steps) // self.episode_length // self.n_rollout_threads
+        # for episode in range(episodes):
+        #     if self.use_linear_lr_decay:
+        #         self.trainer.policy.lr_decay(episode, episodes)
+
+        #     for _ in range(self.episodes_per_thread):
+        #         # done_initialized = False
+        #         for step in range(self.episode_length):
+        #             # Sample actions
+        #             values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env = self.collect(step)
+                        
+        #             # Obser reward and next obs
+        #             obs, rewards, dones, infos = self.envs.step(actions_env)
+        #             # print(obs * 400)
+        #             # if not np.array_equal(obs[0, 0, -2:] * 400, np.array([380., -20.], dtype=np.float32)) and not \
+        #             #     np.array_equal(obs[0, 0, -2:] * 400, np.array([0., 0.], dtype=np.float32)):
+        #             #     import ipdb; ipdb.set_trace()
+
+        #             # the episode gets reset if all agents die so we need to persist the masks across the death
+        #             # TODO(eugenevinitsky) remove this once it works more sensibly 
+        #             # if done_initialized:
+        #             #     done_tracker = np.logical_or(dones, done_tracker)
+        #             # # TODO(eugenevinitsky) this assumes that the first time-step is never done
+        #             # if not done_initialized:
+        #             #     done_initialized = True
+        #             #     done_tracker = np.zeros_like(dones)
+
+        #             # if np.all(dones):
+        #             #     import ipdb; ipdb.set_trace()
+
+        #             data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
+
+        #             # insert data into buffer
+        #             self.insert(data)
         for episode in range(episodes):
             if self.use_linear_lr_decay:
                 self.trainer.policy.lr_decay(episode, episodes)
 
-            for _ in range(self.episodes_per_thread):
-                done_initialized = False
-                for step in range(self.episode_length):
-                    # Sample actions
-                    values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env = self.collect(step)
-                        
-                    # Obser reward and next obs
-                    obs, rewards, dones, infos = self.envs.step(actions_env)
+            for step in range(self.episode_length):
+                # Sample actions
+                values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env = self.collect(step)
+                    
+                # Obser reward and next obs
+                obs, rewards, dones, infos = self.envs.step(actions_env)
 
-                    # the episode gets reset if all agents die so we need to persist the masks across the death
-                    # TODO(eugenevinitsky) remove this once it works more sensibly 
-                    if done_initialized:
-                        done_tracker = np.logical_or(dones, done_tracker)
-                    # TODO(eugenevinitsky) this assumes that the first time-step is never done
-                    if not done_initialized:
-                        done_initialized = True
-                        done_tracker = np.zeros_like(dones)
+                data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
 
-                    # if np.all(dones):
-                    #     import ipdb; ipdb.set_trace()
-
-                    data = obs, rewards, done_tracker, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
-
-                    # insert data into buffer
-                    self.insert(data)
+                # insert data into buffer
+                self.insert(data)
 
             # compute return and update network
             self.compute()
             train_infos = self.train()
             
             # post process
-            total_num_steps = (episode + 1) * self.episode_length * self.n_rollout_threads * self.episodes_per_thread
+            # total_num_steps = (episode + 1) * self.episode_length * self.n_rollout_threads * self.episodes_per_thread
+            total_num_steps = (episode + 1) * self.episode_length * self.n_rollout_threads
             
             # save model
             if (episode % self.save_interval == 0 or episode == episodes - 1):
@@ -122,7 +143,9 @@ class NocturneSharedRunner(Runner):
                     agent_k = 'agent%i/individual_rewards' % agent_id
                     env_infos[agent_k] = idv_rews
 
-                train_infos["average_episode_rewards"] = np.mean(self.buffer.rewards * self.buffer.masks[:-1]) * self.episode_length
+                # TODO(eugenevinitsky) this does not correctly account for the fact that there could be
+                # two episodes in the buffer
+                train_infos["average_episode_rewards"] = np.mean(self.buffer.rewards) * self.episode_length
                 print("average episode rewards is {}".format(train_infos["average_episode_rewards"]))
                 print(f"maximum per step reward is {np.max(self.buffer.rewards)}")
                 self.log_train(train_infos, total_num_steps)
@@ -181,12 +204,20 @@ class NocturneSharedRunner(Runner):
         return values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env
 
     def insert(self, data):
-        obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic = data
+        obs, rewards, dones, infos, \
+        values, actions, action_log_probs, rnn_states, rnn_states_critic = data
 
-        rnn_states[dones == True] = np.zeros(((dones == True).sum(), self.recurrent_N, self.hidden_size), dtype=np.float32)
-        rnn_states_critic[dones == True] = np.zeros(((dones == True).sum(), *self.buffer.rnn_states_critic.shape[3:]), dtype=np.float32)
+        dones_env = np.all(dones, axis=1)
+
+        rnn_states[dones_env == True] = np.zeros(((dones_env == True).sum(), self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
+        rnn_states_critic[dones_env == True] = np.zeros(((dones_env == True).sum(), self.num_agents, *self.buffer.rnn_states_critic.shape[3:]), dtype=np.float32)
+
         masks = np.ones((self.n_rollout_threads, self.num_agents, 1), dtype=np.float32)
-        masks[dones == True] = np.zeros(((dones == True).sum(), 1), dtype=np.float32)
+        masks[dones_env == True] = np.zeros(((dones_env == True).sum(), self.num_agents, 1), dtype=np.float32)
+
+        active_masks = np.ones((self.n_rollout_threads, self.num_agents, 1), dtype=np.float32)
+        active_masks[dones == True] = np.zeros(((dones == True).sum(), 1), dtype=np.float32)
+        active_masks[dones_env == True] = np.ones(((dones_env == True).sum(), self.num_agents, 1), dtype=np.float32)
 
         if self.use_centralized_V:
             share_obs = obs.reshape(self.n_rollout_threads, -1)
@@ -194,7 +225,8 @@ class NocturneSharedRunner(Runner):
         else:
             share_obs = obs
 
-        self.buffer.insert(share_obs, obs, rnn_states, rnn_states_critic, actions, action_log_probs, values, rewards, masks)
+        self.buffer.insert(share_obs, obs, rnn_states, rnn_states_critic,
+                           actions, action_log_probs, values, rewards, masks, active_masks=active_masks)
 
     @torch.no_grad()
     def eval(self, total_num_steps):
@@ -265,11 +297,10 @@ class NocturneSharedRunner(Runner):
             for step in range(self.episode_length):
                 calc_start = time.time()
 
-                # TODO(eugenevinitsky) put back deterministic = True
                 action, rnn_states = self.trainer.policy.act(np.concatenate(obs),
                                                     np.concatenate(rnn_states),
                                                     np.concatenate(masks),
-                                                    deterministic=False)
+                                                    deterministic=True)
                 actions = np.array(np.split(_t2n(action), self.n_rollout_threads))
                 rnn_states = np.array(np.split(_t2n(rnn_states), self.n_rollout_threads))
 
@@ -310,11 +341,11 @@ class NocturneSharedRunner(Runner):
                 else:
                     envs.render('human')
                 
-                print(dones[0])
                 if np.all(dones[0]):
-                    print('exited rendering due to episode termination')
                     break
 
+            # TODO(eugenevinitsky) this undercounts the reward because of the 0 rewards due to done signal leading
+            # to zeros in the array
             print("episode reward of rendered episode is: " + str(np.mean(np.sum(np.array(episode_rewards)[:, 0], axis=0))))
 
         if self.cfg.save_gifs:
