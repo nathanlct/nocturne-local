@@ -17,3 +17,9 @@ dependencies:
     - sklearn==1.0.1
     - imageio==2.10.1
     - moviepy==1.0.3
+    - opencv-python
+    - gym
+    - wandb
+    - imageio
+    - setproctitle
+    - tensorboardX
