@@ -14,6 +14,7 @@ wandb_group: debug
 debug: False
 
 # TODO(eugenevinitsky) don't hardcode this
+episode_length: 100
 scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/intersection.json'
 view_angle: 1.56
 dt: 1.0
@@ -21,6 +22,7 @@ dt: 1.0
 sims_per_step: 10
 initial_speed: 5.0
 rew_cfg:
+  shared_reward: False # agents get the collective reward instead of individual rewards
   goal_tolerance: 30.0
   collision_penalty: -10.0
   shaped_goal_distance: True

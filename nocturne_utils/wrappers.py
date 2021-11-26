@@ -9,7 +9,7 @@ from numpy.lib import index_tricks
 import seaborn as sns
 import wandb
 
-from algos.gcsl.env_utils import ImageandProprio, normalize_image
+# from algos.gcsl.env_utils import ImageandProprio, normalize_image
 from gym.spaces import Box, Discrete
 from envs.base_env import BaseEnv
 from nocturne_utils.density_estimators import RawKernelDensity
@@ -150,8 +150,8 @@ class DictToVecWrapper(object):
         if self.use_images:
             print('Using Images')
 
-            self.state_space = ImageandProprio((84, 84, 4),
-                                                example_obs['features'].shape)
+            # self.state_space = ImageandProprio((84, 84, 4),
+            #                                     example_obs['features'].shape)
         else:
             self.state_space = Box(low=-np.inf,
                                     high=np.inf,
@@ -242,7 +242,8 @@ class GoalEnvWrapper(BaseEnv):
     def observation_space(self):
         # TODO(eugenevinitsky) remove hack
         if self.use_images:
-            return ImageandProprio((4, 84, 84), (self.feature_shape - 2, ))
+            sys.exit('add support for images')
+            # return ImageandProprio((4, 84, 84), (self.feature_shape - 2, ))
         else:
             return Box(low=-np.inf,
                        high=np.inf,

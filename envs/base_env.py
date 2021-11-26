@@ -18,7 +18,9 @@ class BaseEnv(object):
         self.vehicles = self.scenario.getVehicles()
         self.subscriber = Subscriber(cfg.subscriber, self.scenario, self.simulation)
         self.cfg = cfg
+        self.episode_length = cfg.episode_length
         self.t = 0
+        self.step_num = 0
         self.rank=rank
         # If true, agents observations stop being sent back once they're dead
         # If false, a vector of zeros will persist till the episode ends
@@ -57,6 +59,7 @@ class BaseEnv(object):
         self.apply_actions(action_dict)
         self.simulation.step(self.cfg.dt)
         self.t += self.cfg.dt
+        self.step_num += 1
         objs_to_remove = []
         for veh_obj in self.simulation.getScenario().getVehicles():
             veh_id = veh_obj.getID()
@@ -77,7 +80,7 @@ class BaseEnv(object):
             if rew_cfg.shaped_goal_distance:
                 # the minus one is to ensure that it's not beneficial to collide
                 # rew_dict[veh_id] -= ((np.linalg.norm(goal_pos - obj_pos) / 2000) - 1)
-                rew_dict[veh_id] -= ((np.linalg.norm(goal_pos - obj_pos) **2 / 801**2) - 1)
+                rew_dict[veh_id] -= ((np.linalg.norm((goal_pos - obj_pos) / (400 * 1.5), ord=2) ** 2) - 1)
             ######################## Handle potential done conditions #######################
             # we have gone off-screen or off road!
             if not self.scenario.isVehicleOnRoad(veh_obj):
@@ -104,7 +107,14 @@ class BaseEnv(object):
                     rew_dict[veh_id] = 0
                     done_dict[veh_id] = True
                     info_dict[veh_id] = {'goal_achieved': False}
+
+        if self.cfg.rew_cfg.shared_reward:
+            total_reward = np.sum([rew_dict[key] for key in rew_dict.keys()])
+            rew_dict = {key: total_reward for key in rew_dict.keys()}
         
+        if self.step_num >= self.episode_length:
+            done_dict = {key: True for key in done_dict.keys()}
+
         all_done = True
         for value in done_dict.values():
             all_done *= value
@@ -114,6 +124,7 @@ class BaseEnv(object):
 
     def reset(self):
         self.t = 0
+        self.step_num = 0
         # TODO(eugenevinitsky) remove this once the PPO code doesn't have this restriction
         # track dead agents for PPO.
         self.simulation.reset()

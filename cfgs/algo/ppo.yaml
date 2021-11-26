@@ -5,13 +5,13 @@ device: ${device}
 cuda_deterministic: True
 n_training_threads: 1 # "Number of torch threads for training"
 n_rollout_threads: 32 # Number of parallel envs for training rollouts
-episodes_per_thread: 5 # Number of episodes each thread will run before the batch is completed
+# episodes_per_thread: 5 # Number of episodes each thread will run before the batch is completed
 n_eval_rollout_threads: 1 # Number of parallel envs for evaluating rollouts
 n_render_rollout_threads: 1 # Number of parallel envs for rendering rollouts
 num_env_steps: 1e7 # Number of environment steps to train
 wandb: ${wandb}
 use_obs_instead_of_state: True # Whether to use global state or concatenated obs
-episode_length: 50 # Max length for any episode
+episode_length: ${episode_length} # Max length for any episode
 share_policy: True # Whether all agents share the same policy
 use_centralized_V: False # Whether to use a centralized value function
 stacked_frames: 1 # number of stacked observations
@@ -37,11 +37,11 @@ opti_eps: 1e-5 # RMSprop optimizer epsilon
 weight_decay: 0 
 
 # ppo parameters
-ppo_epoch: 15 # number of PPO epochs
+ppo_epoch: 10 # number of PPO epochs
 use_clipped_value_loss: True # clip loss value
 clip_param: 0.2 # PPO clipping parameter
 num_mini_batch: 4 # Number of minibatches of the collected data to use
-entropy_coef: 0.1 
+entropy_coef: 0.01 
 value_loss_coef: 0.5 # scaling on the value loss
 use_max_grad_norm: True # use max norm of gradients
 max_grad_norm: 10.0 # max norm of gradients

@@ -58,52 +58,36 @@ class NocturneSharedRunner(Runner):
         self.warmup()   
 
         start = time.time()
-        # episodes = int(self.num_env_steps) // self.episode_length // self.n_rollout_threads // self.episodes_per_thread
-
         episodes = int(self.num_env_steps) // self.episode_length // self.n_rollout_threads
-        # for episode in range(episodes):
-        #     if self.use_linear_lr_decay:
-        #         self.trainer.policy.lr_decay(episode, episodes)
 
-        #     for _ in range(self.episodes_per_thread):
-        #         # done_initialized = False
-        #         for step in range(self.episode_length):
-        #             # Sample actions
-        #             values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env = self.collect(step)
-                        
-        #             # Obser reward and next obs
-        #             obs, rewards, dones, infos = self.envs.step(actions_env)
-        #             # print(obs * 400)
-        #             # if not np.array_equal(obs[0, 0, -2:] * 400, np.array([380., -20.], dtype=np.float32)) and not \
-        #             #     np.array_equal(obs[0, 0, -2:] * 400, np.array([0., 0.], dtype=np.float32)):
-        #             #     import ipdb; ipdb.set_trace()
-
-        #             # the episode gets reset if all agents die so we need to persist the masks across the death
-        #             # TODO(eugenevinitsky) remove this once it works more sensibly 
-        #             # if done_initialized:
-        #             #     done_tracker = np.logical_or(dones, done_tracker)
-        #             # # TODO(eugenevinitsky) this assumes that the first time-step is never done
-        #             # if not done_initialized:
-        #             #     done_initialized = True
-        #             #     done_tracker = np.zeros_like(dones)
-
-        #             # if np.all(dones):
-        #             #     import ipdb; ipdb.set_trace()
-
-        #             data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
-
-        #             # insert data into buffer
-        #             self.insert(data)
         for episode in range(episodes):
             if self.use_linear_lr_decay:
                 self.trainer.policy.lr_decay(episode, episodes)
 
+            # for _ in range(self.episodes_per_thread):
+            # done_initialized = False
             for step in range(self.episode_length):
                 # Sample actions
                 values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env = self.collect(step)
                     
                 # Obser reward and next obs
                 obs, rewards, dones, infos = self.envs.step(actions_env)
+                # print(obs * 400)
+                # if not np.array_equal(obs[0, 0, -2:] * 400, np.array([380., -20.], dtype=np.float32)) and not \
+                #     np.array_equal(obs[0, 0, -2:] * 400, np.array([0., 0.], dtype=np.float32)):
+                #     import ipdb; ipdb.set_trace()
+
+                # the episode gets reset if all agents die so we need to persist the masks across the death
+                # TODO(eugenevinitsky) remove this once it works more sensibly 
+                # if done_initialized:
+                #     done_tracker = np.logical_or(dones, done_tracker)
+                # # TODO(eugenevinitsky) this assumes that the first time-step is never done
+                # if not done_initialized:
+                #     done_initialized = True
+                #     done_tracker = np.zeros_like(dones)
+
+                # if np.all(dones):
+                #     import ipdb; ipdb.set_trace()
 
                 data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
 
@@ -115,8 +99,7 @@ class NocturneSharedRunner(Runner):
             train_infos = self.train()
             
             # post process
-            # total_num_steps = (episode + 1) * self.episode_length * self.n_rollout_threads * self.episodes_per_thread
-            total_num_steps = (episode + 1) * self.episode_length * self.n_rollout_threads
+            total_num_steps = (episode + 1) * self.episode_length * self.n_rollout_threads #* self.episodes_per_thread
             
             # save model
             if (episode % self.save_interval == 0 or episode == episodes - 1):
@@ -128,8 +111,8 @@ class NocturneSharedRunner(Runner):
                 print("\n Algo {} Exp {} updates {}/{} episodes, total num timesteps {}/{}, FPS {}.\n"
                         .format(self.algorithm_name,
                                 self.experiment_name,
-                                episode * self.episodes_per_thread,
-                                episodes * self.episodes_per_thread,
+                                episode * self.n_rollout_threads,
+                                episodes * self.n_rollout_threads,
                                 total_num_steps,
                                 self.num_env_steps,
                                 int(total_num_steps / (end - start))))
@@ -276,7 +259,7 @@ class NocturneSharedRunner(Runner):
     @torch.no_grad()
     def render(self, total_num_steps):
         """Visualize the env."""
-        envs = self.envs
+        envs = self.eval_envs
         
         all_frames = []
         for episode in range(self.cfg.render_episodes):
@@ -288,8 +271,8 @@ class NocturneSharedRunner(Runner):
             else:
                 envs.render('human')
 
-            rnn_states = np.zeros((self.n_rollout_threads, self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
-            masks = np.ones((self.n_rollout_threads, self.num_agents, 1), dtype=np.float32)
+            rnn_states = np.zeros((self.n_eval_rollout_threads, self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
+            masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
             
             episode_rewards = []
             
@@ -301,8 +284,8 @@ class NocturneSharedRunner(Runner):
                                                     np.concatenate(rnn_states),
                                                     np.concatenate(masks),
                                                     deterministic=True)
-                actions = np.array(np.split(_t2n(action), self.n_rollout_threads))
-                rnn_states = np.array(np.split(_t2n(rnn_states), self.n_rollout_threads))
+                actions = np.array(np.split(_t2n(action), self.n_eval_rollout_threads))
+                rnn_states = np.array(np.split(_t2n(rnn_states), self.n_eval_rollout_threads))
 
                 if envs.action_space[0].__class__.__name__ == 'MultiDiscrete':
                     for i in range(envs.action_space[0].shape):
@@ -328,7 +311,7 @@ class NocturneSharedRunner(Runner):
                     done_tracker = np.zeros_like(dones)
 
                 rnn_states[dones == True] = np.zeros(((dones == True).sum(), self.recurrent_N, self.hidden_size), dtype=np.float32)
-                masks = np.ones((self.n_rollout_threads, self.num_agents, 1), dtype=np.float32)
+                masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
                 masks[dones == True] = np.zeros(((dones == True).sum(), 1), dtype=np.float32)
 
                 if self.cfg.save_gifs:
@@ -343,11 +326,14 @@ class NocturneSharedRunner(Runner):
                 
                 if np.all(dones[0]):
                     break
-
-            # TODO(eugenevinitsky) this undercounts the reward because of the 0 rewards due to done signal leading
-            # to zeros in the array
-            print("episode reward of rendered episode is: " + str(np.mean(np.sum(np.array(episode_rewards)[:, 0], axis=0))))
-
+            
+            # note, every rendered episode is exactly the same since there's no randomness in the env and our actions
+            # are deterministic
+            render_val = np.mean(np.sum(np.array(episode_rewards), axis=0))
+            print("episode reward of rendered episode is: " + str(render_val))
+            if self.use_wandb:
+                wandb.log({'render_rew': render_val}, step=total_num_steps)
+           
         if self.cfg.save_gifs:
             # if self.use_wandb:
             #     np_arr = np.stack(all_frames).transpose((0, 3, 1, 2))
