@@ -402,7 +402,7 @@ def main(cfg):
 
     # env init
     envs = make_train_env(cfg)
-    eval_envs = make_eval_env(cfg) if cfg.algo.use_eval else None
+    eval_envs = make_eval_env(cfg)
     # TODO(eugenevinitsky) hacky
     num_agents = envs.reset().shape[1]
 

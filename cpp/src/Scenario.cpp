@@ -265,8 +265,8 @@ bool Scenario::isVehicleOnRoad(const Object& object) const {
 }
 
 ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) { // args in radians
-    float circleRadius = 400.0f;
-    float renderedCircleRadius = 200.0f;
+    float circleRadius = 300.0f;
+    float renderedCircleRadius = 150.0f;
 
     if (object->coneTexture == nullptr) {
         sf::ContextSettings settings;
@@ -389,7 +389,7 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) {
     sf::Image img = texture->getTexture().copyToImage();
     unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-    return ImageMatrix(pixelsArr, 400, 400, 4);
+    return ImageMatrix(pixelsArr, 300, 300, 4);
 }   
 
 

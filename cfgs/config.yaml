@@ -21,28 +21,33 @@ dt: 1.0
 # TODO(eugenevinitsky) actually implement this
 sims_per_step: 10
 initial_speed: 5.0
+img_as_state: False
 rew_cfg:
   shared_reward: False # agents get the collective reward instead of individual rewards
   goal_tolerance: 30.0
   collision_penalty: -10.0
   shaped_goal_distance: True
   goal_achieved_bonus: 1.0
+  speed_rew: False
+  speed_rew_coef: 0.01
 subscriber:
+  use_local_coordinates: True
   include_ego_state: True
   # TODO(eugenevinitsky) this should be true
   include_visible_object_state: True
+  include_road_edges: True
   object_subscriber:
     include_speed: True
     include_pos: True
     include_heading: True
   ego_subscriber:
-    img_view: False
+    img_view: ${img_as_state}
     view_angle: ${view_angle}
     include_speed: True
     include_heading: True
     include_pos: True
     include_goal_pos: True
-    include_goal_img: False
+    include_goal_img: ${img_as_state}
     # include_lane_pos: True
 
 hydra:

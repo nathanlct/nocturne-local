@@ -81,6 +81,8 @@ class BaseEnv(object):
                 # the minus one is to ensure that it's not beneficial to collide
                 # rew_dict[veh_id] -= ((np.linalg.norm(goal_pos - obj_pos) / 2000) - 1)
                 rew_dict[veh_id] -= ((np.linalg.norm((goal_pos - obj_pos) / (400 * 1.5), ord=2) ** 2) - 1)
+            if rew_cfg.speed_rew:
+                rew_dict[veh_id] += veh_obj.getSpeed() * rew_cfg.speed_rew_coef
             ######################## Handle potential done conditions #######################
             # we have gone off-screen or off road!
             if not self.scenario.isVehicleOnRoad(veh_obj):
@@ -132,13 +134,17 @@ class BaseEnv(object):
         self.vehicles = self.scenario.getVehicles()
         self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
         self.subscriber = Subscriber(self.cfg.subscriber, self.scenario, self.simulation)
+        # initialize the vehicle speeds
+        for veh_obj in self.simulation.getScenario().getVehicles():
+            veh_id = veh_obj.getID()
+            veh_obj.setSpeed(self.cfg.initial_speed)
+
         obs_dict = {}
         for veh_obj in self.simulation.getScenario().getVehicles():
             veh_id = veh_obj.getID()
             obs_dict[veh_id] = self.subscriber.get_obs(veh_obj)
-            veh_obj.setSpeed(self.cfg.initial_speed)
+        
         return obs_dict
-
     def render(self, mode=None):
         # TODO(eugenevinitsky) this should eventually return a global image instead of this hack
         return np.array(self.scenario.getImage(object=None, renderGoals=True), copy=False)

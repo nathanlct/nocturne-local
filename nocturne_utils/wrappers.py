@@ -15,7 +15,7 @@ from envs.base_env import BaseEnv
 from nocturne_utils.density_estimators import RawKernelDensity
 
 class PPOWrapper(object):
-    def __init__(self, env):
+    def __init__(self, env, use_images=False):
         """Wrapper that adds the appropriate observation spaces
 
         Args:
@@ -33,19 +33,17 @@ class PPOWrapper(object):
         obs_dict = self.reset()
         # tracker used to match observations to actions
         self.agent_ids = []
-        # TODO(eugenevinitsky this does not work if images are in the observation)
-
-        self.feature_shape = obs_dict[0].shape[0]
+        self.feature_shape = obs_dict[0].shape
         # TODO(eugenevinitsky) this is a hack that assumes that we have a fixed number of agents
         self.share_observation_space = [Box(
-            low=-np.inf, high=+np.inf, shape=(self.feature_shape,), dtype=np.float32) for _ in range(self.n)]
+            low=-np.inf, high=+np.inf, shape=self.feature_shape, dtype=np.float32) for _ in range(self.n)]
 
     # TODO(eugenevinitsky this does not work if images are in the observation)
     @property
     def observation_space(self):
         return [Box(low=-np.inf,
                        high=np.inf,
-                       shape=(self.feature_shape,)) for _ in range(self.n)]
+                       shape=self.feature_shape) for _ in range(self.n)]
     @property
     # TODO(eugenevinitsky) put back the box once we figure out how to make it compatible with the code
     def action_space(self):
@@ -132,37 +130,7 @@ class DictToVecWrapper(object):
         """
         self._env = env
         self.normalize_value = normalize_value
-
         self.use_images = use_images
-        if self.use_images:
-            self.features_key = 'ego_image'
-        else:
-            self.features_key = 'features'
-
-        # snag an obs that we will use to create the observation spaces
-        obs_dict = self.transform_obs(self._env.reset())
-        example_obs = next(iter(obs_dict.values()))
-        self.feature_shape = example_obs['features'].shape[0]
-        self.goal_space = Box(low=-np.inf,
-                                high=np.inf,
-                                shape=example_obs['goal_pos'].shape)
-
-        if self.use_images:
-            print('Using Images')
-
-            # self.state_space = ImageandProprio((84, 84, 4),
-            #                                     example_obs['features'].shape)
-        else:
-            self.state_space = Box(low=-np.inf,
-                                    high=np.inf,
-                                    shape=example_obs['features'].shape)
-        
-        # TODO(eugenevinitsky) remove this once we actually vary the set of possible goals and sample instead of returning reset state
-        # TODO(eugenevinitsky) this is handled bespoke in every env, make this more general or a wrapper
-        if self.use_images:
-            self.curr_goal = {key: self.state_space.to_flat(obs[self.features_key], obs['features']) for key, obs in obs_dict.items()}
-        else:
-            self.curr_goal = {key: obs[self.features_key] for key, obs in obs_dict.items()}
 
     @property
     def observation_space(self):
@@ -180,22 +148,26 @@ class DictToVecWrapper(object):
     def transform_obs(self, obs_dict):
         # next_obs is a dict since this is a multi-agent system
         for agent_id, next_obs in obs_dict.items():
-            if isinstance(next_obs, dict):
-                features = []
-                for key, val in next_obs.items():
-                    if len(val.shape) > 2 or key == 'goal_pos' or key == 'ego_pos':
-                        continue
-                    else:
-                        features.append(val.ravel())
-                # we want to make sure that the goal is at the end
-                # and that the "achieved_goal" is between -4 and -2 from the end
-                features.extend([next_obs['ego_pos'], next_obs['goal_pos']])
-            agent_dict = obs_dict[agent_id]
-            agent_dict['features'] = np.concatenate(
-                features, axis=0).astype(np.float32) / self.normalize_value
-            if 'image' in self.features_key:
-                agent_dict[self.features_key] = (cv2.resize(agent_dict[self.features_key], 
-                                                (84, 84), interpolation = cv2.INTER_AREA) - 0.5) / 255.0
+            if self.use_images:
+                agent_dict = obs_dict[agent_id]
+                agent_dict['features'] = np.concatenate((agent_dict['ego_img'], agent_dict['goal_img']), axis=-1)
+                agent_dict['features'] = np.transpose(agent_dict['features'], (2, 0, 1))
+            else:
+                if isinstance(next_obs, dict):
+                    features = []
+                    for key, val in next_obs.items():
+                        if len(val.shape) > 2 or key == 'goal_pos' or key == 'ego_pos':
+                            continue
+                        else:
+                            features.append(val.ravel())
+                    # we want to make sure that the goal is at the end
+                    # and that the "achieved_goal" is between -4 and -2 from the end
+                    # TODO(eugenevinitsky) local coordinates break the goal wrappers
+                    if 'ego_pos' in next_obs.keys() and 'goal_pos' in next_obs.keys():
+                        features.extend([next_obs['ego_pos'], next_obs['goal_pos']])
+                agent_dict = obs_dict[agent_id]
+                agent_dict['features'] = np.concatenate(
+                    features, axis=0).astype(np.float32) / self.normalize_value
         return obs_dict
 
     def reset(self):
@@ -233,6 +205,36 @@ class GoalEnvWrapper(BaseEnv):
     def __init__(self, env):
         self._env = env
         self.goal_metric = 'euclidean'
+        self.use_images = use_images
+        if self.use_images:
+            self.features_key = 'ego_image'
+        else:
+            self.features_key = 'features'
+
+        # snag an obs that we will use to create the observation spaces
+        obs_dict = self.transform_obs(self._env.reset())
+        example_obs = next(iter(obs_dict.values()))
+        self.feature_shape = example_obs['features'].shape[0]
+
+        if self.use_images:
+            print('Using Images')
+
+            # self.state_space = ImageandProprio((84, 84, 4),
+            #                                     example_obs['features'].shape)
+        else:
+            self.state_space = Box(low=-np.inf,
+                                    high=np.inf,
+                                    shape=example_obs['features'].shape)
+        
+        # TODO(eugenevinitsky) remove this once we actually vary the set of possible goals and sample instead of returning reset state
+        # TODO(eugenevinitsky) this is handled bespoke in every env, make this more general or a wrapper
+        if self.use_images:
+            self.curr_goal = {key: self.state_space.to_flat(obs[self.features_key], obs['features']) for key, obs in obs_dict.items()}
+        else:
+            self.curr_goal = {key: obs[self.features_key] for key, obs in obs_dict.items()}
+        self.goal_space = Box(low=-np.inf,
+                        high=np.inf,
+                        shape=example_obs['goal_pos'].shape)
 
     @property
     def action_space(self):
@@ -561,14 +563,14 @@ def create_env(cfg):
 
 def create_ppo_env(cfg, rank=0):
     env = BaseEnv(cfg, should_terminate=False, rank=rank)
-    env = DictToVecWrapper(env)
+    env = DictToVecWrapper(env, use_images=cfg.img_as_state)
     # env = CurriculumGoalEnvWrapper(env, density_optim_samples=cfg.algo.density_optim_samples,
     #                             num_goal_samples=cfg.algo.num_goal_samples,
     #                             log_figure=cfg.algo.log_figure,
     #                             kernel=cfg.algo.kernel,
     #                             quartile_cutoff=cfg.algo.quartile_cutoff,
     #                             wandb=cfg.wandb)
-    return PPOWrapper(env)
+    return PPOWrapper(env, use_images=cfg.img_as_state)
 
 
 def create_goal_env(cfg):

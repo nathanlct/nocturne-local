@@ -1,3 +1,4 @@
+from torchvision import transforms
 import torch.nn as nn
 from .util import init
 
@@ -15,6 +16,8 @@ class CNNLayer(nn.Module):
         active_func = [nn.Tanh(), nn.ReLU()][use_ReLU]
         init_method = [nn.init.xavier_uniform_, nn.init.orthogonal_][use_orthogonal]
         gain = nn.init.calculate_gain(['tanh', 'relu'][use_ReLU])
+
+        self.resize = transforms.Resize(84)
 
         def init_(m):
             return init(m, init_method, lambda x: nn.init.constant_(x, 0), gain=gain)
@@ -38,7 +41,8 @@ class CNNLayer(nn.Module):
             init_(nn.Linear(hidden_size, hidden_size)), active_func)
 
     def forward(self, x):
-        x = x / 255.0
+        # TODO(eugenevinitsky) hardcoding is bad
+        x = self.resize(x) / 255.0
         x = self.cnn(x)
         return x
 
