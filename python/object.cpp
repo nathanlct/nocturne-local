@@ -10,6 +10,7 @@ void init_object(py::module &m) {
 
     py::class_<Object, std::shared_ptr<Object>>(m, "Object")
         .def("getWidth", &Object::getWidth)
+        .def("getLength", &Object::getLength)
         .def("getPosition", &Object::getPosition)
         .def("getGoalPosition", &Object::getGoalPosition)
         .def("getSpeed", &Object::getSpeed)
