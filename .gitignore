@@ -19,3 +19,8 @@ __pycache__/
 
 # packaging
 *.egg-info/
+
+# experiment_files
+*.mp4
+*exp_local*
+algos/gcsl/exp_local/*
