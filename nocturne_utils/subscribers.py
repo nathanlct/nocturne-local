@@ -28,14 +28,15 @@ class Subscriber(object):
             # concatenate all the objects together but don't duplicate yourself
             # TODO(eugenevinitsky) you want this to be only visible objects
             # TODO(eugenevinitsky) instead of all objects
-            obs_dict['visible_objects'] = np.zeros((self.max_num_vehicles - 1) * self.num_vehicle_elem)
-            if len(self.scenario.getVehicles()) > 1:
-                obs_dict_list = [self.vehicle_subscriber.get_obs(veh_obj, object) for veh_obj in self.scenario.getVehicles() if veh_obj.getID() != object.getID()]
-                # sort the list by angle if in local coordinates
-                if self.cfg.use_local_coordinates:
-                    obs_dict_list = sorted(obs_dict_list, key=lambda x: x['obj_angle'])
-                visible_obs_feat = np.concatenate([np.hstack(list(veh_obs_dict.values())) for veh_obs_dict in obs_dict_list])
-                obs_dict['visible_objects'][0 : (len(self.scenario.getVehicles()) - 1) * self.num_vehicle_elem] = visible_obs_feat
+            if self.max_num_vehicles - 1 > 0:
+                obs_dict['visible_objects'] = np.zeros((self.max_num_vehicles - 1) * self.num_vehicle_elem)
+                if len(self.scenario.getVehicles()) > 1:
+                    obs_dict_list = [self.vehicle_subscriber.get_obs(veh_obj, object) for veh_obj in self.scenario.getVehicles() if veh_obj.getID() != object.getID()]
+                    # sort the list by angle if in local coordinates
+                    if self.cfg.use_local_coordinates:
+                        obs_dict_list = sorted(obs_dict_list, key=lambda x: x['obj_angle'])
+                    visible_obs_feat = np.concatenate([np.hstack(list(veh_obs_dict.values())) for veh_obs_dict in obs_dict_list])
+                    obs_dict['visible_objects'][0 : (len(self.scenario.getVehicles()) - 1) * self.num_vehicle_elem] = visible_obs_feat
 
         if self.cfg.include_road_edges:
             # get all objects that are not vehicles
@@ -44,7 +45,8 @@ class Subscriber(object):
             # sort the list by angle if in local coordinates
             if self.cfg.use_local_coordinates:
                 obs_dict_list = sorted(obs_dict_list, key=lambda x: x['obj_angle'])
-            obs_dict['road_objects'] = np.concatenate([np.hstack(list(road_obs_dict.values())) for road_obs_dict in obs_dict_list])
+            if len(obs_dict_list) > 0:
+                obs_dict['road_objects'] = np.concatenate([np.hstack(list(road_obs_dict.values())) for road_obs_dict in obs_dict_list])
 
         return obs_dict
 
@@ -70,8 +72,8 @@ class VehicleObjectSubscriber(object):
         if self.use_local_coords:
             # position and angle used to define the local coordinate frame
             heading_rad = observing_object.getHeading()
-            observing_pos = observing_object.getPosition()
-            observing_pos = np.array([observing_pos.x, observing_pos.y])
+        observing_pos = observing_object.getPosition()
+        observing_pos = np.array([observing_pos.x, observing_pos.y])
         if self.cfg.include_speed:
             obs_dict['curr_speed'] = np.array([object.getSpeed()])
         if self.cfg.include_pos:
@@ -80,6 +82,9 @@ class VehicleObjectSubscriber(object):
             # to include a global positions
             if not self.use_local_coords:
                 obs_dict['pos'] = np.array([pos.x, pos.y])
+                # TODO(eugenevinitsky) this is necessary to form costs for Box DDP 
+                # TODO(eugenevinitsky) but we might not want it normally
+                obs_dict['obj_dist'] = np.linalg.norm(np.array([pos.x, pos.y]) - observing_pos)
             else:
                 # use radial coordinates
                 obs_dict['obj_dist'] = np.linalg.norm(np.array([pos.x, pos.y]) - observing_pos)
@@ -113,34 +118,44 @@ class RoadObjectSubscriber(object):
         """
         small_angle = 0.0002
         obs_dict = OrderedDict()
-        if self.use_local_coords:
-            # position and angle used to define the local coordinate frame
-            observing_heading = observing_object.getHeading()
-            observing_pos = observing_object.getPosition()
-            observing_pos = np.array([observing_pos.x, observing_pos.y])
+        # if self.use_local_coords:
+
+        # position of observing vehicle used to define the local coordinate frame
+        observing_heading = observing_object.getHeading()
+        observing_pos = observing_object.getPosition()
+        observing_pos = np.array([observing_pos.x, observing_pos.y])
+
+        # object values
         pos = object.getPosition()
         length = object.getLength()
         heading = object.getHeading()
         # if we are using local coordinates, it does not make sense
         # to include a global positions
+        obj_pos = np.array([pos.x, pos.y])
         if not self.use_local_coords:
-            obs_dict['pos'] = np.array([pos.x, pos.y])
+            obs_dict['pos'] = obj_pos
             obs_dict['heading'] = np.array([heading])
             obs_dict['length'] = np.array([length])
         else:
             # use radial coordinates
-            # TODO(eugenevinitsky) somehow object 1 and object 2 are getting mixed up between cars
-            # TODO(eugenevinitsky) this is the source of the problem
-            obj_pos = np.array([pos.x, pos.y])
-            obs_dict['obj_dist'] = np.linalg.norm(observing_pos - obj_pos)
+            obs_dict['obj_center_dist'] = np.linalg.norm(observing_pos - obj_pos)
             obs_dict['obj_angle'] = angle_between(obj_pos - observing_pos, 
                                                   np.array([np.cos(observing_heading), np.sin(observing_heading)])) * 180 / np.pi
             obs_dict['obj_length'] = np.array([length])
             # this is mod 180 because we don't care which way the edge is pointing
             # we add the small angle to force floating point error to wrap around 180
             obs_dict['obj_rel_angle'] = (np.array([observing_heading - heading]) * 180 / np.pi + small_angle) % 180
-            # if observing_object.getID() == 8:
-            #     import ipdb; ipdb.set_trace()
+            
+            # compute the distance to the closest point in the object for the observing object
+            # conveniently these objects are all lines so we can just compute the shortest distance
+            # to a hyperplane w * x + b = 0 once we construct the normal
+            # rotate the heading by 90 degrees to get the normal
+        normal_angle = (heading + np.pi / 2) % np.pi
+        normal_vec = np.array([np.cos(normal_angle), np.sin(normal_angle)])
+        b = - np.dot(normal_vec, obj_pos)
+        # now computing the distance
+        obs_dict['closest_dist'] = np.abs(np.dot(normal_vec, observing_pos) + b)
+
         return obs_dict
 
 
@@ -177,6 +192,7 @@ class EgoSubscriber(object):
                                                        np.array([np.cos(heading_deg), np.sin(heading_deg)])) * 180 / np.pi
             else:
                 obs_dict['goal_pos'] = np.array([pos.x, pos.y])
+                obs_dict['goal_dist'] = np.linalg.norm(np.array([ego_pos.x, ego_pos.y]) - np.array([pos.x, pos.y]))
         if self.cfg.include_goal_img:
             obs_dict['goal_img'] = np.array(self.scenario.getImage(object=object, renderGoals=True), copy=False)
         # if self.cfg.include_lane_pos:
