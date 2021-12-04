@@ -11,6 +11,7 @@ from torch.nn.parameter import Parameter
 
 import hydra
 import numpy as np
+import imageio
 
 from algos.box_ddp import util
 from algos.box_ddp import mpc
@@ -22,16 +23,20 @@ plt.style.use('bmh')
 
 from envs.base_env import BaseEnv
 
+os.environ["DISPLAY"] = ":0.0"
+
 class CarDx(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg, timesteps):
         super().__init__()
         # we need the agent position in the state so we that we can reset things properly
         # TODO(eugenevinitsky) there's a better way to do this
         cfg.subscriber.use_local_coordinates = False
-        self.env = BaseEnv(cfg)
+        self.env = BaseEnv(cfg, should_terminate=False)
         self.num_vehicles = len(self.env.vehicles)
         self.dt = cfg.dt
-        self.lower, self.higher = torch.Tensor([-1, -0.4]), torch.Tensor([1, 0.4])
+        # TODO(eugenevinitsky) batch size hardcoding
+        self.lower = torch.Tensor([-1, -0.4]).tile((timesteps,1)).unsqueeze(1)
+        self.higher = torch.Tensor([1, 0.4]).tile((timesteps,1)).unsqueeze(1)
 
         self.mpc_eps = 1e-3
         self.linesearch_decay = 0.2
@@ -52,7 +57,7 @@ class CarDx(nn.Module):
             self.vehicle_heading_indices = np.arange(start_pos + 4, start_pos + self.dict_shape[-2], 5)
         start_pos = np.sum(self.dict_shape[0:-1])
         self.road_dist_indices = np.arange(start_pos + 4, start_pos + self.dict_shape[-1], 5)
-        self.goal_index = 0
+        self.goal_dist_index = 0
         self.ego_pos_index = [1, 2]
         self.goal_pos_index = [3, 4]
         self.ego_speed_index = [5]
@@ -61,29 +66,25 @@ class CarDx(nn.Module):
 
     def forward(self, x, u):
         # TODO(eugenevinitsky) remove the hardcoding of the first vehicle
-        vehicle = self.env.vehicles[0]
-        veh_id = vehicle.getID()
-        state_dict = self.state_to_dict(x)
-        # set the vehicle position to the first element of x
-        veh_pos = state_dict['ego_pos'][0].detach().numpy()
-        vehicle.setPosition(veh_pos[0], veh_pos[1])
+        # vehicle = self.env.vehicles[0]
+        # veh_id = vehicle.getID()
+        # state_dict = self.state_to_dict(x)
+        # # set the vehicle position to the first element of x
+        # veh_pos = state_dict['ego_pos'][0].detach().numpy()
+        # vehicle.setPosition(veh_pos[0], veh_pos[1])
         # TODO(eugenevinitsky) batch size hardcoding
-        accel = u[0, 0]
-        turn = u[0, 1]
         # sync up the environment so that we get good rendering
-        _, _, _, _ = self.env.step({veh_id: {'accel': accel, 'turn': turn}})
+        # _, _, _, _ = self.env.step({veh_id: {'accel': accel, 'turn': turn}})
         
         # okay now lets do all the updates for the environment in a differentiable way
         # first lets update speed and heading of the vehicle
-        list_of_updates = [] # all the updates we're going to apply at the end
-        total_shape = x.shape[-1]
         length = 20.0 # TODO(remove hardcoding)
-        steering = u[:, 0]
+        accel = u[:, 0]
         turn = u[:, 1]
         heading = x[:, self.ego_heading_index]
         speed = x[:, self.ego_speed_index]
-        slipAngle = torch.atan(torch.tan(steering) / 2.0)
-        dHeading = speed * torch.sin(steering) / length
+        slipAngle = torch.atan(torch.tan(turn) / 2.0)
+        dHeading = speed * torch.sin(turn) / length
         dX = speed * torch.cos(heading + slipAngle)
         dY = speed * torch.sin(heading + slipAngle)
         # heading update
@@ -120,7 +121,7 @@ class CarDx(nn.Module):
         # goal dist
         new_goal_dist = torch.linalg.norm(x[:, self.ego_pos_index] - x[:, self.goal_pos_index])
         goal_dist_unit_vector = torch.zeros_like(x)
-        goal_dist_unit_vector[:, self.goal_pos_index] = 1
+        goal_dist_unit_vector[:, self.goal_dist_index] = 1
         x = (1 - goal_dist_unit_vector) * x + goal_dist_unit_vector * new_goal_dist
 
         # dist to all the other vehicles
@@ -191,7 +192,14 @@ class VehicleCost(nn.Module):
         constraint_vec = -filtered_vec + self.desired_distance
         constraint_cost = torch.matmul(torch.diag(mask_vec), torch.exp(constraint_vec))
         cost += constraint_cost.sum()
-        return cost
+
+        # form a control cost
+        control_cost_vec = torch.zeros_like(x[0])
+        control_cost_vec[-2:] = 1.0
+        Q = torch.diag(control_cost_vec)
+        cost += 0.001 * torch.matmul(x, torch.matmul(Q, x.T))
+        # TODO(eugenevinitsky) remove hardcoding
+        return cost[0]
 
 @hydra.main(config_path='../../../cfgs/', config_name='config')
 def main(cfg):
@@ -202,7 +210,7 @@ def main(cfg):
     TIMESTEPS = 10  # T
     N_BATCH = 1
     LQR_ITER = 5
-    dx = CarDx(cfg)
+    dx = CarDx(cfg, TIMESTEPS)
 
     dx.env.reset()
 
@@ -211,8 +219,9 @@ def main(cfg):
 
     u_init = None
     render = True
-    retrain_after_iter = 50
-    run_iter = 500
+    # retrain_after_iter = 50
+    run_iter = 50
+    imgs = []
 
     # TODO(eugenevinitsky) set up the goals here
     # we want to regulate goal dist to zero, while keeping distance from objects we could
@@ -245,8 +254,9 @@ def main(cfg):
         # recreate controller using updated u_init (kind of wasteful right?)
         ctrl = mpc.MPC(nx, nu, TIMESTEPS, u_lower=dx.lower, u_upper=dx.higher, lqr_iter=LQR_ITER,
                        exit_unconverged=False, eps=1e-2,
-                       n_batch=N_BATCH, backprop=False, verbose=0, u_init=u_init,
-                       grad_method=mpc.GradMethods.AUTO_DIFF)
+                       n_batch=N_BATCH, backprop=False,  u_init=u_init,
+                       grad_method=mpc.GradMethods.AUTO_DIFF,
+                       verbose=1)
 
         # compute action based on current state, dynamics, and cost
         nominal_states, nominal_actions, nominal_objs = ctrl(state, cost, dx)
@@ -254,11 +264,18 @@ def main(cfg):
         u_init = torch.cat((nominal_actions[1:], torch.zeros(1, N_BATCH, nu)), dim=0)
 
         elapsed = time.perf_counter() - command_start
-        s, r, _, _ = dx.env.step(action.detach().numpy())
-        total_reward += r
-        logger.debug("action taken: %.4f cost received: %.4f time taken: %.5fs", action, -r, elapsed)
+        # TODO(eugenevinitsky) remove hardcoding
+        action = action.detach().numpy()
+        s, r, _, _ = dx.env.step({8: {'accel': action[0, 0], 'turn': action[0, 1]}})
+        total_reward += r[8]
+        print(s, r, action)
+        logger.debug("action taken: %.4f cost received: %.4f time taken: %.5fs", action, -r[8], elapsed)
         if render:
-            dx.env.render()
+            img = dx.env.render()
+            imgs.append(img)
+
+    import ipdb; ipdb.set_trace()
+    imageio.mimsave('/private/home/eugenevinitsky/Code/nocturne/algos/box_ddp/env_dx' + '/render.gif', imgs, duration=0.1)
 
     logger.info("Total reward %f", total_reward)
 
