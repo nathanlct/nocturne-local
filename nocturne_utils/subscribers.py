@@ -134,7 +134,7 @@ class RoadObjectSubscriber(object):
         obj_pos = np.array([pos.x, pos.y])
         if not self.use_local_coords:
             obs_dict['pos'] = obj_pos
-            obs_dict['heading'] = np.array([heading])
+            obs_dict['heading'] = np.array([heading * 180 / np.pi])
             obs_dict['length'] = np.array([length])
         else:
             # use radial coordinates
@@ -150,11 +150,16 @@ class RoadObjectSubscriber(object):
             # conveniently these objects are all lines so we can just compute the shortest distance
             # to a hyperplane w * x + b = 0 once we construct the normal
             # rotate the heading by 90 degrees to get the normal
-        normal_angle = (heading + np.pi / 2) % np.pi
-        normal_vec = np.array([np.cos(normal_angle), np.sin(normal_angle)])
-        b = - np.dot(normal_vec, obj_pos)
-        # now computing the distance
-        obs_dict['closest_dist'] = np.abs(np.dot(normal_vec, observing_pos) + b)
+
+        endpoint_1 = np.array([obj_pos[0] + length * np.cos(heading) / 2,
+                                    obj_pos[1] + length * np.sin(heading) / 2])
+        endpoint_2 = np.array([obj_pos[0] - length * np.cos(heading) / 2,
+                                    obj_pos[1] - length * np.sin(heading) / 2])
+        # find the closest point on the line and project
+        t = max(0, min(1, np.dot(observing_pos - endpoint_1, endpoint_2 - endpoint_1) / (length **2)))
+        projection = endpoint_1 + t * (endpoint_2 - endpoint_1)
+        new_dist = np.linalg.norm(projection - observing_pos)
+        obs_dict['closest_dist'] = new_dist
 
         return obs_dict
 
