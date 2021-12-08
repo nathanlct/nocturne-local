@@ -17,7 +17,12 @@ class Subscriber(object):
         # TODO(eugenevinitsky) this will change when there's a finite number of visible vehicles
         self.max_num_vehicles = len(self.scenario.getVehicles())
         object_cfg = cfg.object_subscriber
-        self.num_vehicle_elem = object_cfg.include_speed + 2 * object_cfg.include_pos + object_cfg.include_heading
+        if cfg.use_local_coordinates:
+            # speed, obj dist, obj angle, heading
+            self.num_vehicle_elem = object_cfg.include_speed + 2 * object_cfg.include_pos + object_cfg.include_heading
+        else:
+            # speed, obj pos, distance to object, heading
+            self.num_vehicle_elem = object_cfg.include_speed + 2 * object_cfg.include_pos + object_cfg.include_heading + 1
 
     def get_obs(self, object):
         obs_dict = OrderedDict()

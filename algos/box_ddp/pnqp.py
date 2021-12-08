@@ -53,6 +53,7 @@ def pnqp(H, q, lower, upper, x_init=None, n_iter=20):
             H_lu_ = H_.lu()
             dx = -g_.unsqueeze(2).lu_solve(*H_lu_).squeeze(2)
 
+        import ipdb; ipdb.set_trace()
         J = torch.norm(dx, 2, 1) >= 1e-4
         m = J.sum().item() # Number of active examples in the batch.
         if m == 0:

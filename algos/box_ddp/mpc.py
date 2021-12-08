@@ -535,26 +535,30 @@ More details: https://github.com/locuslab/mpc.pytorch/issues/12
                 if t < self.T-1:
                     xt = Variable(x[t], requires_grad=True)
                     ut = Variable(u[t], requires_grad=True)
-                    xut = torch.cat((xt, ut), 1)
                     new_x = dynamics(xt, ut)
 
                     # Linear dynamics approximation.
                     if self.grad_method in [GradMethods.AUTO_DIFF,
                                              GradMethods.ANALYTIC_CHECK]:
-                        Rt, St = [], []
-                        for j in range(self.n_state):
-                            Rj, Sj = torch.autograd.grad(
-                                new_x[:,j].sum(), [xt, ut],
-                                retain_graph=True)
-                            if not diff:
-                                Rj, Sj = Rj.data, Sj.data
-                            Rt.append(Rj)
-                            St.append(Sj)
-                        Rt = torch.stack(Rt, dim=1)
-                        St = torch.stack(St, dim=1)
+                        # Rt, St = [], []
+                        # for j in range(self.n_state):
+                        #     Rj, Sj = torch.autograd.grad(
+                        #         new_x[:,j].sum(), [xt, ut],
+                        #         retain_graph=True)
+                        #     if not diff:
+                        #         Rj, Sj = Rj.data, Sj.data
+                        #     Rt.append(Rj)
+                        #     St.append(Sj)
+                        # Rt = torch.stack(Rt, dim=1)
+                        # St = torch.stack(St, dim=1)
+                        # import ipdb; ipdb.set_trace()
+                        Rt, St = torch.autograd.functional.jacobian(dynamics, (xt, ut), vectorize=True)
+                        # TODO(eugenevinitsky) why do we need to do this?
+                        Rt = Rt.squeeze(2)
+                        St = St.squeeze(2)
 
                         if self.grad_method == GradMethods.ANALYTIC_CHECK:
-                            assert False # Not updated
+                            # assert False # Not updated
                             Rt_autograd, St_autograd = Rt, St
                             Rt, St = dynamics.grad_input(xt, ut)
                             eps = 1e-8
