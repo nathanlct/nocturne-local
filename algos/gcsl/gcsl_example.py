@@ -4,6 +4,7 @@ import os
 import hydra
 import gym
 import numpy as np
+from pyvirtualdisplay import Display
 from rlutil.logging import log_utils
 import wandb
 
@@ -17,11 +18,12 @@ import rlutil.torch.pytorch_util as ptu
 # Algo
 from algos.gcsl import buffer, gcsl, variants, networks
 
-os.environ["DISPLAY"] = ":0.0"
-
 
 @hydra.main(config_path='../../cfgs/', config_name='config')
 def main(cfg):
+    # initialize the display
+    disp = Display()
+    disp.start()
     # setup wandb
     # logdir = Path(os.getcwd())
     if cfg.wandb_id is not None:

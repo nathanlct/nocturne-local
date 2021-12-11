@@ -5,6 +5,7 @@ import time
 import hydra
 import imageio
 import numpy as np
+from pyvirtualdisplay import Display
 import setproctitle
 import torch
 import wandb
@@ -13,8 +14,6 @@ from algos.ppo.base_runner import Runner
 from algos.ppo.env_wrappers import SubprocVecEnv, DummyVecEnv, ShareDummyVecEnv, ShareSubprocVecEnv
 
 from nocturne_utils.wrappers import create_ppo_env
-
-os.environ["DISPLAY"] = ":0.0"
 
 def _t2n(x):
     """Convert torch tensor to a numpy array."""
@@ -209,7 +208,7 @@ class NocturneSharedRunner(Runner):
             share_obs = obs
 
         self.buffer.insert(share_obs, obs, rnn_states, rnn_states_critic,
-                           actions, action_log_probs, values, rewards, masks, active_masks=active_masks)
+                        actions, action_log_probs, values, rewards, masks, active_masks=active_masks)
 
     @torch.no_grad()
     def eval(self, total_num_steps):
@@ -329,20 +328,23 @@ class NocturneSharedRunner(Runner):
             
             # note, every rendered episode is exactly the same since there's no randomness in the env and our actions
             # are deterministic
+            # TODO(eugenevinitsky) why is this lower than the non-render reward?
             render_val = np.mean(np.sum(np.array(episode_rewards), axis=0))
             print("episode reward of rendered episode is: " + str(render_val))
             if self.use_wandb:
                 wandb.log({'render_rew': render_val}, step=total_num_steps)
            
         if self.cfg.save_gifs:
-            # if self.use_wandb:
-            #     np_arr = np.stack(all_frames).transpose((0, 3, 1, 2))
-            #     wandb.log({"video": wandb.Video(np_arr, fps=4, format="gif")}, step=total_num_steps)
+            if self.use_wandb:
+                np_arr = np.stack(all_frames).transpose((0, 3, 1, 2))
+                wandb.log({"video": wandb.Video(np_arr, fps=4, format="gif")}, step=total_num_steps)
             # else:
             imageio.mimsave(os.getcwd() + '/render.gif', all_frames, duration=self.cfg.ifi)
 
 @hydra.main(config_path='../../cfgs/', config_name='config')
 def main(cfg):
+    disp = Display()
+    disp.start()
     logdir = Path(os.getcwd())
     if cfg.wandb_id is not None:
         wandb_id = cfg.wandb_id
@@ -385,9 +387,10 @@ def main(cfg):
         print("choose to use gpu...")
         device = torch.device(cfg.algo.device)
         torch.set_num_threads(cfg.algo.n_training_threads)
-        if cfg.algo.cuda_deterministic:
-            torch.backends.cudnn.benchmark = False
-            torch.backends.cudnn.deterministic = True
+        # if cfg.algo.cuda_deterministic:
+        #     import torch.backends.cudnn as cudnn
+        #     cudnn.benchmark = False
+        #     cudnn.deterministic = True
     else:
         print("choose to use cpu...")
         device = torch.device("cpu")

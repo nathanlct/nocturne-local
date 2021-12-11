@@ -667,6 +667,7 @@ class DummyVecEnv(ShareVecEnv):
 
     def step_wait(self):
         results = [env.step(a) for (a, env) in zip(self.actions, self.envs)]
+        # TODO(eugenevinitsky) remove this
         obs, rews, dones, infos = map(np.array, zip(*results))
 
         for (i, done) in enumerate(dones):

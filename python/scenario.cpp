@@ -16,7 +16,8 @@ void init_scenario(py::module &m) {
              py::arg("object") = nullptr, py::arg("renderGoals") = false)
         .def("removeObject", &Scenario::removeObject)
         .def("createVehicle", &Scenario::createVehicle)
-        .def("isVehicleOnRoad", &Scenario::isVehicleOnRoad);
+        .def("isVehicleOnRoad", &Scenario::isVehicleOnRoad)
+        .def("isPointOnRoad", &Scenario::isPointOnRoad);
         // .def(
         //     py::init<std::string>(), 
         //     "Constructor for Scenario",

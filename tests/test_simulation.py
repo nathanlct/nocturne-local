@@ -25,7 +25,7 @@ print(objects)
 #     plt.savefig(f'{i}_.png')
 
 obj = objects[-1]
-img = np.array(scenario.getGoalImage(obj), copy=False)
+img = np.array(scenario.getImage(obj, renderGoals=True), copy=False)
 plt.figure()
 plt.imshow(img)
 plt.savefig('goalImg.png')

@@ -36,6 +36,7 @@ public:
     bool checkForCollision(const Object* object1, const Object* object2);
 
     bool isVehicleOnRoad(const Object& object) const;
+    bool isPointOnRoad(float posX, float posY) const;
     void createVehicle(float posX, float posY, float width, float length, float heading,
         bool occludes, bool collides, bool checkForCollisions, float goalPosX, float goalPosY);
 private:

@@ -264,6 +264,48 @@ bool Scenario::isVehicleOnRoad(const Object& object) const {
     return true;
 }
 
+// TODO(eugenevinitsky) code duplication
+bool Scenario::isPointOnRoad(float posX, float posY) const {
+    bool found;
+    found = false;
+
+    for (const std::shared_ptr<Road>& roadptr : roads) {
+        const std::vector<Vector2D> roadPolygon = roadptr->getRoadPolygon();
+        const size_t nQuads = roadPolygon.size() / 2 - 1;
+
+        for (size_t quadIdx = 0; quadIdx < nQuads; quadIdx++) {
+            const std::vector<Vector2D> quadCorners {
+                roadPolygon[quadIdx],
+                roadPolygon[quadIdx + 1],
+                roadPolygon[roadPolygon.size() - 1 - quadIdx - 1],
+                roadPolygon[roadPolygon.size() - 1 - quadIdx]
+            };
+
+            // test whether {corner} is within ({intersects}) with the polygon defined by {quadCorners}
+            bool intersects = false;
+            for (int i = 0, j = quadCorners.size() - 1; i < quadCorners.size(); j = i++) {
+                if (((quadCorners[i].y > posY) != (quadCorners[j].y > posY)) &&
+                    (posX < (quadCorners[j].x - quadCorners[i].x) * (posY-quadCorners[i].y) / 
+                    (quadCorners[j].y - quadCorners[i].y) + quadCorners[i].x)) 
+                {
+                    intersects = !intersects;
+                }
+            }
+
+            if (intersects) {
+                found = true;
+                break;
+            }
+        }
+    }
+
+    if (!found) {
+        return false;
+    }
+
+    return true;
+}
+
 ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt) { // args in radians
     float circleRadius = 300.0f;
     float renderedCircleRadius = 150.0f;
