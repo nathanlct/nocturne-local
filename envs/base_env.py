@@ -68,11 +68,12 @@ class BaseEnv(object):
             rew_dict[veh_id] = 0
             done_dict[veh_id] = False
             info_dict[veh_id]['goal_achieved'] = False
+            info_dict[veh_id]['collided'] = False
             obj_pos = veh_obj.getPosition()
             obj_pos = np.array([obj_pos.x, obj_pos.y])
             goal_pos = veh_obj.getGoalPosition()
             goal_pos = np.array([goal_pos.x, goal_pos.y])
-            ######################## Computer rewards #######################
+            ######################## Compute rewards #######################
             # TODO(eugenevinitsky) this is never achieved because this is in meters but the goal tolerance is in pixels or something pixel-y
             if np.linalg.norm(goal_pos - obj_pos) < rew_cfg.goal_tolerance:
                 rew_dict[veh_id] += np.abs(rew_cfg.goal_achieved_bonus)
@@ -125,6 +126,7 @@ class BaseEnv(object):
             if not self.scenario.isVehicleOnRoad(veh_obj):
                 done_dict[veh_id] = True
             if veh_obj.getCollided():
+                info_dict[veh_id]['collided'] = True
                 rew_dict[veh_id] -= np.abs(rew_cfg.collision_penalty)
                 done_dict[veh_id] = True
             # remove the vehicle so that its trajectory doesn't continue. This is important
@@ -184,15 +186,15 @@ class BaseEnv(object):
                 while invalid_goal:
                     new_goal = 800 * (np.random.uniform(size=(2,)) - 0.5)
                     on_road = self.scenario.isPointOnRoad(new_goal[0], new_goal[1]) 
-                    far_away = np.linalg.norm(obj_pos - new_goal) > 400
+                    far_away = np.linalg.norm(obj_pos - new_goal) > 200
                     # TODO(eugenevinitsky) make this more general
                     in_intersection = (np.abs(new_goal[0]) < 40) and (np.abs(new_goal[1] < 40))
                     if on_road and far_away and not in_intersection:
                         max_index = np.argmax(np.abs(new_goal))
-                        # move it to slightly past the end of the road
+                        # move it to near the end of the road
                         new_goal[max_index] = 380 * np.sign(new_goal[max_index])
                         invalid_goal = False
-                    
+
                 veh_obj.setGoalPosition(new_goal[0], new_goal[1])
 
         # okay, now if we want dense waypoints, now is the time to compute them

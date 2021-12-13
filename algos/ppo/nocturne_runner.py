@@ -71,22 +71,6 @@ class NocturneSharedRunner(Runner):
                     
                 # Obser reward and next obs
                 obs, rewards, dones, infos = self.envs.step(actions_env)
-                # print(obs * 400)
-                # if not np.array_equal(obs[0, 0, -2:] * 400, np.array([380., -20.], dtype=np.float32)) and not \
-                #     np.array_equal(obs[0, 0, -2:] * 400, np.array([0., 0.], dtype=np.float32)):
-                #     import ipdb; ipdb.set_trace()
-
-                # the episode gets reset if all agents die so we need to persist the masks across the death
-                # TODO(eugenevinitsky) remove this once it works more sensibly 
-                # if done_initialized:
-                #     done_tracker = np.logical_or(dones, done_tracker)
-                # # TODO(eugenevinitsky) this assumes that the first time-step is never done
-                # if not done_initialized:
-                #     done_initialized = True
-                #     done_tracker = np.zeros_like(dones)
-
-                # if np.all(dones):
-                #     import ipdb; ipdb.set_trace()
 
                 data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
 
@@ -216,6 +200,8 @@ class NocturneSharedRunner(Runner):
 
         eval_episode_rewards = []
         one_episode_rewards = []
+        num_achieved_goals = 0
+        num_collisions = 0
 
         eval_obs = self.eval_envs.reset()
 
@@ -234,6 +220,14 @@ class NocturneSharedRunner(Runner):
             
             # Obser reward and next obs
             eval_obs, eval_rewards, eval_dones, eval_infos = self.eval_envs.step(eval_actions)
+            for info_arr in eval_infos:
+                for agent_info_arr in info_arr:
+                    if agent_info_arr['goal_achieved']:
+                        num_achieved_goals += 1
+                    if agent_info_arr['collided']:
+                        num_collisions += 1
+                    
+
             one_episode_rewards.append(eval_rewards)
 
             eval_dones_env = np.all(eval_dones, axis=1)
@@ -251,8 +245,11 @@ class NocturneSharedRunner(Runner):
 
             if eval_episode >= self.cfg.eval_episodes:
                 eval_episode_rewards = np.array(eval_episode_rewards)
-                eval_env_infos = {'eval_average_episode_rewards': eval_episode_rewards}                
-                self.log_env(eval_env_infos, total_num_steps)
+                eval_episode_rewards = np.mean(np.sum(np.array(eval_episode_rewards), axis=0))       
+                if self.use_wandb:
+                    wandb.log({'eval_episode_rewards': eval_episode_rewards}, step=total_num_steps)
+                    wandb.log({'avg_eval_goals_achieved': num_achieved_goals / len(self.eval_envs.envs) / self.num_agents / eval_episode}, step=total_num_steps)
+                    wandb.log({'avg_eval_num_collisions': num_collisions / len(self.eval_envs.envs) / self.num_agents / eval_episode}, step=total_num_steps)
                 break
 
     @torch.no_grad()
@@ -265,7 +262,7 @@ class NocturneSharedRunner(Runner):
             done_initialized = False
             obs = envs.reset()
             if self.cfg.save_gifs:
-                image = envs.render('rgb_array')[0]
+                image = envs.envs[0].render('rgb_array')
                 all_frames.append(image)
             else:
                 envs.render('human')
@@ -302,19 +299,12 @@ class NocturneSharedRunner(Runner):
                 obs, rewards, dones, infos = envs.step(actions_env)
                 episode_rewards.append(rewards)
 
-                if done_initialized:
-                        done_tracker = np.logical_or(dones, done_tracker)
-                # TODO(eugenevinitsky) this assumes that the first time-step is never done
-                if not done_initialized:
-                    done_initialized = True
-                    done_tracker = np.zeros_like(dones)
-
                 rnn_states[dones == True] = np.zeros(((dones == True).sum(), self.recurrent_N, self.hidden_size), dtype=np.float32)
                 masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
                 masks[dones == True] = np.zeros(((dones == True).sum(), 1), dtype=np.float32)
 
                 if self.cfg.save_gifs:
-                    image = envs.render('rgb_array')[0]
+                    image = envs.envs[0].render('rgb_array')
                     all_frames.append(image)
                     calc_end = time.time()
                     elapsed = calc_end - calc_start

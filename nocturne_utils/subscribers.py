@@ -124,7 +124,6 @@ class RoadObjectSubscriber(object):
         """
         small_angle = 0.0002
         obs_dict = OrderedDict()
-        # if self.use_local_coords:
 
         # position of observing vehicle used to define the local coordinate frame
         observing_heading = observing_object.getHeading()
@@ -135,8 +134,6 @@ class RoadObjectSubscriber(object):
         pos = object.getPosition()
         length = object.getLength()
         heading = object.getHeading()
-        # if we are using local coordinates, it does not make sense
-        # to include a global positions
         obj_pos = np.array([pos.x, pos.y])
         if not self.use_local_coords:
             obs_dict['pos'] = obj_pos
@@ -145,18 +142,18 @@ class RoadObjectSubscriber(object):
         else:
             # use radial coordinates
             obs_dict['obj_center_dist'] = np.linalg.norm(observing_pos - obj_pos)
-            obs_dict['obj_angle'] = angle_between(obj_pos - observing_pos, 
-                                                  np.array([np.cos(observing_heading), np.sin(observing_heading)])) * 180 / np.pi
+            obs_dict['obj_angle'] = angle_between(np.array([np.cos(observing_heading), np.sin(observing_heading)]),
+                                                  obj_pos - observing_pos) * 180 / np.pi
             obs_dict['obj_length'] = np.array([length])
+            # this is used to tell us which way the wall is oriented relative to the car
             # this is mod 180 because we don't care which way the edge is pointing
             # we add the small angle to force floating point error to wrap around 180
             obs_dict['obj_rel_angle'] = (np.array([observing_heading - heading]) * 180 / np.pi + small_angle) % 180
             
-            # compute the distance to the closest point in the object for the observing object
-            # conveniently these objects are all lines so we can just compute the shortest distance
-            # to a hyperplane w * x + b = 0 once we construct the normal
-            # rotate the heading by 90 degrees to get the normal
-
+        # compute the distance to the closest point in the object for the observing object
+        # conveniently these objects are all lines so we can just compute the shortest distance
+        # to a hyperplane w * x + b = 0 once we construct the normal
+        # rotate the heading by 90 degrees to get the normal
         endpoint_1 = np.array([obj_pos[0] + length * np.cos(heading) / 2,
                                     obj_pos[1] + length * np.sin(heading) / 2])
         endpoint_2 = np.array([obj_pos[0] - length * np.cos(heading) / 2,
@@ -199,8 +196,9 @@ class EgoSubscriber(object):
             pos = object.getGoalPosition()
             if self.use_local_coords:
                 obs_dict['goal_dist'] = np.linalg.norm(np.array([ego_pos.x, ego_pos.y]) - np.array([pos.x, pos.y]))
-                obs_dict['goal_angle'] = angle_between(np.array([ego_pos.x, ego_pos.y]) - np.array([pos.x, pos.y]), 
-                                                       np.array([np.cos(heading_deg), np.sin(heading_deg)])) * 180 / np.pi
+                obs_dict['goal_angle'] = angle_between(np.array([np.cos(heading_deg), np.sin(heading_deg)]),
+                                                       np.array([pos.x, pos.y]) - np.array([ego_pos.x, ego_pos.y]) 
+                                                       ) * 180 / np.pi
             else:
                 obs_dict['goal_pos'] = np.array([pos.x, pos.y])
                 obs_dict['goal_dist'] = np.linalg.norm(np.array([ego_pos.x, ego_pos.y]) - np.array([pos.x, pos.y]))

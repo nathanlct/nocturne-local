@@ -70,8 +70,8 @@ class PPOWrapper(object):
                 obs_n.append(next_obses[key])
             rew_n.append([rew[key]])
             done_n.append(done[key])
-            info = {'individual_reward': rew[key]}
-            info_n.append(info)
+            info[key].update({'individual_reward': rew[key]})
+            info_n.append(info[key])
         return obs_n, rew_n, done_n, info_n
 
     def reset(self):

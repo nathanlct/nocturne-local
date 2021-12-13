@@ -1,5 +1,5 @@
 defaults:
-  - algo: gcsl
+  - algo: ppo
   - override hydra/launcher: submitit_local
 
 seed: 0
@@ -15,7 +15,7 @@ debug: False
 
 # TODO(eugenevinitsky) don't hardcode this
 episode_length: 100
-scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/twenty_car_intersection.json'
+scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/four_car_intersection.json'
 view_angle: 1.56
 dt: 1.0
 # TODO(eugenevinitsky) actually implement this
@@ -63,7 +63,7 @@ hydra:
     subdir: ${hydra.job.num}
   launcher:
     timeout_min: 4300
-    cpus_per_task: 10
+    cpus_per_task: 80
     gpus_per_node: 1
     tasks_per_node: 1
     mem_gb: 160

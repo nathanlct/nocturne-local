@@ -5,8 +5,7 @@ device: ${device}
 cuda_deterministic: True
 n_training_threads: 1 # "Number of torch threads for training"
 n_rollout_threads: 1 # Number of parallel envs for training rollouts
-# episodes_per_thread: 5 # Number of episodes each thread will run before the batch is completed
-n_eval_rollout_threads: 1 # Number of parallel envs for evaluating rollouts
+n_eval_rollout_threads: 32 # Number of parallel envs for evaluating rollouts
 n_render_rollout_threads: 1 # Number of parallel envs for rendering rollouts
 num_env_steps: 1e8 # Number of environment steps to train
 wandb: ${wandb}
@@ -58,9 +57,9 @@ use_linear_lr_decay: False
 # saving and logging
 save_interval: 1 # time duration between contiunous twice models saving
 log_interval: 5 # time duration between contiunous twice log printing
-use_eval: False
+use_eval: True
 eval_interval: 25 
-eval_episodes: 1
+eval_episodes: 3
 save_gifs: True
 render_interval: 25 # how often to render
 use_render: False
