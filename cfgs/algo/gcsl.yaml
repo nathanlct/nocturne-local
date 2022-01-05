@@ -1,0 +1,27 @@
+eval_freq: 10000
+batch_size: 256
+density_buffer_size: 50000
+buffer_size: 10000
+eval_episodes: 5
+max_trajectory_length: 150
+# how many random time-steps to take to initialize the buffer
+explore_timesteps: 1500
+max_timesteps: 1e6
+# warning use odd not even granularities so that zero is included
+action_granularity: 5
+expl_noise: 0.1
+goal_threshold: cfg.rew_cfg.goal_tolerance
+support_termination: True
+go_explore: True
+save_video: True
+density_optim_samples: 1000
+num_goal_samples: 200
+bandwidth: 0.1
+log_figure: True
+kernel: 'gaussian' 
+quartile_cutoff: 0.0
+wandb: ${wandb}
+normalize_value: 400.0
+log_every_n_episodes: 50
+# if True, all the agents share the same goal buffer for sampling new goals
+share_goal_buffer: False

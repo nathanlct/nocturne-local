@@ -1,0 +1,348 @@
+{
+    "name": "intersection",
+    "objects": [
+        {
+            "type": "object",
+            "position": { "x": 42, "y": -220 },
+            "width": 4,
+            "length": 360,
+            "heading": 90,
+            "occludes": false,
+            "collides": true,
+            "checkForCollisions": false
+        },
+        {
+            "type": "object",
+            "position": { "x": -42, "y": -220 },
+            "width": 4,
+            "length": 360,
+            "heading": 90,
+            "occludes": false,
+            "collides": true,
+            "checkForCollisions": false
+        },
+        {
+            "type": "object",
+            "position": { "x": 42, "y": 220 },
+            "width": 4,
+            "length": 360,
+            "heading": 90,
+            "occludes": false,
+            "collides": true,
+            "checkForCollisions": false
+        },
+        {
+            "type": "object",
+            "position": { "x": -42, "y": 220 },
+            "width": 4,
+            "length": 360,
+            "heading": 90,
+            "occludes": false,
+            "collides": true,
+            "checkForCollisions": false
+        },
+        {
+            "type": "object",
+            "position": { "x": 220, "y": 42 },
+            "width": 4,
+            "length": 360,
+            "heading": 0,
+            "occludes": false,
+            "collides": true,
+            "checkForCollisions": false
+        },
+        {
+            "type": "object",
+            "position": { "x": 220, "y": -42 },
+            "width": 4,
+            "length": 360,
+            "heading": 0,
+            "occludes": false,
+            "collides": true,
+            "checkForCollisions": false
+        },
+        {
+            "type": "object",
+            "position": { "x": -220, "y": 42 },
+            "width": 4,
+            "length": 360,
+            "heading": 0,
+            "occludes": false,
+            "collides": true,
+            "checkForCollisions": false
+        },
+        {
+            "type": "object",
+            "position": { "x": -220, "y": -42 },
+            "width": 4,
+            "length": 360,
+            "heading": 0,
+            "occludes": false,
+            "collides": true,
+            "checkForCollisions": false
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": 20, "y": -200 },
+            "width": 10,
+            "length": 20,
+            "heading": 90,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": 380, "y": -20 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": 20, "y": -240 },
+            "width": 10,
+            "length": 20,
+            "heading": 90,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": 380, "y": -20 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": 20, "y": -280 },
+            "width": 10,
+            "length": 20,
+            "heading": 90,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": 380, "y": -20 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": 20, "y": -320 },
+            "width": 10,
+            "length": 20,
+            "heading": 90,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": 380, "y": -20 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": 20, "y": -160 },
+            "width": 10,
+            "length": 20,
+            "heading": 90,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": 380, "y": -20 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": -20, "y": 160 },
+            "width": 10,
+            "length": 20,
+            "heading": 270,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": -380, "y": 20 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": -20, "y": 200 },
+            "width": 10,
+            "length": 20,
+            "heading": 270,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": -380, "y": 20 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": -20, "y": 240 },
+            "width": 10,
+            "length": 20,
+            "heading": 270,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": -380, "y": 20 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": -20, "y": 280 },
+            "width": 10,
+            "length": 20,
+            "heading": 270,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": -380, "y": 20 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": -20, "y": 320 },
+            "width": 10,
+            "length": 20,
+            "heading": 270,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": -380, "y": 20 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": 160, "y": 20 },
+            "width": 10,
+            "length": 20,
+            "heading": 180,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": -20, "y": -380 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": 200, "y": 20 },
+            "width": 10,
+            "length": 20,
+            "heading": 180,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": -20, "y": -380 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": 240, "y": 20 },
+            "width": 10,
+            "length": 20,
+            "heading": 180,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": -20, "y": -380 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": 280, "y": 20 },
+            "width": 10,
+            "length": 20,
+            "heading": 180,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": -20, "y": -380 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": 320, "y": 20 },
+            "width": 10,
+            "length": 20,
+            "heading": 180,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": -20, "y": -380 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": -160, "y": -20 },
+            "width": 10,
+            "length": 20,
+            "heading": 0,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": 20, "y": 380 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": -200, "y": -20 },
+            "width": 10,
+            "length": 20,
+            "heading": 0,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": 20, "y": 380 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": -240, "y": -20 },
+            "width": 10,
+            "length": 20,
+            "heading": 0,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": 20, "y": 380 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": -280, "y": -20 },
+            "width": 10,
+            "length": 20,
+            "heading": 0,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": 20, "y": 380 }
+        },
+        {
+            "type": "vehicle",
+            "position": { "x": -320, "y": -20 },
+            "width": 10,
+            "length": 20,
+            "heading": 0,
+            "occludes": true,
+            "collides": true,
+            "checkForCollisions": true,
+            "goalPosition": { "x": 20, "y": 380 }
+        }
+    ],
+    "roads": [
+        {
+            "geometry": [
+                { "x": 0, "y": -400 },
+                { "x": 0, "y": -40 }
+            ],
+            "lanes": 2,
+            "laneWidth": 40.0
+        },
+        {
+            "geometry": [
+                { "x": 0, "y": 400 },
+                { "x": 0, "y": 40 }
+            ],
+            "lanes": 2,
+            "laneWidth": 40.0
+        },
+        {
+            "geometry": [
+                { "x": 400, "y": 0 },
+                { "x": 40, "y": 0 }
+            ],
+            "lanes": 2,
+            "laneWidth": 40.0
+        },
+        {
+            "geometry": [
+                { "x": -400, "y": 0 },
+                { "x": -40, "y": 0 }
+            ],
+            "lanes": 2,
+            "laneWidth": 40.0
+        },
+        {
+            "geometry": [
+                { "x": -40, "y": 0 },
+                { "x": 40, "y": 0 }
+            ],
+            "lanes": 1,
+            "laneWidth": 80.0,
+            "hasLines": false
+        }
+    ]
+}

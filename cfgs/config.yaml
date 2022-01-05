@@ -1,40 +1,71 @@
 defaults:
+  - algo: ppo
   - override hydra/launcher: submitit_local
 
+seed: 0
+device: 'cuda:0'
+experiment: intersection
+
+# WANDB things
+wandb: True
+wandb_name: nocturne
+wandb_id: null
+wandb_group: waypoints
+debug: False
+
 # TODO(eugenevinitsky) don't hardcode this
-scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/intersection.json'
+episode_length: 100
+scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/four_car_intersection.json'
 view_angle: 1.56
-dt: 0.1
+dt: 1.0
+# TODO(eugenevinitsky) actually implement this
+sims_per_step: 10
+initial_speed: 5.0
+img_as_state: False
+randomize_goals: True
 rew_cfg:
-  goal_tolerance: 0.05
-  collision_penalty: -1.0
+  shared_reward: False # agents get the collective reward instead of individual rewards
+  goal_tolerance: 30.0
+  collision_penalty: 0.0
+  shaped_goal_distance: True
+  goal_achieved_bonus: 50.0
+  speed_rew: False
+  speed_rew_coef: 0.01
+  # find a dense set of waypoints and reward for getting closer to them
+  dense_waypoints: true
+  dense_waypoint_spacing: 10.0
+  num_visible_waypoints: 5
 subscriber:
+  use_local_coordinates: True
   include_ego_state: True
   # TODO(eugenevinitsky) this should be true
-  include_visible_object_state: False
+  include_visible_object_state: True
+  include_road_edges: True
   object_subscriber:
     include_speed: True
     include_pos: True
+    include_heading: True
   ego_subscriber:
-    img_view: True
+    img_view: ${img_as_state}
     view_angle: ${view_angle}
     include_speed: True
+    include_heading: True
     include_pos: True
     include_goal_pos: True
-    include_goal_img: True
+    include_goal_img: ${img_as_state}
     # include_lane_pos: True
 
 hydra:
   run:
-    dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
+    dir: /checkpoint/eugenevinitsky/nocturne/test/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
   sweep:
-    dir: ./exp/${now:%Y.%m.%d}/${now:%H%M}_${experiment}
+    dir: /checkpoint/eugenevinitsky/nocturne/sweep/${now:%Y.%m.%d}/${now:%H%M}_${experiment}
     subdir: ${hydra.job.num}
   launcher:
     timeout_min: 4300
-    cpus_per_task: 10
+    cpus_per_task: 80
     gpus_per_node: 1
     tasks_per_node: 1
     mem_gb: 160
     nodes: 1
-    submitit_folder: ./exp/${now:%Y.%m.%d}/${now:%H%M%S}_${experiment}/.slurm
+    submitit_folder: /checkpoint/eugenevinitsky/nocturne/sweep/${now:%Y.%m.%d}/${now:%H%M}_${experiment}/.slurm
