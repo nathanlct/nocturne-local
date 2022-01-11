@@ -59,7 +59,7 @@ save_interval: 1 # time duration between contiunous twice models saving
 log_interval: 5 # time duration between contiunous twice log printing
 use_eval: True
 eval_interval: 25 
-eval_episodes: 3
+eval_episodes: 10
 save_gifs: True
 render_interval: 25 # how often to render
 use_render: False

@@ -11,7 +11,7 @@ import wandb
 
 # from algos.gcsl.env_utils import ImageandProprio, normalize_image
 from gym.spaces import Box, Discrete
-from envs.base_env import BaseEnv
+from envs import BaseEnv, WaypointEnv
 from nocturne_utils.density_estimators import RawKernelDensity
 
 class PPOWrapper(object):
@@ -52,10 +52,14 @@ class PPOWrapper(object):
 
     def step(self, actions):
         agent_actions = {}
-        for action, agent_id in zip(actions, self.agent_ids):
-            one_hot = np.argmax(action)
-            accel_action = self.accel_grid[int(one_hot // self.action_discretization)]
-            steering_action = self.steering_grid[one_hot % self.action_discretization]
+        for action_vec, agent_id in zip(actions, self.agent_ids):
+            # during training this is a one-hot vector, during eval this is the argmax
+            if action_vec.shape[0] != 1:
+                action = np.argmax(action_vec)
+            else:
+                action = action_vec[0]
+            accel_action = self.accel_grid[int(action // self.action_discretization)]
+            steering_action = self.steering_grid[action % self.action_discretization]
             agent_actions[agent_id] = {'accel': accel_action, 'turn': steering_action}
         next_obses, rew, done, info = self._env.step(agent_actions)
         obs_n = []
@@ -70,8 +74,9 @@ class PPOWrapper(object):
                 obs_n.append(next_obses[key])
             rew_n.append([rew[key]])
             done_n.append(done[key])
-            info[key].update({'individual_reward': rew[key]})
-            info_n.append(info[key])
+            agent_info = info[key]
+            agent_info['individual_reward'] = rew[key]
+            info_n.append(agent_info)
         return obs_n, rew_n, done_n, info_n
 
     def reset(self):
@@ -92,6 +97,9 @@ class PPOWrapper(object):
 
     def render(self, mode=None):
         return self._env.render(mode)
+
+    def seed(self, seed=None):
+        self._env.seed(seed)
 
     def __getattr__(self, name):
         return getattr(self._env, name)
@@ -115,6 +123,9 @@ class ActionWrapper(object):
 
     def render(self, mode=None):
         return self._env.render()
+    
+    def seed(self, seed=None):
+        self._env.seed(seed)
 
     def __getattr__(self, name):
         return getattr(self._env, name)
@@ -177,6 +188,9 @@ class DictToVecWrapper(object):
 
     def render(self, mode=None):
         return self._env.render()
+    
+    def seed(self, seed=None):
+        self._env.seed(seed)
 
     def __getattr__(self, name):
         return getattr(self._env, name)
@@ -264,6 +278,9 @@ class GoalEnvWrapper(BaseEnv):
 
         obs_dict, rew_dict, done_dict, info_dict = self._env.step(action_dict)
         return self.get_obs(obs_dict), rew_dict, done_dict, info_dict
+
+    def seed(self, seed=None):
+        self._env.seed(seed)
 
     def get_obs(self, obs_dict):
         if self.use_images:
@@ -555,6 +572,9 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
     def transform_obs(self, obs_dict):
          # TODO(eugenevinitsky) this is a hack since dict to vec wrapper expects a dict
         return self.get_obs(self._env.transform_obs(obs_dict))
+
+    def seed(self, seed=None):
+        self._env.seed(seed)
     
 
 def create_env(cfg):
@@ -562,7 +582,10 @@ def create_env(cfg):
     return ActionWrapper(DictToVecWrapper(env))
 
 def create_ppo_env(cfg, rank=0):
-    env = BaseEnv(cfg, should_terminate=False, rank=rank)
+    if cfg.rew_cfg.dense_waypoints:
+        env = WaypointEnv(cfg, should_terminate=False, rank=rank)
+    else:
+        env = BaseEnv(cfg, should_terminate=False, rank=rank)
     env = DictToVecWrapper(env, use_images=cfg.img_as_state)
     # env = CurriculumGoalEnvWrapper(env, density_optim_samples=cfg.algo.density_optim_samples,
     #                             num_goal_samples=cfg.algo.num_goal_samples,
