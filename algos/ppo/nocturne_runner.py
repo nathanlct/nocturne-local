@@ -265,8 +265,8 @@ class NocturneSharedRunner(Runner):
         eval_episode_rewards = np.mean(eval_episode_rewards)       
         if self.use_wandb:
             wandb.log({'eval_episode_rewards': eval_episode_rewards}, step=total_num_steps)
-            wandb.log({'avg_eval_goals_achieved': num_achieved_goals / self.eval_envs.num_envs / self.num_agents / self.cfg.eval_episodes}, step=total_num_steps)
-            wandb.log({'avg_eval_num_collisions': num_collisions / self.eval_envs.num_envs / self.num_agents / self.cfg.eval_episodes}, step=total_num_steps)
+            wandb.log({'avg_eval_goals_achieved': num_achieved_goals / self.num_agents / self.cfg.eval_episodes}, step=total_num_steps)
+            wandb.log({'avg_eval_num_collisions': num_collisions / self.num_agents / self.cfg.eval_episodes}, step=total_num_steps)
 
     @torch.no_grad()
     def render(self, total_num_steps):
