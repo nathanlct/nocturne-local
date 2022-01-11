@@ -37,12 +37,14 @@ class Subscriber(object):
             if self.max_num_vehicles - 1 > 0:
                 obs_dict['visible_objects'] = np.zeros((self.max_num_vehicles - 1) * self.num_vehicle_elem)
                 if len(self.scenario.getVehicles()) > 1:
-                    obs_dict_list = [self.vehicle_subscriber.get_obs(veh_obj, object) for veh_obj in self.scenario.getVehicles() if veh_obj.getID() != object.getID()]
+                    obs_dict_list = [self.vehicle_subscriber.get_obs(veh_obj, object) for veh_obj in self.scenario.getVehicles() 
+                                        if veh_obj.getID() != object.getID() and self.vehicle_subscriber.is_visible(veh_obj, object, self.cfg.view_angle, self.cfg.view_dist)]
                     # sort the list by angle if in local coordinates
                     if self.cfg.use_local_coordinates:
                         obs_dict_list = sorted(obs_dict_list, key=lambda x: x['obj_angle'])
-                    visible_obs_feat = np.concatenate([np.hstack(list(veh_obs_dict.values())) for veh_obs_dict in obs_dict_list])
-                    obs_dict['visible_objects'][0 : (len(self.scenario.getVehicles()) - 1) * self.num_vehicle_elem] = visible_obs_feat
+                    if len(obs_dict_list) > 0:
+                        visible_obs_feat = np.concatenate([np.hstack(list(veh_obs_dict.values())) for veh_obs_dict in obs_dict_list])
+                        obs_dict['visible_objects'][0: visible_obs_feat.shape[0]] = visible_obs_feat
 
         if self.cfg.include_road_edges:
             # get all objects that are not vehicles
@@ -103,6 +105,23 @@ class VehicleObjectSubscriber(object):
             else:
                 obs_dict['heading'] = np.array([object.getHeading() * 180 / np.pi]) % 360
         return obs_dict
+
+    def is_visible(self, object, observing_object, view_angle, view_dist):
+        # TODO(eugenevinitsky) add support for partial obscurity, this currently just checks if it's in the cone
+        # get the heading of the observing object, we use this to construct the cone
+        heading = observing_object.getHeading()
+        observer_pos = observing_object.getPosition()
+        observer_pos = np.array([observer_pos.x, observer_pos.y])
+        object_pos = object.getPosition()
+        object_pos = np.array([object_pos.x, object_pos.y])
+        obj_vector = object_pos - observer_pos
+        dist = np.linalg.norm(obj_vector)
+        # this is not a bug, arctan2 takes in (y, x)
+        obj_angle = np.arctan2(obj_vector[1], obj_vector[0])
+        if (np.abs(obj_angle - heading) > view_angle / 2) or dist > view_dist :
+            return False
+        else:
+            return True
 
 
 class RoadObjectSubscriber(object):

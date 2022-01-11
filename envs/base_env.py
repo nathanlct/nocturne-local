@@ -178,6 +178,7 @@ class BaseEnv(object):
         for veh_obj in self.simulation.getScenario().getVehicles():
             veh_id = veh_obj.getID()
             obs_dict[veh_id] = self.subscriber.get_obs(veh_obj)
+
         return obs_dict
 
     def render(self, mode=None):
