@@ -1,6 +1,8 @@
 #pragma once
 
 
+// Utility class for holding a 3D image array that can be converted 
+// into a numpy array without copy
 class ImageMatrix {
 public:
     ImageMatrix(unsigned char* data, size_t rows, size_t cols, size_t channels = 4) : 
