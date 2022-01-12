@@ -35,7 +35,7 @@ rew_cfg:
   dense_waypoint_spacing: 10.0
   num_visible_waypoints: 5
 subscriber:
-  view_angle: 1.56
+  view_angle: 3.14
   view_dist: 120 # the distance which the cone extends before agents are not visible
   use_local_coordinates: True
   include_ego_state: True
