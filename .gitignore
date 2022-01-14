@@ -25,3 +25,6 @@ __pycache__/
 *exp_local*
 algos/gcsl/exp_local/*
 *.xml
+
+# log files
+checkpoint/
