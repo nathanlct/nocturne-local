@@ -8,15 +8,14 @@ experiment: intersection
 
 # WANDB things
 wandb: True
-wandb_name: nocturne
+wandb_name: nocturne2
 wandb_id: null
 wandb_group: waypoints
 debug: False
 
 # TODO(eugenevinitsky) don't hardcode this
-episode_length: 100
-scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/four_car_intersection.json'
-view_angle: 1.56
+episode_length: 200
+scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/twenty_car_intersection.json'
 dt: 1.0
 # TODO(eugenevinitsky) actually implement this
 sims_per_step: 10
@@ -36,6 +35,8 @@ rew_cfg:
   dense_waypoint_spacing: 10.0
   num_visible_waypoints: 5
 subscriber:
+  view_angle: 3.14
+  view_dist: 120 # the distance which the cone extends before agents are not visible
   use_local_coordinates: True
   include_ego_state: True
   # TODO(eugenevinitsky) this should be true

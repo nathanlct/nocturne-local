@@ -1,3 +1,4 @@
+from copy import deepcopy
 from pathlib import Path
 import os
 import time
@@ -47,11 +48,24 @@ def make_eval_env(cfg):
     else:
         return SubprocVecEnv([get_env_fn(i) for i in range(cfg.algo.n_eval_rollout_threads)])
 
+
+def make_render_env(cfg):
+    def get_env_fn(rank):
+        def init_env():
+            env = create_ppo_env(cfg)
+            # TODO(eugenevinitsky) implement this
+            env.seed(cfg.seed + rank * 1000)
+            return env
+        return init_env
+    return DummyVecEnv([get_env_fn(0)])
+
+
 class NocturneSharedRunner(Runner):
     """Runner class to perform training, evaluation. and data collection for the Nocturne envs. Assumes a shared policy."""
     def __init__(self, config):
         super(NocturneSharedRunner, self).__init__(config)
         self.cfg = config['cfg.algo']
+        self.render_envs = config['render_envs']
 
     def run(self):
         self.warmup()   
@@ -100,6 +114,8 @@ class NocturneSharedRunner(Runner):
                                 self.num_env_steps,
                                 int(total_num_steps / (end - start))))
 
+                if self.use_wandb:
+                    wandb.log({'fps': int(total_num_steps / (end - start))}, step=total_num_steps)
                 env_infos = {}
                 for agent_id in range(self.num_agents):
                     idv_rews = []
@@ -199,16 +215,18 @@ class NocturneSharedRunner(Runner):
         eval_episode = 0
 
         eval_episode_rewards = []
-        one_episode_rewards = []
+        one_episode_rewards = [[] for _ in range(self.n_eval_rollout_threads)]
         num_achieved_goals = 0
         num_collisions = 0
 
+        i = 0
         eval_obs = self.eval_envs.reset()
 
         eval_rnn_states = np.zeros((self.n_eval_rollout_threads, self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
         eval_masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
 
-        while True:
+        while eval_episode < self.cfg.eval_episodes:
+            i += 1
             self.trainer.prep_rollout()
             eval_actions, eval_rnn_states = \
                 self.trainer.policy.act(np.concatenate(eval_obs),
@@ -218,17 +236,17 @@ class NocturneSharedRunner(Runner):
             eval_actions = np.array(np.split(_t2n(eval_actions), self.n_eval_rollout_threads))
             eval_rnn_states = np.array(np.split(_t2n(eval_rnn_states), self.n_eval_rollout_threads))
             
-            # Obser reward and next obs
+            # Observed reward and next obs
             eval_obs, eval_rewards, eval_dones, eval_infos = self.eval_envs.step(eval_actions)
             for info_arr in eval_infos:
                 for agent_info_arr in info_arr:
-                    if agent_info_arr['goal_achieved']:
+                    if 'goal_achieved' in agent_info_arr and agent_info_arr['goal_achieved']:
                         num_achieved_goals += 1
-                    if agent_info_arr['collided']:
+                    if 'collided' in agent_info_arr and agent_info_arr['collided']:
                         num_collisions += 1
                     
-
-            one_episode_rewards.append(eval_rewards)
+            for i in range(self.n_eval_rollout_threads):
+                one_episode_rewards[i].append(eval_rewards[i])
 
             eval_dones_env = np.all(eval_dones, axis=1)
 
@@ -240,22 +258,20 @@ class NocturneSharedRunner(Runner):
             for eval_i in range(self.n_eval_rollout_threads):
                 if eval_dones_env[eval_i]:
                     eval_episode += 1
-                    eval_episode_rewards.append(np.sum(one_episode_rewards, axis=0))
-                    one_episode_rewards = []
+                    eval_episode_rewards.append(np.sum(one_episode_rewards[eval_i], axis=0).mean())
+                    one_episode_rewards[eval_i] = []
 
-            if eval_episode >= self.cfg.eval_episodes:
-                eval_episode_rewards = np.array(eval_episode_rewards)
-                eval_episode_rewards = np.mean(np.sum(np.array(eval_episode_rewards), axis=0))       
-                if self.use_wandb:
-                    wandb.log({'eval_episode_rewards': eval_episode_rewards}, step=total_num_steps)
-                    wandb.log({'avg_eval_goals_achieved': num_achieved_goals / len(self.eval_envs.envs) / self.num_agents / eval_episode}, step=total_num_steps)
-                    wandb.log({'avg_eval_num_collisions': num_collisions / len(self.eval_envs.envs) / self.num_agents / eval_episode}, step=total_num_steps)
-                break
+        eval_episode_rewards = np.array(eval_episode_rewards)
+        eval_episode_rewards = np.mean(eval_episode_rewards)       
+        if self.use_wandb:
+            wandb.log({'eval_episode_rewards': eval_episode_rewards}, step=total_num_steps)
+            wandb.log({'avg_eval_goals_achieved': num_achieved_goals / self.num_agents / self.cfg.eval_episodes}, step=total_num_steps)
+            wandb.log({'avg_eval_num_collisions': num_collisions / self.num_agents / self.cfg.eval_episodes}, step=total_num_steps)
 
     @torch.no_grad()
     def render(self, total_num_steps):
         """Visualize the env."""
-        envs = self.eval_envs
+        envs = self.render_envs
         
         all_frames = []
         for episode in range(self.cfg.render_episodes):
@@ -267,8 +283,8 @@ class NocturneSharedRunner(Runner):
             else:
                 envs.render('human')
 
-            rnn_states = np.zeros((self.n_eval_rollout_threads, self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
-            masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
+            rnn_states = np.zeros((1, self.num_agents, self.recurrent_N, self.hidden_size), dtype=np.float32)
+            masks = np.ones((1, self.num_agents, 1), dtype=np.float32)
             
             episode_rewards = []
             
@@ -280,8 +296,8 @@ class NocturneSharedRunner(Runner):
                                                     np.concatenate(rnn_states),
                                                     np.concatenate(masks),
                                                     deterministic=True)
-                actions = np.array(np.split(_t2n(action), self.n_eval_rollout_threads))
-                rnn_states = np.array(np.split(_t2n(rnn_states), self.n_eval_rollout_threads))
+                actions = np.array(np.split(_t2n(action), 1))
+                rnn_states = np.array(np.split(_t2n(rnn_states), 1))
 
                 if envs.action_space[0].__class__.__name__ == 'MultiDiscrete':
                     for i in range(envs.action_space[0].shape):
@@ -300,7 +316,7 @@ class NocturneSharedRunner(Runner):
                 episode_rewards.append(rewards)
 
                 rnn_states[dones == True] = np.zeros(((dones == True).sum(), self.recurrent_N, self.hidden_size), dtype=np.float32)
-                masks = np.ones((self.n_eval_rollout_threads, self.num_agents, 1), dtype=np.float32)
+                masks = np.ones((1, self.num_agents, 1), dtype=np.float32)
                 masks[dones == True] = np.zeros(((dones == True).sum(), 1), dtype=np.float32)
 
                 if self.cfg.save_gifs:
@@ -396,6 +412,7 @@ def main(cfg):
     # env init
     envs = make_train_env(cfg)
     eval_envs = make_eval_env(cfg)
+    render_envs = make_render_env(cfg)
     # TODO(eugenevinitsky) hacky
     num_agents = envs.reset().shape[1]
 
@@ -403,6 +420,7 @@ def main(cfg):
         "cfg.algo": cfg.algo,
         "envs": envs,
         "eval_envs": eval_envs,
+        "render_envs": render_envs,
         "num_agents": num_agents,
         "device": device,
         "logdir": logdir
