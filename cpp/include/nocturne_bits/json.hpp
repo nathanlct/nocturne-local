@@ -1,3 +1,5 @@
+// One-file JSON parser from https://github.com/nlohmann/json
+
 /*
     __ _____ _____ _____
  __|  |   __|     |   | |  JSON for Modern C++

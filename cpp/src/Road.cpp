@@ -66,6 +66,7 @@ void Road::buildLanes() {
 }
 
 std::vector<Vector2D> Road::getRoadPolygon() const {
+    // todo compute this just once
     size_t nPoints = 2 * geometry.size();
     std::vector<Vector2D> roadPolygon(nPoints);
     for (int i = 0; i < lanesGeometry.size(); ++i) {
