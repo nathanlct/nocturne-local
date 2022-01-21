@@ -23,6 +23,7 @@ class PPOWrapper(object):
             no_img_concat (bool, optional): If true, we don't concat images into the 'state' key
         """
         self._env = env
+        self.use_images = use_images
 
         self.action_discretization = 5
         self.accel_grid = np.linspace(-1, 1, self.action_discretization)
@@ -38,7 +39,6 @@ class PPOWrapper(object):
         self.share_observation_space = [Box(
             low=-np.inf, high=+np.inf, shape=self.feature_shape, dtype=np.float32) for _ in range(self.n)]
 
-    # TODO(eugenevinitsky this does not work if images are in the observation)
     @property
     def observation_space(self):
         return [Box(low=-np.inf,
