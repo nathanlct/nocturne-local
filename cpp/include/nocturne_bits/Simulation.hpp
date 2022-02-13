@@ -3,7 +3,9 @@
 #include "Scenario.hpp"
 #include "Object.hpp"
 #include "Vector2D.hpp"
-#include "ImageMatrix.hpp"
+#include "utils.hpp"
+
+#include <SFML/Graphics.hpp>
 
 #include <iostream>
 #include <cmath>
@@ -14,30 +16,29 @@
 
 class Simulation {
 public:
-    Simulation(bool render = false, std::string scenarioPath = "");
+    Simulation(std::string scenarioFilePath = "");
 
     void reset();
-    void step();
+    void step(float dt);
+    void render();
 
-    sf::View getView(sf::Vector2u winSize) const;
+    void updateView(float padding = 100.0f) const;
     
     void renderCone(Vector2D center, float heading, float viewAngle, const Object* self = nullptr);
     void renderCone(const Object* object, float viewAngle, float headTilt);
 
-    std::vector<Object*> getRoadObjects();
-    ImageMatrix getConePixels();
-
     void saveScreenshot();
+    Scenario* getScenario() const;
 
 private:
-    Scenario scenario;
-    bool render;
-
-    float circleRadius;
-    float renderedCircleRadius;
-    sf::RenderTexture circleTexture;
+    Scenario* scenario;
 
     sf::RenderWindow* renderWindow;
 
     sf::Transform renderTransform;
+
+    sf::Font font;
+    sf::Clock clock;
+
+    std::string scenarioPath;
 };

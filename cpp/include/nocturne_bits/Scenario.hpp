@@ -1,9 +1,12 @@
 #pragma once
 
-#include "Network.hpp"
 #include "Object.hpp"
 #include "Vehicle.hpp"
 #include "Vector2D.hpp"
+#include "Road.hpp"
+#include "ImageMatrix.hpp"
+
+#include <vector>
 #include <string>
 #include <fstream>
 #include <SFML/Graphics.hpp>
@@ -19,14 +22,30 @@ public:
     void loadScenario(std::string path);
 
     void step(float dt);
-    sf::FloatRect getBoundingBox() const;
 
-    std::vector<Object*> getRoadObjects() const;
+    std::vector<std::shared_ptr<Object>> getRoadObjects();
+    std::vector<std::shared_ptr<Vehicle>> getVehicles();
 
+    void removeObject(Object* object);
+
+    sf::FloatRect getRoadNetworkBoundaries() const;
+
+    ImageMatrix getCone(Object* object, float viewAngle = pi / 2.0f, float headTilt = 0.0f);
+    ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
+
+    bool checkForCollision(const Object* object1, const Object* object2);
+
+    bool isVehicleOnRoad(const Object& object) const;
+    bool isPointOnRoad(float posX, float posY) const;
+    void createVehicle(float posX, float posY, float width, float length, float heading,
+        bool occludes, bool collides, bool checkForCollisions, float goalPosX, float goalPosY);
 private:
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
     std::string name;
-    Network roadNetwork;
-    std::vector<Object*> roadObjects;
+    std::vector<std::shared_ptr<Object>> roadObjects;
+    std::vector<std::shared_ptr<Vehicle>> vehicles;
+    std::vector<std::shared_ptr<Road>> roads;
+
+    sf::RenderTexture* imageTexture;
 };

@@ -9,9 +9,13 @@
 
 class Vehicle : public Object {
 public:
-    Vehicle(Vector2D position, float width, float length, float heading);
+    Vehicle(Vector2D position, float width, float length, float heading,
+            bool occludes, bool collides, bool checkForCollisions,
+            Vector2D goalPosition);
 
-    void act(float acceleration, float steering);
+    void setAccel(float acceleration);
+    void setSteeringAngle(float steeringAngle);
+
     virtual void step(float dt);
 
 private:

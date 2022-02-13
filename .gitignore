@@ -9,5 +9,22 @@ bin/
 # IDE
 .vscode
 
-# videos
+# media
 *.mov
+*.png
+
+# Python
+__pycache__/
+*.pyc
+
+# packaging
+*.egg-info/
+
+# experiment_files
+*.mp4
+*exp_local*
+algos/gcsl/exp_local/*
+*.xml
+
+# log files
+checkpoint/

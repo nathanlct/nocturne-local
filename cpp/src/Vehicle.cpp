@@ -1,42 +1,47 @@
 #include <Vehicle.hpp>
 
 
-Vehicle::Vehicle(Vector2D position, float width, float length, float heading) :
-    Object(position, width, length, heading),
+Vehicle::Vehicle(Vector2D position, float width, float length, float heading,
+        bool occludes, bool collides, bool checkForCollisions,
+        Vector2D goalPosition) :
+    Object(position, width, length, heading, occludes, collides, checkForCollisions, goalPosition),
     accelAction(0), steeringAction(0),
     lateralSpeed(0), yawRate(0)
 {
-    
+    type = "Vehicle";
 }
 
-void Vehicle::act(float acceleration, float steering) {
+void Vehicle::setAccel(float acceleration) {
     accelAction = acceleration;
-    steeringAction = steering;
+}
+
+void Vehicle::setSteeringAngle(float steeringAngle) {
+    steeringAction = steeringAngle;
 }
 
 void Vehicle::step(float dt) {
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-        accelAction = 100.0f;
-    }
-    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-        if (speed > 0.0f) accelAction = -200.0f;
-        else accelAction = -100.0f;
-    }
-    else {
-        if (speed > 0.0f) accelAction = -15.0f;
-        else if (speed < 0.0f) accelAction = 15.0f;
-        else accelAction = 0.0f;
-    }
+    // if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+    //     accelAction = 100.0f;
+    // }
+    // else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+    //     if (speed > 0.0f) accelAction = -200.0f;
+    //     else accelAction = -100.0f;
+    // }
+    // else {
+    //     if (speed > 0.0f) accelAction = -15.0f;
+    //     else if (speed < 0.0f) accelAction = 15.0f;
+    //     else accelAction = 0.0f;
+    // }
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-        steeringAction = -10.0f * pi / 180.0f;
-    }
-    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-        steeringAction = 10.0f * pi / 180.0f;
-    }
-    else {
-        steeringAction = 0.0f;
-    }
+    // if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+    //     steeringAction = -10.0f * pi / 180.0f;
+    // }
+    // else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+    //     steeringAction = 10.0f * pi / 180.0f;
+    // }
+    // else {
+    //     steeringAction = 0.0f;
+    // }
     
     kinematicsUpdate(dt);
 }
