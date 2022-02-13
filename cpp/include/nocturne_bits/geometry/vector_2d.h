@@ -13,6 +13,13 @@ class Vector2D {
  public:
   Vector2D() = default;
   Vector2D(float x, float y) : x_(x), y_(y) {}
+  Vector2D(const Vector2D& v) : x_(v.x_), y_(v.y_) {}
+
+  Vector2D& operator=(const Vector2D& v) {
+    x_ = v.x_;
+    y_ = v.y_;
+    return *this;
+  }
 
   float x() const { return x_; }
   float y() const { return y_; }
@@ -87,7 +94,7 @@ class Vector2D {
     }
   }
 
-  float Atan2() const { return std::atan2(y_, x_); }
+  float Angle() const { return std::atan2(y_, x_); }
 
   Vector2D Rotate(float theta) const {
     const float sin_theta = std::sin(theta);
@@ -101,19 +108,19 @@ class Vector2D {
   float y_ = 0.0f;
 };
 
-Vector2D PolarToVector2D(float r, float theta) {
+inline Vector2D PolarToVector2D(float r, float theta) {
   return Vector2D(r * std::cos(theta), r * std::sin(theta));
 }
 
-float DotProduct(const Vector2D& a, const Vector2D& b) {
+inline float DotProduct(const Vector2D& a, const Vector2D& b) {
   return a.x() * b.x() + a.y() * b.y();
 }
 
-float CrossProduct(const Vector2D& a, const Vector2D& b) {
+inline float CrossProduct(const Vector2D& a, const Vector2D& b) {
   return a.x() * b.y() - a.y() * b.x();
 }
 
-std::ostream& operator<<(std::ostream& os, const Vector2D& v) {
+inline std::ostream& operator<<(std::ostream& os, const Vector2D& v) {
   os << "(" << v.x() << ", " << v.y() << ")";
   return os;
 }
