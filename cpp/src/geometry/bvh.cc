@@ -57,14 +57,14 @@ BVH::Node* BVH::InitHierarchyImpl(
     return MakeNode(std::get<1>(objects[l]));
   }
   const int64_t p = FindPivot(objects, l, r);
-  BVH::Node* l_child = BVH::InitHierarchyImpl(objects, l, p);
-  BVH::Node* r_child = BVH::InitHierarchyImpl(objects, p, r);
+  Node* l_child = InitHierarchyImpl(objects, l, p);
+  Node* r_child = InitHierarchyImpl(objects, p, r);
   const AABB aabb = l_child->aabb() || r_child->aabb();
   return MakeNode(aabb, l_child, r_child);
 }
 
 void BVH::CollisionCandidatesImpl(
-    const AABB& aabb, const BVH::Node* cur,
+    const AABB& aabb, const Node* cur,
     std::vector<const AABBInterface*>& candidates) const {
   if (!aabb.Overlaps(cur->aabb())) {
     return;
@@ -73,8 +73,8 @@ void BVH::CollisionCandidatesImpl(
     candidates.push_back(cur->object());
     return;
   }
-  BVH::CollisionCandidatesImpl(aabb, cur->LChild(), candidates);
-  BVH::CollisionCandidatesImpl(aabb, cur->RChild(), candidates);
+  CollisionCandidatesImpl(aabb, cur->LChild(), candidates);
+  CollisionCandidatesImpl(aabb, cur->RChild(), candidates);
 }
 
 }  // namespace geometry
