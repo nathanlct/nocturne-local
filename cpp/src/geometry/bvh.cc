@@ -10,8 +10,8 @@ namespace geometry {
 
 namespace {
 
-// Binary search for smallest index who shares the highest differing bit in
-// range [l, r).
+// Binary search for smallest index who shares the same highest bit with r - 1
+// in range [l, r).
 int64_t FindPivot(
     const std::vector<std::tuple<uint64_t, const AABBInterface*>>& objects,
     int64_t l, int64_t r) {
