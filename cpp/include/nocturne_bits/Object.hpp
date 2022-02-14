@@ -7,11 +7,13 @@
 #include <string>
 #include <vector>
 
+#include "geometry/aabb.h"
+#include "geometry/aabb_interface.h"
 #include "geometry/vector_2d.h"
 
 namespace nocturne {
 
-class Object : public sf::Drawable {
+class Object : public sf::Drawable, public geometry::AABBInterface {
  public:
   Object(const geometry::Vector2D& position, float width, float length,
          float heading, bool occludes, bool collides, bool checkForCollisions,
@@ -50,6 +52,12 @@ class Object : public sf::Drawable {
 
   void setCollided(bool collided);
   bool getCollided() const;
+
+  // TODO: Improve this later.
+  geometry::AABB GetAABB() const override {
+    const float radius = getRadius();
+    return geometry::AABB(getPosition() - radius, getPosition() + radius);
+  }
 
   sf::RenderTexture* coneTexture;
 

@@ -1,5 +1,6 @@
 #include "Scenario.hpp"
 
+#include "geometry/aabb_interface.h"
 #include "geometry/segment.h"
 #include "geometry/vector_2d.h"
 #include "utils.hpp"
@@ -93,16 +94,45 @@ void Scenario::step(float dt) {
     object->step(dt);
   }
 
-  for (auto& object1 : roadObjects) {
-    for (auto& object2 : roadObjects) {
-      if (object1 == object2) continue;
-      if (!object1->checkForCollisions && !object2->checkForCollisions)
+  // for (auto& object1 : roadObjects) {
+  //   for (auto& object2 : roadObjects) {
+  //     if (object1 == object2) continue;
+  //     if (!object1->checkForCollisions && !object2->checkForCollisions)
+  //       continue;
+  //     if (!object1->collides || !object2->collides) continue;
+  //     bool collided = checkForCollision(object1.get(), object2.get());
+  //     if (collided) {
+  //       object1->setCollided(true);
+  //       object2->setCollided(true);
+  //     }
+  //   }
+  // }
+
+  const int64_t n = roadObjects.size();
+  std::vector<const geometry::AABBInterface*> objects;
+  objects.reserve(n);
+  for (const auto& obj : roadObjects) {
+    objects.push_back(dynamic_cast<const geometry::AABBInterface*>(obj.get()));
+  }
+  bvh_.InitHierarchy(objects);
+  for (auto& obj1 : roadObjects) {
+    std::vector<const geometry::AABBInterface*> candidates =
+        bvh_.CollisionCandidates(
+            dynamic_cast<geometry::AABBInterface*>(obj1.get()));
+    for (const auto* ptr : candidates) {
+      const Object* obj2 = dynamic_cast<const Object*>(ptr);
+      if (obj1->getID() == obj2->getID()) {
         continue;
-      if (!object1->collides || !object2->collides) continue;
-      bool collided = checkForCollision(object1.get(), object2.get());
-      if (collided) {
-        object1->setCollided(true);
-        object2->setCollided(true);
+      }
+      if (!obj1->checkForCollisions && !obj2->checkForCollisions) {
+        continue;
+      }
+      if (!obj1->collides || !obj2->collides) {
+        continue;
+      }
+      if (checkForCollision(obj1.get(), obj2)) {
+        obj1->setCollided(true);
+        const_cast<Object*>(obj2)->setCollided(true);
       }
     }
   }

@@ -56,20 +56,20 @@ install(TARGETS nocturne DESTINATION lib)
 install(FILES include/nocturne DESTINATION include)
 install(DIRECTORY include/nocturne_bits DESTINATION include)
 
-# # Google Test
-# include(FetchContent)
-#
-# FetchContent_Declare(
-#   googletest
-#   GIT_REPOSITORY https://github.com/google/googletest.git
-#   GIT_TAG main
-# )
-#
-# set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-# FetchContent_MakeAvailable(googletest)
-#
-# enable_testing()
-# add_subdirectory(
-#     ${CMAKE_CURRENT_SOURCE_DIR}/tests
-#     ${CMAKE_CURRENT_BINARY_DIR}/tests
-# )
+# Google Test
+include(FetchContent)
+
+FetchContent_Declare(
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG main
+)
+
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+enable_testing()
+add_subdirectory(
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    ${CMAKE_CURRENT_BINARY_DIR}/tests
+)

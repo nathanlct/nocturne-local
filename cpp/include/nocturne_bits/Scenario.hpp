@@ -10,6 +10,7 @@
 #include "Object.hpp"
 #include "Road.hpp"
 #include "Vehicle.hpp"
+#include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "json.hpp"
 
@@ -55,6 +56,8 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<Road>> roads;
 
   sf::RenderTexture* imageTexture;
+
+  geometry::BVH bvh_;
 };
 
 }  // namespace nocturne
