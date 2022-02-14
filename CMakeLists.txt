@@ -38,6 +38,12 @@ pybind11_add_module(nocturne
 	${PYTHON_FILES}
 )
 
+target_include_directories(
+  nocturne
+  PUBLIC
+  ${CMAKE_SOURCE_DIR}/cpp/include/nocturne_bits
+)
+
 # Link nocturne and SFML
 target_link_libraries(nocturne PUBLIC)
 target_link_libraries(nocturne PUBLIC sfml-window sfml-system sfml-graphics sfml-audio)
