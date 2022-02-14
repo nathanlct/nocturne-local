@@ -1,8 +1,13 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(
+  CMAKE_CXX_FLAGS
+  "${CMAKE_CXX_FLAGS} -O3 -Wall -Wextra -Wno-register -Wno-comment -fPIC \
+  -march=native -Wfatal-errors -fvisibility=hidden"
+)
 
 # fix for bug (https://gitlab.kitware.com/cmake/cmake/-/issues/17995)
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
@@ -23,8 +28,8 @@ project(nocturne)
 include_directories("${CMAKE_SOURCE_DIR}/cpp/include/nocturne_bits")
 include_directories("${CMAKE_SOURCE_DIR}/python")
 
-file (GLOB SOURCE_FILES "cpp/src/*.cpp")
-file (GLOB HEADER_FILES "cpp/include/nocturne_bits/*.hpp")
+file (GLOB SOURCE_FILES "cpp/src/*.cpp" "cpp/src/geometry/*.cc")
+file (GLOB HEADER_FILES "cpp/include/nocturne_bits/*.hpp" "cpp/include/nocturne_bits/geometry/*.h")
 file (GLOB PYTHON_FILES "python/*.cpp" "python/*.hpp")
 
 # Find pybind and SFML
