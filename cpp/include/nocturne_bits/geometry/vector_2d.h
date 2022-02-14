@@ -7,8 +7,6 @@
 namespace nocturne {
 namespace geometry {
 
-constexpr float kPi = M_PI;
-
 class Vector2D {
  public:
   Vector2D() = default;
@@ -103,6 +101,12 @@ class Vector2D {
                     x_ * sin_theta + y_ * cos_theta);
   }
 
+  void Normalize() {
+    const float d = Norm();
+    x_ /= d;
+    y_ /= d;
+  }
+
  protected:
   float x_ = 0.0f;
   float y_ = 0.0f;
@@ -118,6 +122,10 @@ inline float DotProduct(const Vector2D& a, const Vector2D& b) {
 
 inline float CrossProduct(const Vector2D& a, const Vector2D& b) {
   return a.x() * b.y() - a.y() * b.x();
+}
+
+inline float Distance(const Vector2D& a, const Vector2D& b, int64_t p = 2) {
+  return (a - b).Norm(p);
 }
 
 inline std::ostream& operator<<(std::ostream& os, const Vector2D& v) {

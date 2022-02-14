@@ -1,30 +1,31 @@
 #pragma once
 
-
 #include "Object.hpp"
-#include <iostream>
-#include "Vector2D.hpp"
-#include <cmath>
+#include "geometry/vector_2d.h"
 
+namespace nocturne {
 
 class Vehicle : public Object {
-public:
-    Vehicle(Vector2D position, float width, float length, float heading,
-            bool occludes, bool collides, bool checkForCollisions,
-            Vector2D goalPosition);
+ public:
+  Vehicle(const geometry::Vector2D& position, float width, float length,
+          float heading, bool occludes, bool collides, bool checkForCollisions,
+          const geometry::Vector2D& goalPosition);
 
-    void setAccel(float acceleration);
-    void setSteeringAngle(float steeringAngle);
+  void setAccel(float acceleration) { accelAction = acceleration; }
 
-    virtual void step(float dt);
+  void setSteeringAngle(float steeringAngle) { steeringAction = steeringAngle; }
 
-private:
-    void kinematicsUpdate(float dt);
-    void dynamicsUpdate(float dt);
+  virtual void step(float dt);
 
-    float accelAction;
-    float steeringAction;
+ private:
+  void kinematicsUpdate(float dt);
+  void dynamicsUpdate(float dt);
 
-    float lateralSpeed;
-    float yawRate;
+  float accelAction;
+  float steeringAction;
+
+  float lateralSpeed;
+  float yawRate;
 };
+
+}  // namespace nocturne

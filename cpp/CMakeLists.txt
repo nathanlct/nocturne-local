@@ -23,6 +23,7 @@ add_library(
   STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/bvh.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/morton.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/segment.cc
 )
 target_include_directories(
   geometry 
