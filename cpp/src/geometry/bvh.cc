@@ -1,6 +1,7 @@
 #include "geometry/bvh.h"
 
 #include <algorithm>
+#include <cassert>
 
 #include "geometry/morton.h"
 #include "geometry/vector_2d.h"
@@ -57,6 +58,7 @@ BVH::Node* BVH::InitHierarchyImpl(
     return MakeNode(std::get<1>(objects[l]));
   }
   const int64_t p = FindPivot(objects, l, r);
+  assert(p > l && p < r);
   Node* l_child = InitHierarchyImpl(objects, l, p);
   Node* r_child = InitHierarchyImpl(objects, p, r);
   const AABB aabb = l_child->aabb() || r_child->aabb();
