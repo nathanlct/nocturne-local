@@ -1,73 +1,92 @@
 #pragma once
 
-#include <vector>
-#include <iostream>
-#include <string>
-#include "Vector2D.hpp"
 #include <SFML/Graphics.hpp>
 #include <cstdlib>
 #include <ctime>
+#include <iostream>
+#include <string>
+#include <vector>
 
-class Point;
+#include "geometry/aabb.h"
+#include "geometry/aabb_interface.h"
+#include "geometry/vector_2d.h"
 
-class Object : public sf::Drawable {
-public:
-    Object(Vector2D position, float width, float length, float heading,
-           bool occludes, bool collides, bool checkForCollisions,
-           Vector2D goalPosition);
+namespace nocturne {
 
-    // bool intersectsWith(Object* other) const; // fast spherical pre-check, then accurate rectangular check
-    // std::vector<Point> getCorners() const;
+class Object : public sf::Drawable, public geometry::AABBInterface {
+ public:
+  Object(const geometry::Vector2D& position, float width, float length,
+         float heading, bool occludes, bool collides, bool checkForCollisions,
+         const geometry::Vector2D& goalPosition);
 
-    // void move(); // move according to pos, heading and speed
-    virtual void step(float dt);
+  // bool intersectsWith(Object* other) const; // fast spherical pre-check, then
+  // accurate rectangular check std::vector<Point> getCorners() const;
 
-    Vector2D getPosition() const;
-    Vector2D getGoalPosition() const;
-    float getSpeed() const;
-    float getHeading() const;
-    float getWidth() const;
-    float getLength() const;
-    int getID() const;
-    std::string getType() const;
-    float getRadius() const;  // radius of the minimal circle of center {position} that includes the whole polygon
-    std::vector<Vector2D> getCorners() const;
-    std::vector<std::pair<Vector2D,Vector2D>> getLines() const;
+  // void move(); // move according to pos, heading and speed
+  virtual void step(float dt);
 
-    void setPosition(float x, float y);
-    void setGoalPosition(float x, float y);
-    void setSpeed(float speed);
-    void setHeading(float heading);
+  const geometry::Vector2D& getPosition() const { return position; }
 
-    void setCollided(bool collided);
-    bool getCollided() const;
+  const geometry::Vector2D& getGoalPosition() const { return goalPosition; }
 
-    sf::RenderTexture* coneTexture;
+  float getSpeed() const;
+  float getHeading() const;
+  float getWidth() const;
+  float getLength() const;
+  int getID() const;
+  std::string getType() const;
+  float getRadius() const;  // radius of the minimal circle of center {position}
+                            // that includes the whole polygon
+  std::vector<geometry::Vector2D> getCorners() const;
+  std::vector<std::pair<geometry::Vector2D, geometry::Vector2D>> getLines()
+      const;
 
-    static int nextID;
+  void setPosition(float x, float y) { position = geometry::Vector2D(x, y); }
 
-protected:
-    virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
+  void setGoalPosition(float x, float y) {
+    goalPosition = geometry::Vector2D(x, y);
+  }
 
-    // bool solid;
+  void setSpeed(float speed);
+  void setHeading(float heading);
 
-    Vector2D position;
-    float width;
-    float length;
-    float heading;
+  void setCollided(bool collided);
+  bool getCollided() const;
 
-    float speed;
-    int id;
-    std::string type;
+  // TODO: Improve this later.
+  geometry::AABB GetAABB() const override {
+    const float radius = getRadius();
+    return geometry::AABB(getPosition() - radius, getPosition() + radius);
+  }
 
-    bool hasCollided;
+  sf::RenderTexture* coneTexture;
 
-public: // tmp
-    bool occludes;
-    bool collides;
-    bool checkForCollisions;
+  static int nextID;
 
-    Vector2D goalPosition;
+ protected:
+  virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
-    sf::Color color;
+  // bool solid;
+
+  geometry::Vector2D position;
+  float width;
+  float length;
+  float heading;
+
+  float speed;
+  int id;
+  std::string type;
+
+  bool hasCollided;
+
+ public:  // tmp
+  bool occludes;
+  bool collides;
+  bool checkForCollisions;
+
+  nocturne::geometry::Vector2D goalPosition;
+
+  sf::Color color;
 };
+
+}  // namespace nocturne

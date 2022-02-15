@@ -1,41 +1,46 @@
-#include "../cpp/include/nocturne_bits/Object.hpp"
-#include "../cpp/include/nocturne_bits/Vehicle.hpp"
 #include <pybind11/pybind11.h>
-// #include <pybind11/stl.h>  // automatic conversion from C++ std::vector to Python list
+
+#include <memory>
+
+#include "Object.hpp"
+#include "Vehicle.hpp"
+// #include <pybind11/stl.h>  // automatic conversion from C++ std::vector to
+// Python list
 
 namespace py = pybind11;
 
-void init_object(py::module &m) {
-    m.doc() = "nocturne documentation for class Object and subclass Vehicle";
+void init_object(py::module& m) {
+  m.doc() = "nocturne documentation for class Object and subclass Vehicle";
 
-    py::class_<Object, std::shared_ptr<Object>>(m, "Object")
-        .def("getWidth", &Object::getWidth)
-        .def("getLength", &Object::getLength)
-        .def("getPosition", &Object::getPosition)
-        .def("getGoalPosition", &Object::getGoalPosition)
-        .def("getSpeed", &Object::getSpeed)
-        .def("getHeading", &Object::getHeading)
-        .def("getID", &Object::getID)
-        .def("getType", &Object::getType)
-        .def("getCollided", &Object::getCollided)
-        .def("setPosition", &Object::setPosition)
-        .def("setGoalPosition", &Object::setGoalPosition)
-        .def("setSpeed", &Object::setSpeed)
-        .def("setHeading", &Object::setHeading);
+  py::class_<nocturne::Object, std::shared_ptr<nocturne::Object>>(m, "Object")
+      .def("getWidth", &nocturne::Object::getWidth)
+      .def("getLength", &nocturne::Object::getLength)
+      .def("getPosition", &nocturne::Object::getPosition)
+      .def("getGoalPosition", &nocturne::Object::getGoalPosition)
+      .def("getSpeed", &nocturne::Object::getSpeed)
+      .def("getHeading", &nocturne::Object::getHeading)
+      .def("getID", &nocturne::Object::getID)
+      .def("getType", &nocturne::Object::getType)
+      .def("getCollided", &nocturne::Object::getCollided)
+      .def("setPosition", &nocturne::Object::setPosition)
+      .def("setGoalPosition", &nocturne::Object::setGoalPosition)
+      .def("setSpeed", &nocturne::Object::setSpeed)
+      .def("setHeading", &nocturne::Object::setHeading);
 
-    py::class_<Vehicle, std::shared_ptr<Vehicle>, Object>(m, "Vehicle")
-        .def("getWidth", &Vehicle::getWidth)
-        .def("getPosition", &Vehicle::getPosition)
-        .def("getGoalPosition", &Vehicle::getGoalPosition)
-        .def("getSpeed", &Vehicle::getSpeed)
-        .def("getHeading", &Vehicle::getHeading)
-        .def("getID", &Vehicle::getID)
-        .def("getType", &Vehicle::getType)
-        .def("getCollided", &Vehicle::getCollided)
-        .def("setAccel", &Vehicle::setAccel)
-        .def("setSteeringAngle", &Vehicle::setSteeringAngle)
-        .def("setPosition", &Vehicle::setPosition)
-        .def("setGoalPosition", &Vehicle::setGoalPosition)
-        .def("setSpeed", &Vehicle::setSpeed)
-        .def("setHeading", &Vehicle::setHeading);
+  py::class_<nocturne::Vehicle, std::shared_ptr<nocturne::Vehicle>,
+             nocturne::Object>(m, "Vehicle")
+      .def("getWidth", &nocturne::Vehicle::getWidth)
+      .def("getPosition", &nocturne::Vehicle::getPosition)
+      .def("getGoalPosition", &nocturne::Vehicle::getGoalPosition)
+      .def("getSpeed", &nocturne::Vehicle::getSpeed)
+      .def("getHeading", &nocturne::Vehicle::getHeading)
+      .def("getID", &nocturne::Vehicle::getID)
+      .def("getType", &nocturne::Vehicle::getType)
+      .def("getCollided", &nocturne::Vehicle::getCollided)
+      .def("setAccel", &nocturne::Vehicle::setAccel)
+      .def("setSteeringAngle", &nocturne::Vehicle::setSteeringAngle)
+      .def("setPosition", &nocturne::Vehicle::setPosition)
+      .def("setGoalPosition", &nocturne::Vehicle::setGoalPosition)
+      .def("setSpeed", &nocturne::Vehicle::setSpeed)
+      .def("setHeading", &nocturne::Vehicle::setHeading);
 }

@@ -1,44 +1,48 @@
 #pragma once
 
-#include "Scenario.hpp"
-#include "Object.hpp"
-#include "Vector2D.hpp"
-#include "utils.hpp"
-
 #include <SFML/Graphics.hpp>
-
-#include <iostream>
 #include <cmath>
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <stdexcept>
-#include <fstream>
+
+#include "Object.hpp"
+#include "Scenario.hpp"
+#include "geometry/vector_2d.h"
+#include "utils.hpp"
+
+namespace nocturne {
 
 class Simulation {
-public:
-    Simulation(std::string scenarioFilePath = "");
+ public:
+  Simulation(std::string scenarioFilePath = "");
 
-    void reset();
-    void step(float dt);
-    void render();
+  void reset();
+  void step(float dt);
+  void render();
 
-    void updateView(float padding = 100.0f) const;
-    
-    void renderCone(Vector2D center, float heading, float viewAngle, const Object* self = nullptr);
-    void renderCone(const Object* object, float viewAngle, float headTilt);
+  void updateView(float padding = 100.0f) const;
 
-    void saveScreenshot();
-    Scenario* getScenario() const;
+  void renderCone(const geometry::Vector2D& center, float heading,
+                  float viewAngle, const Object* self = nullptr);
+  void renderCone(const Object* object, float viewAngle, float headTilt);
 
-private:
-    Scenario* scenario;
+  void saveScreenshot();
+  Scenario* getScenario() const;
 
-    sf::RenderWindow* renderWindow;
+ private:
+  Scenario* scenario;
 
-    sf::Transform renderTransform;
+  sf::RenderWindow* renderWindow;
 
-    sf::Font font;
-    sf::Clock clock;
+  sf::Transform renderTransform;
 
-    std::string scenarioPath;
+  sf::Font font;
+  sf::Clock clock;
+
+  std::string scenarioPath;
 };
+
+}  // namespace nocturne

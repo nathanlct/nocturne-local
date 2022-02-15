@@ -1,8 +1,13 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(
+  CMAKE_CXX_FLAGS
+  "${CMAKE_CXX_FLAGS} -O3 -Wall -Wextra -Wno-register -Wno-comment -fPIC \
+  -march=native -Wfatal-errors -fvisibility=hidden"
+)
 
 project(nocturne VERSION 0.1.0)
 
@@ -13,15 +18,58 @@ set(PROJECT_SOURCE_DIR "src")
 set(PROJECT_INCLUDE_DIR "include/nocturne_bits")
 file (GLOB SOURCE_FILES "${PROJECT_INCLUDE_DIR}/*.hpp" "${PROJECT_SOURCE_DIR}/*.cpp")
 
+add_library(
+  geometry
+  STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/bvh.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/morton.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/segment.cc
+)
+target_include_directories(
+  geometry 
+  PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/nocturne_bits
+)
+
 # Build and link nocturne
-add_library(nocturne SHARED ${SOURCE_FILES})
-target_include_directories(nocturne PRIVATE include/nocturne_bits)
+# add_library(nocturne SHARED ${SOURCE_FILES})
+add_library(nocturne_lib OBJECT ${SOURCE_FILES})
+set_property(TARGET nocturne_lib PROPERTY POSITION_INDEPENDENT_CODE 1)
+target_include_directories(
+  nocturne_lib
+  PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/nocturne_bits
+)
+
+add_library(nocturne SHARED $<TARGET_OBJECTS:nocturne_lib>)
+add_library(nocturne_static STATIC $<TARGET_OBJECTS:nocturne_lib>)
 
 # Link SFML
 find_package(SFML 2.5 COMPONENTS window system graphics audio REQUIRED)
-target_link_libraries(nocturne PUBLIC sfml-window sfml-system sfml-graphics sfml-audio)
+set(SFML_LIBS sfml-window sfml-system sfml-graphics sfml-audio)
+
+target_link_libraries(nocturne PUBLIC ${SFML_LIBS} geometry)
+target_link_libraries(nocturne_static PUBLIC ${SFML_LIBS} geometry)
 
 # Install library and includes
 install(TARGETS nocturne DESTINATION lib)
 install(FILES include/nocturne DESTINATION include)
 install(DIRECTORY include/nocturne_bits DESTINATION include)
+
+# Google Test
+include(FetchContent)
+
+FetchContent_Declare(
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG main
+)
+
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+enable_testing()
+add_subdirectory(
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    ${CMAKE_CURRENT_BINARY_DIR}/tests
+)

@@ -36,7 +36,8 @@ rew_cfg:
   num_visible_waypoints: 5
 subscriber:
   view_angle: 3.14
-  view_dist: 120 # the distance which the cone extends before agents are not visible
+  # the distance which the cone extends before agents are not visible
+  view_dist: 120
   use_local_coordinates: True
   include_ego_state: True
   # TODO(eugenevinitsky) this should be true
@@ -48,7 +49,7 @@ subscriber:
     include_heading: True
   ego_subscriber:
     img_view: ${img_as_state}
-    view_angle: ${view_angle}
+    view_angle: ${subscriber.view_angle}
     include_speed: True
     include_heading: True
     include_pos: True
