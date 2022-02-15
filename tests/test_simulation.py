@@ -16,7 +16,7 @@ sim.step(0.1)
 objects = scenario.getRoadObjects()
 print(objects)
 
-cone = np.array(scenario.getCone(objects[3], 3.14/2.0, 0.0), copy=False)
+cone = np.array(scenario.getCone(scenario.getVehicles()[0], 3.14/2.0, 0.0), copy=False)
 plt.figure()
 plt.imshow(cone)
 plt.savefig('cone.png')
