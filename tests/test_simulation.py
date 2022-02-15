@@ -7,22 +7,19 @@ from nocturne import Simulation
 import time
 
 os.environ["DISPLAY"] = ":0.0"
-sim = Simulation(scenarioPath='./scenarios/intersection.json')
+sim = Simulation(scenarioPath='./scenarios/four_car_intersection.json')
 scenario = sim.getScenario()
 
 sim.step(0.1)
-# while True:
-#     sim.step(0.01)
-#     sim.render()
+
 
 objects = scenario.getRoadObjects()
 print(objects)
 
-# for i, obj in enumerate(objects):
-#     cone = np.array(scenario.getCone(obj, 3.14/2.0, 0.0), copy=False)
-#     plt.figure()
-#     plt.imshow(cone)
-#     plt.savefig(f'{i}_.png')
+cone = np.array(scenario.getCone(objects[3], 3.14/2.0, 0.0), copy=False)
+plt.figure()
+plt.imshow(cone)
+plt.savefig('cone.png')
 
 obj = objects[-1]
 img = np.array(scenario.getImage(obj, renderGoals=True), copy=False)
@@ -31,27 +28,29 @@ plt.imshow(img)
 plt.savefig('goalImg.png')
 print('saved at ./goalImg.png')
 
-# objects = sim.getRoadObjects()
-# print(objects)
-# print([obj.getWidth() for obj in objects])
+# now step forward a huge number of times and check that the cone is advanced
+print('agent position before step', scenario.getVehicles()[0].getPosition().x(), scenario.getVehicles()[0].getPosition().y())
+scenario.getVehicles()[0].setAccel(1.5)
+for i in range(100):
+    sim.step(1.0)
+    print(scenario.getVehicles()[0].getSpeed())
+print('agent position after step', scenario.getVehicles()[0].getPosition().x(), scenario.getVehicles()[0].getPosition().y())  
 
-# arr = np.array(sim.getConePixels(), copy=False)
-# print(arr.shape, np.max(arr), np.min(arr), arr.dtype)
-
-# plt.figure()
-# plt.imshow(arr)
-# plt.show()
+img = np.array(scenario.getCone(scenario.getVehicles()[0], 1.58, 0.0), copy=False)
+plt.figure()
+plt.imshow(img)
+plt.savefig('egoImgAfterStep.png')
+print('saved at ./egoImgAfterStep.png')
 
 # now lets test for collisions
-
 # grab a vehicle and place it on top of another vehicle
 sim = Simulation(scenarioPath='./scenarios/four_car_intersection.json')
 scenario = sim.getScenario()
 veh0 = scenario.getVehicles()[0]
 veh1 = scenario.getVehicles()[1]
 veh2 = scenario.getVehicles()[2]
-import ipdb; ipdb.set_trace()
-veh1.setPosition(veh0.getPosition().x(), veh0.getPosition().y())
+# TODO(ev this fails unless the shift is non-zero)
+veh1.setPosition(veh0.getPosition().x() + 0.001, veh0.getPosition().y())
 sim.step(0.000001)
 assert veh1.getCollided() == True, 'vehicle1 should have collided after being placed on vehicle 0'
 assert veh0.getCollided() == True, 'vehicle0 should have collided after vehicle 0 was placed on it'
