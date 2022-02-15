@@ -97,8 +97,8 @@ std::vector<geometry::Vector2D> Object::getCorners() const {
   std::vector<geometry::Vector2D> corners = {
       geometry::Vector2D(length * 0.5, width * 0.5),
       geometry::Vector2D(length * 0.5, -width * 0.5),
-      geometry::Vector2D(-length * 0.5, width * 0.5),
-      geometry::Vector2D(-length * 0.5, -width * 0.5)};
+      geometry::Vector2D(-length * 0.5, -width * 0.5),
+      geometry::Vector2D(-length * 0.5, width * 0.5)};
   // Rotate and translate points
   for (auto& p : corners) {
     p = p.Rotate(heading) + position;
