@@ -41,11 +41,17 @@ class Scenario : public sf::Drawable {
 
   bool checkForCollision(const Object* object1, const Object* object2);
 
-  bool isVehicleOnRoad(const Object& object) const;
-  bool isPointOnRoad(float posX, float posY) const;
+  // bool isVehicleOnRoad(const Object& object) const;
+  // bool isPointOnRoad(float posX, float posY) const;
   void createVehicle(float posX, float posY, float width, float length,
                      float heading, bool occludes, bool collides,
                      bool checkForCollisions, float goalPosX, float goalPosY);
+
+  // query expert data
+  std::vector<float> getExpertAction(int objID, int timeIdx); // return the expert action of object at time timeIDX
+  bool hasExpertAction(int objID, int timeIdx); // given the currIndex, figure out if we actually can compute
+                                                // an expert action given the valid vector
+  std::vector<bool> getValidExpertStates(int objID);
 
  private:
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
@@ -53,11 +59,17 @@ class Scenario : public sf::Drawable {
   std::string name;
   std::vector<std::shared_ptr<Object>> roadObjects;
   std::vector<std::shared_ptr<Vehicle>> vehicles;
-  std::vector<std::shared_ptr<Road>> roads;
 
   sf::RenderTexture* imageTexture;
-
+  sf::FloatRect roadNetworkBounds;
   geometry::BVH bvh_;
+
+  // expert data
+  std::vector<std::vector<geometry::Vector2D>> expertTrajectories;
+  std::vector<std::vector<geometry::Vector2D>> expertSpeeds;
+  std::vector<std::vector<float>> expertHeadings;
+  std::vector<float> lengths;
+  std::vector<std::vector<bool>> expertValid;
 };
 
 }  // namespace nocturne

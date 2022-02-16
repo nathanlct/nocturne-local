@@ -8,7 +8,9 @@
 namespace nocturne {
 
 Scenario::Scenario(std::string path)
-    : roadObjects(), vehicles(), roads(), imageTexture(nullptr) {
+    : roadObjects(), vehicles(), imageTexture(nullptr),
+    expertTrajectories(), expertSpeeds(), expertHeadings(), lengths(),
+    expertValid() {
   if (path.size() > 0) {
     loadScenario(path);
   } else {
@@ -28,24 +30,46 @@ void Scenario::loadScenario(std::string path) {
   data >> j;
 
   name = j["name"];
+  std::cout << "name is " + name << std::endl;
 
   for (const auto& obj : j["objects"]) {
     std::string type = obj["type"];
-    geometry::Vector2D pos(obj["position"]["x"], obj["position"]["y"]);
+    // TODO(ev) startTime should be passed in
+    int startTime = 0;
+    geometry::Vector2D pos(obj["position"]["x"][startTime], obj["position"]["y"][startTime]);
     float width = obj["width"];
     float length = obj["length"];
     float heading =
-        geometry::utils::Radians(static_cast<float>(obj["heading"]));
+        geometry::utils::Radians(static_cast<float>(obj["heading"][startTime]));
 
-    bool occludes = obj["occludes"];
-    bool collides = obj["collides"];
-    bool checkForCollisions = obj["checkForCollisions"];
+    // TODO(ev) this should be set elsewhere
+    bool occludes = true;
+    bool collides = true;
+    bool checkForCollisions = true;
 
     geometry::Vector2D goalPos;
     if (obj.contains("goalPosition")) {
       goalPos = geometry::Vector2D(obj["goalPosition"]["x"],
                                    obj["goalPosition"]["y"]);
     }
+    std::vector<geometry::Vector2D> localExpertTrajectory;
+    std::vector<geometry::Vector2D> localExpertSpeeds;
+    std::vector<bool> localValid; 
+    std::vector<float> localHeadingVec;
+    for (unsigned int i = 0; i < obj["position"]["x"].size(); i++){
+      geometry::Vector2D currPos(obj["position"]["x"][i], obj["position"]["y"][i]);
+      geometry::Vector2D currVel(obj["velocity"]["x"][i], obj["velocity"]["y"][i]);
+      localExpertTrajectory.push_back(currPos);
+      localExpertSpeeds.push_back(currVel);
+      localValid.push_back(bool(obj["valid"][i]));
+      localHeadingVec.push_back(obj["heading"][i]);
+    }
+    expertTrajectories.push_back(localExpertTrajectory);
+    expertSpeeds.push_back(localExpertSpeeds);
+    expertHeadings.push_back(localHeadingVec);
+    lengths.push_back(length);
+    expertValid.push_back(localValid);
+    // TODO(ev) add support for pedestrians and cyclists
 
     if (type == "vehicle") {
       Vehicle* veh = new Vehicle(pos, width, length, heading, occludes,
@@ -53,28 +77,50 @@ void Scenario::loadScenario(std::string path) {
       auto ptr = std::shared_ptr<Vehicle>(veh);
       roadObjects.push_back(ptr);
       vehicles.push_back(ptr);
-    } else if (type == "object") {
-      Object* obj = new Object(pos, width, length, heading, occludes, collides,
-                               checkForCollisions, goalPos);
-      roadObjects.push_back(std::shared_ptr<Object>(obj));
-    } else {
+    } 
+    else {
       std::cerr << "Unknown object type: " << type << std::endl;
     }
   }
 
+  float minX, minY, maxX, maxY;
+  bool first = true;
+
+  // TODO(ev) refactor into a roadline object
   for (const auto& road : j["roads"]) {
-    std::vector<geometry::Vector2D> geometry;
-    for (const auto& pt : road["geometry"]) {
-      geometry.emplace_back(pt["x"], pt["y"]);
+    for (int i = 0; i < road["geometry"].size() - 1; i++) {
+      geometry::Vector2D startPoint(road["geometry"][i]["x"], road["geometry"][i]["y"]);
+      geometry::Vector2D endPoint(road["geometry"][i + 1]["x"], road["geometry"][i + 1]["y"]);
+      geometry::Vector2D diff = endPoint - startPoint;
+      geometry::Vector2D goalPos;
+      float segmentLength = diff.Norm();
+      float heading = diff.Angle();
+      // TODO(ev) this should not bea  constant
+      float width = 0.1;
+      // track the minimum boundaries
+      if (first) {
+          minX = maxX = startPoint.x();
+          minY = maxY = startPoint.y();
+          first = false;
+      } else {
+          minX = std::min(minX, std::min(startPoint.x(), endPoint.x()));
+          maxX = std::max(maxX, std::max(startPoint.x(), endPoint.x()));
+          minY = std::min(minY, std::min(startPoint.y(), endPoint.y()));
+          maxY = std::max(maxY, std::max(startPoint.y(), endPoint.y()));
+      }
+      std::string type = road["type"];
+      bool checkForCollisions = false;
+      bool occludes = true;
+      //TODO(ev) this is not good
+      if (type == "road_edge"){
+          checkForCollisions = true;
+      }
+      Object* obj = new Object(startPoint, width, segmentLength, heading, occludes, checkForCollisions,
+                          checkForCollisions, goalPos);
+      roadObjects.push_back(std::shared_ptr<Object>(obj));
     }
-
-    int lanes = road["lanes"];
-    float laneWidth = road["laneWidth"];
-    bool hasLines = road.value("hasLines", true);
-
-    Road* roadObject = new Road(geometry, lanes, laneWidth, hasLines);
-    roads.push_back(std::shared_ptr<Road>(roadObject));
   }
+  roadNetworkBounds = sf::FloatRect(minX, minY, maxX - minX, maxY - minY);
 }
 
 void Scenario::createVehicle(float posX, float posY, float width, float length,
@@ -200,9 +246,9 @@ bool Scenario::checkForCollision(const Object* object1, const Object* object2) {
 }
 
 void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
-  for (const auto& road : roads) {
-    target.draw(*road, states);
-  }
+  // for (const auto& road : roads) {
+  //   target.draw(*road, states);
+  // }
   for (const auto& object : roadObjects) {
     target.draw(*object, states);
 
@@ -247,117 +293,98 @@ void Scenario::removeObject(Object* object) {
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
-  float minX, minY, maxX, maxY;
-  bool first = true;
-
-  for (const auto& road : roads) {
-    for (const auto& point : road->getRoadPolygon()) {
-      if (first) {
-        minX = maxX = point.x();
-        minY = maxY = point.y();
-        first = false;
-      } else {
-        minX = std::min(minX, point.x());
-        maxX = std::max(maxX, point.x());
-        minY = std::min(minY, point.y());
-        maxY = std::max(maxY, point.y());
-      }
-    }
-  }
-
-  sf::FloatRect roadNetworkBounds(minX, minY, maxX - minX, maxY - minY);
   return roadNetworkBounds;
 }
 
-bool Scenario::isVehicleOnRoad(const Object& object) const {
-  bool found;
-  for (const geometry::Vector2D& corner : object.getCorners()) {
-    found = false;
+// bool Scenario::isVehicleOnRoad(const Object& object) const {
+//   bool found;
+//   for (const geometry::Vector2D& corner : object.getCorners()) {
+//     found = false;
 
-    for (const std::shared_ptr<Road>& roadptr : roads) {
-      const std::vector<geometry::Vector2D> roadPolygon =
-          roadptr->getRoadPolygon();
-      const size_t nQuads = roadPolygon.size() / 2 - 1;
+//     for (const std::shared_ptr<Road>& roadptr : roads) {
+//       const std::vector<geometry::Vector2D> roadPolygon =
+//           roadptr->getRoadPolygon();
+//       const size_t nQuads = roadPolygon.size() / 2 - 1;
 
-      for (size_t quadIdx = 0; quadIdx < nQuads; quadIdx++) {
-        const std::vector<geometry::Vector2D> quadCorners{
-            roadPolygon[quadIdx], roadPolygon[quadIdx + 1],
-            roadPolygon[roadPolygon.size() - 1 - quadIdx - 1],
-            roadPolygon[roadPolygon.size() - 1 - quadIdx]};
+//       for (size_t quadIdx = 0; quadIdx < nQuads; quadIdx++) {
+//         const std::vector<geometry::Vector2D> quadCorners{
+//             roadPolygon[quadIdx], roadPolygon[quadIdx + 1],
+//             roadPolygon[roadPolygon.size() - 1 - quadIdx - 1],
+//             roadPolygon[roadPolygon.size() - 1 - quadIdx]};
 
-        // test whether {corner} is within ({intersects}) with the polygon
-        // defined by {quadCorners}
-        bool intersects = false;
-        for (int i = 0, j = quadCorners.size() - 1; i < quadCorners.size();
-             j = i++) {
-          if (((quadCorners[i].y() > corner.y()) !=
-               (quadCorners[j].y() > corner.y())) &&
-              (corner.x() < (quadCorners[j].x() - quadCorners[i].x()) *
-                                    (corner.y() - quadCorners[i].y()) /
-                                    (quadCorners[j].y() - quadCorners[i].y()) +
-                                quadCorners[i].x())) {
-            intersects = !intersects;
-          }
-        }
+//         // test whether {corner} is within ({intersects}) with the polygon
+//         // defined by {quadCorners}
+//         bool intersects = false;
+//         for (int i = 0, j = quadCorners.size() - 1; i < quadCorners.size();
+//              j = i++) {
+//           if (((quadCorners[i].y() > corner.y()) !=
+//                (quadCorners[j].y() > corner.y())) &&
+//               (corner.x() < (quadCorners[j].x() - quadCorners[i].x()) *
+//                                     (corner.y() - quadCorners[i].y()) /
+//                                     (quadCorners[j].y() - quadCorners[i].y()) +
+//                                 quadCorners[i].x())) {
+//             intersects = !intersects;
+//           }
+//         }
 
-        if (intersects) {
-          found = true;
-          break;
-        }
-      }
-    }
+//         if (intersects) {
+//           found = true;
+//           break;
+//         }
+//       }
+//     }
 
-    if (!found) {
-      return false;
-    }
-  }
+//     if (!found) {
+//       return false;
+//     }
+//   }
 
-  return true;
-}
+//   return true;
+// }
 
-// TODO(eugenevinitsky) code duplication
-bool Scenario::isPointOnRoad(float posX, float posY) const {
-  bool found;
-  found = false;
+// // TODO(eugenevinitsky) code duplication
+// bool Scenario::isPointOnRoad(float posX, float posY) const {
+//   bool found;
+//   found = false;
 
-  for (const std::shared_ptr<Road>& roadptr : roads) {
-    const std::vector<geometry::Vector2D> roadPolygon =
-        roadptr->getRoadPolygon();
-    const size_t nQuads = roadPolygon.size() / 2 - 1;
+//   for (const std::shared_ptr<Road>& roadptr : roads) {
+//     const std::vector<geometry::Vector2D> roadPolygon =
+//         roadptr->getRoadPolygon();
+//     const size_t nQuads = roadPolygon.size() / 2 - 1;
 
-    for (size_t quadIdx = 0; quadIdx < nQuads; quadIdx++) {
-      const std::vector<geometry::Vector2D> quadCorners{
-          roadPolygon[quadIdx], roadPolygon[quadIdx + 1],
-          roadPolygon[roadPolygon.size() - 1 - quadIdx - 1],
-          roadPolygon[roadPolygon.size() - 1 - quadIdx]};
+//     for (size_t quadIdx = 0; quadIdx < nQuads; quadIdx++) {
+//       const std::vector<geometry::Vector2D> quadCorners{
+//           roadPolygon[quadIdx], roadPolygon[quadIdx + 1],
+//           roadPolygon[roadPolygon.size() - 1 - quadIdx - 1],
+//           roadPolygon[roadPolygon.size() - 1 - quadIdx]};
 
-      // test whether {corner} is within ({intersects}) with the polygon defined
-      // by {quadCorners}
-      bool intersects = false;
-      for (int i = 0, j = quadCorners.size() - 1; i < quadCorners.size();
-           j = i++) {
-        if (((quadCorners[i].y() > posY) != (quadCorners[j].y() > posY)) &&
-            (posX < (quadCorners[j].x() - quadCorners[i].x()) *
-                            (posY - quadCorners[i].y()) /
-                            (quadCorners[j].y() - quadCorners[i].y()) +
-                        quadCorners[i].x())) {
-          intersects = !intersects;
-        }
-      }
+//       // test whether {corner} is within ({intersects}) with the polygon defined
+//       // by {quadCorners}
+//       bool intersects = false;
+//       for (int i = 0, j = quadCorners.size() - 1; i < quadCorners.size();
+//            j = i++) {
+//         if (((quadCorners[i].y() > posY) != (quadCorners[j].y() > posY)) &&
+//             (posX < (quadCorners[j].x() - quadCorners[i].x()) *
+//                             (posY - quadCorners[i].y()) /
+//                             (quadCorners[j].y() - quadCorners[i].y()) +
+//                         quadCorners[i].x())) {
+//           intersects = !intersects;
+//         }
+//       }
 
-      if (intersects) {
-        found = true;
-        break;
-      }
-    }
-  }
+//       if (intersects) {
+//         found = true;
+//         break;
+//       }
+//     }
+//   }
 
-  if (!found) {
-    return false;
-  }
+//   if (!found) {
+//     return false;
+//   }
 
-  return true;
-}
+//   return true;
+// }
 
 ImageMatrix Scenario::getCone(Object* object, float viewAngle,
                               float headTilt) {  // args in radians
@@ -542,9 +569,9 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
 
   texture->setView(view);
 
-  for (const auto& road : roads) {
-    texture->draw(*road, renderTransform);
-  }
+  // for (const auto& road : roads) {
+  //   texture->draw(*road, renderTransform);
+  // }
   if (object == nullptr) {
     for (const auto& obj : roadObjects) {
       texture->draw(*obj, renderTransform);
