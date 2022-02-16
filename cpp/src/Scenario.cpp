@@ -198,18 +198,8 @@ void Scenario::step(float dt) {
             line_segment_bvh_.CollisionCandidates(dynamic_cast<geometry::AABBInterface*>(obj1.get()));
         for (const auto* ptr : candidates) {
             const Object* obj2 = dynamic_cast<const Object*>(ptr);
-            if (obj1->getID() == obj2->getID()) {
-                continue;
-            }
-            if (!obj1->checkForCollisions && !obj2->checkForCollisions) {
-                continue;
-            }
-            if (!obj1->collides || !obj2->collides) {
-                continue;
-            }
             if (checkForCollision(obj1.get(), obj2)) {
                 obj1->setCollided(true);
-                const_cast<Object*>(obj2)->setCollided(true);
             }
         }
     }
