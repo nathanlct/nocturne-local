@@ -8,9 +8,10 @@
 
 #include "ImageMatrix.hpp"
 #include "Object.hpp"
-#include "Road.hpp"
+#include "RoadLine.hpp"
 #include "Vehicle.hpp"
 #include "geometry/bvh.h"
+#include "geometry/segment.h"
 #include "geometry/geometry_utils.h"
 #include "json.hpp"
 
@@ -26,15 +27,15 @@ class Scenario : public sf::Drawable {
 
   void step(float dt);
 
-  std::vector<std::shared_ptr<Object>> getRoadObjects();
+  // std::vector<std::shared_ptr<Object>> getRoadObjects();
   std::vector<std::shared_ptr<Vehicle>> getVehicles();
 
-  void removeObject(Object* object);
+  void removeVehicle(Vehicle* object);
 
   sf::FloatRect getRoadNetworkBoundaries() const;
 
   ImageMatrix getCone(
-      Object* object,
+      Vehicle* object,
       float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
       float headTilt = 0.0f);
   ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
@@ -57,12 +58,14 @@ class Scenario : public sf::Drawable {
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
   std::string name;
-  std::vector<std::shared_ptr<Object>> roadObjects;
+  std::vector<std::shared_ptr<geometry::Segment>> lineSegments;
+  std::vector<std::shared_ptr<RoadLine>> roadLines;
   std::vector<std::shared_ptr<Vehicle>> vehicles;
 
   sf::RenderTexture* imageTexture;
   sf::FloatRect roadNetworkBounds;
   geometry::BVH bvh_;
+  geometry::BVH line_segment_bvh_;
 
   // expert data
   std::vector<std::vector<geometry::Vector2D>> expertTrajectories;

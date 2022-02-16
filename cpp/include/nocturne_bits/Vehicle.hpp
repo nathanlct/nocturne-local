@@ -16,6 +16,7 @@ class Vehicle : public Object {
   void setSteeringAngle(float steeringAngle) { steeringAction = steeringAngle; }
 
   virtual void step(float dt);
+  float viewRadius = 120; // TODO(ev) hardcoding
 
  private:
   void kinematicsUpdate(float dt);
