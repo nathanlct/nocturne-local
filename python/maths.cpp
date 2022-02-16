@@ -13,10 +13,8 @@ void init_maths(py::module& m) {
   m.doc() = "nocturne documentation for classes Vector2D, ImageMatrix";
 
   py::class_<nocturne::geometry::Vector2D>(m, "Vector2D")
-      // .def_readonly("x", &Vector2D::x)
-      // .def_readonly("y", &Vector2D::y);
-      .def("x", &nocturne::geometry::Vector2D::x)
-      .def("y", &nocturne::geometry::Vector2D::y);
+      .def_property_readonly("x", &nocturne::geometry::Vector2D::x)
+      .def_property_readonly("y", &nocturne::geometry::Vector2D::y);
 
   py::class_<nocturne::ImageMatrix>(m, "ImageMatrix", py::buffer_protocol())
       .def_buffer([](nocturne::ImageMatrix& m) -> py::buffer_info {
