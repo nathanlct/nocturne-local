@@ -451,7 +451,7 @@ sf::FloatRect Scenario::getRoadNetworkBoundaries() const { return roadNetworkBou
 ImageMatrix Scenario::getCone(Vehicle* object, float viewAngle,
                               float headTilt) {  // args in radians
     float circleRadius = object->viewRadius;
-    float renderedCircleRadius = 100.0f;
+    float renderedCircleRadius = 300.0f;
 
     if (object->coneTexture == nullptr) {
         sf::ContextSettings settings;
@@ -622,7 +622,7 @@ ImageMatrix Scenario::getCone(Vehicle* object, float viewAngle,
     sf::Image img = texture->getTexture().copyToImage();
     unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-    return ImageMatrix(pixelsArr, 300, 300, 4);
+    return ImageMatrix(pixelsArr, renderedCircleRadius * 2, renderedCircleRadius * 2, 4);
 }
 
 ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
