@@ -9,14 +9,14 @@
 namespace nocturne {
 namespace geometry {
 
-class Segment : public AABBInterface {
+class LineSegment : public AABBInterface {
  public:
-  Segment() = default;
-  Segment(const Vector2D& p, const Vector2D& q) {
+  LineSegment() = default;
+  LineSegment(const Vector2D& p, const Vector2D& q) {
     endpoints_[0] = p;
     endpoints_[1] = q;
   }
-  Segment(const Segment& seg) {
+  LineSegment(const LineSegment& seg) {
     endpoints_[0] = seg.endpoints_[0];
     endpoints_[1] = seg.endpoints_[1];
   }
@@ -28,14 +28,14 @@ class Segment : public AABBInterface {
   float Length() const { return Distance(endpoints_[0], endpoints_[1]); }
 
   AABB GetAABB() const override {
-    const auto [min_x, max_x] =
-        std::minmax(endpoints_[0].x(), endpoints_[1].x());
-    const auto [min_y, max_y] =
-        std::minmax(endpoints_[0].y(), endpoints_[1].y());
+    const float min_x = std::min(endpoints_[0].x(), endpoints_[1].x());
+    const float max_x = std::max(endpoints_[0].x(), endpoints_[1].x());
+    const float min_y = std::min(endpoints_[0].y(), endpoints_[1].y());
+    const float max_y = std::max(endpoints_[0].y(), endpoints_[1].y());
     return AABB(min_x, min_y, max_x, max_y);
   }
 
-  bool Intersects(const Segment& seg) const;
+  bool Intersects(const LineSegment& seg) const;
 
  protected:
   Vector2D endpoints_[2];

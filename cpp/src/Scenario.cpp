@@ -1,7 +1,7 @@
 #include "Scenario.hpp"
 
 #include "geometry/aabb_interface.h"
-#include "geometry/segment.h"
+#include "geometry/line_segment.h"
 #include "geometry/vector_2d.h"
 #include "utils.hpp"
 
@@ -126,8 +126,8 @@ void Scenario::loadScenario(std::string path) {
             }
             // We only want to store the line segments for collision checking if collisions are possible
             if (checkForCollisions == true) {
-                geometry::Segment* lineSegment = new geometry::Segment(startPoint, endPoint);
-                lineSegments.push_back(std::shared_ptr<geometry::Segment>(lineSegment));
+                geometry::LineSegment* lineSegment = new geometry::LineSegment(startPoint, endPoint);
+                lineSegments.push_back(std::shared_ptr<geometry::LineSegment>(lineSegment));
             }
         }
         // Now construct the entire roadline object which is what will be used for drawing
@@ -162,7 +162,7 @@ void Scenario::step(float dt) {
         object->step(dt);
     }
 
-    // Check vehicle - vehicle collisions
+    // initalize the vehicle bvh
     const int64_t n = vehicles.size();
     std::vector<const geometry::AABBInterface*> objects;
     objects.reserve(n);
@@ -198,7 +198,7 @@ void Scenario::step(float dt) {
         std::vector<const geometry::AABBInterface*> candidates =
             line_segment_bvh_.CollisionCandidates(dynamic_cast<geometry::AABBInterface*>(obj1.get()));
         for (const auto* ptr : candidates) {
-            const geometry::Segment* obj2 = dynamic_cast<const geometry::Segment*>(ptr);
+            const geometry::LineSegment* obj2 = dynamic_cast<const geometry::LineSegment*>(ptr);
             if (checkForCollision(obj1.get(), obj2)) {
                 obj1->setCollided(true);
             }
@@ -266,13 +266,13 @@ bool Scenario::checkForCollision(const Object* object1, const Object* object2) {
     return true;
 }
 
-bool Scenario::checkForCollision(const Object* object, const geometry::Segment* segment) {
+bool Scenario::checkForCollision(const Object* object, const geometry::LineSegment* segment) {
     // note: right now objects are rectangles but this code works for any pair of
     // convex polygons
 
     // check if the line intersects with any of the edges
     for (std::pair<geometry::Vector2D, geometry::Vector2D> line : object->getLines()){
-        if (segment->Intersects(geometry::Segment(line.first, line.second))){
+        if (segment->Intersects(geometry::LineSegment(line.first, line.second))){
             return true;
         }
     }
@@ -468,176 +468,150 @@ ImageMatrix Scenario::getCone(Vehicle* object, float viewAngle,
     float circleRadius = object->viewRadius;
     float renderedCircleRadius = 300.0f;
 
-    if (object->coneTexture == nullptr) {
-        sf::ContextSettings settings;
-        settings.antialiasingLevel = 4;
+    
+  if (object->coneTexture == nullptr) {
+    sf::ContextSettings settings;
+    settings.antialiasingLevel = 1;
 
-        object->coneTexture = new sf::RenderTexture();
-        object->coneTexture->create(2.0f * renderedCircleRadius, 2.0f * renderedCircleRadius, settings);
+    object->coneTexture = new sf::RenderTexture();
+    object->coneTexture->create(2.0f * renderedCircleRadius,
+                                2.0f * renderedCircleRadius, settings);
+  }
+  sf::RenderTexture* texture = object->coneTexture;
+
+  sf::Transform renderTransform;
+  renderTransform.scale(1, -1);  // horizontal flip
+
+  geometry::Vector2D center = object->getPosition();
+  float heading = object->getHeading() + headTilt;
+
+  texture->clear(sf::Color(50, 50, 50));
+  sf::View view(utils::ToVector2f(center, /*flip_y=*/true),
+                sf::Vector2f(2.0f * circleRadius, 2.0f * circleRadius));
+  view.rotate(-geometry::utils::Degrees(object->getHeading()) + 90.0f);
+  texture->setView(view);
+
+  texture->draw(
+      *this,
+      renderTransform);  // todo optimize with objects in range only (quadtree?)
+
+  texture->setView(
+      sf::View(sf::Vector2f(0.0f, 0.0f), sf::Vector2f(texture->getSize())));
+
+  // draw circle
+  float r = renderedCircleRadius;
+  float diag = std::sqrt(2 * r * r);
+
+  for (int quadrant = 0; quadrant < 4; ++quadrant) {
+    std::vector<sf::Vertex> outerCircle;  // todo precompute just once
+
+    float angleShift = quadrant * geometry::utils::kPi / 2.0f;
+
+    geometry::Vector2D corner = geometry::PolarToVector2D(
+        diag, geometry::utils::kPi / 4.0f + angleShift);
+    outerCircle.push_back(
+        sf::Vertex(utils::ToVector2f(corner), sf::Color::Black));
+
+    int nPoints = 20;
+    for (int i = 0; i < nPoints; ++i) {
+      float angle =
+          angleShift + i * (geometry::utils::kPi / 2.0f) / (nPoints - 1);
+
+      geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
+      outerCircle.push_back(
+          sf::Vertex(utils::ToVector2f(pt), sf::Color::Black));
     }
-    sf::RenderTexture* texture = object->coneTexture;
 
-    sf::Transform renderTransform;
-    renderTransform.scale(1, -1);  // horizontal flip
+    texture->draw(&outerCircle[0], outerCircle.size(),
+                  sf::TriangleFan);  //, renderTransform);
+  }
 
-    geometry::Vector2D center = object->getPosition();
-    float heading = object->getHeading() + headTilt;
+  // draw cone
+  if (viewAngle < 2.0f * geometry::utils::kPi) {
+    std::vector<sf::Vertex> innerCircle;  // todo precompute just once
 
-    texture->clear(sf::Color(50, 50, 50));
-    sf::View view(utils::ToVector2f(center, /*flip_y=*/true), sf::Vector2f(2.0f * circleRadius, 2.0f * circleRadius));
-    view.rotate(-geometry::utils::Degrees(object->getHeading()) + 90.0f);
-    texture->setView(view);
+    innerCircle.push_back(
+        sf::Vertex(sf::Vector2f(0.0f, 0.0f), sf::Color::Black));
+    float startAngle =
+        geometry::utils::kPi / 2.0f + headTilt + viewAngle / 2.0f;
+    float endAngle = geometry::utils::kPi / 2.0f + headTilt +
+                     2.0f * geometry::utils::kPi - viewAngle / 2.0f;
 
-    texture->draw(*this,
-                  renderTransform);  // todo optimize with objects in range only (quadtree?)
+    int nPoints = 80;  // todo function of angle
+    for (int i = 0; i < nPoints; ++i) {
+      float angle = startAngle + i * (endAngle - startAngle) / (nPoints - 1);
+      geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
+      innerCircle.push_back(
+          sf::Vertex(utils::ToVector2f(pt), sf::Color::Black));
+    }
 
-    texture->setView(sf::View(sf::Vector2f(0.0f, 0.0f), sf::Vector2f(texture->getSize())));
+    texture->draw(&innerCircle[0], innerCircle.size(), sf::TriangleFan,
+                  renderTransform);
+  }
 
-    // draw circle
-    float r = renderedCircleRadius;
-    float diag = std::sqrt(2 * r * r);
+  renderTransform.rotate(-geometry::utils::Degrees(object->getHeading()) +
+                         90.0f);
 
-    for (int quadrant = 0; quadrant < 4; ++quadrant) {
-        std::vector<sf::Vertex> outerCircle;  // todo precompute just once
+  // TODO(ev) do this for road objects too
+  // draw obstructions
+  std::vector<std::shared_ptr<Vehicle>> roadObjects =
+      getVehicles();  // todo optimize with objects in range only (quadtree?)
 
-        float angleShift = quadrant * geometry::utils::kPi / 2.0f;
+  for (const auto& obj : roadObjects) {
+    if (obj.get() != object && obj->occludes) {
+      auto lines = obj->getLines();
+      for (const auto& [pt1, pt2] : lines) {
+        int nIntersections = 0;
+        for (const auto& [pt3, pt4] : lines) {
+          if (pt1 != pt3 && pt1 != pt4 &&
+              geometry::LineSegment(pt1, center)
+                  .Intersects(geometry::LineSegment(pt3, pt4))) {
+            nIntersections++;
+            break;
+          }
+        }
+        for (const auto& [pt3, pt4] : lines) {
+          if (pt2 != pt3 && pt2 != pt4 &&
+              geometry::LineSegment(pt2, center)
+                  .Intersects(geometry::LineSegment(pt3, pt4))) {
+            nIntersections++;
+            break;
+          }
+        }
 
-        geometry::Vector2D corner = geometry::PolarToVector2D(diag, geometry::utils::kPi / 4.0f + angleShift);
-        outerCircle.push_back(sf::Vertex(utils::ToVector2f(corner), sf::Color::Black));
+        if (nIntersections >= 1) {
+          sf::ConvexShape hiddenArea;
 
-        int nPoints = 20;
-        for (int i = 0; i < nPoints; ++i) {
-            float angle = angleShift + i * (geometry::utils::kPi / 2.0f) / (nPoints - 1);
+          float angle1 = (pt1 - center).Angle();
+          float angle2 = (pt2 - center).Angle();
+          while (angle2 > angle1) angle2 -= 2.0f * geometry::utils::kPi;
 
+          int nPoints = 80;  // todo function of angle
+          hiddenArea.setPointCount(nPoints + 2);
+
+          hiddenArea.setPoint(0, utils::ToVector2f((pt1 - center) * 0.5f));
+          for (int i = 0; i < nPoints; ++i) {
+            float angle = angle1 + i * (angle2 - angle1) / (nPoints - 1);
             geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
-            outerCircle.push_back(sf::Vertex(utils::ToVector2f(pt), sf::Color::Black));
+            hiddenArea.setPoint(1 + i, utils::ToVector2f(pt));
+          }
+          hiddenArea.setPoint(nPoints + 1,
+                              utils::ToVector2f((pt2 - center) * 0.5f));
+
+          hiddenArea.setFillColor(sf::Color::Black);
+
+          texture->draw(hiddenArea, renderTransform);
         }
-
-        texture->draw(&outerCircle[0], outerCircle.size(),
-                      sf::TriangleFan);  //, renderTransform);
+      }
     }
+  }
 
-    // draw cone
-    if (viewAngle < 2.0f * geometry::utils::kPi) {
-        std::vector<sf::Vertex> innerCircle;  // todo precompute just once
+  texture->display();
 
-        innerCircle.push_back(sf::Vertex(sf::Vector2f(0.0f, 0.0f), sf::Color::Black));
-        float startAngle = geometry::utils::kPi / 2.0f + headTilt + viewAngle / 2.0f;
-        float endAngle = geometry::utils::kPi / 2.0f + headTilt + 2.0f * geometry::utils::kPi - viewAngle / 2.0f;
+  sf::Image img = texture->getTexture().copyToImage();
+  unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-        int nPoints = 80;  // todo function of angle
-        for (int i = 0; i < nPoints; ++i) {
-            float angle = startAngle + i * (endAngle - startAngle) / (nPoints - 1);
-            geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
-            innerCircle.push_back(sf::Vertex(utils::ToVector2f(pt), sf::Color::Black));
-        }
-
-        texture->draw(&innerCircle[0], innerCircle.size(), sf::TriangleFan, renderTransform);
-    }
-
-    renderTransform.rotate(-geometry::utils::Degrees(object->getHeading()) + 90.0f);
-
-    // draw obstructions
-    // TODO(ev) copypasta
-    for (const auto& obj : vehicles) {
-        if (obj.get() != object && obj->occludes) {
-            auto lines = obj->getLines();
-            for (const auto& [pt1, pt2] : lines) {
-                int nIntersections = 0;
-                for (const auto& [pt3, pt4] : lines) {
-                    if (pt1 != pt3 && pt1 != pt4 &&
-                        geometry::Segment(pt1, center).Intersects(geometry::Segment(pt3, pt4))) {
-                        nIntersections++;
-                        break;
-                    }
-                }
-                for (const auto& [pt3, pt4] : lines) {
-                    if (pt2 != pt3 && pt2 != pt4 &&
-                        geometry::Segment(pt2, center).Intersects(geometry::Segment(pt3, pt4))) {
-                        nIntersections++;
-                        break;
-                    }
-                }
-
-                if (nIntersections >= 1) {
-                    sf::ConvexShape hiddenArea;
-
-                    float angle1 = (pt1 - center).Angle();
-                    float angle2 = (pt2 - center).Angle();
-                    while (angle2 > angle1) angle2 -= 2.0f * geometry::utils::kPi;
-
-                    int nPoints = 80;  // todo function of angle
-                    hiddenArea.setPointCount(nPoints + 2);
-
-                    hiddenArea.setPoint(0, utils::ToVector2f((pt1 - center) * 0.5f));
-                    for (int i = 0; i < nPoints; ++i) {
-                        float angle = angle1 + i * (angle2 - angle1) / (nPoints - 1);
-                        geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
-                        hiddenArea.setPoint(1 + i, utils::ToVector2f(pt));
-                    }
-                    hiddenArea.setPoint(nPoints + 1, utils::ToVector2f((pt2 - center) * 0.5f));
-
-                    hiddenArea.setFillColor(sf::Color::Black);
-
-                    texture->draw(hiddenArea, renderTransform);
-                }
-            }
-        }
-    }
-    // TODO(ev) enable obscuring for the line segments
-    // for (const auto& obj : lineSegments) {
-    //   auto lines = obj->getLines();
-    //   for (const auto& [pt1, pt2] : lines) {
-    //     int nIntersections = 0;
-    //     for (const auto& [pt3, pt4] : lines) {
-    //       if (pt1 != pt3 && pt1 != pt4 &&
-    //           geometry::Segment(pt1, center)
-    //               .Intersects(geometry::Segment(pt3, pt4))) {
-    //         nIntersections++;
-    //         break;
-    //       }
-    //     }
-    //     for (const auto& [pt3, pt4] : lines) {
-    //       if (pt2 != pt3 && pt2 != pt4 &&
-    //           geometry::Segment(pt2, center)
-    //               .Intersects(geometry::Segment(pt3, pt4))) {
-    //         nIntersections++;
-    //         break;
-    //       }
-    //     }
-
-    //     if (nIntersections >= 1) {
-    //       sf::ConvexShape hiddenArea;
-
-    //       float angle1 = (pt1 - center).Angle();
-    //       float angle2 = (pt2 - center).Angle();
-    //       while (angle2 > angle1) angle2 -= 2.0f * geometry::utils::kPi;
-
-    //       int nPoints = 80;  // todo function of angle
-    //       hiddenArea.setPointCount(nPoints + 2);
-
-    //       hiddenArea.setPoint(0, utils::ToVector2f((pt1 - center) * 0.5f));
-    //       for (int i = 0; i < nPoints; ++i) {
-    //         float angle = angle1 + i * (angle2 - angle1) / (nPoints - 1);
-    //         geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
-    //         hiddenArea.setPoint(1 + i, utils::ToVector2f(pt));
-    //       }
-    //       hiddenArea.setPoint(nPoints + 1,
-    //                           utils::ToVector2f((pt2 - center) * 0.5f));
-
-    //       hiddenArea.setFillColor(sf::Color::Black);
-
-    //       texture->draw(hiddenArea, renderTransform);
-    //     }
-    //   }
-    // }
-
-    texture->display();
-
-    sf::Image img = texture->getTexture().copyToImage();
-    unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
-
-    return ImageMatrix(pixelsArr, renderedCircleRadius * 2, renderedCircleRadius * 2, 4);
+  return ImageMatrix(pixelsArr, renderedCircleRadius * 2, renderedCircleRadius * 2, 4);
 }
 
 ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
