@@ -11,7 +11,7 @@
 #include "RoadLine.hpp"
 #include "Vehicle.hpp"
 #include "geometry/bvh.h"
-#include "geometry/segment.h"
+#include "geometry/line_segment.h"
 #include "geometry/geometry_utils.h"
 #include "json.hpp"
 
@@ -41,7 +41,7 @@ class Scenario : public sf::Drawable {
   ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
 
   bool checkForCollision(const Object* object1, const Object* object2);
-  bool checkForCollision(const Object* object, const geometry::Segment* segment) ;
+  bool checkForCollision(const Object* object, const geometry::LineSegment* segment) ;
 
   // bool isVehicleOnRoad(const Object& object) const;
   // bool isPointOnRoad(float posX, float posY) const;
@@ -59,7 +59,7 @@ class Scenario : public sf::Drawable {
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
   std::string name;
-  std::vector<std::shared_ptr<geometry::Segment>> lineSegments;
+  std::vector<std::shared_ptr<geometry::LineSegment>> lineSegments;
   std::vector<std::shared_ptr<RoadLine>> roadLines;
   std::vector<std::shared_ptr<Vehicle>> vehicles;
 
