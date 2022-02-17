@@ -51,5 +51,7 @@ class AABB {
   Vector2D max_;
 };
 
+inline float Distance(const AABB& a, const AABB& b) { return (a || b).Area(); }
+
 }  // namespace geometry
 }  // namespace nocturne

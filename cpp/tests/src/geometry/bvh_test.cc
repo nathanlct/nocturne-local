@@ -53,7 +53,7 @@ class TestBVH : public BVH {
   }
 };
 
-TEST(BVHTest, InitHierarchyTest) {
+TEST(BVHTest, InitHierarchyPerfTest) {
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<float> dis(-100.0f, 100.0f);
@@ -73,20 +73,22 @@ TEST(BVHTest, InitHierarchyTest) {
   }
 
   TestBVH bvh(objects_ptr);
-  EXPECT_LT(bvh.MaxDepth(), 20);
+  EXPECT_LT(bvh.MaxDepth(), 30);
 }
 
 TEST(BVHTest, CollisionCandidatesTest) {
   const MockObject obj1(Vector2D(0.0f, 0.0f), 1.0f);
-  const MockObject obj2(Vector2D(-0.5f, -0.5f), 1.0f);
+  const MockObject obj2(Vector2D(0.5f, 0.5f), 1.0f);
   const MockObject obj3(Vector2D(10.0f, 0.0f), 1.0f);
   const MockObject obj4(Vector2D(10.0f, 1.5f), 1.0f);
+  const MockObject obj5(Vector2D(-10.0f, -10.0f), 1.0f);
 
   std::vector<const AABBInterface*> objects = {
       dynamic_cast<const AABBInterface*>(&obj1),
       dynamic_cast<const AABBInterface*>(&obj2),
       dynamic_cast<const AABBInterface*>(&obj3),
-      dynamic_cast<const AABBInterface*>(&obj4)};
+      dynamic_cast<const AABBInterface*>(&obj4),
+      dynamic_cast<const AABBInterface*>(&obj5)};
 
   TestBVH bvh(objects);
   std::vector<const AABBInterface*> candidates =

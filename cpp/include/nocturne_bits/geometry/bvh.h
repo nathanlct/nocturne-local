@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tuple>
+#include <utility>
 #include <vector>
 
 #include "geometry/aabb.h"
@@ -67,14 +67,18 @@ class BVH {
     return &nodes_.back();
   }
 
-  Node* MakeNode(const AABB& aabb, Node* l_child, Node* r_child) {
-    nodes_.emplace_back(aabb, /*object=*/nullptr, l_child, r_child);
+  Node* MakeNode(Node* l_child, Node* r_child) {
+    nodes_.emplace_back((l_child->aabb() || r_child->aabb()),
+                        /*object=*/nullptr, l_child, r_child);
     return &nodes_.back();
   }
 
+  std::vector<BVH::Node*> CombineNodes(const std::vector<BVH::Node*>& nodes,
+                                       int64_t num);
+
   // Init hierarchy in range [l, r).
-  Node* InitHierarchyImpl(
-      const std::vector<std::tuple<uint64_t, const AABBInterface*>>& objects,
+  std::vector<Node*> InitHierarchyImpl(
+      const std::vector<std::pair<uint64_t, const AABBInterface*>>& objects,
       int64_t l, int64_t r);
 
   void CollisionCandidatesImpl(
