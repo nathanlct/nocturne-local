@@ -41,6 +41,7 @@ class Scenario : public sf::Drawable {
   ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
 
   bool checkForCollision(const Object* object1, const Object* object2);
+  bool checkForCollision(const Object* object, const geometry::Segment* segment) ;
 
   // bool isVehicleOnRoad(const Object& object) const;
   // bool isPointOnRoad(float posX, float posY) const;

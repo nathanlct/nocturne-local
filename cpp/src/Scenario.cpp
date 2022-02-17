@@ -191,13 +191,14 @@ void Scenario::step(float dt) {
             }
         }
     }
+    std::cout << "Checked vehicle -> vehicle collisions " << std::endl;
     // TODO(ev) copypasta
     // check vehicle-lane segment collisions
     for (auto& obj1 : vehicles) {
         std::vector<const geometry::AABBInterface*> candidates =
             line_segment_bvh_.CollisionCandidates(dynamic_cast<geometry::AABBInterface*>(obj1.get()));
         for (const auto* ptr : candidates) {
-            const Object* obj2 = dynamic_cast<const Object*>(ptr);
+            const geometry::Segment* obj2 = dynamic_cast<const geometry::Segment*>(ptr);
             if (checkForCollision(obj1.get(), obj2)) {
                 obj1->setCollided(true);
             }
@@ -264,6 +265,30 @@ bool Scenario::checkForCollision(const Object* object1, const Object* object2) {
     // we didn't find any line separating both polygons
     return true;
 }
+
+bool Scenario::checkForCollision(const Object* object, const geometry::Segment* segment) {
+    // note: right now objects are rectangles but this code works for any pair of
+    // convex polygons
+
+    // check if the line intersects with any of the edges
+    for (std::pair<geometry::Vector2D, geometry::Vector2D> line : object->getLines()){
+        if (segment->Intersects(geometry::Segment(line.first, line.second))){
+            return true;
+        }
+    }
+
+    // Now check if both points are inside the polygon
+    bool p1_inside = object->pointInside(segment->Endpoint0());
+    bool p2_inside = object->pointInside(segment->Endpoint1());
+    if (p1_inside && p2_inside) {
+        return true;
+    }
+    else{
+        return false;
+    }
+
+
+ }
 
 // TODO(ev) make smoother, also maybe return something named so that
 // it's clear what's accel and what's steeringAngle

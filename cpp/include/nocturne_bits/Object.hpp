@@ -40,6 +40,7 @@ class Object : public sf::Drawable, public geometry::AABBInterface {
   std::vector<geometry::Vector2D> getCorners() const;
   std::vector<std::pair<geometry::Vector2D, geometry::Vector2D>> getLines()
       const;
+  bool pointInside(geometry::Vector2D point) const;
 
   void setPosition(float x, float y) { position = geometry::Vector2D(x, y); }
 
