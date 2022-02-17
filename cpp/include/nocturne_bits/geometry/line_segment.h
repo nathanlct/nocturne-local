@@ -9,14 +9,14 @@
 namespace nocturne {
 namespace geometry {
 
-class Segment : public AABBInterface {
+class LineSegment : public AABBInterface {
  public:
-  Segment() = default;
-  Segment(const Vector2D& p, const Vector2D& q) {
+  LineSegment() = default;
+  LineSegment(const Vector2D& p, const Vector2D& q) {
     endpoints_[0] = p;
     endpoints_[1] = q;
   }
-  Segment(const Segment& seg) {
+  LineSegment(const LineSegment& seg) {
     endpoints_[0] = seg.endpoints_[0];
     endpoints_[1] = seg.endpoints_[1];
   }
@@ -35,7 +35,7 @@ class Segment : public AABBInterface {
     return AABB(min_x, min_y, max_x, max_y);
   }
 
-  bool Intersects(const Segment& seg) const;
+  bool Intersects(const LineSegment& seg) const;
 
  protected:
   Vector2D endpoints_[2];
