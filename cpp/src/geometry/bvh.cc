@@ -67,6 +67,8 @@ void RemoveNode(int64_t num, BVH::Node* p,
 
 }  // namespace
 
+// Implement AAC-fast algorithm in
+// http://graphics.cs.cmu.edu/projects/aac/aac_build.pdf
 void BVH::InitHierarchy(const std::vector<const AABBInterface*>& objects) {
   Clear();
   const int64_t n = objects.size();
