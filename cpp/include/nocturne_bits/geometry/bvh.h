@@ -43,7 +43,11 @@ class BVH {
   };
 
   BVH() = default;
-  BVH(const std::vector<const AABBInterface*>& objects) {
+  explicit BVH(const std::vector<const AABBInterface*>& objects) {
+    InitHierarchy(objects);
+  }
+  BVH(const std::vector<const AABBInterface*>& objects, int64_t delta)
+      : delta_(delta) {
     InitHierarchy(objects);
   }
 
@@ -87,6 +91,7 @@ class BVH {
 
   std::vector<Node> nodes_;
   Node* root_ = nullptr;
+  const int64_t delta_ = 4;
 };
 
 }  // namespace geometry

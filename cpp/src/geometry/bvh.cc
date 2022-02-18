@@ -14,8 +14,6 @@ namespace geometry {
 
 namespace {
 
-constexpr int64_t kDelta = 4;
-
 // Binary search for smallest index who shares the same highest bit with r - 1
 // in range [l, r).
 int64_t FindPivot(
@@ -67,7 +65,7 @@ void RemoveNode(int64_t num, BVH::Node* p,
 
 }  // namespace
 
-// Implement AAC-fast algorithm in
+// Implement AAC algorithm in
 // http://graphics.cs.cmu.edu/projects/aac/aac_build.pdf
 void BVH::InitHierarchy(const std::vector<const AABBInterface*>& objects) {
   Clear();
@@ -145,7 +143,7 @@ std::vector<BVH::Node*> BVH::InitHierarchyImpl(
     const std::vector<std::pair<uint64_t, const AABBInterface*>>& objects,
     int64_t l, int64_t r) {
   assert(l < r);
-  if (r - l <= kDelta) {
+  if (r - l <= delta_) {
     std::vector<BVH::Node*> ret;
     ret.reserve(r - l);
     for (int64_t i = l; i < r; ++i) {
