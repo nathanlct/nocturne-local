@@ -1,7 +1,7 @@
 #include "Scenario.hpp"
 
 #include "geometry/aabb_interface.h"
-#include "geometry/segment.h"
+#include "geometry/line_segment.h"
 #include "geometry/vector_2d.h"
 #include "utils.hpp"
 
@@ -458,16 +458,16 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle,
         int nIntersections = 0;
         for (const auto& [pt3, pt4] : lines) {
           if (pt1 != pt3 && pt1 != pt4 &&
-              geometry::Segment(pt1, center)
-                  .Intersects(geometry::Segment(pt3, pt4))) {
+              geometry::LineSegment(pt1, center)
+                  .Intersects(geometry::LineSegment(pt3, pt4))) {
             nIntersections++;
             break;
           }
         }
         for (const auto& [pt3, pt4] : lines) {
           if (pt2 != pt3 && pt2 != pt4 &&
-              geometry::Segment(pt2, center)
-                  .Intersects(geometry::Segment(pt3, pt4))) {
+              geometry::LineSegment(pt2, center)
+                  .Intersects(geometry::LineSegment(pt3, pt4))) {
             nIntersections++;
             break;
           }

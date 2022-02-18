@@ -31,7 +31,7 @@ set(
 add_executable(
   nocturne_test 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/bvh_test.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/segment_test.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/line_segment_test.cc
 )
 target_include_directories(
   nocturne_test
