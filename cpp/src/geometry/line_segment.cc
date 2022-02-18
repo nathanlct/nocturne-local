@@ -1,4 +1,4 @@
-#include "geometry/segment.h"
+#include "geometry/line_segment.h"
 
 namespace nocturne {
 namespace geometry {
@@ -11,7 +11,7 @@ bool CCW(const Vector2D& a, const Vector2D& b, const Vector2D& c) {
 
 }  // namespace
 
-bool Segment::Intersects(const Segment& seg) const {
+bool LineSegment::Intersects(const LineSegment& seg) const {
   const Vector2D& p1 = endpoints_[0];
   const Vector2D& q1 = endpoints_[1];
   const Vector2D& p2 = seg.endpoints_[0];
