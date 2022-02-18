@@ -353,6 +353,8 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
 
 std::vector<std::shared_ptr<Vehicle>> Scenario::getVehicles() { return vehicles; }
 
+std::vector<std::shared_ptr<RoadLine>> Scenario::getRoadLines() {return roadLines; }
+
 void Scenario::removeVehicle(Vehicle* object) {
     for (auto it = vehicles.begin(); it != vehicles.end();) {
         if ((*it).get() == object) {

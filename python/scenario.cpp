@@ -9,8 +9,8 @@ void init_scenario(py::module& m) {
   m.doc() = "nocturne documentation for class Scenario";
 
   py::class_<nocturne::Scenario>(m, "Scenario")
-      // .def("getRoadObjects", &nocturne::Scenario::getRoadObjects)
       .def("getVehicles", &nocturne::Scenario::getVehicles)
+      .def("getRoadLines", &nocturne::Scenario::getRoadLines)
       .def("getCone", &nocturne::Scenario::getCone,
           "Draw a cone representing the objects that the agent can see",
           py::arg("object"), py::arg("viewAngle") = 1.58, py::arg("headTilt") = 0.0, py::arg("obscuredView") = true)

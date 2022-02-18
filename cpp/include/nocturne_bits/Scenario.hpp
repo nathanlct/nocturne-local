@@ -28,8 +28,8 @@ class Scenario : public sf::Drawable {
 
   void step(float dt);
 
-  // std::vector<std::shared_ptr<Object>> getRoadObjects();
   std::vector<std::shared_ptr<Vehicle>> getVehicles();
+  std::vector<std::shared_ptr<RoadLine>> getRoadLines();
 
   void removeVehicle(Vehicle* object);
 
