@@ -39,12 +39,11 @@ void Scenario::loadScenario(std::string path) {
 
     for (const auto& obj : j["objects"]) {
         std::string type = obj["type"];
-        // TODO(ev) startTime should be passed in
-        int startTime = 0;
-        geometry::Vector2D pos(obj["position"]["x"][startTime], obj["position"]["y"][startTime]);
+        // TODO(ev) currTime should be passed in rather than defined here
+        geometry::Vector2D pos(obj["position"]["x"][currTime], obj["position"]["y"][currTime]);
         float width = obj["width"];
         float length = obj["length"];
-        float heading = geometry::utils::Radians(static_cast<float>(obj["heading"][startTime]));
+        float heading = geometry::utils::Radians(static_cast<float>(obj["heading"][currTime]));
 
         // TODO(ev) this should be set elsewhere
         bool occludes = true;
@@ -73,9 +72,10 @@ void Scenario::loadScenario(std::string path) {
         lengths.push_back(length);
         expertValid.push_back(localValid);
         // TODO(ev) add support for pedestrians and cyclists
-
-        if (type == "vehicle") {
-            Vehicle* veh = new Vehicle(pos, width, length, heading, occludes, collides, checkForCollisions, goalPos);
+        // TODO(ev) make it a flag whether all vehicles are added or just the vehicles that are valid
+        if (type == "vehicle" && bool(obj["valid"][currTime])) {
+            Vehicle* veh = new Vehicle(pos, width, length, heading, occludes, collides, checkForCollisions, goalPos,
+                                        localExpertSpeeds[currTime].Norm());
             auto ptr = std::shared_ptr<Vehicle>(veh);
             vehicles.push_back(ptr);
         } else {
@@ -158,6 +158,7 @@ void Scenario::createVehicle(float posX, float posY, float width, float length, 
 }
 
 void Scenario::step(float dt) {
+    currTime += int(dt / 0.1); // TODO(ev) hardcoding
     for (auto& object : vehicles) {
         object->step(dt);
     }
@@ -167,6 +168,7 @@ void Scenario::step(float dt) {
     std::vector<const geometry::AABBInterface*> objects;
     objects.reserve(n);
     for (const auto& obj : vehicles) {
+
         objects.push_back(dynamic_cast<const geometry::AABBInterface*>(obj.get()));
     }
     bvh_.InitHierarchy(objects);
@@ -191,8 +193,6 @@ void Scenario::step(float dt) {
             }
         }
     }
-    std::cout << "Checked vehicle -> vehicle collisions " << std::endl;
-    // TODO(ev) copypasta
     // check vehicle-lane segment collisions
     for (auto& obj1 : vehicles) {
         std::vector<const geometry::AABBInterface*> candidates =
@@ -373,102 +373,11 @@ void Scenario::removeVehicle(Vehicle* object) {
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const { return roadNetworkBounds; }
 
-// bool Scenario::isVehicleOnRoad(const Object& object) const {
-//   bool found;
-//   for (const geometry::Vector2D& corner : object.getCorners()) {
-//     found = false;
-
-//     for (const std::shared_ptr<Road>& roadptr : roads) {
-//       const std::vector<geometry::Vector2D> roadPolygon =
-//           roadptr->getRoadPolygon();
-//       const size_t nQuads = roadPolygon.size() / 2 - 1;
-
-//       for (size_t quadIdx = 0; quadIdx < nQuads; quadIdx++) {
-//         const std::vector<geometry::Vector2D> quadCorners{
-//             roadPolygon[quadIdx], roadPolygon[quadIdx + 1],
-//             roadPolygon[roadPolygon.size() - 1 - quadIdx - 1],
-//             roadPolygon[roadPolygon.size() - 1 - quadIdx]};
-
-//         // test whether {corner} is within ({intersects}) with the polygon
-//         // defined by {quadCorners}
-//         bool intersects = false;
-//         for (int i = 0, j = quadCorners.size() - 1; i < quadCorners.size();
-//              j = i++) {
-//           if (((quadCorners[i].y() > corner.y()) !=
-//                (quadCorners[j].y() > corner.y())) &&
-//               (corner.x() < (quadCorners[j].x() - quadCorners[i].x()) *
-//                                     (corner.y() - quadCorners[i].y()) /
-//                                     (quadCorners[j].y() - quadCorners[i].y()) +
-//                                 quadCorners[i].x())) {
-//             intersects = !intersects;
-//           }
-//         }
-
-//         if (intersects) {
-//           found = true;
-//           break;
-//         }
-//       }
-//     }
-
-//     if (!found) {
-//       return false;
-//     }
-//   }
-
-//   return true;
-// }
-
-// // TODO(eugenevinitsky) code duplication
-// bool Scenario::isPointOnRoad(float posX, float posY) const {
-//   bool found;
-//   found = false;
-
-//   for (const std::shared_ptr<Road>& roadptr : roads) {
-//     const std::vector<geometry::Vector2D> roadPolygon =
-//         roadptr->getRoadPolygon();
-//     const size_t nQuads = roadPolygon.size() / 2 - 1;
-
-//     for (size_t quadIdx = 0; quadIdx < nQuads; quadIdx++) {
-//       const std::vector<geometry::Vector2D> quadCorners{
-//           roadPolygon[quadIdx], roadPolygon[quadIdx + 1],
-//           roadPolygon[roadPolygon.size() - 1 - quadIdx - 1],
-//           roadPolygon[roadPolygon.size() - 1 - quadIdx]};
-
-//       // test whether {corner} is within ({intersects}) with the polygon defined
-//       // by {quadCorners}
-//       bool intersects = false;
-//       for (int i = 0, j = quadCorners.size() - 1; i < quadCorners.size();
-//            j = i++) {
-//         if (((quadCorners[i].y() > posY) != (quadCorners[j].y() > posY)) &&
-//             (posX < (quadCorners[j].x() - quadCorners[i].x()) *
-//                             (posY - quadCorners[i].y()) /
-//                             (quadCorners[j].y() - quadCorners[i].y()) +
-//                         quadCorners[i].x())) {
-//           intersects = !intersects;
-//         }
-//       }
-
-//       if (intersects) {
-//         found = true;
-//         break;
-//       }
-//     }
-//   }
-
-//   if (!found) {
-//     return false;
-//   }
-
-//   return true;
-// }
-
 ImageMatrix Scenario::getCone(Vehicle* object, float viewAngle,
-                              float headTilt) {  // args in radians
+                              float headTilt, bool obscuredView) {  // args in radians
     float circleRadius = object->viewRadius;
     float renderedCircleRadius = 300.0f;
 
-    
   if (object->coneTexture == nullptr) {
     sf::ContextSettings settings;
     settings.antialiasingLevel = 1;
@@ -483,7 +392,6 @@ ImageMatrix Scenario::getCone(Vehicle* object, float viewAngle,
   renderTransform.scale(1, -1);  // horizontal flip
 
   geometry::Vector2D center = object->getPosition();
-  float heading = object->getHeading() + headTilt;
 
   texture->clear(sf::Color(50, 50, 50));
   sf::View view(utils::ToVector2f(center, /*flip_y=*/true),
@@ -554,55 +462,57 @@ ImageMatrix Scenario::getCone(Vehicle* object, float viewAngle,
 
   // TODO(ev) do this for road objects too
   // draw obstructions
-  std::vector<std::shared_ptr<Vehicle>> roadObjects =
-      getVehicles();  // todo optimize with objects in range only (quadtree?)
+  if (obscuredView == true) {
+    std::vector<std::shared_ptr<Vehicle>> roadObjects =
+        getVehicles();  // todo optimize with objects in range only (quadtree?)
 
-  for (const auto& obj : roadObjects) {
-    if (obj.get() != object && obj->occludes) {
-      auto lines = obj->getLines();
-      for (const auto& [pt1, pt2] : lines) {
-        int nIntersections = 0;
-        for (const auto& [pt3, pt4] : lines) {
-          if (pt1 != pt3 && pt1 != pt4 &&
-              geometry::LineSegment(pt1, center)
-                  .Intersects(geometry::LineSegment(pt3, pt4))) {
-            nIntersections++;
-            break;
-          }
+    for (const auto& obj : roadObjects) {
+        if (obj.get() != object && obj->occludes) {
+        auto lines = obj->getLines();
+        for (const auto& [pt1, pt2] : lines) {
+            int nIntersections = 0;
+            for (const auto& [pt3, pt4] : lines) {
+            if (pt1 != pt3 && pt1 != pt4 &&
+                geometry::LineSegment(pt1, center)
+                    .Intersects(geometry::LineSegment(pt3, pt4))) {
+                nIntersections++;
+                break;
+            }
+            }
+            for (const auto& [pt3, pt4] : lines) {
+            if (pt2 != pt3 && pt2 != pt4 &&
+                geometry::LineSegment(pt2, center)
+                    .Intersects(geometry::LineSegment(pt3, pt4))) {
+                nIntersections++;
+                break;
+            }
+            }
+
+            if (nIntersections >= 1) {
+            sf::ConvexShape hiddenArea;
+
+            float angle1 = (pt1 - center).Angle();
+            float angle2 = (pt2 - center).Angle();
+            while (angle2 > angle1) angle2 -= 2.0f * geometry::utils::kPi;
+
+            int nPoints = 80;  // todo function of angle
+            hiddenArea.setPointCount(nPoints + 2);
+
+            hiddenArea.setPoint(0, utils::ToVector2f((pt1 - center) * 0.5f));
+            for (int i = 0; i < nPoints; ++i) {
+                float angle = angle1 + i * (angle2 - angle1) / (nPoints - 1);
+                geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
+                hiddenArea.setPoint(1 + i, utils::ToVector2f(pt));
+            }
+            hiddenArea.setPoint(nPoints + 1,
+                                utils::ToVector2f((pt2 - center) * 0.5f));
+
+            hiddenArea.setFillColor(sf::Color::Black);
+
+            texture->draw(hiddenArea, renderTransform);
+            }
         }
-        for (const auto& [pt3, pt4] : lines) {
-          if (pt2 != pt3 && pt2 != pt4 &&
-              geometry::LineSegment(pt2, center)
-                  .Intersects(geometry::LineSegment(pt3, pt4))) {
-            nIntersections++;
-            break;
-          }
         }
-
-        if (nIntersections >= 1) {
-          sf::ConvexShape hiddenArea;
-
-          float angle1 = (pt1 - center).Angle();
-          float angle2 = (pt2 - center).Angle();
-          while (angle2 > angle1) angle2 -= 2.0f * geometry::utils::kPi;
-
-          int nPoints = 80;  // todo function of angle
-          hiddenArea.setPointCount(nPoints + 2);
-
-          hiddenArea.setPoint(0, utils::ToVector2f((pt1 - center) * 0.5f));
-          for (int i = 0; i < nPoints; ++i) {
-            float angle = angle1 + i * (angle2 - angle1) / (nPoints - 1);
-            geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
-            hiddenArea.setPoint(1 + i, utils::ToVector2f(pt));
-          }
-          hiddenArea.setPoint(nPoints + 1,
-                              utils::ToVector2f((pt2 - center) * 0.5f));
-
-          hiddenArea.setFillColor(sf::Color::Black);
-
-          texture->draw(hiddenArea, renderTransform);
-        }
-      }
     }
   }
 
@@ -615,7 +525,7 @@ ImageMatrix Scenario::getCone(Vehicle* object, float viewAngle,
 }
 
 ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
-    int squareSide = 1200;
+    int squareSide = 600;
 
     if (imageTexture == nullptr) {
         sf::ContextSettings settings;
@@ -643,6 +553,8 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
     sf::Vector2f size = sf::Vector2f(squareSide, squareSide) *
                         std::max(scenarioBounds.width / squareSide, scenarioBounds.height / squareSide);
     sf::View view(center, size);
+    float heading = object->getHeading();
+    view.rotate(-geometry::utils::Degrees(object->getHeading()) + 90.0f);
 
     texture->setView(view);
 

@@ -11,7 +11,9 @@ void init_scenario(py::module& m) {
   py::class_<nocturne::Scenario>(m, "Scenario")
       // .def("getRoadObjects", &nocturne::Scenario::getRoadObjects)
       .def("getVehicles", &nocturne::Scenario::getVehicles)
-      .def("getCone", &nocturne::Scenario::getCone)
+      .def("getCone", &nocturne::Scenario::getCone,
+          "Draw a cone representing the objects that the agent can see",
+          py::arg("object"), py::arg("viewAngle") = 1.58, py::arg("headTilt") = 0.0, py::arg("obscuredView") = true)
       .def("getImage", &nocturne::Scenario::getImage,
            "Return a numpy array of dimension (w, h, 4) representing the scene",
            py::arg("object") = nullptr, py::arg("renderGoals") = false)

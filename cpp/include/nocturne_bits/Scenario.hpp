@@ -24,6 +24,7 @@ class Scenario : public sf::Drawable {
   Scenario(std::string path);
 
   void loadScenario(std::string path);
+  int currTime = 0; // TODO(ev) this should be passed in rather than defined here
 
   void step(float dt);
 
@@ -37,7 +38,8 @@ class Scenario : public sf::Drawable {
   ImageMatrix getCone(
       Vehicle* object,
       float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
-      float headTilt = 0.0f);
+      float headTilt = 0.0f,
+      bool obscuredView = true);
   ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
 
   bool checkForCollision(const Object* object1, const Object* object2);
