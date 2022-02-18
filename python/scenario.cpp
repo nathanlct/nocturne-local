@@ -22,8 +22,6 @@ void init_scenario(py::module& m) {
       .def("hasExpertAction", &nocturne::Scenario::hasExpertAction)
       .def("getExpertAction", &nocturne::Scenario::getExpertAction)
       .def("getValidExpertStates", &nocturne::Scenario::getValidExpertStates);
-      // .def("isVehicleOnRoad", &nocturne::Scenario::isVehicleOnRoad)
-      // .def("isPointOnRoad", &nocturne::Scenario::isPointOnRoad);
   // .def(
   //     py::init<std::string>(),
   //     "Constructor for Scenario",

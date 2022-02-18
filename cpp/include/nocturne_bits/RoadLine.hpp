@@ -24,10 +24,12 @@ public:
             int numPoints=8);
             // num_points = how many points are returned to 
             // represent the road line
+    bool canCollide(){return checkForCollisions;}
     std::vector<geometry::Vector2D> getSplineCoeffs() const;
     std::vector<geometry::Vector2D> getRoadPolyLine() const;
     void setRoadPoints(); // return an evenly spaced set of the geometry
     std::vector<geometry::Vector2D> getRoadPoints(); // return an evenly spaced set of the geometry
+    std::vector<geometry::Vector2D> getAllPoints() {return geometry;}
     void setState();
     std::vector<float> getState();
     std::vector<float> getLocalState(geometry::Vector2D vehPos);

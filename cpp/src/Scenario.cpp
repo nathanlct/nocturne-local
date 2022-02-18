@@ -348,9 +348,6 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     }
 }
 
-// std::vector<std::unique_ptr<Object, py::nodelete>> Scenario::getRoadObjects()
-// {
-
 std::vector<std::shared_ptr<Vehicle>> Scenario::getVehicles() { return vehicles; }
 
 std::vector<std::shared_ptr<RoadLine>> Scenario::getRoadLines() {return roadLines; }
