@@ -497,14 +497,15 @@ ImageMatrix Scenario::getCone(Vehicle* object, float viewAngle,
             int nPoints = 80;  // todo function of angle
             hiddenArea.setPointCount(nPoints + 2);
 
-            hiddenArea.setPoint(0, utils::ToVector2f((pt1 - center) * 0.5f));
+            float ratio = renderedCircleRadius / circleRadius;
+            hiddenArea.setPoint(0, utils::ToVector2f((pt1 - center) * ratio));
             for (int i = 0; i < nPoints; ++i) {
                 float angle = angle1 + i * (angle2 - angle1) / (nPoints - 1);
                 geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
                 hiddenArea.setPoint(1 + i, utils::ToVector2f(pt));
             }
             hiddenArea.setPoint(nPoints + 1,
-                                utils::ToVector2f((pt2 - center) * 0.5f));
+                            utils::ToVector2f((pt2 - center) * ratio));
 
             hiddenArea.setFillColor(sf::Color::Black);
 
