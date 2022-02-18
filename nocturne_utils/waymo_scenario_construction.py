@@ -61,12 +61,17 @@ def _init_object(track: scenario_pb2.Track) -> Optional[Dict[str, Any]]:
 
 
 def _init_road(map_feature: map_pb2.MapFeature) -> Optional[Dict[str, Any]]:
-
-    # TODO(eugenevinitsky) add support for crosswalks!!! They are polygons not polylines
-    try:
-        geometry = [{"x": p.x, "y": p.y} for p in getattr(map_feature, map_feature.WhichOneof("feature_data")).polyline]
-    except:
-        return None
+    feature = map_feature.WhichOneof("feature_data")
+    if feature == 'stop_sign':
+        p = getattr(map_feature, map_feature.WhichOneof("feature_data")).position
+        geometry = [{"x": p.x, "y": p.y}]
+    elif feature != 'crosswalk' and feature != 'speed_bump':
+        try:
+            geometry = [{"x": p.x, "y": p.y} for p in getattr(map_feature, map_feature.WhichOneof("feature_data")).polyline]
+        except:
+            return None
+    else:
+        geometry = [{"x": p.x, "y": p.y} for p in getattr(map_feature, map_feature.WhichOneof("feature_data")).polygon]
     return {
         "geometry": geometry,
         "type": map_feature.WhichOneof("feature_data"),

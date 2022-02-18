@@ -64,6 +64,7 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<geometry::LineSegment>> lineSegments;
   std::vector<std::shared_ptr<RoadLine>> roadLines;
   std::vector<std::shared_ptr<Vehicle>> vehicles;
+  std::vector<geometry::Vector2D> stopSigns;
 
   sf::RenderTexture* imageTexture;
   sf::FloatRect roadNetworkBounds;

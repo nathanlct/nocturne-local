@@ -17,7 +17,7 @@ print('all veh IDS are', [veh.getID() for veh in scenario.getVehicles()])
 expert_action = scenario.getExpertAction(scenario.getVehicles()[0].getID(), 10)
 print('expert action of vehicle 0 is ', expert_action)
 print(scenario.getValidExpertStates(scenario.getVehicles()[0].getID()))
-print('is the expert action valid or outside the valid states', scenario.hasExpertAction(scenario.getVehicles()[0].getID(), 10))
+print('is the expert action valid', scenario.hasExpertAction(scenario.getVehicles()[0].getID(), 10))
 
 img = np.array(scenario.getImage(scenario.getVehicles()[3], renderGoals=True), copy=False)
 plt.figure()
@@ -93,28 +93,11 @@ assert veh1.getCollided() == True, 'vehicle1 should have collided after being pl
 assert veh0.getCollided() == True, 'vehicle0 should have collided after vehicle 1 was placed on it'
 assert veh2.getCollided() == False, 'vehicle2 should not have collided'
 
-# now offset them more and do the same thing again
-sim = Simulation(scenarioPath='./nocturne_utils/output.json')
-scenario = sim.getScenario()
-veh0 = scenario.getVehicles()[0]
-veh1 = scenario.getVehicles()[1]
-veh2 = scenario.getVehicles()[2]
-veh0 = scenario.getVehicles()[0]
-veh1 = scenario.getVehicles()[1]
-veh1.setPosition(veh0.getPosition().x + 10.0, veh0.getPosition().y + 30.0)
-sim.step(0.000001)
-cone = np.array(scenario.getCone(veh0, 2 * np.pi, 0.0), copy=False)
-plt.figure()
-plt.imshow(cone)
-plt.savefig('overlapping_veh.png')
-assert veh1.getCollided() == False, 'vehicle1 should not have collided'
-assert veh0.getCollided() == False, 'vehicle0 should not have collided'
-assert veh2.getCollided() == False, 'vehicle2 should not have collided'
-
 ################################
 # Road Collision checking
 ################################
-# now check if we place it onto one of the road points that there should be a collision
+# check if we place it onto one of the road points that there should be a collision
+
 # find a road edge 
 colliding_road_line = None
 for roadline in scenario.getRoadLines():
@@ -152,3 +135,29 @@ plt.figure()
 plt.imshow(cone)
 plt.savefig('line_veh_check2.png')
 assert veh0.getCollided() == True, 'vehicle0 should have collided since a road edge intersects it'
+
+# quick check that when we place the vehicle onto a non-colliding edge (like a lane line)
+# no collision occurs
+sim.reset()
+scenario = sim.getScenario()
+veh0 = scenario.getVehicles()[0]
+non_colliding_road_line = None
+for roadline in scenario.getRoadLines():
+    if not roadline.canCollide():
+        non_colliding_road_line = roadline
+        break
+roadpoints = non_colliding_road_line.getAllPoints()
+start_point = np.array([roadpoints[0].x, roadpoints[0].y])
+road_segment_dir = np.array([roadpoints[1].x, roadpoints[1].y]) - np.array([roadpoints[0].x, roadpoints[0].y])
+assert np.linalg.norm(road_segment_dir) < 1 # it should be able to fit inside the vehicle
+road_segment_angle = np.arctan2(road_segment_dir[1], road_segment_dir[0]) #atan2 is (y, x) not (x,y)
+veh0.setHeading(road_segment_angle)
+# place the vehicle so that the segment is contained inside of it
+new_center = start_point + 0.5 * road_segment_dir
+veh0.setPosition(new_center[0], new_center[1])
+sim.step(1e-6)
+cone = np.array(scenario.getCone(veh0, 2 * np.pi, 0.0), copy=False)
+plt.figure()
+plt.imshow(cone)
+plt.savefig('line_veh_check3.png')
+assert veh0.getCollided() == False, 'a non-colliding object shouldn\'t register collisions'

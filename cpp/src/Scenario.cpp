@@ -11,6 +11,7 @@ Scenario::Scenario(std::string path)
     : roadLines(),
       lineSegments(),
       vehicles(),
+      stopSigns(),
       imageTexture(nullptr),
       expertTrajectories(),
       expertSpeeds(),
@@ -78,7 +79,12 @@ void Scenario::loadScenario(std::string path) {
                                         localExpertSpeeds[currTime].Norm());
             auto ptr = std::shared_ptr<Vehicle>(veh);
             vehicles.push_back(ptr);
-        } else {
+        }
+        else if (type == "vehicle" && !bool(obj["valid"][currTime])){
+            std::cerr << "skipped vehicle as its logged states were not ";
+            std::cerr << "valid at this time" << std::endl;
+        }
+        else {
             std::cerr << "Unknown object type: " << type << std::endl;
         }
     }
@@ -108,26 +114,32 @@ void Scenario::loadScenario(std::string path) {
         } else if (type == "speed_bump") {
             road_type = RoadType::speed_bump;
         }
-        // Iterate over every line segment
-        for (int i = 0; i < road["geometry"].size() - 1; i++) {
-            laneGeometry.emplace_back(road["geometry"][i]["x"], road["geometry"][i]["y"]);
-            geometry::Vector2D startPoint(road["geometry"][i]["x"], road["geometry"][i]["y"]);
-            geometry::Vector2D endPoint(road["geometry"][i + 1]["x"], road["geometry"][i + 1]["y"]);
-            // track the minimum boundaries
-            if (first) {
-                minX = maxX = startPoint.x();
-                minY = maxY = startPoint.y();
-                first = false;
-            } else {
-                minX = std::min(minX, std::min(startPoint.x(), endPoint.x()));
-                maxX = std::max(maxX, std::max(startPoint.x(), endPoint.x()));
-                minY = std::min(minY, std::min(startPoint.y(), endPoint.y()));
-                maxY = std::max(maxY, std::max(startPoint.y(), endPoint.y()));
-            }
-            // We only want to store the line segments for collision checking if collisions are possible
-            if (checkForCollisions == true) {
-                geometry::LineSegment* lineSegment = new geometry::LineSegment(startPoint, endPoint);
-                lineSegments.push_back(std::shared_ptr<geometry::LineSegment>(lineSegment));
+        // we have to handle stop signs differently
+        if (road_type == RoadType::stop_sign){
+            stopSigns.push_back(geometry::Vector2D(road["geometry"][0]["x"], road["geometry"][0]["y"]));
+        }
+        else{
+            // Iterate over every line segment
+            for (int i = 0; i < road["geometry"].size() - 1; i++) {
+                laneGeometry.emplace_back(road["geometry"][i]["x"], road["geometry"][i]["y"]);
+                geometry::Vector2D startPoint(road["geometry"][i]["x"], road["geometry"][i]["y"]);
+                geometry::Vector2D endPoint(road["geometry"][i + 1]["x"], road["geometry"][i + 1]["y"]);
+                // track the minimum boundaries
+                if (first) {
+                    minX = maxX = startPoint.x();
+                    minY = maxY = startPoint.y();
+                    first = false;
+                } else {
+                    minX = std::min(minX, std::min(startPoint.x(), endPoint.x()));
+                    maxX = std::max(maxX, std::max(startPoint.x(), endPoint.x()));
+                    minY = std::min(minY, std::min(startPoint.y(), endPoint.y()));
+                    maxY = std::max(maxY, std::max(startPoint.y(), endPoint.y()));
+                }
+                // We only want to store the line segments for collision checking if collisions are possible
+                if (checkForCollisions == true) {
+                    geometry::LineSegment* lineSegment = new geometry::LineSegment(startPoint, endPoint);
+                    lineSegments.push_back(std::shared_ptr<geometry::LineSegment>(lineSegment));
+                }
             }
         }
         // Now construct the entire roadline object which is what will be used for drawing
@@ -333,6 +345,13 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     // }
     for (const auto& object : roadLines) {
         target.draw(*object, states);
+    }
+    for (geometry::Vector2D stopSign : stopSigns){
+        float radius = 3;
+        sf::CircleShape hexagon(radius, 6);
+        hexagon.setFillColor(sf::Color::Red);
+        hexagon.setPosition(utils::ToVector2f(stopSign));
+        target.draw(hexagon, states);
     }
     for (const auto& object : vehicles) {
         target.draw(*object, states);
@@ -581,6 +600,13 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
 
         for (const auto& obj : roadLines) {
             texture->draw(*obj, renderTransform);
+        }
+        for (geometry::Vector2D stopSign : stopSigns){
+            float radius = 3;
+            sf::CircleShape hexagon(radius, 6);
+            hexagon.setFillColor(sf::Color::Red);
+            hexagon.setPosition(utils::ToVector2f(stopSign));
+            texture->draw(hexagon, renderTransform);
         }
 
         if (renderGoals) {
