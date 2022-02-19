@@ -2,13 +2,15 @@
 
 namespace nocturne {
 
-Simulation::Simulation(std::string scenarioFilePath)
-    : scenario(new Scenario(scenarioFilePath)),
+Simulation::Simulation(std::string scenarioFilePath, int startTime, bool useNonVehicles)
+    : scenario(new Scenario(scenarioFilePath, startTime, useNonVehicles)),
       scenarioPath(scenarioFilePath),
       renderTransform(),
       renderWindow(nullptr),
       font(),
-      clock() {
+      clock(),
+      startTime(startTime),
+      useNonVehicles(useNonVehicles) {
   renderTransform.scale(1, -1);  // horizontal flip
 }
 
@@ -98,7 +100,7 @@ void Simulation::updateView(float padding) const {
 
 void Simulation::reset() {
   Object::nextID = 0;
-  scenario = new Scenario(scenarioPath);
+  scenario = new Scenario(scenarioPath, startTime, useNonVehicles);
 }
 
 void Simulation::saveScreenshot() {

@@ -17,8 +17,7 @@ namespace nocturne {
 
 class Simulation {
  public:
-  Simulation(std::string scenarioFilePath = "");
-
+  Simulation(std::string scenarioFilePath = "", int startTime=0, bool useNonVehicles=true);
   void reset();
   void step(float dt);
   void render();
@@ -33,6 +32,8 @@ class Simulation {
   Scenario* getScenario() const;
 
  private:
+  int startTime;
+  bool useNonVehicles;
   Scenario* scenario;
 
   sf::RenderWindow* renderWindow;

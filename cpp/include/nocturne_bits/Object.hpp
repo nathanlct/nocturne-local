@@ -88,6 +88,7 @@ class Object : public sf::Drawable, public geometry::AABBInterface {
   nocturne::geometry::Vector2D goalPosition;
 
   sf::Color color;
+  float viewRadius = 120; // TODO(ev) hardcoding
 };
 
 }  // namespace nocturne

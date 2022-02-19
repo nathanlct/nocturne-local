@@ -9,6 +9,10 @@ void init_scenario(py::module& m) {
   m.doc() = "nocturne documentation for class Scenario";
 
   py::class_<nocturne::Scenario>(m, "Scenario")
+      .def(py::init<std::string, int, bool>(), "Constructor for Scenario",
+           py::arg("path") = "",
+           py::arg("startTime") = 0,
+           py::arg("useNonVehicles") = true)
       .def("getVehicles", &nocturne::Scenario::getVehicles)
       .def("getRoadLines", &nocturne::Scenario::getRoadLines)
       .def("getCone", &nocturne::Scenario::getCone,

@@ -1,12 +1,12 @@
 """Construct a scenarios.json file from a waymos protobuf
 """
 
+from collections import defaultdict
 import math
 import json
 
 from typing import Any, Dict, Iterator, Optional
 
-import numpy as np
 import tensorflow as tf
 
 from waymo_open_dataset.protos import map_pb2, scenario_pb2
@@ -22,16 +22,23 @@ _WAYMO_OBJECT_STR = {
 }
 
 _WAYMO_ROAD_STR = {
-    scenario_pb2.DynamicMapState
+    map_pb2.TrafficSignalLaneState.LANE_STATE_UNKNOWN: "unknown",
+    map_pb2.TrafficSignalLaneState.LANE_STATE_ARROW_STOP: "arrow_stop",
+    map_pb2.TrafficSignalLaneState.LANE_STATE_ARROW_CAUTION: "arrow_caution",
+    map_pb2.TrafficSignalLaneState.LANE_STATE_ARROW_GO: "arrow_go",
+    map_pb2.TrafficSignalLaneState.LANE_STATE_STOP: "stop",
+    map_pb2.TrafficSignalLaneState.LANE_STATE_CAUTION: "caution",
+    map_pb2.TrafficSignalLaneState.LANE_STATE_GO: "go",
+    map_pb2.TrafficSignalLaneState.LANE_STATE_FLASHING_STOP: "flashing_stop",
+    map_pb2.TrafficSignalLaneState.LANE_STATE_FLASHING_CAUTION: "flashing_caution",
 }
-
 
 def _parse_object_state(states: scenario_pb2.ObjectState, 
                         final_state: scenario_pb2.ObjectState) -> Dict[str, Any]:
     return {
         "position": {
-            "x": [state.center_x if state.valid else ERR_VAL for state in states ],
-            "y": [state.center_y if state.valid else ERR_VAL for state in states ],
+            "x": [state.center_x if state.valid else ERR_VAL for state in states],
+            "y": [state.center_y if state.valid else ERR_VAL for state in states],
         },
         "width": states[0].width,
         "length": states[0].length,
@@ -47,6 +54,12 @@ def _parse_object_state(states: scenario_pb2.ObjectState,
         }
     }
 
+def _init_tl_object(track):
+    returned_dict = {}
+    for lane_state in track.lane_states:
+        returned_dict[lane_state.lane] = {'state': _WAYMO_ROAD_STR[lane_state.state],
+                                          'x': lane_state.stop_point.x, 'y': lane_state.stop_point.y}
+    return returned_dict
 
 def _init_object(track: scenario_pb2.Track) -> Optional[Dict[str, Any]]:
     final_valid_index = 0
@@ -114,11 +127,25 @@ def waymo_to_scenario(scenario_path: str,
         road = _init_road(map_feature)
         if road is not None:
             roads.append(road)
+        
+    tl_dict = defaultdict(lambda: {'state': [], 'x': [], 'y': []})
+    all_keys = ['state', 'x', 'y']
+    for dynamic_map_state in protobuf.dynamic_map_states:
+        traffic_light_dict = _init_tl_object(dynamic_map_state)
+        for id, value in traffic_light_dict.items():
+            try:
+                for state_key in all_keys:
+                    tl_dict[id][state_key].append(value[state_key])
+            except:
+                import ipdb; ipdb.set_trace()
+            
+
 
     scenario = {
         "name": scenario_path.split('/')[-1],
         "objects": objects,
         "roads": roads,
+        "tl_states": tl_dict
     }
     with open(scenario_path, "w") as f:
         json.dump(scenario, f)

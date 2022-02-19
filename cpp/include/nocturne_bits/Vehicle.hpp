@@ -17,8 +17,9 @@ class Vehicle : public Object {
 
   virtual void step(float dt);
   float viewRadius = 120; // TODO(ev) hardcoding
+  std::string type = "Vehicle";
 
- private:
+ protected:
   void kinematicsUpdate(float dt);
   void dynamicsUpdate(float dt);
 
@@ -27,6 +28,18 @@ class Vehicle : public Object {
 
   float lateralSpeed;
   float yawRate;
+};
+
+class Pedestrian : public Vehicle{
+public:
+  using Vehicle :: Vehicle;
+  std::string type = "Pedestrian";
+};
+
+class Cyclist : public Vehicle{
+public:
+  using Vehicle :: Vehicle;
+  std::string type = "Cyclist";
 };
 
 }  // namespace nocturne

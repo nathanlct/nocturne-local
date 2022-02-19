@@ -14,7 +14,6 @@ Vehicle::Vehicle(const geometry::Vector2D& position, float width, float length,
       steeringAction(0),
       lateralSpeed(lateralSpeed),
       yawRate(0) {
-  type = "Vehicle";
 }
 
 void Vehicle::step(float dt) {

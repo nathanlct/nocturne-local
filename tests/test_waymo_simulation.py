@@ -42,12 +42,10 @@ plt.figure()
 plt.imshow(img)
 plt.savefig('fullEgoImgNoObscure.png')
 
-# step a vehicle a bunch of times to confirm that stepping works
+# step a vehicle once with huge accel to confirm that stepping works
 print('agent position before step', scenario.getVehicles()[3].getPosition().x, scenario.getVehicles()[3].getPosition().y)
-scenario.getVehicles()[0].setAccel(1.5)
-for i in range(100):
-    sim.step(0.2)
-    # print('accel is ', scenario.getVehicles()[0].getAccel())
+scenario.getVehicles()[0].setAccel(100)
+sim.step(0.2)
 print('agent position after step', scenario.getVehicles()[3].getPosition().x, scenario.getVehicles()[3].getPosition().y)  
 
 img = np.array(scenario.getCone(scenario.getVehicles()[3], 1.58, 0.0), copy=False)
@@ -97,7 +95,7 @@ assert veh2.getCollided() == False, 'vehicle2 should not have collided'
 # Road Collision checking
 ################################
 # check if we place it onto one of the road points that there should be a collision
-
+print('entering road line - vehicle collision checking')
 # find a road edge 
 colliding_road_line = None
 for roadline in scenario.getRoadLines():
@@ -161,3 +159,35 @@ plt.figure()
 plt.imshow(cone)
 plt.savefig('line_veh_check3.png')
 assert veh0.getCollided() == False, 'a non-colliding object shouldn\'t register collisions'
+
+
+######################
+# Waymo Scene Construction
+######################
+sim = Simulation(scenarioPath='./nocturne_utils/output.json', startTime=0)
+scenario = sim.getScenario()
+
+img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 0.0, False), copy=False)
+plt.figure()
+plt.imshow(img)
+plt.savefig('t0.png')
+
+# check that initializing things to a different time leads to a different
+# image
+sim = Simulation(scenarioPath='./nocturne_utils/output.json', startTime=20)
+scenario = sim.getScenario()
+
+img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 0.0, False), copy=False)
+plt.figure()
+plt.imshow(img)
+plt.savefig('t20.png')
+
+# check that initializing things with and without pedestrians leads to a different
+# image
+sim = Simulation(scenarioPath='./nocturne_utils/output.json', startTime=20, useNonVehicles=False)
+scenario = sim.getScenario()
+
+img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 0.0, False), copy=False)
+plt.figure()
+plt.imshow(img)
+plt.savefig('t20_no_peds.png')

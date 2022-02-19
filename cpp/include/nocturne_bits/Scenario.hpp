@@ -8,6 +8,7 @@
 
 #include "ImageMatrix.hpp"
 #include "Object.hpp"
+#include "TrafficLight.hpp"
 #include "RoadLine.hpp"
 #include "Vehicle.hpp"
 #include "geometry/bvh.h"
@@ -21,14 +22,16 @@ using json = nlohmann::json;
 
 class Scenario : public sf::Drawable {
  public:
-  Scenario(std::string path);
+  Scenario(std::string path, int startTime, bool useNonVehicles);
 
   void loadScenario(std::string path);
-  int currTime = 0; // TODO(ev) this should be passed in rather than defined here
 
   void step(float dt);
 
   std::vector<std::shared_ptr<Vehicle>> getVehicles();
+  std::vector<std::shared_ptr<Pedestrian>> getPedestrians();
+  std::vector<std::shared_ptr<Cyclist>> getCyclists();
+  std::vector<std::shared_ptr<Object>> getRoadObjects();
   std::vector<std::shared_ptr<RoadLine>> getRoadLines();
 
   void removeVehicle(Vehicle* object);
@@ -36,7 +39,7 @@ class Scenario : public sf::Drawable {
   sf::FloatRect getRoadNetworkBoundaries() const;
 
   ImageMatrix getCone(
-      Vehicle* object,
+      Object* object,
       float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
       float headTilt = 0.0f,
       bool obscuredView = true);
@@ -60,11 +63,18 @@ class Scenario : public sf::Drawable {
  private:
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
+  int currTime;
+  bool useNonVehicles; // used to turn off pedestrians and cyclists
+
   std::string name;
   std::vector<std::shared_ptr<geometry::LineSegment>> lineSegments;
   std::vector<std::shared_ptr<RoadLine>> roadLines;
   std::vector<std::shared_ptr<Vehicle>> vehicles;
+  std::vector<std::shared_ptr<Pedestrian>> pedestrians;
+  std::vector<std::shared_ptr<Cyclist>> cyclists;
+  std::vector<std::shared_ptr<Object>> roadObjects;
   std::vector<geometry::Vector2D> stopSigns;
+  std::vector<std::shared_ptr<TrafficLight>> trafficLights;
 
   sf::RenderTexture* imageTexture;
   sf::FloatRect roadNetworkBounds;
