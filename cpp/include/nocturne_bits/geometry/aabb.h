@@ -28,6 +28,11 @@ class AABB {
 
   float Area() const { return (MaxX() - MinX()) * (MaxY() - MinY()); }
 
+  bool Contains(const Vector2D& vec) const {
+    return MinX() <= vec.x() && MaxX() >= vec.x() && MinY() <= vec.y() &&
+           MaxY() >= vec.y();
+  }
+
   bool Contains(const AABB& other) const {
     return MinX() <= other.MinX() && MaxX() >= other.MaxX() &&
            MinY() <= other.MinY() && MaxY() >= other.MaxY();
@@ -50,6 +55,8 @@ class AABB {
   Vector2D min_;
   Vector2D max_;
 };
+
+inline float Distance(const AABB& a, const AABB& b) { return (a || b).Area(); }
 
 }  // namespace geometry
 }  // namespace nocturne
