@@ -132,7 +132,7 @@ void Scenario::loadScenario(std::string path) {
         } else if (type == "speed_bump") {
             road_type = RoadType::speed_bump;
         }
-        // we have to handle stop signs differently
+        // we have to handle stop signs differently from other lane types
         if (road_type == RoadType::stop_sign){
             stopSigns.push_back(geometry::Vector2D(road["geometry"][0]["x"], road["geometry"][0]["y"]));
         }
@@ -180,8 +180,11 @@ void Scenario::loadScenario(std::string path) {
 
     // Now handle the traffic light states
     for (const auto& tl : j["tl_states"]) {
-        float x_pos = float(tl["x"][currTime]);
-        float y_pos = float(tl["y"][currTime]);
+        // Lane positions don't move so we can just use the first
+        // element
+        float x_pos = float(tl["x"][0]);
+        float y_pos = float(tl["y"][0]);
+        std::vector<int> validTimes;
         std::vector<LightState> lightStates;
 
         for(int i = 0; i < tl["state"].size(); i++){
@@ -215,8 +218,9 @@ void Scenario::loadScenario(std::string path) {
                 lightState = LightState::flashing_caution;
             }
             lightStates.push_back(lightState);
+            validTimes.push_back(int(tl["time_index"][i]));
         }
-        TrafficLight* t_light = new TrafficLight(x_pos, y_pos, lightStates, currTime);
+        TrafficLight* t_light = new TrafficLight(x_pos, y_pos, lightStates, currTime, validTimes);
         auto ptr = std::shared_ptr<TrafficLight>(t_light);
         trafficLights.push_back(ptr);
     }
@@ -379,8 +383,6 @@ std::vector<float> Scenario::getExpertAction(int objID, int timeIdx) {
     float steeringAngle;
     if (speed > 0.0) {
         float temp = dHeading / speed * lengths[objID];
-        std::cout << std::to_string(temp) << std::endl;
-        std::cout << std::to_string(asin(temp)) << std::endl;
         steeringAngle = asin(dHeading / speed * lengths[objID]);
     } else {
         steeringAngle = 0.0;
@@ -606,8 +608,12 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle,
   // light state onto the lane. It should never be obscured.
   // Once we figure out where the traffic light actually is,
   // we can remove this
-  for (const auto& object : trafficLights){
-        texture->draw(*object);
+    sf::Transform renderTransform2;
+    renderTransform2.scale(1, -1); 
+
+    texture->setView(view);
+    for (const auto& object : trafficLights){
+        texture->draw(*object, renderTransform2);
     }
 
   texture->display();

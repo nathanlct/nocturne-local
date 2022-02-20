@@ -128,19 +128,18 @@ def waymo_to_scenario(scenario_path: str,
         if road is not None:
             roads.append(road)
         
-    tl_dict = defaultdict(lambda: {'state': [], 'x': [], 'y': []})
+    tl_dict = defaultdict(lambda: {'state': [], 'x': [], 'y': [],
+                                   'time_index': []})
     all_keys = ['state', 'x', 'y']
+    i = 0
     for dynamic_map_state in protobuf.dynamic_map_states:
         traffic_light_dict = _init_tl_object(dynamic_map_state)
         for id, value in traffic_light_dict.items():
-            try:
-                for state_key in all_keys:
-                    tl_dict[id][state_key].append(value[state_key])
-            except:
-                import ipdb; ipdb.set_trace()
+            for state_key in all_keys:
+                tl_dict[id][state_key].append(value[state_key])
+            tl_dict[id]['time_index'].append(i)
+        i += 1
             
-
-
     scenario = {
         "name": scenario_path.split('/')[-1],
         "objects": objects,
