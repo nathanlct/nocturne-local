@@ -180,6 +180,7 @@ void Scenario::loadScenario(std::string path) {
 
     // Now handle the traffic light states
     for (const auto& tl : j["tl_states"]) {
+        maxEnvTime = 90;
         // Lane positions don't move so we can just use the first
         // element
         float x_pos = float(tl["x"][0]);
@@ -521,29 +522,6 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle,
                   sf::TriangleFan);  //, renderTransform);
   }
 
-  // draw cone
-  if (viewAngle < 2.0f * geometry::utils::kPi) {
-    std::vector<sf::Vertex> innerCircle;  // todo precompute just once
-
-    innerCircle.push_back(
-        sf::Vertex(sf::Vector2f(0.0f, 0.0f), sf::Color::Black));
-    float startAngle =
-        geometry::utils::kPi / 2.0f + headTilt + viewAngle / 2.0f;
-    float endAngle = geometry::utils::kPi / 2.0f + headTilt +
-                     2.0f * geometry::utils::kPi - viewAngle / 2.0f;
-
-    int nPoints = 80;  // todo function of angle
-    for (int i = 0; i < nPoints; ++i) {
-      float angle = startAngle + i * (endAngle - startAngle) / (nPoints - 1);
-      geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
-      innerCircle.push_back(
-          sf::Vertex(utils::ToVector2f(pt), sf::Color::Black));
-    }
-
-    texture->draw(&innerCircle[0], innerCircle.size(), sf::TriangleFan,
-                  renderTransform);
-  }
-
   renderTransform.rotate(-geometry::utils::Degrees(object->getHeading()) +
                          90.0f);
 
@@ -608,14 +586,43 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle,
   // light state onto the lane. It should never be obscured.
   // Once we figure out where the traffic light actually is,
   // we can remove this
-    sf::Transform renderTransform2;
-    renderTransform2.scale(1, -1); 
+  sf::Transform renderTransform2;
+  renderTransform2.scale(1, -1); 
 
-    texture->setView(view);
-    for (const auto& object : trafficLights){
-        texture->draw(*object, renderTransform2);
+  texture->setView(view);
+  for (const auto& object : trafficLights){
+      texture->draw(*object, renderTransform2);
+  }
+
+  texture->display();
+
+  // draw cone
+  texture->setView(
+    sf::View(sf::Vector2f(0.0f, 0.0f), sf::Vector2f(texture->getSize())));
+
+  renderTransform.rotate(geometry::utils::Degrees(object->getHeading()) -
+                    90.0f);
+  if (viewAngle < 2.0f * geometry::utils::kPi) {
+    std::vector<sf::Vertex> innerCircle;  // todo precompute just once
+
+    innerCircle.push_back(
+        sf::Vertex(sf::Vector2f(0.0f, 0.0f), sf::Color::Black));
+    float startAngle =
+        geometry::utils::kPi / 2.0f + headTilt + viewAngle / 2.0f;
+    float endAngle = geometry::utils::kPi / 2.0f + headTilt +
+                     2.0f * geometry::utils::kPi - viewAngle / 2.0f;
+
+    int nPoints = 80;  // todo function of angle
+    for (int i = 0; i < nPoints; ++i) {
+      float angle = startAngle + i * (endAngle - startAngle) / (nPoints - 1);
+      geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
+      innerCircle.push_back(
+          sf::Vertex(utils::ToVector2f(pt), sf::Color::Black));
     }
 
+    texture->draw(&innerCircle[0], innerCircle.size(), sf::TriangleFan,
+                  renderTransform);
+  }
   texture->display();
 
   sf::Image img = texture->getTexture().copyToImage();

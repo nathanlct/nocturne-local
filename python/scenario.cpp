@@ -14,6 +14,7 @@ void init_scenario(py::module& m) {
            py::arg("startTime") = 0,
            py::arg("useNonVehicles") = true)
       .def("getVehicles", &nocturne::Scenario::getVehicles)
+      .def("getMaxEnvTime", &nocturne::Scenario::getMaxEnvTime)
       .def("getRoadLines", &nocturne::Scenario::getRoadLines)
       .def("getCone", &nocturne::Scenario::getCone,
           "Draw a cone representing the objects that the agent can see",

@@ -36,6 +36,8 @@ class Scenario : public sf::Drawable {
 
   void removeVehicle(Vehicle* object);
 
+  int getMaxEnvTime() {return maxEnvTime;}
+
   sf::FloatRect getRoadNetworkBoundaries() const;
 
   ImageMatrix getCone(
@@ -64,6 +66,11 @@ class Scenario : public sf::Drawable {
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
   int currTime;
+  int maxEnvTime = int(1e5);// the maximum time an env can run for 
+                            // set to a big number so that it never overrides the RL env
+                            // however, if a traffic light is in the scene then we 
+                            // set it to 90 so that the episode never runs past
+                            // the maximum length of available traffic light data
   bool useNonVehicles; // used to turn off pedestrians and cyclists
 
   std::string name;
