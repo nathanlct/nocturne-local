@@ -101,7 +101,9 @@ void Scenario::loadScenario(std::string path) {
                 cyclists.push_back(ptr);
                 roadObjects.push_back(ptr);
             }
-            else {
+            // No point in printing this if we are not using non-vehicles
+            // TODO(ev) we should include the UNKNOWN type objects
+            else if (useNonVehicles){
                 std::cerr << "Unknown object type: " << type << std::endl;
             }
         }
