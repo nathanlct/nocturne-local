@@ -8,12 +8,12 @@
 
 #include "ImageMatrix.hpp"
 #include "Object.hpp"
-#include "TrafficLight.hpp"
 #include "RoadLine.hpp"
+#include "TrafficLight.hpp"
 #include "Vehicle.hpp"
 #include "geometry/bvh.h"
-#include "geometry/line_segment.h"
 #include "geometry/geometry_utils.h"
+#include "geometry/line_segment.h"
 #include "json.hpp"
 
 namespace nocturne {
@@ -36,19 +36,19 @@ class Scenario : public sf::Drawable {
 
   void removeVehicle(Vehicle* object);
 
-  int getMaxEnvTime() {return maxEnvTime;}
+  int getMaxEnvTime() { return maxEnvTime; }
 
   sf::FloatRect getRoadNetworkBoundaries() const;
 
   ImageMatrix getCone(
       Object* object,
       float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
-      float headTilt = 0.0f,
-      bool obscuredView = true);
+      float headTilt = 0.0f, bool obscuredView = true);
   ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
 
   bool checkForCollision(const Object* object1, const Object* object2);
-  bool checkForCollision(const Object* object, const geometry::LineSegment* segment) ;
+  bool checkForCollision(const Object* object,
+                         const geometry::LineSegment* segment);
 
   // bool isVehicleOnRoad(const Object& object) const;
   // bool isPointOnRoad(float posX, float posY) const;
@@ -57,21 +57,26 @@ class Scenario : public sf::Drawable {
                      bool checkForCollisions, float goalPosX, float goalPosY);
 
   // query expert data
-  std::vector<float> getExpertAction(int objID, int timeIdx); // return the expert action of object at time timeIDX
-  bool hasExpertAction(int objID, int timeIdx); // given the currIndex, figure out if we actually can compute
-                                                // an expert action given the valid vector
+  std::vector<float> getExpertAction(
+      int objID,
+      int timeIdx);  // return the expert action of object at time timeIDX
+  bool hasExpertAction(
+      int objID,
+      int timeIdx);  // given the currIndex, figure out if we actually can
+                     // compute an expert action given the valid vector
   std::vector<bool> getValidExpertStates(int objID);
 
  private:
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
   int currTime;
-  int maxEnvTime = int(1e5);// the maximum time an env can run for 
-                            // set to a big number so that it never overrides the RL env
-                            // however, if a traffic light is in the scene then we 
-                            // set it to 90 so that the episode never runs past
-                            // the maximum length of available traffic light data
-  bool useNonVehicles; // used to turn off pedestrians and cyclists
+  int maxEnvTime =
+      int(1e5);  // the maximum time an env can run for
+                 // set to a big number so that it never overrides the RL env
+                 // however, if a traffic light is in the scene then we
+                 // set it to 90 so that the episode never runs past
+                 // the maximum length of available traffic light data
+  bool useNonVehicles;  // used to turn off pedestrians and cyclists
 
   std::string name;
   std::vector<std::shared_ptr<geometry::LineSegment>> lineSegments;
