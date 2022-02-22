@@ -8,7 +8,7 @@ import time
 
 os.environ["DISPLAY"] = ":0.0"
 # sim = Simulation(scenarioFilePath='./nocturne_utils/output.json', startTime=10, showPeds=True, showCyclists=True)
-sim = Simulation(scenario_path='/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json/tfrecord-00008-of-01000.json',)
+sim = Simulation(scenario_path='/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json/tfrecord-00002-of-01000_2.json',)
 scenario = sim.getScenario()
 
 print('all veh IDS are', [veh.getID() for veh in scenario.getVehicles()])

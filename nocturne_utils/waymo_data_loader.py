@@ -1,6 +1,5 @@
-import glob
 from pathlib import Path
-import os
+import time
 
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
@@ -20,18 +19,19 @@ class WaymoDataset(Dataset):
         return self.num_samples
 
     def __getitem__(self, idx):
-        # TODO(ev) there might not be a valid vehicle?
+        t = time.time()
         # construct a scenario
         scenario_path = self.files[idx]
-        # sample a start time for the scenario
-        start_time = np.random.randint(low=0, high=90)
+        # sample a start time for the scenario (need a non-zero time for now to have expert actions)
+        start_time = np.random.randint(low=1, high=90)
 
         sim = Simulation(str(scenario_path), start_time=start_time)
         scenario = sim.getScenario()
         vehicles = scenario.getVehicles()
         # not all the vehicles have expert actions at every time-step
         valid_vehs = [veh for veh in vehicles if scenario.hasExpertAction(veh.getID(), start_time)]
-        veh_id = valid_vehs[np.random.randint(low=0, high=len(valid_vehs))].getID()
+        int_val = np.random.randint(low=0, high=len(valid_vehs))
+        veh_id = valid_vehs[int_val].getID()
         # TODO(ev) put this in when complete
         # veh_state = sim.scenario.getState(veh_id)
         veh_state = np.zeros(2)
