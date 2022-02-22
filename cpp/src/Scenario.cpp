@@ -43,7 +43,6 @@ void Scenario::loadScenario(std::string path) {
   data >> j;
 
   name = j["name"];
-  std::cout << "name is " + name << std::endl;
 
   for (const auto& obj : j["objects"]) {
     std::string type = obj["type"];
