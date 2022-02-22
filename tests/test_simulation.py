@@ -13,7 +13,7 @@ scenario = sim.getScenario()
 sim.step(0.1)
 
 
-objects = scenario.getRoadObjects()
+objects = scenario.getRoadLines()
 print(objects)
 
 cone = np.array(scenario.getCone(scenario.getVehicles()[0], 3.14/2.0, 0.0), copy=False)

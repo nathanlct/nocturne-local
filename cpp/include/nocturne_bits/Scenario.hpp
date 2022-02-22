@@ -8,10 +8,12 @@
 
 #include "ImageMatrix.hpp"
 #include "Object.hpp"
-#include "Road.hpp"
+#include "RoadLine.hpp"
+#include "TrafficLight.hpp"
 #include "Vehicle.hpp"
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
+#include "geometry/line_segment.h"
 #include "json.hpp"
 
 namespace nocturne {
@@ -20,44 +22,83 @@ using json = nlohmann::json;
 
 class Scenario : public sf::Drawable {
  public:
-  Scenario(std::string path);
+  Scenario(std::string path, int startTime, bool useNonVehicles);
 
   void loadScenario(std::string path);
 
   void step(float dt);
 
-  std::vector<std::shared_ptr<Object>> getRoadObjects();
   std::vector<std::shared_ptr<Vehicle>> getVehicles();
+  std::vector<std::shared_ptr<Pedestrian>> getPedestrians();
+  std::vector<std::shared_ptr<Cyclist>> getCyclists();
+  std::vector<std::shared_ptr<Object>> getRoadObjects();
+  std::vector<std::shared_ptr<RoadLine>> getRoadLines();
 
-  void removeObject(Object* object);
+  void removeVehicle(Vehicle* object);
+
+  int getMaxEnvTime() { return maxEnvTime; }
 
   sf::FloatRect getRoadNetworkBoundaries() const;
 
   ImageMatrix getCone(
       Object* object,
       float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
-      float headTilt = 0.0f);
+      float headTilt = 0.0f, bool obscuredView = true);
   ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
 
   bool checkForCollision(const Object* object1, const Object* object2);
+  bool checkForCollision(const Object* object,
+                         const geometry::LineSegment* segment);
 
-  bool isVehicleOnRoad(const Object& object) const;
-  bool isPointOnRoad(float posX, float posY) const;
+  // bool isVehicleOnRoad(const Object& object) const;
+  // bool isPointOnRoad(float posX, float posY) const;
   void createVehicle(float posX, float posY, float width, float length,
                      float heading, bool occludes, bool collides,
                      bool checkForCollisions, float goalPosX, float goalPosY);
 
+  // query expert data
+  std::vector<float> getExpertAction(
+      int objID,
+      int timeIdx);  // return the expert action of object at time timeIDX
+  bool hasExpertAction(
+      int objID,
+      int timeIdx);  // given the currIndex, figure out if we actually can
+                     // compute an expert action given the valid vector
+  std::vector<bool> getValidExpertStates(int objID);
+
  private:
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
+  int currTime;
+  int maxEnvTime =
+      int(1e5);  // the maximum time an env can run for
+                 // set to a big number so that it never overrides the RL env
+                 // however, if a traffic light is in the scene then we
+                 // set it to 90 so that the episode never runs past
+                 // the maximum length of available traffic light data
+  bool useNonVehicles;  // used to turn off pedestrians and cyclists
+
   std::string name;
-  std::vector<std::shared_ptr<Object>> roadObjects;
+  std::vector<std::shared_ptr<geometry::LineSegment>> lineSegments;
+  std::vector<std::shared_ptr<RoadLine>> roadLines;
   std::vector<std::shared_ptr<Vehicle>> vehicles;
-  std::vector<std::shared_ptr<Road>> roads;
+  std::vector<std::shared_ptr<Pedestrian>> pedestrians;
+  std::vector<std::shared_ptr<Cyclist>> cyclists;
+  std::vector<std::shared_ptr<Object>> roadObjects;
+  std::vector<geometry::Vector2D> stopSigns;
+  std::vector<std::shared_ptr<TrafficLight>> trafficLights;
 
   sf::RenderTexture* imageTexture;
-
+  sf::FloatRect roadNetworkBounds;
   geometry::BVH bvh_;
+  geometry::BVH line_segment_bvh_;
+
+  // expert data
+  std::vector<std::vector<geometry::Vector2D>> expertTrajectories;
+  std::vector<std::vector<geometry::Vector2D>> expertSpeeds;
+  std::vector<std::vector<float>> expertHeadings;
+  std::vector<float> lengths;
+  std::vector<std::vector<bool>> expertValid;
 };
 
 }  // namespace nocturne
