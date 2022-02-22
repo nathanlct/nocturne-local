@@ -52,9 +52,9 @@ class Scenario : public sf::Drawable {
 
   // bool isVehicleOnRoad(const Object& object) const;
   // bool isPointOnRoad(float posX, float posY) const;
-  void createVehicle(float posX, float posY, float width, float length,
-                     float heading, bool occludes, bool collides,
-                     bool checkForCollisions, float goalPosX, float goalPosY);
+//   void createVehicle(float posX, float posY, float width, float length,
+//                      float heading, bool occludes, bool collides,
+//                      bool checkForCollisions, float goalPosX, float goalPosY);
 
   // query expert data
   std::vector<float> getExpertAction(
@@ -70,6 +70,7 @@ class Scenario : public sf::Drawable {
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 
   int currTime;
+  int IDCounter = 0;
   int maxEnvTime =
       int(1e5);  // the maximum time an env can run for
                  // set to a big number so that it never overrides the RL env

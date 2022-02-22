@@ -25,7 +25,7 @@ void init_scenario(py::module& m) {
            "Return a numpy array of dimension (w, h, 4) representing the scene",
            py::arg("object") = nullptr, py::arg("render_goals") = false)
       .def("removeVehicle", &nocturne::Scenario::removeVehicle)
-      .def("createVehicle", &nocturne::Scenario::createVehicle)
+      // .def("createVehicle", &nocturne::Scenario::createVehicle)
       .def("hasExpertAction", &nocturne::Scenario::hasExpertAction)
       .def("getExpertAction", &nocturne::Scenario::getExpertAction)
       .def("getValidExpertStates", &nocturne::Scenario::getValidExpertStates);

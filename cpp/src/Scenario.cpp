@@ -20,8 +20,8 @@ Scenario::Scenario(std::string path, int startTime, bool useNonVehicles)
       expertTrajectories(),
       expertSpeeds(),
       expertHeadings(),
-      lengths(),
       expertValid(),
+      lengths(),
       currTime(startTime),
       useNonVehicles(useNonVehicles) {
   if (path.size() > 0) {
@@ -93,6 +93,7 @@ void Scenario::loadScenario(std::string path) {
       if (type == "vehicle") {
         Vehicle* veh = new Vehicle(pos, width, length, heading, occludes,
                                    collides, checkForCollisions, goalPos,
+                                   IDCounter,
                                    localExpertSpeeds[currTime].Norm());
         auto ptr = std::shared_ptr<Vehicle>(veh);
         vehicles.push_back(ptr);
@@ -100,6 +101,7 @@ void Scenario::loadScenario(std::string path) {
       } else if (type == "pedestrian" && useNonVehicles) {
         Pedestrian* ped = new Pedestrian(pos, width, length, heading, occludes,
                                          collides, checkForCollisions, goalPos,
+                                         IDCounter,
                                          localExpertSpeeds[currTime].Norm());
         auto ptr = std::shared_ptr<Pedestrian>(ped);
         pedestrians.push_back(ptr);
@@ -107,6 +109,7 @@ void Scenario::loadScenario(std::string path) {
       } else if (type == "cyclist" && useNonVehicles) {
         Cyclist* cyclist = new Cyclist(pos, width, length, heading, occludes,
                                        collides, checkForCollisions, goalPos,
+                                       IDCounter,
                                        localExpertSpeeds[currTime].Norm());
         auto ptr = std::shared_ptr<Cyclist>(cyclist);
         cyclists.push_back(ptr);
@@ -117,6 +120,7 @@ void Scenario::loadScenario(std::string path) {
       else if (useNonVehicles) {
         std::cerr << "Unknown object type: " << type << std::endl;
       }
+      IDCounter++;
     }
   }
 
@@ -242,16 +246,16 @@ void Scenario::loadScenario(std::string path) {
   }
 }
 
-void Scenario::createVehicle(float posX, float posY, float width, float length,
-                             float heading, bool occludes, bool collides,
-                             bool checkForCollisions, float goalPosX,
-                             float goalPosY) {
-  Vehicle* veh = new Vehicle(geometry::Vector2D(posX, posY), width, length,
-                             heading, occludes, collides, checkForCollisions,
-                             geometry::Vector2D(goalPosX, goalPosY));
-  auto ptr = std::shared_ptr<Vehicle>(veh);
-  vehicles.push_back(ptr);
-}
+// void Scenario::createVehicle(float posX, float posY, float width, float length,
+//                              float heading, bool occludes, bool collides,
+//                              bool checkForCollisions, float goalPosX,
+//                              float goalPosY) {
+//   Vehicle* veh = new Vehicle(geometry::Vector2D(posX, posY), width, length,
+//                              heading, occludes, collides, checkForCollisions,
+//                              geometry::Vector2D(goalPosX, goalPosY));
+//   auto ptr = std::shared_ptr<Vehicle>(veh);
+//   vehicles.push_back(ptr);
+// }
 
 void Scenario::step(float dt) {
   currTime += int(dt / 0.1);  // TODO(ev) hardcoding

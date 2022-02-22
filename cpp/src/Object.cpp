@@ -5,11 +5,10 @@
 
 namespace nocturne {
 
-int Object::nextID = 0;
-
 Object::Object(const geometry::Vector2D& position, float width, float length,
                float heading, bool occludes, bool collides,
-               bool checkForCollisions, const geometry::Vector2D& goalPosition)
+               bool checkForCollisions, const geometry::Vector2D& goalPosition,
+               int objID)
     : position(position),
       width(width),
       length(length),
@@ -20,7 +19,7 @@ Object::Object(const geometry::Vector2D& position, float width, float length,
       speed(0),
       coneTexture(nullptr),
       goalPosition(goalPosition),
-      id(nextID++),
+      id(objID),
       type("Object"),
       hasCollided(false) {
   // generate random color for vehicle

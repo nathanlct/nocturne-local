@@ -9,7 +9,8 @@ class Vehicle : public Object {
  public:
   Vehicle(const geometry::Vector2D& position, float width, float length,
           float heading, bool occludes, bool collides, bool checkForCollisions,
-          const geometry::Vector2D& goalPosition, float lateralSpeed=0.0);
+          const geometry::Vector2D& goalPosition, int objID, 
+          float lateralSpeed=0.0);
 
   void setAccel(float acceleration) { accelAction = acceleration; }
 

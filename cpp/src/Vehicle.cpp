@@ -7,9 +7,11 @@ namespace nocturne {
 Vehicle::Vehicle(const geometry::Vector2D& position, float width, float length,
                  float heading, bool occludes, bool collides,
                  bool checkForCollisions,
-                 const geometry::Vector2D& goalPosition, float lateralSpeed)
+                 const geometry::Vector2D& goalPosition,
+                 int objID,
+                 float lateralSpeed)
     : Object(position, width, length, heading, occludes, collides,
-             checkForCollisions, goalPosition),
+             checkForCollisions, goalPosition, objID),
       accelAction(0),
       steeringAction(0),
       lateralSpeed(lateralSpeed),

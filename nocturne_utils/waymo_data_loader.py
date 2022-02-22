@@ -29,10 +29,9 @@ class WaymoDataset(Dataset):
         sim = Simulation(str(scenario_path), start_time=start_time)
         scenario = sim.getScenario()
         vehicles = scenario.getVehicles()
-        import ipdb; ipdb.set_trace()
         # not all the vehicles have expert actions at every time-step
         valid_vehs = [veh for veh in vehicles if scenario.hasExpertAction(veh.getID(), start_time)]
-        veh_id = valid_vehs[np.random.randint(len(vehicles))].getID()
+        veh_id = valid_vehs[np.random.randint(low=0, high=len(valid_vehs))].getID()
         # TODO(ev) put this in when complete
         # veh_state = sim.scenario.getState(veh_id)
         veh_state = np.zeros(2)
@@ -52,4 +51,13 @@ if __name__== '__main__':
     data_loader = DataLoader(WaymoDataset({'file_path': path}),
                             pin_memory=True, shuffle=True, 
                             batch_size=32, num_workers=0)
+    t = time.time()
     states, actions = next(iter(data_loader))
+    print(f'time to generate batch with 1 worker is {time.time() - t}')
+
+    # t = time.time()
+    # data_loader = DataLoader(WaymoDataset({'file_path': path}),
+    #                         pin_memory=True, shuffle=True, 
+    #                         batch_size=32, num_workers=4)
+    # states, actions = next(iter(data_loader))
+    # print(f'time to generate batch with 4 workers is {time.time() - t}')

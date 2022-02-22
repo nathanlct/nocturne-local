@@ -17,7 +17,7 @@ class Object : public sf::Drawable, public geometry::AABBInterface {
  public:
   Object(const geometry::Vector2D& position, float width, float length,
          float heading, bool occludes, bool collides, bool checkForCollisions,
-         const geometry::Vector2D& goalPosition);
+         const geometry::Vector2D& goalPosition, int objID);
 
   // bool intersectsWith(Object* other) const; // fast spherical pre-check, then
   // accurate rectangular check std::vector<Point> getCorners() const;
@@ -61,8 +61,6 @@ class Object : public sf::Drawable, public geometry::AABBInterface {
   }
 
   sf::RenderTexture* coneTexture;
-
-  static int nextID;
 
  protected:
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
