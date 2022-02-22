@@ -22,8 +22,8 @@ add_library(
   nocturne_geometry
   STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/bvh.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/line_segment.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/morton.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/segment.cc
 )
 target_include_directories(
   nocturne_geometry 
