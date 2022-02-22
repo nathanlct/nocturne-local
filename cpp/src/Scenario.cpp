@@ -79,15 +79,17 @@ void Scenario::loadScenario(std::string path) {
       localValid.push_back(bool(obj["valid"][i]));
       localHeadingVec.push_back(obj["heading"][i]);
     }
-    expertTrajectories.push_back(localExpertTrajectory);
-    expertSpeeds.push_back(localExpertSpeeds);
-    expertHeadings.push_back(localHeadingVec);
-    lengths.push_back(length);
-    expertValid.push_back(localValid);
-    // TODO(ev) add support for pedestrians and cyclists
     // TODO(ev) make it a flag whether all vehicles are added or just the
     // vehicles that are valid
+
+    // we only want to store and load vehicles that are valid at this initialization
+    // time
     if (bool(obj["valid"][currTime])) {
+      expertTrajectories.push_back(localExpertTrajectory);
+      expertSpeeds.push_back(localExpertSpeeds);
+      expertHeadings.push_back(localHeadingVec);
+      lengths.push_back(length);
+      expertValid.push_back(localValid);
       if (type == "vehicle") {
         Vehicle* veh = new Vehicle(pos, width, length, heading, occludes,
                                    collides, checkForCollisions, goalPos,

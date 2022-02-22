@@ -13,9 +13,9 @@ void init_scenario(py::module& m) {
            py::arg("path") = "",
            py::arg("start_time") = 0,
            py::arg("use_non_vehicles") = true)
-      .def("getVehicles", &nocturne::Scenario::getVehicles)
-      .def("getPedestrians", &nocturne::Scenario::getPedestrians)
-      .def("getCyclists", &nocturne::Scenario::getCyclists)
+      .def("getVehicles", &nocturne::Scenario::getVehicles, py::return_value_policy::reference)
+      .def("getPedestrians", &nocturne::Scenario::getPedestrians, py::return_value_policy::reference)
+      .def("getCyclists", &nocturne::Scenario::getCyclists, py::return_value_policy::reference)
       .def("getMaxEnvTime", &nocturne::Scenario::getMaxEnvTime)
       .def("getRoadLines", &nocturne::Scenario::getRoadLines)
       .def("getCone", &nocturne::Scenario::getCone,
