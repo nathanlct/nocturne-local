@@ -8,7 +8,7 @@ import time
 
 os.environ["DISPLAY"] = ":0.0"
 # sim = Simulation(scenarioFilePath='./nocturne_utils/output.json', startTime=10, showPeds=True, showCyclists=True)
-sim = Simulation(scenarioPath='./nocturne_utils/output.json',)
+sim = Simulation(scenario_path='/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json/tfrecord-00008-of-01000.json',)
 scenario = sim.getScenario()
 
 print('all veh IDS are', [veh.getID() for veh in scenario.getVehicles()])
@@ -19,7 +19,7 @@ print('expert action of vehicle 0 is ', expert_action)
 print(scenario.getValidExpertStates(scenario.getVehicles()[0].getID()))
 print('is the expert action valid', scenario.hasExpertAction(scenario.getVehicles()[0].getID(), 10))
 
-img = np.array(scenario.getImage(scenario.getVehicles()[3], renderGoals=True), copy=False)
+img = np.array(scenario.getImage(scenario.getVehicles()[3], render_goals=True), copy=False)
 plt.figure()
 plt.imshow(img)
 plt.savefig('goalImg.png')
@@ -59,7 +59,7 @@ print('saved at ./egoImgAfterStep.png')
 ################################
 # now lets test for collisions
 # grab a vehicle and place it on top of another vehicle
-sim = Simulation(scenarioPath='./nocturne_utils/output.json')
+sim = Simulation(scenario_path='./nocturne_utils/output.json')
 scenario = sim.getScenario()
 veh0 = scenario.getVehicles()[0]
 veh1 = scenario.getVehicles()[1]
@@ -78,7 +78,7 @@ assert veh0.getCollided() == True, 'vehicle0 should have collided after vehicle 
 assert veh2.getCollided() == False, 'vehicle2 should not have collided'
 
 # now offset them slightly and do the same thing again
-sim = Simulation(scenarioPath='./nocturne_utils/output.json')
+sim = Simulation(scenario_path='./nocturne_utils/output.json')
 scenario = sim.getScenario()
 veh0 = scenario.getVehicles()[0]
 veh1 = scenario.getVehicles()[1]
@@ -169,7 +169,7 @@ assert veh0.getCollided() == True, 'vehicle0 should have collided since a road e
 ######################
 # Waymo Scene Construction
 ######################
-sim = Simulation(scenarioPath='./nocturne_utils/output.json', startTime=0)
+sim = Simulation(scenario_path='./nocturne_utils/output.json', start_time=0)
 scenario = sim.getScenario()
 
 img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 0.0, False), copy=False)
@@ -179,7 +179,7 @@ plt.savefig('t0.png')
 
 # check that initializing things to a different time leads to a different
 # image
-sim = Simulation(scenarioPath='./nocturne_utils/output.json', startTime=20)
+sim = Simulation(scenario_path='./nocturne_utils/output.json', start_time=20)
 scenario = sim.getScenario()
 
 img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 0.0, False), copy=False)
@@ -189,7 +189,7 @@ plt.savefig('t20.png')
 
 # check that initializing things with and without pedestrians leads to a different
 # image
-sim = Simulation(scenarioPath='./nocturne_utils/output.json', startTime=20, useNonVehicles=False)
+sim = Simulation(scenario_path='./nocturne_utils/output.json', start_time=20, use_non_vehicles=False)
 scenario = sim.getScenario()
 
 img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 0.0, False), copy=False)

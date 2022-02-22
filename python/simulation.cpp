@@ -11,9 +11,9 @@ void init_simulation(py::module& m) {
 
   py::class_<nocturne::Simulation>(m, "Simulation")
       .def(py::init<std::string, int, bool>(), "Constructor for Simulation",
-           py::arg("scenarioPath") = "",
-           py::arg("startTime") = 0,
-           py::arg("useNonVehicles") = true)
+           py::arg("scenario_path") = "",
+           py::arg("start_time") = 0,
+           py::arg("use_non_vehicles") = true)
       .def("step", &nocturne::Simulation::step)
       .def("render", &nocturne::Simulation::render)
       .def("reset", &nocturne::Simulation::reset)
