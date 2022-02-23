@@ -310,6 +310,64 @@ void Scenario::step(float dt) {
   }
 }
 
+void Scenario::waymo_step() {
+  if (currTime < 91){
+    currTime += 1;  // TODO(ev) hardcoding
+    for (auto& object : roadObjects) {
+      geometry::Vector2D expertPosition = expertTrajectories[int(object->getID())][currTime];
+      object->setPosition(expertPosition.x(), expertPosition.y());
+      object->setHeading(expertHeadings[int(object->getID())][currTime] * (geometry::utils::kPi / 180));
+    }
+    for (auto& object : trafficLights) {
+      object->updateTime(currTime);
+    }
+
+    // initalize the vehicle bvh
+    const int64_t n = roadObjects.size();
+    std::vector<const geometry::AABBInterface*> objects;
+    objects.reserve(n);
+    for (const auto& obj : roadObjects) {
+      objects.push_back(dynamic_cast<const geometry::AABBInterface*>(obj.get()));
+    }
+    bvh_.InitHierarchy(objects);
+    // check vehicle-vehicle collisions
+    for (auto& obj1 : roadObjects) {
+      std::vector<const geometry::AABBInterface*> candidates =
+          bvh_.CollisionCandidates(
+              dynamic_cast<geometry::AABBInterface*>(obj1.get()));
+      for (const auto* ptr : candidates) {
+        const Object* obj2 = dynamic_cast<const Object*>(ptr);
+        if (obj1->getID() == obj2->getID()) {
+          continue;
+        }
+        if (!obj1->checkForCollisions && !obj2->checkForCollisions) {
+          continue;
+        }
+        if (!obj1->collides || !obj2->collides) {
+          continue;
+        }
+        if (checkForCollision(obj1.get(), obj2)) {
+          obj1->setCollided(true);
+          const_cast<Object*>(obj2)->setCollided(true);
+        }
+      }
+    }
+    // check vehicle-lane segment collisions
+    for (auto& obj1 : roadObjects) {
+      std::vector<const geometry::AABBInterface*> candidates =
+          line_segment_bvh_.CollisionCandidates(
+              dynamic_cast<geometry::AABBInterface*>(obj1.get()));
+      for (const auto* ptr : candidates) {
+        const geometry::LineSegment* obj2 =
+            dynamic_cast<const geometry::LineSegment*>(ptr);
+        if (checkForCollision(obj1.get(), obj2)) {
+          obj1->setCollided(true);
+        }
+      }
+    }
+  }
+}
+
 bool Scenario::checkForCollision(const Object* object1, const Object* object2) {
   // note: right now objects are rectangles but this code works for any pair of
   // convex polygons
@@ -703,8 +761,10 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
                       std::max(scenarioBounds.width / squareSide,
                                scenarioBounds.height / squareSide);
   sf::View view(center, size);
-  float heading = object->getHeading();
-  view.rotate(-geometry::utils::Degrees(object->getHeading()) + 90.0f);
+  if (object != nullptr){
+    float heading = object->getHeading();
+    view.rotate(-geometry::utils::Degrees(object->getHeading()) + 90.0f);
+  }
 
   texture->setView(view);
 
@@ -712,15 +772,9 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
   //   texture->draw(*road, renderTransform);
   // }
   if (object == nullptr) {
-    for (const auto& obj : roadLines) {
-      texture->draw(*obj, renderTransform);
-    }
-    for (const auto& obj : trafficLights) {
-      texture->draw(*obj, renderTransform);
-    }
     for (const auto& obj : vehicles) {
       texture->draw(*obj, renderTransform);
-      if (renderGoals && obj->getType() == "Vehicle") {
+      if (renderGoals) {
         // draw goal destination
         float radius = 2;
         sf::CircleShape ptShape(radius);
@@ -733,20 +787,6 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
   } else {
     texture->draw(*object, renderTransform);
 
-    for (const auto& obj : roadLines) {
-      texture->draw(*obj, renderTransform);
-    }
-    for (const auto& obj : trafficLights) {
-      texture->draw(*obj, renderTransform);
-    }
-    for (geometry::Vector2D stopSign : stopSigns) {
-      float radius = 3;
-      sf::CircleShape hexagon(radius, 6);
-      hexagon.setFillColor(sf::Color::Red);
-      hexagon.setPosition(utils::ToVector2f(stopSign));
-      texture->draw(hexagon, renderTransform);
-    }
-
     if (renderGoals) {
       // draw goal destination
       float radius = 2;
@@ -757,7 +797,19 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
       texture->draw(ptShape, renderTransform);
     }
   }
-
+  for (const auto& obj : roadLines) {
+    texture->draw(*obj, renderTransform);
+  }
+  for (const auto& obj : trafficLights) {
+    texture->draw(*obj, renderTransform);
+  }
+  for (geometry::Vector2D stopSign : stopSigns) {
+      float radius = 3;
+      sf::CircleShape hexagon(radius, 6);
+      hexagon.setFillColor(sf::Color::Red);
+      hexagon.setPosition(utils::ToVector2f(stopSign));
+      texture->draw(hexagon, renderTransform);
+  }
   // render texture and return
   texture->display();
 

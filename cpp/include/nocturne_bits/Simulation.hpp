@@ -20,6 +20,7 @@ class Simulation {
   Simulation(std::string scenarioFilePath = "", int startTime=0, bool useNonVehicles=true);
   void reset();
   void step(float dt);
+  void waymo_step();
   void render();
 
   void updateView(float padding = 100.0f) const;

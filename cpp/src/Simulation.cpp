@@ -16,6 +16,8 @@ Simulation::Simulation(std::string scenarioFilePath, int startTime, bool useNonV
 
 void Simulation::step(float dt) { scenario->step(dt); }
 
+void Simulation::waymo_step() { scenario->waymo_step(); }
+
 void Simulation::render() {
   if (renderWindow == nullptr) {
     float winWidth = 1500;

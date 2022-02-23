@@ -27,6 +27,7 @@ class Scenario : public sf::Drawable {
   void loadScenario(std::string path);
 
   void step(float dt);
+  void waymo_step(); // step forwards and place vehicles at their next position in the expert dict
 
   std::vector<std::shared_ptr<Vehicle>> getVehicles();
   std::vector<std::shared_ptr<Pedestrian>> getPedestrians();
