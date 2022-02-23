@@ -31,8 +31,9 @@ protected:
     float x;
     float y;
     int currTime;
-    std::vector<LightState> lightStates;
-    std::vector<int> validTimes; // used to check at which times traffic light data is actually available
+    // TODO(ev) convert lightStates and validTimes into a map to decrease chance of mistakes
+    std::vector<LightState> lightStates; // traffic light state at each time in validTimes
+    std::vector<int> validTimes; // list of times at which traffic lights are available
 };
 
 }  // namespace nocturne

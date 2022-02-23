@@ -1,5 +1,6 @@
 from pathlib import Path
 import time
+import os
 
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
@@ -19,6 +20,7 @@ class WaymoDataset(Dataset):
         return self.num_samples
 
     def __getitem__(self, idx):
+        print('calling get item')
         t = time.time()
         # construct a scenario
         scenario_path = self.files[idx]
@@ -34,8 +36,9 @@ class WaymoDataset(Dataset):
         veh_id = valid_vehs[int_val].getID()
         # TODO(ev) put this in when complete
         # veh_state = sim.scenario.getState(veh_id)
-        veh_state = np.zeros(2)
+        veh_state = np.array(scenario.getCone(valid_vehs[int_val], 2 * np.pi, 0.0), copy=False)
         expert_action = np.array(scenario.getExpertAction(veh_id, start_time))
+        print('returning from get item')
         return veh_state, expert_action
 
 # TODO(ev) move this out of this file
@@ -46,18 +49,27 @@ def form_imitation_loss(policy, dataloader):
 
 
 if __name__== '__main__':
+
+    os.environ["DISPLAY"] = ":0.0"
     path = '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json/'
 
+    num_iters = 1
     data_loader = DataLoader(WaymoDataset({'file_path': path}),
                             pin_memory=True, shuffle=True, 
                             batch_size=32, num_workers=0)
     t = time.time()
-    states, actions = next(iter(data_loader))
-    print(f'time to generate batch with 1 worker is {time.time() - t}')
+    for i, (states, actions) in enumerate(data_loader):
+        print(i)
+        if i > num_iters:
+            break
+    print(f'time to generate {num_iters} batches with 1 worker is {time.time() - t}')
 
-    # t = time.time()
-    # data_loader = DataLoader(WaymoDataset({'file_path': path}),
-    #                         pin_memory=True, shuffle=True, 
-    #                         batch_size=32, num_workers=4)
-    # states, actions = next(iter(data_loader))
-    # print(f'time to generate batch with 4 workers is {time.time() - t}')
+    data_loader = DataLoader(WaymoDataset({'file_path': path}),
+                            pin_memory=True, shuffle=True, 
+                            batch_size=32, num_workers=min(num_iters, 10))
+    t = time.time()
+    for i, (states, actions) in enumerate(data_loader):
+        print(i)
+        if i > num_iters:
+            break
+    print(f'time to generate {num_iters} batches with 4 workers is {time.time() - t}')

@@ -17,14 +17,6 @@ void TrafficLight::updateTime(int newTime){
     currTime = newTime;
 }
 
-LightState TrafficLight::getLightState(int currTime) {
-    if (currTime > lightStates.size()){
-        std::cerr << "Requested time that is larger than recorded Traffic Light States"
-                  << std::endl;
-    }
-    return lightStates[currTime];
-}
-
 void TrafficLight::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     // check if the current time is actually a state for which we have info
     // If not, return unknown
