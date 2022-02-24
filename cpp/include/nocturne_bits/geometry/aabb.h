@@ -38,7 +38,7 @@ class AABB {
            MinY() <= other.MinY() && MaxY() >= other.MaxY();
   }
 
-  bool Overlaps(const AABB& other) const {
+  bool Intersects(const AABB& other) const {
     return MinX() < other.MaxX() && MaxX() > other.MinX() &&
            MinY() < other.MaxY() && MaxY() > other.MinY();
   }
