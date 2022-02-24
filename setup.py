@@ -79,9 +79,9 @@ def main():
     # with open("./requirements.txt", "r") as f:
     #     requires = f.read().splitlines()
     setup(
-        name='nocturne',
-        version='0.0.1',
-        author='Nathan Lichtle, Eugene Vinitsky, and Xiaomeng Yang',
+        name="nocturne",
+        version="0.0.1",
+        author="Nathan Lichtle, Eugene Vinitsky, and Xiaomeng Yang",
         long_description="",
         license="MIT",
         ext_modules=[CMakeExtension("nocturne", "./")],
