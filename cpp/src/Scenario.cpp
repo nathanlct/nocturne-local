@@ -77,7 +77,9 @@ void Scenario::loadScenario(std::string path) {
       localExpertTrajectory.push_back(currPos);
       localExpertSpeeds.push_back(currVel);
       localValid.push_back(bool(obj["valid"][i]));
-      localHeadingVec.push_back(obj["heading"][i]);
+      // waymo data is in degrees!
+      float heading = obj["heading"][i];
+      localHeadingVec.push_back(heading * float(geometry::utils::kPi / 180.0));
     }
     // TODO(ev) make it a flag whether all vehicles are added or just the
     // vehicles that are valid
@@ -244,6 +246,16 @@ void Scenario::loadScenario(std::string path) {
     auto ptr = std::shared_ptr<TrafficLight>(t_light);
     trafficLights.push_back(ptr);
   }
+
+  // initialize the vehicle bvh
+  const int64_t nRoadObjects = roadObjects.size();
+  std::vector<const geometry::AABBInterface*> storeObjects;
+  storeObjects.reserve(nRoadObjects);
+  for (const auto& obj : roadObjects) {
+    storeObjects.push_back(dynamic_cast<const geometry::AABBInterface*>(obj.get()));
+  }
+  bvh_.InitHierarchy(storeObjects);
+
 }
 
 // void Scenario::createVehicle(float posX, float posY, float width, float length,
@@ -266,7 +278,7 @@ void Scenario::step(float dt) {
     object->updateTime(currTime);
   }
 
-  // initalize the vehicle bvh
+  // update the vehicle bvh
   const int64_t n = roadObjects.size();
   std::vector<const geometry::AABBInterface*> objects;
   objects.reserve(n);
@@ -317,7 +329,7 @@ void Scenario::waymo_step() {
     for (auto& object : roadObjects) {
       geometry::Vector2D expertPosition = expertTrajectories[int(object->getID())][currTime];
       object->setPosition(expertPosition.x(), expertPosition.y());
-      object->setHeading(expertHeadings[int(object->getID())][currTime] * (geometry::utils::kPi / 180));
+      object->setHeading(expertHeadings[int(object->getID())][currTime]);
     }
     for (auto& object : trafficLights) {
       object->updateTime(currTime);
@@ -369,15 +381,15 @@ void Scenario::waymo_step() {
   }
 }
 
-std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj) {
+std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float viewAngle) {
     // TODO(ev) hardcoded
     float viewDist = 120.0f;
-    float halfViewAngle = geometry::utils::kPi / 2.0f;
+    float halfViewAngle = viewAngle / 2.0;
 
     std::vector<std::tuple<const Object*, float, float>> visibleVehicles;
 
-    // TODO(ev) make sure this transformation doesn't break finding the bounds
-    // of the box below
+    // re-center between -pi and pi
+    // TODO(ev) this won't work if we are > 2pi or < -2pi
     float sourceHeading = sourceObj->getHeading();
     while (sourceHeading > geometry::utils::kPi)
         sourceHeading -= 2.0f * geometry::utils::kPi;
@@ -387,39 +399,63 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj) {
     geometry::Vector2D sourcePos = sourceObj->getPosition();
 
     // Find a set of plausible candidates that could be in view
-    // Do this by bounding the cone in a square. It's an overapproximation
-    // but at least it throws out a bunch of objects
-    float leftAngle = sourceHeading + halfViewAngle; // the angle pointing to the top left corner of the rectangle enclosing the cone
+    // Do this by bounding the cone in the square that encloses the entire circle that the cone is a part of
+    // TODO(ev) replace this check with an efficient check
+    // it's waaaaay too large a bound but we are going to get rid of this
+    const geometry::Box* outerBox;
+    float leftAngle = sourceHeading + geometry::utils::kPi / 4.0f; // the angle pointing to the top left corner of the rectangle enclosing the cone
     float scalingFactorLeft = viewDist / std::cos(halfViewAngle); // how long the vector should be
     geometry::Vector2D topLeft = geometry::Vector2D(std::cos(leftAngle), std::sin(leftAngle));
     topLeft *= scalingFactorLeft;
-    float scalingFactorRight = viewDist * std::tan(halfViewAngle);
-    float rightAngle = sourceHeading - (geometry::utils::kPi / 2.0); // the angle pointing to the bottom right hand corner of the rectangle enclosing the cone
+    topLeft += sourcePos;
+    float scalingFactorRight = viewDist / std::sin((geometry::utils::kPi / 2.0) - halfViewAngle);
+    float rightAngle = sourceHeading - 3 * geometry::utils::kPi / 4.0f; // the angle pointing to the bottom right hand corner of the rectangle enclosing the cone
     geometry::Vector2D bottomRight = geometry::Vector2D(std::cos(rightAngle), std::sin(rightAngle));
     bottomRight *= scalingFactorRight;
-    const geometry::Box* outerBox = new geometry::Box(topLeft, bottomRight);
+    bottomRight += sourcePos;
+    outerBox = new geometry::Box(topLeft, bottomRight);
+    std::cout << "made the box" << std::endl;
+    std::cout << "box area is " << std::to_string(outerBox->GetAABB().Area()) << std::endl;
+    std::cout << "source pos is " << sourcePos << std::endl;
+    std::cout << "source heading is " + std::to_string(sourceHeading) << std::endl;
+    std::cout << "half view angle is " + std::to_string(halfViewAngle) << std::endl;
+    std::cout << "cos of half view angle is " + std::to_string(std::cos(halfViewAngle)) << std::endl;
+    std::cout << "scaling factor left is " + std::to_string(scalingFactorLeft) << std::endl;
+    std::cout << "left vector is " << topLeft << std::endl;
+    std::cout << "right vector is " << bottomRight << std::endl;
+    std::cout << "the box is " << outerBox->GetAABB().min() << " " <<  outerBox->GetAABB().max() << std::endl;
     std::vector<const geometry::AABBInterface*> roadObjCandidates = bvh_.CollisionCandidates(dynamic_cast<const geometry::AABBInterface*>(outerBox));
-
+    std::cout << "found some candidates of size " + std::to_string(roadObjCandidates.size()) << std::endl;
+    int i = 0;
     for (const auto* ptr : roadObjCandidates) {
+        std::cout << std::to_string(i) << std::endl;
+        i++;
         const Object* objPtr = dynamic_cast<const Object*>(ptr);
-        if (objPtr->getID() == sourceObj->getID())
+        if (objPtr->getID() == sourceObj->getID()){
+            std::cout << "exited because of identical ID" << std::endl;
             continue;
-
+        }
         geometry::Vector2D otherRelativePos = objPtr->getPosition() - sourcePos;
         float dist = otherRelativePos.Norm();
 
-        if (dist > viewDist)
+        if (dist > viewDist){
+            std::cout << "exited because of view dist" << std::endl;
             continue;
+        }
 
         float otherRelativeHeading = otherRelativePos.Angle();
 
         float headingDiff = otherRelativeHeading - sourceHeading;
-        if (headingDiff > geometry::utils::kPi) headingDiff -= 2.0f * geometry::utils::kPi;
-        if (headingDiff < -geometry::utils::kPi) headingDiff += 2.0f * geometry::utils::kPi;
+        if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
+        if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
 
         if (std::abs(headingDiff) <= halfViewAngle) {
+            std::cout << "pushed back a vehicle" << std::endl;
             visibleVehicles.push_back(std::make_tuple(objPtr, dist, headingDiff));
-        }        
+        }
+        else{
+          std::cout << "exited due to angle diff of " + std::to_string(std::abs(headingDiff)) << std::endl;
+        }
     }
 
     std::sort(
@@ -429,6 +465,7 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj) {
     );
 
     size_t nVeh = visibleVehicles.size();
+    std::cout << "number of visible vehicles is " + std::to_string(nVeh) << std::endl;
     std::vector<float> state(nVeh * 4);
 
     for (size_t k = 0, i = 0; k < nVeh; ++k) {
@@ -565,7 +602,7 @@ std::vector<float> Scenario::getExpertAction(int objID, int timeIdx) {
       0.2;
   float accel = accel_vec.Norm();
   float speed = expertSpeeds[objID][timeIdx].Norm();
-  float dHeading = (geometry::utils::kPi / 180) *
+  float dHeading = (geometry::utils::kPi / 180.0) *
                    (expertHeadings[objID][timeIdx + 1] -
                     expertHeadings[objID][timeIdx - 1]) /
                    0.2;

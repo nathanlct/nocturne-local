@@ -69,7 +69,7 @@ class Scenario : public sf::Drawable {
 
   // methods for handling state
   std::vector<float> getEgoState(Object* obj);
-  std::vector<float> getVisibleObjectsState(Object* sourceObj);
+  std::vector<float> getVisibleObjectsState(Object* sourceObj, float viewAngle /* the total angle subtended by the view cone*/);
 
  private:
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
