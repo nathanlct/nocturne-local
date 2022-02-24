@@ -8,7 +8,7 @@ namespace nocturne {
 Object::Object(const geometry::Vector2D& position, float width, float length,
                float heading, bool occludes, bool collides,
                bool checkForCollisions, const geometry::Vector2D& goalPosition,
-               int objID)
+               int objID, float speed)
     : position(position),
       width(width),
       length(length),
@@ -16,7 +16,7 @@ Object::Object(const geometry::Vector2D& position, float width, float length,
       occludes(occludes),
       collides(collides),
       checkForCollisions(checkForCollisions),
-      speed(0),
+      speed(speed),
       coneTexture(nullptr),
       goalPosition(goalPosition),
       id(objID),

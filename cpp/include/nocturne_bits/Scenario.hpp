@@ -67,6 +67,10 @@ class Scenario : public sf::Drawable {
                      // compute an expert action given the valid vector
   std::vector<bool> getValidExpertStates(int objID);
 
+  // methods for handling state
+  std::vector<float> getEgoState(Object* obj);
+  std::vector<float> getVisibleObjectsState(Object* sourceObj);
+
  private:
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
 

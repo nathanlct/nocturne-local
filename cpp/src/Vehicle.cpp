@@ -9,12 +9,11 @@ Vehicle::Vehicle(const geometry::Vector2D& position, float width, float length,
                  bool checkForCollisions,
                  const geometry::Vector2D& goalPosition,
                  int objID,
-                 float lateralSpeed)
+                 float speed)
     : Object(position, width, length, heading, occludes, collides,
-             checkForCollisions, goalPosition, objID),
+             checkForCollisions, goalPosition, objID, speed),
       accelAction(0),
       steeringAction(0),
-      lateralSpeed(lateralSpeed),
       yawRate(0) {
 }
 

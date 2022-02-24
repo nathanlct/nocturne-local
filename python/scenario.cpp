@@ -28,7 +28,9 @@ void init_scenario(py::module& m) {
       // .def("createVehicle", &nocturne::Scenario::createVehicle)
       .def("hasExpertAction", &nocturne::Scenario::hasExpertAction)
       .def("getExpertAction", &nocturne::Scenario::getExpertAction)
-      .def("getValidExpertStates", &nocturne::Scenario::getValidExpertStates);
+      .def("getValidExpertStates", &nocturne::Scenario::getValidExpertStates)
+      .def("getEgoState", &nocturne::Scenario::getEgoState)
+      .def("getVisibleObjectsState", &nocturne::Scenario::getVisibleObjectsState);
   // .def(
   //     py::init<std::string>(),
   //     "Constructor for Scenario",

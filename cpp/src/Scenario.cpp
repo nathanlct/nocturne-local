@@ -2,6 +2,7 @@
 
 #include "geometry/aabb_interface.h"
 #include "geometry/line_segment.h"
+#include "geometry/box.h"
 #include "geometry/vector_2d.h"
 #include "utils.hpp"
 
@@ -366,6 +367,110 @@ void Scenario::waymo_step() {
       }
     }
   }
+}
+
+std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj) {
+    // TODO(ev) hardcoded
+    float viewDist = 120.0f;
+    float halfViewAngle = geometry::utils::kPi / 2.0f;
+
+    std::vector<std::tuple<const Object*, float, float>> visibleVehicles;
+
+    // TODO(ev) make sure this transformation doesn't break finding the bounds
+    // of the box below
+    float sourceHeading = sourceObj->getHeading();
+    while (sourceHeading > geometry::utils::kPi)
+        sourceHeading -= 2.0f * geometry::utils::kPi;
+    while (sourceHeading < -geometry::utils::kPi)
+        sourceHeading += 2.0f * geometry::utils::kPi;
+
+    geometry::Vector2D sourcePos = sourceObj->getPosition();
+
+    // Find a set of plausible candidates that could be in view
+    // Do this by bounding the cone in a square. It's an overapproximation
+    // but at least it throws out a bunch of objects
+    float leftAngle = sourceHeading + halfViewAngle; // the angle pointing to the top left corner of the rectangle enclosing the cone
+    float scalingFactorLeft = viewDist / std::cos(halfViewAngle); // how long the vector should be
+    geometry::Vector2D topLeft = geometry::Vector2D(std::cos(leftAngle), std::sin(leftAngle));
+    topLeft *= scalingFactorLeft;
+    float scalingFactorRight = viewDist * std::tan(halfViewAngle);
+    float rightAngle = sourceHeading - (geometry::utils::kPi / 2.0); // the angle pointing to the bottom right hand corner of the rectangle enclosing the cone
+    geometry::Vector2D bottomRight = geometry::Vector2D(std::cos(rightAngle), std::sin(rightAngle));
+    bottomRight *= scalingFactorRight;
+    const geometry::Box* outerBox = new geometry::Box(topLeft, bottomRight);
+    std::vector<const geometry::AABBInterface*> roadObjCandidates = bvh_.CollisionCandidates(dynamic_cast<const geometry::AABBInterface*>(outerBox));
+
+    for (const auto* ptr : roadObjCandidates) {
+        const Object* objPtr = dynamic_cast<const Object*>(ptr);
+        if (objPtr->getID() == sourceObj->getID())
+            continue;
+
+        geometry::Vector2D otherRelativePos = objPtr->getPosition() - sourcePos;
+        float dist = otherRelativePos.Norm();
+
+        if (dist > viewDist)
+            continue;
+
+        float otherRelativeHeading = otherRelativePos.Angle();
+
+        float headingDiff = otherRelativeHeading - sourceHeading;
+        if (headingDiff > geometry::utils::kPi) headingDiff -= 2.0f * geometry::utils::kPi;
+        if (headingDiff < -geometry::utils::kPi) headingDiff += 2.0f * geometry::utils::kPi;
+
+        if (std::abs(headingDiff) <= halfViewAngle) {
+            visibleVehicles.push_back(std::make_tuple(objPtr, dist, headingDiff));
+        }        
+    }
+
+    std::sort(
+        visibleVehicles.begin(), 
+        visibleVehicles.end(),
+        [](auto a, auto b) { return std::get<2>(a) > std::get<2>(b); }
+    );
+
+    size_t nVeh = visibleVehicles.size();
+    std::vector<float> state(nVeh * 4);
+
+    for (size_t k = 0, i = 0; k < nVeh; ++k) {
+        auto vehData = visibleVehicles[k];
+        state[i++] = std::get<1>(vehData);
+        state[i++] = std::get<2>(vehData);
+        state[i++] = std::get<0>(vehData)->getSpeed();
+        state[i++] = std::get<0>(vehData)->getLength();
+    }
+
+    return state;
+}
+
+std::vector<float> Scenario::getEgoState(Object* obj) {
+    std::vector<float> state(4);
+
+    state[0] = obj->getSpeed();
+
+    float sourceHeading = obj->getHeading();
+    while (sourceHeading > geometry::utils::kPi)
+        sourceHeading -= 2.0f * geometry::utils::kPi;
+    while (sourceHeading < -geometry::utils::kPi)
+        sourceHeading += 2.0f * geometry::utils::kPi;
+
+    geometry::Vector2D sourcePos = obj->getPosition();
+
+    geometry::Vector2D goalPos = obj->getGoalPosition();
+
+    geometry::Vector2D otherRelativePos = goalPos - sourcePos;
+    float dist = otherRelativePos.Norm();
+
+    float otherRelativeHeading = otherRelativePos.Angle();
+
+    float headingDiff = otherRelativeHeading - sourceHeading;
+    if (headingDiff > geometry::utils::kPi) headingDiff -= 2.0f * geometry::utils::kPi;
+    if (headingDiff < -geometry::utils::kPi) headingDiff += 2.0f * geometry::utils::kPi;
+
+    state[1] = dist;
+    state[2] = headingDiff;
+    state[3] = obj->getLength();
+
+    return state;
 }
 
 bool Scenario::checkForCollision(const Object* object1, const Object* object2) {
