@@ -22,6 +22,7 @@ add_library(
   geometry
   STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/bvh.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/intersection.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/line_segment.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/morton.cc
 )

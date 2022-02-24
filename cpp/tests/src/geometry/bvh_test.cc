@@ -9,6 +9,7 @@
 
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
+#include "geometry/line_segment.h"
 #include "geometry/vector_2d.h"
 
 namespace nocturne {
@@ -124,7 +125,7 @@ TEST(BVHTest, InitHierarchyPerfTest) {
   EXPECT_LT(bvh.MaxDepth(), 30);
 }
 
-TEST(BVHTest, CollisionCandidatesTest) {
+TEST(BVHTest, AABBIntersectionCandidatesTest) {
   const MockObject obj1(1, Vector2D(0.0f, 0.0f), 1.0f);
   const MockObject obj2(2, Vector2D(0.5f, 0.5f), 1.0f);
   const MockObject obj3(3, Vector2D(10.0f, 0.0f), 1.0f);
@@ -140,17 +141,37 @@ TEST(BVHTest, CollisionCandidatesTest) {
 
   TestBVH bvh(objects);
   std::vector<const AABBInterface*> candidates =
-      bvh.CollisionCandidates(dynamic_cast<const AABBInterface*>(&obj1));
+      bvh.IntersectionCandidates(obj1);
   EXPECT_THAT(candidates, UnorderedElementsAre(&obj1, &obj2));
-  candidates =
-      bvh.CollisionCandidates(dynamic_cast<const AABBInterface*>(&obj2));
+  candidates = bvh.IntersectionCandidates(obj2);
   EXPECT_THAT(candidates, UnorderedElementsAre(&obj1, &obj2));
-  candidates =
-      bvh.CollisionCandidates(dynamic_cast<const AABBInterface*>(&obj3));
+  candidates = bvh.IntersectionCandidates(obj3);
   EXPECT_THAT(candidates, UnorderedElementsAre(&obj3, &obj4));
-  candidates =
-      bvh.CollisionCandidates(dynamic_cast<const AABBInterface*>(&obj4));
+  candidates = bvh.IntersectionCandidates(obj4);
   EXPECT_THAT(candidates, UnorderedElementsAre(&obj3, &obj4));
+}
+
+TEST(BVHTest, LineSegmentIntersectionCandidatesTest) {
+  const MockObject obj1(1, Vector2D(0.0f, 0.0f), 1.0f);
+  const MockObject obj2(2, Vector2D(0.5f, 0.5f), 1.0f);
+  const MockObject obj3(3, Vector2D(10.0f, 0.0f), 1.0f);
+  const MockObject obj4(4, Vector2D(10.0f, 1.5f), 1.0f);
+  const MockObject obj5(5, Vector2D(-10.0f, -10.0f), 1.0f);
+
+  std::vector<const AABBInterface*> objects = {
+      dynamic_cast<const AABBInterface*>(&obj1),
+      dynamic_cast<const AABBInterface*>(&obj2),
+      dynamic_cast<const AABBInterface*>(&obj3),
+      dynamic_cast<const AABBInterface*>(&obj4),
+      dynamic_cast<const AABBInterface*>(&obj5)};
+
+  TestBVH bvh(objects);
+  std::vector<const AABBInterface*> candidates = bvh.IntersectionCandidates(
+      LineSegment(Vector2D(-2.0f, -1.0f), Vector2D(0.0f, -0.5f)));
+  EXPECT_THAT(candidates, UnorderedElementsAre(&obj1, &obj2));
+  candidates = bvh.IntersectionCandidates(
+      LineSegment(Vector2D(9.5f, 0.0f), Vector2D(10.5f, 0.0f)));
+  EXPECT_THAT(candidates, UnorderedElementsAre(&obj3));
 }
 
 }  // namespace

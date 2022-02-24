@@ -6,6 +6,7 @@
 #include <limits>
 #include <tuple>
 
+#include "geometry/intersection.h"
 #include "geometry/morton.h"
 #include "geometry/vector_2d.h"
 
@@ -170,18 +171,32 @@ std::vector<BVH::Node*> BVH::InitHierarchyImpl(
   return CombineNodes(nodes, num);
 }
 
-void BVH::CollisionCandidatesImpl(
+void BVH::IntersectionCandidatesImpl(
     const AABB& aabb, const Node* cur,
     std::vector<const AABBInterface*>& candidates) const {
-  if (!aabb.Overlaps(cur->aabb())) {
+  if (!aabb.Intersects(cur->aabb())) {
     return;
   }
   if (cur->IsLeaf()) {
     candidates.push_back(cur->object());
     return;
   }
-  CollisionCandidatesImpl(aabb, cur->LChild(), candidates);
-  CollisionCandidatesImpl(aabb, cur->RChild(), candidates);
+  IntersectionCandidatesImpl(aabb, cur->LChild(), candidates);
+  IntersectionCandidatesImpl(aabb, cur->RChild(), candidates);
+}
+
+void BVH::IntersectionCandidatesImpl(
+    const LineSegment& segment, const Node* cur,
+    std::vector<const AABBInterface*>& candidates) const {
+  if (!Intersects(segment, cur->aabb())) {
+    return;
+  }
+  if (cur->IsLeaf()) {
+    candidates.push_back(cur->object());
+    return;
+  }
+  IntersectionCandidatesImpl(segment, cur->LChild(), candidates);
+  IntersectionCandidatesImpl(segment, cur->RChild(), candidates);
 }
 
 }  // namespace geometry
