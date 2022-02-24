@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 import os
 import re
@@ -57,11 +58,19 @@ class CMakeBuild(build_ext):
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
-        subprocess.check_call(["cmake", ext.src_dir] + cmake_args,
-                              cwd=self.build_temp,
-                              env=env)
-        subprocess.check_call(["cmake", "--build", "."] + build_args,
-                              cwd=self.build_temp)
+        cmd = ["cmake", ext.src_dir] + cmake_args
+        try:
+            subprocess.check_call(cmd, cwd=self.build_temp, env=env)
+        except subprocess.CalledProcessError:
+            logging.error(f"Aborting due to errors when running command {cmd}")
+            sys.exit(1)
+
+        cmd = ["cmake", "--build", "."] + build_args
+        try:
+            subprocess.check_call(cmd, cwd=self.build_temp)
+        except subprocess.CalledProcessError:
+            logging.error(f"Aborting due to errors when running command {cmd}")
+            sys.exit(1)
 
         print()  # Add an empty line for cleaner output
 
