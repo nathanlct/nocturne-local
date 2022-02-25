@@ -35,6 +35,9 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<Object>> getRoadObjects();
   std::vector<std::shared_ptr<RoadLine>> getRoadLines();
 
+  // TODO(ev) hardcoding, this is the maximum number of vehicles that can be returned in the state
+  int maxNumVisibleVehicles = 20;
+
   void removeVehicle(Vehicle* object);
 
   int getMaxEnvTime() { return maxEnvTime; }
@@ -96,8 +99,10 @@ class Scenario : public sf::Drawable {
 
   sf::RenderTexture* imageTexture;
   sf::FloatRect roadNetworkBounds;
-  geometry::BVH bvh_;
-  geometry::BVH line_segment_bvh_;
+  geometry::BVH bvh_; // track vehicles for collisions
+  geometry::BVH line_segment_bvh_; // track line segments for collisions
+  geometry::BVH tl_bvh_; // track traffic light states to find visible traffic lights
+  geometry::BVH road_point_bvh; // track road points to find visible road points
 
   // expert data
   std::vector<std::vector<geometry::Vector2D>> expertTrajectories;

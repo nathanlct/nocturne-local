@@ -398,10 +398,9 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
 
     geometry::Vector2D sourcePos = sourceObj->getPosition();
 
+    // TODO(ev) replace this check with an efficient check, this is too large a bound
     // Find a set of plausible candidates that could be in view
     // Do this by bounding the cone in the square that encloses the entire circle that the cone is a part of
-    // TODO(ev) replace this check with an efficient check
-    // it's waaaaay too large a bound but we are going to get rid of this
     const geometry::Box* outerBox;
     float leftAngle = sourceHeading + geometry::utils::kPi / 4.0f; // the angle pointing to the top left corner of the rectangle enclosing the cone
     float scalingFactorLeft = viewDist / std::cos(halfViewAngle); // how long the vector should be
@@ -414,32 +413,20 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
     bottomRight *= scalingFactorRight;
     bottomRight += sourcePos;
     outerBox = new geometry::Box(topLeft, bottomRight);
-    std::cout << "made the box" << std::endl;
-    std::cout << "box area is " << std::to_string(outerBox->GetAABB().Area()) << std::endl;
-    std::cout << "source pos is " << sourcePos << std::endl;
-    std::cout << "source heading is " + std::to_string(sourceHeading) << std::endl;
-    std::cout << "half view angle is " + std::to_string(halfViewAngle) << std::endl;
-    std::cout << "cos of half view angle is " + std::to_string(std::cos(halfViewAngle)) << std::endl;
-    std::cout << "scaling factor left is " + std::to_string(scalingFactorLeft) << std::endl;
-    std::cout << "left vector is " << topLeft << std::endl;
-    std::cout << "right vector is " << bottomRight << std::endl;
-    std::cout << "the box is " << outerBox->GetAABB().min() << " " <<  outerBox->GetAABB().max() << std::endl;
+
     std::vector<const geometry::AABBInterface*> roadObjCandidates = bvh_.CollisionCandidates(dynamic_cast<const geometry::AABBInterface*>(outerBox));
-    std::cout << "found some candidates of size " + std::to_string(roadObjCandidates.size()) << std::endl;
     int i = 0;
     for (const auto* ptr : roadObjCandidates) {
         std::cout << std::to_string(i) << std::endl;
         i++;
         const Object* objPtr = dynamic_cast<const Object*>(ptr);
         if (objPtr->getID() == sourceObj->getID()){
-            std::cout << "exited because of identical ID" << std::endl;
             continue;
         }
         geometry::Vector2D otherRelativePos = objPtr->getPosition() - sourcePos;
         float dist = otherRelativePos.Norm();
 
         if (dist > viewDist){
-            std::cout << "exited because of view dist" << std::endl;
             continue;
         }
 
@@ -450,25 +437,23 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
         if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
 
         if (std::abs(headingDiff) <= halfViewAngle) {
-            std::cout << "pushed back a vehicle" << std::endl;
             visibleVehicles.push_back(std::make_tuple(objPtr, dist, headingDiff));
-        }
-        else{
-          std::cout << "exited due to angle diff of " + std::to_string(std::abs(headingDiff)) << std::endl;
         }
     }
 
+    // we want all the vehicles sorted by distance to the agent
     std::sort(
         visibleVehicles.begin(), 
         visibleVehicles.end(),
-        [](auto a, auto b) { return std::get<2>(a) > std::get<2>(b); }
+        [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
     );
 
-    size_t nVeh = visibleVehicles.size();
+    int nVeh = visibleVehicles.size();
     std::cout << "number of visible vehicles is " + std::to_string(nVeh) << std::endl;
-    std::vector<float> state(nVeh * 4);
+    std::vector<float> state(maxNumVisibleVehicles * 4);
+    std::fill(state.begin(), state.end(), 0);
 
-    for (size_t k = 0, i = 0; k < nVeh; ++k) {
+    for (size_t k = 0, i = 0; k < std::min(nVeh, maxNumVisibleVehicles); ++k) {
         auto vehData = visibleVehicles[k];
         state[i++] = std::get<1>(vehData);
         state[i++] = std::get<2>(vehData);
