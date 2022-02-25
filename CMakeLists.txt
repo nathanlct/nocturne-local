@@ -9,52 +9,26 @@ set(
   -march=native -Wfatal-errors -fvisibility=hidden"
 )
 
-# fix for bug (https://gitlab.kitware.com/cmake/cmake/-/issues/17995)
-set(CMAKE_SKIP_BUILD_RPATH FALSE)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-set(CMAKE_INSTALL_RPATH "")
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
-endif()
-
-set(CMAKE_CXX_FLAGS "-O3")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-
 project(nocturne)
 
-# Find project files
-include_directories("${CMAKE_SOURCE_DIR}/cpp/include/nocturne_bits")
-include_directories("${CMAKE_SOURCE_DIR}/python")
-
-file (GLOB SOURCE_FILES "cpp/src/*.cpp" "cpp/src/geometry/*.cc")
-file (GLOB HEADER_FILES "cpp/include/nocturne_bits/*.hpp" "cpp/include/nocturne_bits/geometry/*.h")
-file (GLOB PYTHON_FILES "python/*.cpp" "python/*.hpp")
-
-# Find pybind and SFML
 find_package(pybind11 REQUIRED)
-find_package(SFML 2.5 COMPONENTS window system graphics audio REQUIRED)
 
-# Create Python module for nocturne
-pybind11_add_module(nocturne 
-	${SOURCE_FILES}
-	${HEADER_FILES}
-	${PYTHON_FILES}
+add_subdirectory(
+  ${CMAKE_CURRENT_SOURCE_DIR}/cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/cpp
 )
 
+pybind11_add_module(
+  nocturne
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/maths.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/nocturne.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/object.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/scenario.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/simulation.cpp
+)
 target_include_directories(
   nocturne
   PUBLIC
   ${CMAKE_SOURCE_DIR}/cpp/include/nocturne_bits
 )
-
-# Link nocturne and SFML
-target_link_libraries(nocturne PUBLIC)
-target_link_libraries(nocturne PUBLIC sfml-window sfml-system sfml-graphics sfml-audio)
-
-# Install Python module for nocturne
-install(TARGETS nocturne
-  COMPONENT python
-  LIBRARY DESTINATION "${PYTHON_LIBRARY_DIR}"
-)
+target_link_libraries(nocturne PUBLIC nocturne_core)
