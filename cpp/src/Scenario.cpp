@@ -339,8 +339,7 @@ void Scenario::step(float dt) {
   // check vehicle-vehicle collisions
   for (auto& obj1 : roadObjects) {
     std::vector<const geometry::AABBInterface*> candidates =
-        bvh_.CollisionCandidates(
-            dynamic_cast<geometry::AABBInterface*>(obj1.get()));
+        bvh_.IntersectionCandidates(*obj1);
     for (const auto* ptr : candidates) {
       const Object* obj2 = dynamic_cast<const Object*>(ptr);
       if (obj1->getID() == obj2->getID()) {

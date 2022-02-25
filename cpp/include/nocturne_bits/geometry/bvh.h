@@ -5,6 +5,7 @@
 
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
+#include "geometry/line_segment.h"
 
 namespace nocturne {
 namespace geometry {
@@ -58,10 +59,17 @@ class BVH {
 
   void InitHierarchy(const std::vector<const AABBInterface*>& objects);
 
-  std::vector<const AABBInterface*> CollisionCandidates(
-      const AABBInterface* object) const {
+  std::vector<const AABBInterface*> IntersectionCandidates(
+      const AABBInterface& object) const {
     std::vector<const AABBInterface*> candidates;
-    CollisionCandidatesImpl(object->GetAABB(), root_, candidates);
+    IntersectionCandidatesImpl(object.GetAABB(), root_, candidates);
+    return candidates;
+  }
+
+  std::vector<const AABBInterface*> IntersectionCandidates(
+      const LineSegment& segment) const {
+    std::vector<const AABBInterface*> candidates;
+    IntersectionCandidatesImpl(segment, root_, candidates);
     return candidates;
   }
 
@@ -85,8 +93,12 @@ class BVH {
       const std::vector<std::pair<uint64_t, const AABBInterface*>>& objects,
       int64_t l, int64_t r);
 
-  void CollisionCandidatesImpl(
+  void IntersectionCandidatesImpl(
       const AABB& aabb, const Node* cur,
+      std::vector<const AABBInterface*>& candidates) const;
+
+  void IntersectionCandidatesImpl(
+      const LineSegment& segment, const Node* cur,
       std::vector<const AABBInterface*>& candidates) const;
 
   std::vector<Node> nodes_;

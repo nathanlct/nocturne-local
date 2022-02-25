@@ -9,52 +9,59 @@ set(
   -march=native -Wfatal-errors -fvisibility=hidden"
 )
 
-project(nocturne VERSION 0.1.0)
+project(nocturne)
 
 # nocturne files
-include_directories(/usr/local/include)
-AUX_SOURCE_DIRECTORY(src SRC_FILES)
-set(PROJECT_SOURCE_DIR "src")
-set(PROJECT_INCLUDE_DIR "include/nocturne_bits")
-file (GLOB SOURCE_FILES "${PROJECT_INCLUDE_DIR}/*.hpp" "${PROJECT_SOURCE_DIR}/*.cpp")
+# include_directories(/usr/local/include)
+# AUX_SOURCE_DIRECTORY(src SRC_FILES)
+# set(PROJECT_SOURCE_DIR "src")
+# set(PROJECT_INCLUDE_DIR "include/nocturne_bits")
+# file (GLOB SOURCE_FILES "${PROJECT_INCLUDE_DIR}/*.hpp" "${PROJECT_SOURCE_DIR}/*.cpp")
 
 add_library(
-  geometry
+  nocturne_geometry
   STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/bvh.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/intersection.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/line_segment.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/morton.cc
 )
 target_include_directories(
-  geometry 
+  nocturne_geometry 
   PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/nocturne_bits
 )
 
 # Build and link nocturne
 # add_library(nocturne SHARED ${SOURCE_FILES})
-add_library(nocturne_lib OBJECT ${SOURCE_FILES})
-set_property(TARGET nocturne_lib PROPERTY POSITION_INDEPENDENT_CODE 1)
+add_library(
+  nocturne_core
+  STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Object.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Road.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Scenario.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Simulation.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Vehicle.cpp
+)
+# set_property(TARGET nocturne_lib PROPERTY POSITION_INDEPENDENT_CODE 1)
 target_include_directories(
-  nocturne_lib
+  nocturne_core
   PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/nocturne_bits
 )
-
-add_library(nocturne SHARED $<TARGET_OBJECTS:nocturne_lib>)
-add_library(nocturne_static STATIC $<TARGET_OBJECTS:nocturne_lib>)
 
 # Link SFML
 find_package(SFML 2.5 COMPONENTS window system graphics audio REQUIRED)
 set(SFML_LIBS sfml-window sfml-system sfml-graphics sfml-audio)
 
-target_link_libraries(nocturne PUBLIC ${SFML_LIBS} geometry)
-target_link_libraries(nocturne_static PUBLIC ${SFML_LIBS} geometry)
+target_link_libraries(nocturne_core PUBLIC ${SFML_LIBS} nocturne_geometry)
+# target_link_libraries(nocturne PUBLIC ${SFML_LIBS} geometry)
+# target_link_libraries(nocturne_static PUBLIC ${SFML_LIBS} geometry)
 
 # Install library and includes
-install(TARGETS nocturne DESTINATION lib)
-install(FILES include/nocturne DESTINATION include)
-install(DIRECTORY include/nocturne_bits DESTINATION include)
+# install(TARGETS nocturne DESTINATION lib)
+# install(FILES include/nocturne DESTINATION include)
+# install(DIRECTORY include/nocturne_bits DESTINATION include)
 
 # Google Test
 include(FetchContent)

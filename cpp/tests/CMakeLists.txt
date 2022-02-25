@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
+project(nocturne)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -44,7 +46,7 @@ target_link_libraries(
   gmock
   gtest
   gtest_main
-  nocturne_static
+  nocturne_core
 )
 
 include(GoogleTest)
