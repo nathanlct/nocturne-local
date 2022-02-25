@@ -21,13 +21,11 @@ void RoadLine::setRoadPoints(){
     if (numPoints > geometry.size()){
         int diff = numPoints - geometry.size();
         for (int i = 0; i < geometry.size(); i++){
-            RoadPoint* r_pt = new RoadPoint(geometry[i], static_cast<int>(road_type));
-            auto ptr = std::shared_ptr<RoadPoint>(r_pt);
+            auto ptr = std::shared_ptr<RoadPoint>(new RoadPoint(geometry[i], static_cast<int>(road_type)));
             roadPoints.push_back(ptr);
         }
         for (int i = 0; i < diff; i++){
-            RoadPoint* r_pt = new RoadPoint(geometry::Vector2D(-100, -100), -1);
-            auto ptr = std::shared_ptr<RoadPoint>(r_pt);
+            auto ptr = std::shared_ptr<RoadPoint>(new RoadPoint(geometry::Vector2D(-100, -100), -1));
             roadPoints.push_back(ptr);
         }
     }

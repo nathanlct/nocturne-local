@@ -548,10 +548,12 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
         std::cout << statePosCounter << std::endl;
         auto pointData = visibleRoadPoints[k];
         state[statePosCounter++] = std::get<1>(pointData);
+        std::cout << "got the first state" << std::endl;
         state[statePosCounter++] = std::get<2>(pointData);
-        std::cout << "got the first two states" << std::endl;
+        std::cout << "got the second state" << std::endl;
         std::cout << "dist is " + std::to_string( std::get<1>(pointData)) << std::endl;
         state[statePosCounter++] = std::get<0>(pointData)->type;
+        std::cout << "got the third state" << std::endl;
     }
 
     // //**************** STOP SIGNS **********************
@@ -766,7 +768,6 @@ std::vector<float> Scenario::getExpertAction(int objID, int timeIdx) {
                    0.2;
   float steeringAngle;
   if (speed > 0.0) {
-    float temp = dHeading / speed * lengths[objID];
     steeringAngle = asin(dHeading / speed * lengths[objID]);
   } else {
     steeringAngle = 0.0;
@@ -1062,7 +1063,6 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
                                scenarioBounds.height / squareSide);
   sf::View view(center, size);
   if (object != nullptr){
-    float heading = object->getHeading();
     view.rotate(-geometry::utils::Degrees(object->getHeading()) + 90.0f);
   }
 

@@ -16,12 +16,12 @@ Object::Object(const geometry::Vector2D& position, float width, float length,
       occludes(occludes),
       collides(collides),
       checkForCollisions(checkForCollisions),
-      speed(speed),
-      coneTexture(nullptr),
       goalPosition(goalPosition),
       id(objID),
+      speed(speed),
       type("Object"),
-      hasCollided(false) {
+      hasCollided(false),
+      coneTexture(nullptr) {
   // generate random color for vehicle
   std::srand(std::time(nullptr) +
              id);  // use current time as seed for random generator
@@ -117,9 +117,9 @@ Object::getLines() const {
   return lines;
 }
 
-bool Object::pointInside(geometry::Vector2D point) const{
+bool Object::pointInside(geometry::Vector2D point) const {
   std::vector<geometry::Vector2D> corners = getCorners();
-  // check 
+  // check
   int counter = 0;
   int N = corners.size();
   double xinters;
@@ -127,15 +127,16 @@ bool Object::pointInside(geometry::Vector2D point) const{
   geometry::Vector2D p1;
   geometry::Vector2D p2;
   p1 = corners[0];
-  for (int i=1; i<= N; i++) {
+  for (int i = 1; i <= N; i++) {
     p2 = corners[i % N];
     if (point.y() > std::min(p1.y(), p2.y())) {
       if (point.y() <= std::max(p1.y(), p2.y())) {
         if (point.x() <= std::max(p1.x(), p2.x())) {
           if (p1.y() != p2.y()) {
-            xinters = (point.y() - p1.y()) * (p2.x() - p1.x())/(p2.y() -p1.y()) + p1.x();
-            if (p1.x() == p2.x() || point.x() <= xinters)
-              counter++;
+            xinters =
+                (point.y() - p1.y()) * (p2.x() - p1.x()) / (p2.y() - p1.y()) +
+                p1.x();
+            if (p1.x() == p2.x() || point.x() <= xinters) counter++;
           }
         }
       }

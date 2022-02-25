@@ -22,7 +22,7 @@ class Vehicle : public Object {
 
  protected:
   void kinematicsUpdate(float dt);
-  void dynamicsUpdate(float dt);
+  void dynamicsUpdate();
 
   float accelAction;
   float steeringAction;

@@ -60,6 +60,6 @@ void Vehicle::kinematicsUpdate(float dt) {
   speed += accel * dt;
 }
 
-void Vehicle::dynamicsUpdate(float dt) {}
+void Vehicle::dynamicsUpdate() {}
 
 }  // namespace nocturne
