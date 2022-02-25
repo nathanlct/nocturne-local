@@ -25,6 +25,11 @@ void RoadLine::setRoadPoints(){
             auto ptr = std::shared_ptr<RoadPoint>(r_pt);
             roadPoints.push_back(ptr);
         }
+        for (int i = 0; i < diff; i++){
+            RoadPoint* r_pt = new RoadPoint(geometry::Vector2D(-100, -100), -1);
+            auto ptr = std::shared_ptr<RoadPoint>(r_pt);
+            roadPoints.push_back(ptr);
+        }
     }
     else{
         // TODO(ev) actually we need to make sure we include

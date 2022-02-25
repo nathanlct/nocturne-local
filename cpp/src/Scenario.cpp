@@ -552,6 +552,7 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
         state[statePosCounter++] = std::get<1>(pointData);
         state[statePosCounter++] = std::get<2>(pointData);
         std::cout << "got the first two states" << std::endl;
+        std::cout << "dist is " + std::to_string( std::get<1>(pointData)) << std::endl;
         state[statePosCounter++] = std::get<0>(pointData)->type;
     }
 
