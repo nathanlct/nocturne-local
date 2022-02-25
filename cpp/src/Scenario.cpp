@@ -9,11 +9,13 @@
 namespace nocturne {
 
 Scenario::Scenario(std::string path, int startTime, bool useNonVehicles)
-    : roadLines(),
+    : currTime(startTime),
+      useNonVehicles(useNonVehicles),
       lineSegments(),
+      roadLines(),
       vehicles(),
-      cyclists(),
       pedestrians(),
+      cyclists(),
       roadObjects(),
       stopSigns(),
       trafficLights(),
@@ -21,10 +23,9 @@ Scenario::Scenario(std::string path, int startTime, bool useNonVehicles)
       expertTrajectories(),
       expertSpeeds(),
       expertHeadings(),
-      expertValid(),
       lengths(),
-      currTime(startTime),
-      useNonVehicles(useNonVehicles) {
+      expertValid()
+{
   if (path.size() > 0) {
     loadScenario(path);
   } else {
@@ -134,7 +135,6 @@ void Scenario::loadScenario(std::string path) {
     std::vector<geometry::Vector2D> laneGeometry;
     std::string type = road["type"];
     bool checkForCollisions = false;
-    bool occludes = false;
     RoadType road_type;
     // TODO(ev) this is not good
     if (type == "lane") {
@@ -150,6 +150,8 @@ void Scenario::loadScenario(std::string path) {
       road_type = RoadType::crosswalk;
     } else if (type == "speed_bump") {
       road_type = RoadType::speed_bump;
+    } else {
+      road_type = RoadType::none;
     }
     // we have to handle stop signs differently from other lane types
     if (road_type == RoadType::stop_sign) {
@@ -157,7 +159,7 @@ void Scenario::loadScenario(std::string path) {
                                              road["geometry"][0]["y"]));
     } else {
       // Iterate over every line segment
-      for (int i = 0; i < road["geometry"].size() - 1; i++) {
+      for (size_t i = 0; i < road["geometry"].size() - 1; i++) {
         laneGeometry.emplace_back(road["geometry"][i]["x"],
                                   road["geometry"][i]["y"]);
         geometry::Vector2D startPoint(road["geometry"][i]["x"],
@@ -216,7 +218,7 @@ void Scenario::loadScenario(std::string path) {
     std::vector<int> validTimes;
     std::vector<LightState> lightStates;
 
-    for (int i = 0; i < tl["state"].size(); i++) {
+    for (size_t i = 0; i < tl["state"].size(); i++) {
       // TODO(ev) do this more compactly
       LightState lightState;
       if (tl["state"][i] == "unknown") {
@@ -502,7 +504,7 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
 
     int nVeh = visibleVehicles.size();
     std::cout << "number of visible vehicles is " + std::to_string(nVeh) << std::endl;
-    for (size_t k = 0; k < std::min(nVeh, maxNumVisibleVehicles); ++k) {
+    for (int k = 0; k < std::min(nVeh, maxNumVisibleVehicles); ++k) {
         auto vehData = visibleVehicles[k];
         state[statePosCounter++] = std::get<1>(vehData);
         state[statePosCounter++] = std::get<2>(vehData);
@@ -544,7 +546,7 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
     int nRoadPoints = visibleRoadPoints.size();
     std::cout << "got " + std::to_string(nRoadPoints) + " road points" << std::endl;
     std::cout << "size of state is " + std::to_string(state.size()) << std::endl;
-    for (size_t k = 0; k < std::min(nRoadPoints, maxNumVisibleRoadPoints); ++k) {
+    for (int k = 0; k < std::min(nRoadPoints, maxNumVisibleRoadPoints); ++k) {
         std::cout << statePosCounter << std::endl;
         auto pointData = visibleRoadPoints[k];
         state[statePosCounter++] = std::get<1>(pointData);
@@ -776,7 +778,7 @@ std::vector<float> Scenario::getExpertAction(int objID, int timeIdx) {
   return expertAction;
 };
 
-bool Scenario::hasExpertAction(int objID, int timeIdx) {
+bool Scenario::hasExpertAction(int objID, unsigned int timeIdx) {
   // The user requested too large a point or a point that
   // can't be used for a second order expansion
   if (timeIdx > expertValid[objID].size() - 1 || timeIdx < 1) {

@@ -69,7 +69,7 @@ class Scenario : public sf::Drawable {
       int timeIdx);  // return the expert action of object at time timeIDX
   bool hasExpertAction(
       int objID,
-      int timeIdx);  // given the currIndex, figure out if we actually can
+      unsigned int timeIdx);  // given the currIndex, figure out if we actually can
                      // compute an expert action given the valid vector
   std::vector<bool> getValidExpertStates(int objID);
 
