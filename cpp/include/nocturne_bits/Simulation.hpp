@@ -33,18 +33,16 @@ class Simulation {
   Scenario* getScenario() const;
 
  private:
-  int startTime;
-  bool useNonVehicles;
   Scenario* scenario;
-
-  sf::RenderWindow* renderWindow;
+  std::string scenarioPath;
 
   sf::Transform renderTransform;
+  sf::RenderWindow* renderWindow;
 
   sf::Font font;
   sf::Clock clock;
-
-  std::string scenarioPath;
+  int startTime;
+  bool useNonVehicles;
 };
 
 }  // namespace nocturne

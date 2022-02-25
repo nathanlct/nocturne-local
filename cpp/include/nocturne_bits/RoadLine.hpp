@@ -13,6 +13,7 @@
 namespace nocturne {
 
 enum class RoadType {
+    none,
     lane,
     road_line,
     road_edge,
