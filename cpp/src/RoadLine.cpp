@@ -7,45 +7,11 @@ namespace nocturne{
 
 RoadLine::RoadLine(std::vector<geometry::Vector2D> geometry, RoadType road_type, 
                    bool checkForCollisions, int numPoints) : 
-    geometry(geometry), splineCoefficients(), road_type(road_type),
-    numPoints(numPoints), checkForCollisions(checkForCollisions), roadPoints()
+    geometry(geometry), road_type(road_type), roadPoints(),
+    numPoints(numPoints), checkForCollisions(checkForCollisions)
 {
-    computeSpline();
     setRoadPoints();
-    setState();
     buildRoadLineGraphics();
-}
-
-void RoadLine::setState(){
-    std::vector<float> state;
-    for (auto& roadPoint : roadPoints){
-        state.push_back(roadPoint.x());
-        state.push_back(roadPoint.y());
-    }
-    if (geometry.size() < numPoints){
-        int diff = numPoints - geometry.size();
-        for (int i = 0; i < diff; i++){
-            //TODO(ev) hardcoding invalid points!
-            roadPoints.push_back(geometry::Vector2D(-100, -100));
-        }
-    }
-    state.push_back(float(road_type));
-}
-
-std::vector<float> RoadLine::getState(){
-    return state;
-}
-
-std::vector<float> RoadLine::getLocalState(geometry::Vector2D vehPos){
-    std::vector<float> localState;
-    int numRoadPoints = getState().size();
-    for (int i = 0; i < numRoadPoints; i++){
-        // get the local x and y coordinates
-        localState.push_back(state[2 * i] - vehPos.x());
-        localState.push_back(state[2 * i + 1] - vehPos.y());
-    }
-    localState.push_back(state.back());
-    return localState;
 }
 
 void RoadLine::setRoadPoints(){
@@ -55,7 +21,9 @@ void RoadLine::setRoadPoints(){
     if (numPoints > geometry.size()){
         int diff = numPoints - geometry.size();
         for (int i = 0; i < geometry.size(); i++){
-            roadPoints.push_back(geometry[i]);
+            RoadPoint* r_pt = new RoadPoint(geometry[i], static_cast<int>(road_type));
+            auto ptr = std::shared_ptr<RoadPoint>(r_pt);
+            roadPoints.push_back(ptr);
         }
     }
     else{
@@ -63,19 +31,19 @@ void RoadLine::setRoadPoints(){
         // the most extremal points
         // consider using polyline decimation algos
         for(int i = 0; i < numPoints - 1; i++){
-            roadPoints.push_back(geometry[i * stepSize]);
+            RoadPoint* rpt = new RoadPoint(geometry[i * stepSize], static_cast<int>(road_type));
+            auto ptr = std::shared_ptr<RoadPoint>(r_pt);
+            roadPoints.push_back(ptr);
         }
-        roadPoints.push_back(geometry.back());
+        RoadPoint* rpt = new RoadPoint(geometry.back(), static_cast<int>(road_type))
+        auto ptr = std::shared_ptr<RoadPoint>(r_pt);
+        roadPoints.push_back(ptr);
     }
 }
 
- std::vector<geometry::Vector2D> RoadLine::getRoadPoints(){
+ std::vector<std::shared_ptr<RoadPoint>> RoadLine::getRoadPoints(){
      return roadPoints;
  }
-
-void RoadLine::computeSpline() {
-    
-}
 
 RoadType RoadLine::getRoadType() {
     return road_type;

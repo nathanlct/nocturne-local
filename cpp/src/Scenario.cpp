@@ -256,6 +256,26 @@ void Scenario::loadScenario(std::string path) {
   }
   bvh_.InitHierarchy(storeObjects);
 
+  // Now create the BVH for the stop signs
+  // Since the line segments never move we only need to define this once
+  const int64_t n = lineSegments.size();
+  std::vector<const geometry::AABBInterface*> objects;
+  objects.reserve(n);
+  for (const auto& obj : lineSegments) {
+    objects.push_back(dynamic_cast<const geometry::AABBInterface*>(obj.get()));
+  }
+  line_segment_bvh_.InitHierarchy(objects);
+
+  // Now create the BVH for the line points
+  // Since the line segments never move we only need to define this once
+  const int64_t n = lineSegments.size();
+  std::vector<const geometry::AABBInterface*> objects;
+  objects.reserve(n);
+  for (const auto& obj : lineSegments) {
+    objects.push_back(dynamic_cast<const geometry::AABBInterface*>(obj.get()));
+  }
+  line_segment_bvh_.InitHierarchy(objects);
+
 }
 
 // void Scenario::createVehicle(float posX, float posY, float width, float length,
@@ -451,7 +471,8 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
     int nVeh = visibleVehicles.size();
     std::cout << "number of visible vehicles is " + std::to_string(nVeh) << std::endl;
     std::vector<float> state(maxNumVisibleVehicles * 4);
-    std::fill(state.begin(), state.end(), 0);
+    // TODO(ev) hardcoding
+    std::fill(state.begin(), state.end(), -100);
 
     for (size_t k = 0, i = 0; k < std::min(nVeh, maxNumVisibleVehicles); ++k) {
         auto vehData = visibleVehicles[k];
