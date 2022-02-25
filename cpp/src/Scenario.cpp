@@ -360,8 +360,7 @@ void Scenario::step(float dt) {
   // check vehicle-lane segment collisions
   for (auto& obj1 : roadObjects) {
     std::vector<const geometry::AABBInterface*> candidates =
-        line_segment_bvh_.CollisionCandidates(
-            dynamic_cast<geometry::AABBInterface*>(obj1.get()));
+        line_segment_bvh_.IntersectionCandidates(*obj1);
     for (const auto* ptr : candidates) {
       const geometry::LineSegment* obj2 =
           dynamic_cast<const geometry::LineSegment*>(ptr);
@@ -395,8 +394,7 @@ void Scenario::waymo_step() {
     // check vehicle-vehicle collisions
     for (auto& obj1 : roadObjects) {
       std::vector<const geometry::AABBInterface*> candidates =
-          bvh_.CollisionCandidates(
-              dynamic_cast<geometry::AABBInterface*>(obj1.get()));
+          bvh_.IntersectionCandidates(*obj1);
       for (const auto* ptr : candidates) {
         const Object* obj2 = dynamic_cast<const Object*>(ptr);
         if (obj1->getID() == obj2->getID()) {
@@ -417,8 +415,7 @@ void Scenario::waymo_step() {
     // check vehicle-lane segment collisions
     for (auto& obj1 : roadObjects) {
       std::vector<const geometry::AABBInterface*> candidates =
-          line_segment_bvh_.CollisionCandidates(
-              dynamic_cast<geometry::AABBInterface*>(obj1.get()));
+          line_segment_bvh_.IntersectionCandidates(*obj1);
       for (const auto* ptr : candidates) {
         const geometry::LineSegment* obj2 =
             dynamic_cast<const geometry::LineSegment*>(ptr);
@@ -472,7 +469,7 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
     outerBox = new geometry::Box(topLeft, bottomRight);
 
     //**************** Vehicles **********************
-    std::vector<const geometry::AABBInterface*> roadObjCandidates = bvh_.CollisionCandidates(dynamic_cast<const geometry::AABBInterface*>(outerBox));
+    std::vector<const geometry::AABBInterface*> roadObjCandidates = bvh_.IntersectionCandidates(*outerBox);
     for (const auto* ptr : roadObjCandidates) {
         const Object* objPtr = dynamic_cast<const Object*>(ptr);
         if (objPtr->getID() == sourceObj->getID()){
@@ -517,7 +514,7 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
     // Okay now lets run the same process with road edges
     //****************************************
     std::vector<std::tuple<const RoadPoint*, float, float>> visibleRoadPoints;
-    std::vector<const geometry::AABBInterface*> roadPointCandidates = road_point_bvh.CollisionCandidates(dynamic_cast<const geometry::AABBInterface*>(outerBox));
+    std::vector<const geometry::AABBInterface*> roadPointCandidates = road_point_bvh.IntersectionCandidates(*outerBox);
     for (const auto* ptr : roadPointCandidates) {
         const RoadPoint* objPtr = dynamic_cast<const RoadPoint*>(ptr);
         geometry::Vector2D otherRelativePos = objPtr->position - sourcePos;
