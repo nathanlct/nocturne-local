@@ -31,11 +31,11 @@ void RoadLine::setRoadPoints(){
         // the most extremal points
         // consider using polyline decimation algos
         for(int i = 0; i < numPoints - 1; i++){
-            RoadPoint* rpt = new RoadPoint(geometry[i * stepSize], static_cast<int>(road_type));
+            RoadPoint* r_pt = new RoadPoint(geometry[i * stepSize], static_cast<int>(road_type));
             auto ptr = std::shared_ptr<RoadPoint>(r_pt);
             roadPoints.push_back(ptr);
         }
-        RoadPoint* rpt = new RoadPoint(geometry.back(), static_cast<int>(road_type))
+        RoadPoint* r_pt = new RoadPoint(geometry.back(), static_cast<int>(road_type));
         auto ptr = std::shared_ptr<RoadPoint>(r_pt);
         roadPoints.push_back(ptr);
     }

@@ -37,6 +37,9 @@ class Scenario : public sf::Drawable {
 
   // TODO(ev) hardcoding, this is the maximum number of vehicles that can be returned in the state
   int maxNumVisibleVehicles = 20;
+  int maxNumVisibleRoadPoints = 80;
+  int maxNumVisibleStopSigns = 4;
+  int maxNumTLSigns = 20;
 
   void removeVehicle(Vehicle* object);
 
@@ -103,6 +106,7 @@ class Scenario : public sf::Drawable {
   geometry::BVH line_segment_bvh_; // track line segments for collisions
   geometry::BVH tl_bvh_; // track traffic light states to find visible traffic lights
   geometry::BVH road_point_bvh; // track road points to find visible road points
+  geometry::BVH stop_sign_bvh; // track stop signs to find visible stop signs
 
   // expert data
   std::vector<std::vector<geometry::Vector2D>> expertTrajectories;

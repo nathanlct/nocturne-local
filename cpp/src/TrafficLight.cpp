@@ -17,6 +17,23 @@ void TrafficLight::updateTime(int newTime){
     currTime = newTime;
 }
 
+geometry::Vector2D TrafficLight::getPosition(){
+    return geometry::Vector2D(x, y);
+}
+
+int TrafficLight::getLightState(){
+    // TODO(ev) copypasta
+    LightState lightState;
+    auto result = std::find(validTimes.begin() , validTimes.end() , currTime);
+    if (result != validTimes.end()){
+        lightState = lightStates[result - validTimes.begin()];
+    }
+    else{
+        lightState = LightState::unknown;
+    }
+    return static_cast<int>(lightState);
+}
+
 void TrafficLight::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     // check if the current time is actually a state for which we have info
     // If not, return unknown
