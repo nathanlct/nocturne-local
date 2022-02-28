@@ -257,7 +257,6 @@ void Scenario::loadScenario(std::string path) {
     storeObjects.push_back(dynamic_cast<const geometry::AABBInterface*>(obj.get()));
   }
   bvh_.InitHierarchy(storeObjects);
-  std::cout << "initialized the road objects bvh" << std::endl;
 
   // Now create the BVH for the inividual road points that will be passed to our agent as state
   // Since the line segments never move we only need to define this once
@@ -271,8 +270,8 @@ void Scenario::loadScenario(std::string path) {
     }
   }
   road_point_bvh.InitHierarchy(roadPointObjects);
-  std::cout << "initialized the road points bvh" << std::endl;
 
+  // TODO(ev) this segfaults
   // // Now create the BVH for the stop signs
   // // Since the stop signs never move we only need to define this once
   // const int64_t nStopSigns = stopSigns.size();
@@ -441,8 +440,7 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
     std::vector<float> state(maxNumVisibleVehicles * 4 + maxNumTLSigns * 3 + maxNumVisibleRoadPoints * 3 + 2 * maxNumVisibleStopSigns);
     // TODO(ev) hardcoding
     std::fill(state.begin(), state.end(), -100);
-    std::vector<std::tuple<const Object*, float, float>> visibleVehicles;
-    int statePosCounter = -1; // set to -1 so the ++ logic for state incrementing works
+    int statePosCounter = 0; // set to -1 so the ++ logic for state incrementing works
 
     // re-center between -pi and pi
     // TODO(ev) this won't work if we are > 2pi or < -2pi
@@ -471,6 +469,7 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
     outerBox = new geometry::Box(topLeft, bottomRight);
 
     //**************** Vehicles **********************
+    std::vector<std::tuple<const Object*, float, float>> visibleVehicles;
     std::vector<const geometry::AABBInterface*> roadObjCandidates = bvh_.IntersectionCandidates(*outerBox);
     for (const auto* ptr : roadObjCandidates) {
         const Object* objPtr = dynamic_cast<const Object*>(ptr);
@@ -544,28 +543,23 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
         [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
     );
     int nRoadPoints = visibleRoadPoints.size();
-    std::cout << "got " + std::to_string(nRoadPoints) + " road points" << std::endl;
-    std::cout << "size of state is " + std::to_string(state.size()) << std::endl;
     for (int k = 0; k < std::min(nRoadPoints, maxNumVisibleRoadPoints); ++k) {
-        std::cout << statePosCounter << std::endl;
         auto pointData = visibleRoadPoints[k];
         state[statePosCounter++] = std::get<1>(pointData);
-        std::cout << "got the first state" << std::endl;
         state[statePosCounter++] = std::get<2>(pointData);
-        std::cout << "got the second state" << std::endl;
-        std::cout << "dist is " + std::to_string( std::get<1>(pointData)) << std::endl;
-        state[statePosCounter++] = std::get<0>(pointData)->type;
-        std::cout << "got the third state" << std::endl;
+        state[statePosCounter++] = float(std::get<0>(pointData)->type);
     }
-
     // //**************** STOP SIGNS **********************
     // // Okay now lets run the same process with stop signs
     // //**************** ************************
     // std::vector<std::tuple<float, float>> visibleStopSigns;
-    // std::vector<const geometry::AABBInterface*> stopSignCandidates = stop_sign_bvh.CollisionCandidates(dynamic_cast<const geometry::AABBInterface*>(outerBox));
+    // std::vector<const geometry::AABBInterface*> stopSignCandidates = stop_sign_bvh.IntersectionCandidates(*outerBox);
     // for (const auto* ptr : stopSignCandidates) {
+    //     std::cout << "made it into the stop sign for loop" << std::endl;
     //     const geometry::Box* objPtr = dynamic_cast<const geometry::Box*>(ptr);
+    //     std::cout << "got the pointer" << std::endl;
     //     geometry::Vector2D otherRelativePos = ((objPtr->Endpoint0() + objPtr->Endpoint1())/2.0) - sourcePos;
+    //     std::cout << "found the relative pos " << std::endl;
     //     float dist = otherRelativePos.Norm();
 
     //     if (dist > viewDist){
@@ -637,7 +631,6 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
     //     state[statePosCounter++] = std::get<2>(pointData);
     // }
 
-    // return state;
     return state;
 }
 
