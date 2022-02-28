@@ -102,7 +102,7 @@ class Scenario : public sf::Drawable {
 
   sf::RenderTexture* imageTexture;
   sf::FloatRect roadNetworkBounds;
-  geometry::BVH bvh_; // track vehicles for collisions
+  geometry::BVH vehicle_bvh_; // track vehicles for collisions
   geometry::BVH line_segment_bvh_; // track line segments for collisions
   geometry::BVH tl_bvh_; // track traffic light states to find visible traffic lights
   geometry::BVH road_point_bvh; // track road points to find visible road points

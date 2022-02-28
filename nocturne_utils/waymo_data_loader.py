@@ -11,7 +11,8 @@ from nocturne import Simulation
 class WaymoDataset(Dataset):
     def __init__(self, cfg):
         file_path = Path(cfg['file_path'])
-        self.files = list(file_path.glob('*tfrecord*'))
+        self.file_path = file_path
+        self.files = os.listdir(file_path) #list(file_path.glob('*tfrecord*'))
         # TODO(ev) this is just the number of files, 
         # the actual number of samples is harder to go
         self.num_samples = len(self.files)
@@ -23,7 +24,7 @@ class WaymoDataset(Dataset):
         print('calling get item')
         t = time.time()
         # construct a scenario
-        scenario_path = self.files[idx]
+        scenario_path = os.path.join(self.file_path, self.files[idx])
         # sample a start time for the scenario (need a non-zero time for now to have expert actions)
         start_time = np.random.randint(low=1, high=90)
 
@@ -36,7 +37,8 @@ class WaymoDataset(Dataset):
         veh_id = valid_vehs[int_val].getID()
         # TODO(ev) put this in when complete
         # veh_state = sim.scenario.getState(veh_id)
-        veh_state = np.array(scenario.getCone(valid_vehs[int_val], 2 * np.pi, 0.0), copy=False)
+        print('made it to get visible state')
+        veh_state = scenario.getVisibleObjectsState(valid_vehs[int_val], 1.58)
         expert_action = np.array(scenario.getExpertAction(veh_id, start_time))
         print('returning from get item')
         return veh_state, expert_action
