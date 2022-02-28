@@ -76,7 +76,9 @@ void BVH::InitHierarchy(const std::vector<const AABBInterface*>& objects) {
   std::vector<std::pair<uint64_t, const AABBInterface*>> encoded_objects;
   encoded_objects.reserve(n);
   for (const auto* obj : objects) {
+    std::cout << "made it here" << std::endl;
     const AABB aabb = obj->GetAABB();
+    std::cout << "made it past getAABB" <<std::endl;
     const uint64_t morton_code = morton::Morton2D(aabb.Center());
     encoded_objects.emplace_back(morton_code, obj);
   }

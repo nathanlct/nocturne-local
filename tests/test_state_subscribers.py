@@ -38,10 +38,20 @@ print('run time for partial view is is ', np.mean(times))
 times = []
 for _ in range(5):
     t = time.time()
-    sim.waymo_step()
+    sim.step(0.1)
     diff = time.time() - t
     times.append(diff)
 
 print('run time for step is ', np.mean(times))
+
+
+times = []
+for _ in range(5):
+    t = time.time()
+    sim.waymo_step()
+    diff = time.time() - t
+    times.append(diff)
+
+print('run time for waymo step is ', np.mean(times))
 
 

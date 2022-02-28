@@ -274,21 +274,22 @@ void Scenario::loadScenario(std::string path) {
   // TODO(ev) this segfaults
   // // Now create the BVH for the stop signs
   // // Since the stop signs never move we only need to define this once
-  // const int64_t nStopSigns = stopSigns.size();
-  // std::vector<const geometry::AABBInterface*> stopSignObjects;
-  // stopSignObjects.reserve(nStopSigns);
-  // std::cout << "made it to stop sign for loop" << std::endl;
-  // for (const auto& obj : stopSigns) {
-  //   // create a box to store
-  //   geometry::Box* box = new geometry::Box(obj + 2, obj - 2);
-  //   std::cout << "initialized stop sign box" << std::endl;
-  //   auto ptr = std::shared_ptr<geometry::Box>(box);
-  //   stopSignObjects.push_back(dynamic_cast<const geometry::AABBInterface*>(box));
-  //   std::cout << "the stop sign area is " << ptr->GetAABB().Area() << std::endl;
-  // }
-  // std::cout << "exited the stop sign for loop" << std::endl;
-  // stop_sign_bvh.InitHierarchy(stopSignObjects);
-  // std::cout << "initialized the stop sign bvh" << std::endl;
+  const int64_t nStopSigns = stopSigns.size();
+  std::vector<const geometry::AABBInterface*> stopSignObjects;
+  stopSignObjects.reserve(nStopSigns);
+  std::cout << "made it to stop sign for loop" << std::endl;
+  for (const auto& obj : stopSigns) {
+    // create a box to store
+    geometry::Vector2D rightElement = obj + 2;
+    geometry::Vector2D leftElement = obj - 2;
+    geometry::Box* box = new geometry::Box(leftElement, rightElement);
+    std::cout << "initialized stop sign box" << std::endl;
+    auto ptr = std::shared_ptr<geometry::Box>(box);
+    stopSignObjects.push_back(dynamic_cast<const geometry::AABBInterface*>(ptr.get()));
+    std::cout << "the stop sign area is " << ptr->GetAABB().Area() << std::endl;
+    std::cout << "the stop sign area is " << dynamic_cast<const geometry::AABBInterface*>(ptr.get())->GetAABB().Area() << std::endl;
+  }
+  stop_sign_bvh.InitHierarchy(stopSignObjects);
 
   // // Now create the BVH for the traffic lights
   // // Since the line segments never move we only need to define this once but
@@ -502,7 +503,6 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
     );
 
     int nVeh = visibleVehicles.size();
-    std::cout << "number of visible vehicles is " + std::to_string(nVeh) << std::endl;
     for (int k = 0; k < std::min(nVeh, maxNumVisibleVehicles); ++k) {
         auto vehData = visibleVehicles[k];
         state[statePosCounter++] = std::get<1>(vehData);
@@ -535,7 +535,6 @@ std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float vie
             visibleRoadPoints.push_back(std::make_tuple(objPtr, dist, headingDiff));
         }
     }
-    std::cout << "created a list of visible road points" << std::endl;
     // we want all the road points sorted by distance to the agent
     std::sort(
         visibleRoadPoints.begin(), 
