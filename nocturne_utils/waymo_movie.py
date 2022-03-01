@@ -10,7 +10,9 @@ os.environ["DISPLAY"] = ":0.0"
 
 fig = plt.figure()
 cam = Camera(fig)
-file = '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json/tfrecord-00002-of-01000_5.json'
+path = '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json'
+files = os.listdir(path)
+file = os.path.join(path, files[np.random.randint(len(files))])
 sim = Simulation(file, start_time = 0)
 scenario = sim.getScenario()
 for i in range(90):
@@ -20,4 +22,4 @@ for i in range(90):
     sim.waymo_step()
 
 animation = cam.animate(interval=50)
-animation.save(f'{os.basename(file)}.mp4')
+animation.save(f'{os.path.basename(file)}.mp4')

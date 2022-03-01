@@ -436,7 +436,7 @@ void Scenario::waymo_step() {
 
 std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float viewAngle) {
     // TODO(ev) hardcoded
-    float viewDist = 120.0f;
+    float viewDist = 60.0f;
     float halfViewAngle = viewAngle / 2.0;
 
     // Vehicle state is: dist, heading-diff, speed, length
@@ -876,9 +876,9 @@ void Scenario::removeVehicle(Vehicle* object) {
     }
   }
 
-  for (auto it = vehicles.begin(); it != vehicles.end();) {
+  for (auto it = roadObjects.begin(); it != roadObjects.end();) {
     if ((*it).get() == object) {
-      it = vehicles.erase(it);
+      it = roadObjects.erase(it);
     } else {
       it++;
     }

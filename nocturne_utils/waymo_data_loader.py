@@ -21,7 +21,6 @@ class WaymoDataset(Dataset):
         return self.num_samples
 
     def __getitem__(self, idx):
-        print('calling get item')
         t = time.time()
         # construct a scenario
         scenario_path = os.path.join(self.file_path, self.files[idx])
@@ -37,10 +36,8 @@ class WaymoDataset(Dataset):
         veh_id = valid_vehs[int_val].getID()
         # TODO(ev) put this in when complete
         # veh_state = sim.scenario.getState(veh_id)
-        print('made it to get visible state')
         veh_state = scenario.getVisibleObjectsState(valid_vehs[int_val], 1.58)
         expert_action = np.array(scenario.getExpertAction(veh_id, start_time))
-        print('returning from get item')
         return veh_state, expert_action
 
 # TODO(ev) move this out of this file
@@ -55,16 +52,16 @@ if __name__== '__main__':
     os.environ["DISPLAY"] = ":0.0"
     path = '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json/'
 
-    num_iters = 1
-    data_loader = DataLoader(WaymoDataset({'file_path': path}),
-                            pin_memory=True, shuffle=True, 
-                            batch_size=32, num_workers=0)
-    t = time.time()
-    for i, (states, actions) in enumerate(data_loader):
-        print(i)
-        if i > num_iters:
-            break
-    print(f'time to generate {num_iters} batches with 1 worker is {time.time() - t}')
+    num_iters = 20
+    # data_loader = DataLoader(WaymoDataset({'file_path': path}),
+    #                         pin_memory=True, shuffle=True, 
+    #                         batch_size=32, num_workers=0)
+    # t = time.time()
+    # for i, (states, actions) in enumerate(data_loader):
+    #     print(i)
+    #     if i > num_iters:
+    #         break
+    # print(f'avg time to generate a batch with 1 worker is {(time.time() - t) / num_iters}')
 
     data_loader = DataLoader(WaymoDataset({'file_path': path}),
                             pin_memory=True, shuffle=True, 
@@ -74,4 +71,4 @@ if __name__== '__main__':
         print(i)
         if i > num_iters:
             break
-    print(f'time to generate {num_iters} batches with 4 workers is {time.time() - t}')
+    print(f'avg time to generate a batch with {min(num_iters, 10)} workers is {(time.time() - t) / num_iters}')
