@@ -29,12 +29,6 @@ class Scenario : public sf::Drawable {
   void step(float dt);
   void waymo_step(); // step forwards and place vehicles at their next position in the expert dict
 
-  std::vector<std::shared_ptr<Vehicle>> getVehicles();
-  std::vector<std::shared_ptr<Pedestrian>> getPedestrians();
-  std::vector<std::shared_ptr<Cyclist>> getCyclists();
-  std::vector<std::shared_ptr<Object>> getRoadObjects();
-  std::vector<std::shared_ptr<RoadLine>> getRoadLines();
-
   // TODO(ev) hardcoding, this is the maximum number of vehicles that can be returned in the state
   int maxNumVisibleVehicles = 20;
   int maxNumVisibleRoadPoints = 80;
@@ -44,24 +38,6 @@ class Scenario : public sf::Drawable {
   void removeVehicle(Vehicle* object);
 
   int getMaxEnvTime() { return maxEnvTime; }
-
-  sf::FloatRect getRoadNetworkBoundaries() const;
-
-  ImageMatrix getCone(
-      Object* object,
-      float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
-      float headTilt = 0.0f, bool obscuredView = true);
-  ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
-
-  bool checkForCollision(const Object* object1, const Object* object2);
-  bool checkForCollision(const Object* object,
-                         const geometry::LineSegment* segment);
-
-  // bool isVehicleOnRoad(const Object& object) const;
-  // bool isPointOnRoad(float posX, float posY) const;
-//   void createVehicle(float posX, float posY, float width, float length,
-//                      float heading, bool occludes, bool collides,
-//                      bool checkForCollisions, float goalPosX, float goalPosY);
 
   // query expert data
   std::vector<float> getExpertAction(
@@ -73,9 +49,25 @@ class Scenario : public sf::Drawable {
                      // compute an expert action given the valid vector
   std::vector<bool> getValidExpertStates(int objID);
 
-  // methods for handling state
+  // state accessors
+  // get a list of vehicles that actually moved
+  sf::FloatRect getRoadNetworkBoundaries() const;
+  ImageMatrix getCone(
+      Object* object,
+      float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
+      float headTilt = 0.0f, bool obscuredView = true);
+  ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
+  bool checkForCollision(const Object* object1, const Object* object2);
+  bool checkForCollision(const Object* object,
+                         const geometry::LineSegment* segment);
+  std::vector<std::shared_ptr<Vehicle>> getVehicles();
+  std::vector<std::shared_ptr<Pedestrian>> getPedestrians();
+  std::vector<std::shared_ptr<Cyclist>> getCyclists();
+  std::vector<std::shared_ptr<Object>> getRoadObjects();
+  std::vector<std::shared_ptr<RoadLine>> getRoadLines();
   std::vector<float> getEgoState(Object* obj);
   std::vector<float> getVisibleObjectsState(Object* sourceObj, float viewAngle /* the total angle subtended by the view cone*/);
+  std::vector<std::shared_ptr<Object>> getObjectsThatMoved() {return objectsThatMoved;}
 
  private:
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
@@ -114,6 +106,9 @@ class Scenario : public sf::Drawable {
   std::vector<std::vector<float>> expertHeadings;
   std::vector<float> lengths;
   std::vector<std::vector<bool>> expertValid;
+
+  // track the object that moved, useful for figuring out which agents should actually be controlled
+  std::vector<std::shared_ptr<Object>> objectsThatMoved;
 };
 
 }  // namespace nocturne

@@ -70,6 +70,7 @@ void Scenario::loadScenario(std::string path) {
     std::vector<geometry::Vector2D> localExpertSpeeds;
     std::vector<bool> localValid;
     std::vector<float> localHeadingVec;
+    bool didObjectMove = false;
     for (unsigned int i = 0; i < obj["position"]["x"].size(); i++) {
       geometry::Vector2D currPos(obj["position"]["x"][i],
                                  obj["position"]["y"][i]);
@@ -77,6 +78,9 @@ void Scenario::loadScenario(std::string path) {
                                  obj["velocity"]["y"][i]);
       localExpertTrajectory.push_back(currPos);
       localExpertSpeeds.push_back(currVel);
+      if (currVel.Norm() > 0){
+        didObjectMove = true;
+      }
       localValid.push_back(bool(obj["valid"][i]));
       // waymo data is in degrees!
       float heading = obj["heading"][i];
@@ -101,6 +105,9 @@ void Scenario::loadScenario(std::string path) {
         auto ptr = std::shared_ptr<Vehicle>(veh);
         vehicles.push_back(ptr);
         roadObjects.push_back(ptr);
+        if (didObjectMove){
+          objectsThatMoved.push_back(ptr);
+        }
       } else if (type == "pedestrian" && useNonVehicles) {
         Pedestrian* ped = new Pedestrian(pos, width, length, heading, occludes,
                                          collides, checkForCollisions, goalPos,
@@ -109,6 +116,9 @@ void Scenario::loadScenario(std::string path) {
         auto ptr = std::shared_ptr<Pedestrian>(ped);
         pedestrians.push_back(ptr);
         roadObjects.push_back(ptr);
+        if (didObjectMove){
+          objectsThatMoved.push_back(ptr);
+        }
       } else if (type == "cyclist" && useNonVehicles) {
         Cyclist* cyclist = new Cyclist(pos, width, length, heading, occludes,
                                        collides, checkForCollisions, goalPos,
@@ -117,6 +127,9 @@ void Scenario::loadScenario(std::string path) {
         auto ptr = std::shared_ptr<Cyclist>(cyclist);
         cyclists.push_back(ptr);
         roadObjects.push_back(ptr);
+        if (didObjectMove){
+          objectsThatMoved.push_back(ptr);
+        }
       }
       // No point in printing this if we are not using non-vehicles
       // TODO(ev) we should include the UNKNOWN type objects
