@@ -38,7 +38,8 @@ class BaseEnv(object):
         # TODO(eugenevinitsky) remove this once the PPO code doesn't have this restriction
         # track dead agents for PPO.
         self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
-        self.dead_feat =  -np.ones_like(self.scenario.getVisibleObjectsState(self.vehicles[0], self.cfg.subscriber.view_angle))
+        self.dead_feat =  -np.ones_like(self.scenario.getVisibleState(self.vehicles[0], self.cfg.subscriber.view_angle, 
+                                                                      self.cfg.subscriber.view_dist))
 
     @property
     def observation_space(self):
@@ -73,7 +74,7 @@ class BaseEnv(object):
         objs_to_remove = []
         for veh_obj in self.simulation.getScenario().getVehicles():
             veh_id = veh_obj.getID()
-            obs_dict[veh_id] = np.array(self.scenario.getVisibleObjectsState(veh_obj, self.cfg.subscriber.view_angle), copy=False)
+            obs_dict[veh_id] = np.array(self.scenario.getVisibleObjectsState(veh_obj, self.cfg.subscriber.view_angle, self.cfg.subscriber.view_dist), copy=False)
             rew_dict[veh_id] = 0
             done_dict[veh_id] = False
             info_dict[veh_id]['goal_achieved'] = False
@@ -172,7 +173,7 @@ class BaseEnv(object):
         obs_dict = {}
         for veh_obj in self.simulation.getScenario().getVehicles():
             veh_id = veh_obj.getID()
-            obs_dict[veh_id] = np.array(self.scenario.getVisibleObjectsState(veh_obj, self.cfg.subscriber.view_angle), copy=False)
+            obs_dict[veh_id] = np.array(self.scenario.getVisibleObjectsState(veh_obj, self.cfg.subscriber.view_angle, self.cfg.subscriber.view_dist), copy=False)
 
         return obs_dict
 

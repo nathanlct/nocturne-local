@@ -9,8 +9,10 @@ sim = Simulation(scenario_path='/checkpoint/eugenevinitsky/waymo_open/motion_v1p
 scenario = sim.getScenario()
 vehs = scenario.getVehicles()
 state = scenario.getEgoState(vehs[0])
+print('ego state is ', state)
 angle = np.pi/4
-new_state = scenario.getVisibleObjectsState(vehs[0], 2 * np.pi)
+new_state = scenario.getVisibleState(vehs[0], 2 * np.pi)
+print('new state is ', new_state)
 img = np.array(scenario.getCone(scenario.getVehicles()[0], 2 * np.pi, 0.0, False), copy=False)
 plt.figure()
 plt.imshow(img)
@@ -20,7 +22,7 @@ print(new_state)
 times = []
 for _ in range(5):
     t = time.time()
-    new_state = scenario.getVisibleObjectsState(vehs[0], 2 * np.pi)
+    new_state = scenario.getVisibleState(vehs[0], 2 * np.pi)
     diff = time.time() - t
     times.append(diff)
 
@@ -29,7 +31,7 @@ print('run time for full view is is ', np.mean(times))
 times = []
 for _ in range(5):
     t = time.time()
-    new_state = scenario.getVisibleObjectsState(vehs[0], 1.58)
+    new_state = scenario.getVisibleState(vehs[0], 1.58)
     diff = time.time() - t
     times.append(diff)
 

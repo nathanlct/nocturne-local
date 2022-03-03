@@ -16,11 +16,13 @@ void init_scenario(py::module& m) {
       .def("getVehicles", &nocturne::Scenario::getVehicles, py::return_value_policy::reference)
       .def("getPedestrians", &nocturne::Scenario::getPedestrians, py::return_value_policy::reference)
       .def("getCyclists", &nocturne::Scenario::getCyclists, py::return_value_policy::reference)
+      .def("getObjectsThatMoved", &nocturne::Scenario::getObjectsThatMoved, py::return_value_policy::reference)
       .def("getMaxEnvTime", &nocturne::Scenario::getMaxEnvTime)
       .def("getRoadLines", &nocturne::Scenario::getRoadLines)
       .def("getCone", &nocturne::Scenario::getCone,
           "Draw a cone representing the objects that the agent can see",
-          py::arg("object"), py::arg("view_angle") = 1.58, py::arg("head_tilt") = 0.0, py::arg("obscuredView") = true)
+          py::arg("object"), py::arg("view_angle") = 1.58, py::arg("view_dist") = 60,
+          py::arg("head_tilt") = 0.0, py::arg("obscuredView") = true)
       .def("getImage", &nocturne::Scenario::getImage,
            "Return a numpy array of dimension (w, h, 4) representing the scene",
            py::arg("object") = nullptr, py::arg("render_goals") = false)
@@ -30,7 +32,12 @@ void init_scenario(py::module& m) {
       .def("getExpertAction", &nocturne::Scenario::getExpertAction)
       .def("getValidExpertStates", &nocturne::Scenario::getValidExpertStates)
       .def("getEgoState", &nocturne::Scenario::getEgoState)
-      .def("getVisibleObjectsState", &nocturne::Scenario::getVisibleObjectsState);
+      .def("getVisibleObjects", &nocturne::Scenario::getVisibleObjects)
+      .def("getVisibleRoadPoints", &nocturne::Scenario::getVisibleRoadPoints)
+      .def("getVisibleStopSigns", &nocturne::Scenario::getVisibleStopSigns)
+      .def("getVisibleTrafficLights", &nocturne::Scenario::getVisibleTrafficLights)
+      .def("getVisibleState", &nocturne::Scenario::getVisibleState,
+          py::arg("object"), py::arg("view_angle"), py::arg("view_dist") = 60.0);
   // .def(
   //     py::init<std::string>(),
   //     "Constructor for Scenario",

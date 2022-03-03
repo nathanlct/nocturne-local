@@ -447,237 +447,269 @@ void Scenario::waymo_step() {
   }
 }
 
-std::vector<float> Scenario::getVisibleObjectsState(Object* sourceObj, float viewAngle) {
-    // TODO(ev) hardcoded
-    float viewDist = 60.0f;
-    float halfViewAngle = viewAngle / 2.0;
+std::pair<float, geometry::Vector2D> Scenario::getObjectHeadingAndPos(Object* sourceObject){
+  float sourceHeading = sourceObject->getHeading();
+  while (sourceHeading > geometry::utils::kPi)
+      sourceHeading -= 2.0f * geometry::utils::kPi;
+  while (sourceHeading < -geometry::utils::kPi)
+      sourceHeading += 2.0f * geometry::utils::kPi;
 
+  geometry::Vector2D sourcePos = sourceObject->getPosition();
+  return std::pair<float, geometry::Vector2D>(sourceHeading, sourcePos);
+}
+
+const geometry::Box* Scenario::getOuterBox(float sourceHeading, geometry::Vector2D sourcePos, float halfViewAngle, float viewDist){
+  const geometry::Box* outerBox;
+  float leftAngle = sourceHeading + geometry::utils::kPi / 4.0f; // the angle pointing to the top left corner of the rectangle enclosing the cone
+  float scalingFactorLeft = viewDist / std::cos(halfViewAngle); // how long the vector should be
+  geometry::Vector2D topLeft = geometry::Vector2D(std::cos(leftAngle), std::sin(leftAngle));
+  topLeft *= scalingFactorLeft;
+  topLeft += sourcePos;
+  float scalingFactorRight = viewDist / std::sin((geometry::utils::kPi / 2.0) - halfViewAngle);
+  float rightAngle = sourceHeading - 3 * geometry::utils::kPi / 4.0f; // the angle pointing to the bottom right hand corner of the rectangle enclosing the cone
+  geometry::Vector2D bottomRight = geometry::Vector2D(std::cos(rightAngle), std::sin(rightAngle));
+  bottomRight *= scalingFactorRight;
+  bottomRight += sourcePos;
+  outerBox = new geometry::Box(topLeft, bottomRight);
+  return outerBox;
+}
+
+std::vector<float> Scenario::getVisibleObjects(Object* sourceObj, float viewAngle, float viewDist){
+  auto[sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
+  float halfViewAngle = viewAngle / 2.0;
+  int statePosCounter = 0;
+  std::vector<float> state(maxNumVisibleObjects * 4);
+  std::fill(state.begin(), state.end(), -100); // TODO(ev hardcoding)
+  const geometry::Box* outerBox = getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
+  if (vehicle_bvh_.getSize() > 0){
+    std::vector<std::tuple<const Object*, float, float>> visibleVehicles;
+    std::vector<const geometry::AABBInterface*> roadObjCandidates = vehicle_bvh_.IntersectionCandidates(*outerBox);
+    for (const auto* ptr : roadObjCandidates) {
+        const Object* objPtr = dynamic_cast<const Object*>(ptr);
+        if (objPtr->getID() == sourceObj->getID()){
+            continue;
+        }
+        geometry::Vector2D otherRelativePos = objPtr->getPosition() - sourcePos;
+        float dist = otherRelativePos.Norm();
+
+        if (dist > viewDist){
+            continue;
+        }
+
+        float otherRelativeHeading = otherRelativePos.Angle();
+
+        float headingDiff = otherRelativeHeading - sourceHeading;
+        if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
+        if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
+
+        if (std::abs(headingDiff) <= halfViewAngle) {
+            visibleVehicles.push_back(std::make_tuple(objPtr, dist, headingDiff));
+        }
+    }
+
+    // we want all the vehicles sorted by distance to the agent
+    std::sort(
+        visibleVehicles.begin(), 
+        visibleVehicles.end(),
+        [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
+    );
+
+    int nVeh = visibleVehicles.size();
+    for (int k = 0; k < std::min(nVeh, maxNumVisibleObjects); ++k) {
+        auto vehData = visibleVehicles[k];
+        state[statePosCounter++] = std::get<1>(vehData);
+        state[statePosCounter++] = std::get<2>(vehData);
+        state[statePosCounter++] = std::get<0>(vehData)->getSpeed();
+        state[statePosCounter++] = std::get<0>(vehData)->getLength();
+    }
+    // increment the state counter appropriately if we have fewer than the maximum number of vehicles
+    if (nVeh < maxNumVisibleObjects){
+      statePosCounter += (maxNumVisibleObjects - nVeh) * 4;
+    }
+  } else{
+    statePosCounter += maxNumVisibleObjects * 4;
+  }
+  return state;
+}
+std::vector<float> Scenario::getVisibleRoadPoints(Object* sourceObj, float viewAngle, float viewDist){
+  auto[sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
+  float halfViewAngle = viewAngle / 2.0;
+  int statePosCounter = 0;
+  std::vector<float> state(maxNumVisibleRoadPoints * 3);
+  std::fill(state.begin(), state.end(), -100); // TODO(ev hardcoding)
+  const geometry::Box* outerBox = getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
+  if (road_point_bvh.getSize() > 0){
+    std::vector<std::tuple<const RoadPoint*, float, float>> visibleRoadPoints;
+    std::vector<const geometry::AABBInterface*> roadPointCandidates = road_point_bvh.IntersectionCandidates(*outerBox);
+    for (const auto* ptr : roadPointCandidates) {
+        const RoadPoint* objPtr = dynamic_cast<const RoadPoint*>(ptr);
+        geometry::Vector2D otherRelativePos = objPtr->position - sourcePos;
+        float dist = otherRelativePos.Norm();
+
+        if (dist > viewDist){
+            continue;
+        }
+
+        float otherRelativeHeading = otherRelativePos.Angle();
+
+        float headingDiff = otherRelativeHeading - sourceHeading;
+        if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
+        if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
+
+        if (std::abs(headingDiff) <= halfViewAngle) {
+            visibleRoadPoints.push_back(std::make_tuple(objPtr, dist, headingDiff));
+        }
+    }
+    // we want all the road points sorted by distance to the agent
+    std::sort(
+        visibleRoadPoints.begin(), 
+        visibleRoadPoints.end(),
+        [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
+    );
+    int nRoadPoints = visibleRoadPoints.size();
+    for (int k = 0; k < std::min(nRoadPoints, maxNumVisibleRoadPoints); ++k) {
+        auto pointData = visibleRoadPoints[k];
+        state[statePosCounter++] = std::get<1>(pointData);
+        state[statePosCounter++] = std::get<2>(pointData);
+        state[statePosCounter++] = float(std::get<0>(pointData)->type);
+    }
+    // increment the state counter appropriately if we have fewer than the maximum number of visible road points
+    if (nRoadPoints < maxNumVisibleRoadPoints){
+      statePosCounter += (maxNumVisibleRoadPoints - nRoadPoints) * 3;
+    }
+  } else{
+    statePosCounter += maxNumVisibleRoadPoints * 3;
+  }
+  return state;
+}
+
+std::vector<float> Scenario::getVisibleStopSigns(Object* sourceObj, float viewAngle, float viewDist){
+  auto[sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
+  float halfViewAngle = viewAngle / 2.0;
+  int statePosCounter = 0;
+  std::vector<float> state(maxNumVisibleStopSigns * 2);
+  std::fill(state.begin(), state.end(), -100); // TODO(ev hardcoding)
+  const geometry::Box* outerBox = getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
+  if (stop_sign_bvh.getSize() > 0){
+    std::vector<std::tuple<float, float>> visibleStopSigns;
+    std::vector<const geometry::AABBInterface*> stopSignCandidates = stop_sign_bvh.IntersectionCandidates(*outerBox);
+    for (const auto* ptr : stopSignCandidates) {
+        const geometry::Box* objPtr = dynamic_cast<const geometry::Box*>(ptr);
+        geometry::Vector2D otherRelativePos = ((objPtr->Endpoint0() + objPtr->Endpoint1())/2.0) - sourcePos;
+        float dist = otherRelativePos.Norm();
+
+        if (dist > viewDist){
+            continue;
+        }
+
+        float otherRelativeHeading = otherRelativePos.Angle();
+
+        float headingDiff = otherRelativeHeading - sourceHeading;
+        if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
+        if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
+
+        if (std::abs(headingDiff) <= halfViewAngle) {
+            visibleStopSigns.push_back(std::make_tuple(dist, headingDiff));
+        }
+    }
+
+    // we want all the stop signs sorted by distance to the agent
+    std::sort(
+        visibleStopSigns.begin(), 
+        visibleStopSigns.end(),
+        [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
+    );
+
+    int nStopSigns = visibleStopSigns.size();
+    for (size_t k = 0; k < std::min(nStopSigns, maxNumVisibleStopSigns); ++k) {
+        auto pointData = visibleStopSigns[k];
+        state[statePosCounter++] = std::get<0>(pointData);
+        state[statePosCounter++] = std::get<1>(pointData);
+    }
+    // increment the state counter appropriately if we have fewer than the maximum number of visible stop signs
+    if (nStopSigns < maxNumVisibleStopSigns){
+      statePosCounter += (maxNumVisibleStopSigns - nStopSigns) * 2;
+    }
+  } else{
+    statePosCounter += maxNumVisibleStopSigns * 2;
+  }
+  return state;
+}
+
+std::vector<float> Scenario::getVisibleTrafficLights(Object* sourceObj, float viewAngle, float viewDist){
+  auto[sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
+  float halfViewAngle = viewAngle / 2.0;
+  int statePosCounter = 0;
+  std::vector<float> state(maxNumVisibleTLSigns * 3);
+  std::fill(state.begin(), state.end(), -100); // TODO(ev hardcoding)
+  const geometry::Box* outerBox = getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
+  if (tl_bvh_.getSize() > 0){
+    std::vector<std::tuple<float, float, int>> visibleTrafficLights;
+    std::vector<const geometry::AABBInterface*> tlCandidates = tl_bvh_.IntersectionCandidates(*outerBox);
+    for (const auto* ptr : tlCandidates) {
+        const TrafficLightBox* objPtr = dynamic_cast<const TrafficLightBox*>(ptr);
+        geometry::Vector2D otherRelativePos = objPtr->position - sourcePos;
+        float dist = otherRelativePos.Norm();
+
+        if (dist > viewDist){
+            continue;
+        }
+
+        float otherRelativeHeading = otherRelativePos.Angle();
+
+        float headingDiff = otherRelativeHeading - sourceHeading;
+        if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
+        if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
+
+        if (std::abs(headingDiff) <= halfViewAngle) {
+            visibleTrafficLights.push_back(std::make_tuple(dist, headingDiff, trafficLights[objPtr->tlIndex]->getLightState()));
+        }
+    }
+
+    // we want all the traffic lights sorted by distance to the agent
+    std::sort(
+        visibleTrafficLights.begin(), 
+        visibleTrafficLights.end(),
+        [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
+    );
+
+    int nTrafficLights = visibleTrafficLights.size();
+    for (size_t k = 0; k < std::min(nTrafficLights, maxNumVisibleTLSigns); ++k) {
+        auto pointData = visibleTrafficLights[k];
+        state[statePosCounter++] = std::get<0>(pointData);
+        state[statePosCounter++] = std::get<1>(pointData);
+        state[statePosCounter++] = std::get<2>(pointData);
+    }
+    // increment the state counter appropriately if we have fewer than the maximum number of visible traffic lights
+    if (nTrafficLights < maxNumVisibleTLSigns){
+      statePosCounter += (maxNumVisibleTLSigns - nTrafficLights) * 3;
+    }
+  } else{
+    statePosCounter += maxNumVisibleTLSigns * 3;
+  }
+
+  return state;
+}
+
+std::vector<float> Scenario::getVisibleState(Object* sourceObj, float viewAngle, float viewDist) {
     // Vehicle state is: dist, heading-diff, speed, length
     // TL state is: dist, heading-diff, current light color as an int
     // Road point state is: dist, heading-diff, type of road point as an int i.e. roadEdge, laneEdge, etc.
     // Stop sign state is: dist, heading-diff
-    std::vector<float> state(maxNumVisibleVehicles * 4 + maxNumTLSigns * 3 + maxNumVisibleRoadPoints * 3 + 2 * maxNumVisibleStopSigns);
-    // TODO(ev) hardcoding
-    std::fill(state.begin(), state.end(), -100);
-    int statePosCounter = 0; // set to -1 so the ++ logic for state incrementing works
-
-    // re-center between -pi and pi
-    // TODO(ev) this won't work if we are > 2pi or < -2pi
-    float sourceHeading = sourceObj->getHeading();
-    while (sourceHeading > geometry::utils::kPi)
-        sourceHeading -= 2.0f * geometry::utils::kPi;
-    while (sourceHeading < -geometry::utils::kPi)
-        sourceHeading += 2.0f * geometry::utils::kPi;
-
-    geometry::Vector2D sourcePos = sourceObj->getPosition();
-
-    // TODO(ev) replace this check with an efficient check, this is too large a bound
-    // Find a set of plausible candidates that could be in view
-    // Do this by bounding the cone in the square that encloses the entire circle that the cone is a part of
-    const geometry::Box* outerBox;
-    float leftAngle = sourceHeading + geometry::utils::kPi / 4.0f; // the angle pointing to the top left corner of the rectangle enclosing the cone
-    float scalingFactorLeft = viewDist / std::cos(halfViewAngle); // how long the vector should be
-    geometry::Vector2D topLeft = geometry::Vector2D(std::cos(leftAngle), std::sin(leftAngle));
-    topLeft *= scalingFactorLeft;
-    topLeft += sourcePos;
-    float scalingFactorRight = viewDist / std::sin((geometry::utils::kPi / 2.0) - halfViewAngle);
-    float rightAngle = sourceHeading - 3 * geometry::utils::kPi / 4.0f; // the angle pointing to the bottom right hand corner of the rectangle enclosing the cone
-    geometry::Vector2D bottomRight = geometry::Vector2D(std::cos(rightAngle), std::sin(rightAngle));
-    bottomRight *= scalingFactorRight;
-    bottomRight += sourcePos;
-    outerBox = new geometry::Box(topLeft, bottomRight);
-
-    //**************** Vehicles **********************
-    if (vehicle_bvh_.getSize() > 0){
-      std::vector<std::tuple<const Object*, float, float>> visibleVehicles;
-      std::vector<const geometry::AABBInterface*> roadObjCandidates = vehicle_bvh_.IntersectionCandidates(*outerBox);
-      for (const auto* ptr : roadObjCandidates) {
-          const Object* objPtr = dynamic_cast<const Object*>(ptr);
-          if (objPtr->getID() == sourceObj->getID()){
-              continue;
-          }
-          geometry::Vector2D otherRelativePos = objPtr->getPosition() - sourcePos;
-          float dist = otherRelativePos.Norm();
-
-          if (dist > viewDist){
-              continue;
-          }
-
-          float otherRelativeHeading = otherRelativePos.Angle();
-
-          float headingDiff = otherRelativeHeading - sourceHeading;
-          if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
-          if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
-
-          if (std::abs(headingDiff) <= halfViewAngle) {
-              visibleVehicles.push_back(std::make_tuple(objPtr, dist, headingDiff));
-          }
-      }
-
-      // we want all the vehicles sorted by distance to the agent
-      std::sort(
-          visibleVehicles.begin(), 
-          visibleVehicles.end(),
-          [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
-      );
-
-      int nVeh = visibleVehicles.size();
-      for (int k = 0; k < std::min(nVeh, maxNumVisibleVehicles); ++k) {
-          auto vehData = visibleVehicles[k];
-          state[statePosCounter++] = std::get<1>(vehData);
-          state[statePosCounter++] = std::get<2>(vehData);
-          state[statePosCounter++] = std::get<0>(vehData)->getSpeed();
-          state[statePosCounter++] = std::get<0>(vehData)->getLength();
-      }
-      // increment the state counter appropriately if we have fewer than the maximum number of vehicles
-      if (nVeh < maxNumVisibleVehicles){
-        statePosCounter += (maxNumVisibleVehicles - nVeh) * 4;
-      }
-    } else{
-      statePosCounter += maxNumVisibleVehicles * 4;
+    const int64_t n = maxNumVisibleObjects * 4 + maxNumVisibleTLSigns * 3 + maxNumVisibleRoadPoints * 3 + 2 * maxNumVisibleStopSigns;
+    std::vector<float> state;
+    state.reserve(n);
+    std::vector<float> vehicleState = getVisibleObjects(sourceObj, viewAngle, viewDist);
+    std::vector<float> roadState = getVisibleRoadPoints(sourceObj, viewAngle, viewDist);
+    std::vector<float> stopSignState = getVisibleStopSigns(sourceObj, viewAngle, viewDist);
+    std::vector<float> tlState = getVisibleTrafficLights(sourceObj, viewAngle, viewDist);
+    state.insert( state.end(), vehicleState.begin(), vehicleState.end() );
+    state.insert( state.end(), roadState.begin(), roadState.end() );
+    state.insert( state.end(), stopSignState.begin(), stopSignState.end() );
+    state.insert( state.end(), tlState.begin(), tlState.end() );
+    for (float i : state){
+      std::cout << i << std::endl;
     }
-
-    //**************** ROAD EDGES **********************
-    // Okay now lets run the same process with road edges
-    //****************************************
-    if (road_point_bvh.getSize() > 0){
-      std::vector<std::tuple<const RoadPoint*, float, float>> visibleRoadPoints;
-      std::vector<const geometry::AABBInterface*> roadPointCandidates = road_point_bvh.IntersectionCandidates(*outerBox);
-      for (const auto* ptr : roadPointCandidates) {
-          const RoadPoint* objPtr = dynamic_cast<const RoadPoint*>(ptr);
-          geometry::Vector2D otherRelativePos = objPtr->position - sourcePos;
-          float dist = otherRelativePos.Norm();
-
-          if (dist > viewDist){
-              continue;
-          }
-
-          float otherRelativeHeading = otherRelativePos.Angle();
-
-          float headingDiff = otherRelativeHeading - sourceHeading;
-          if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
-          if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
-
-          if (std::abs(headingDiff) <= halfViewAngle) {
-              visibleRoadPoints.push_back(std::make_tuple(objPtr, dist, headingDiff));
-          }
-      }
-      // we want all the road points sorted by distance to the agent
-      std::sort(
-          visibleRoadPoints.begin(), 
-          visibleRoadPoints.end(),
-          [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
-      );
-      int nRoadPoints = visibleRoadPoints.size();
-      for (int k = 0; k < std::min(nRoadPoints, maxNumVisibleRoadPoints); ++k) {
-          auto pointData = visibleRoadPoints[k];
-          state[statePosCounter++] = std::get<1>(pointData);
-          state[statePosCounter++] = std::get<2>(pointData);
-          state[statePosCounter++] = float(std::get<0>(pointData)->type);
-      }
-      // increment the state counter appropriately if we have fewer than the maximum number of visible road points
-      if (nRoadPoints < maxNumVisibleRoadPoints){
-        statePosCounter += (maxNumVisibleRoadPoints - nRoadPoints) * 3;
-      }
-    } else{
-      statePosCounter += maxNumVisibleRoadPoints * 3;
-    }
-
-    // //**************** STOP SIGNS **********************
-    // // Okay now lets run the same process with stop signs
-    // //**************** ************************
-    if (stop_sign_bvh.getSize() > 0){
-      std::vector<std::tuple<float, float>> visibleStopSigns;
-      std::vector<const geometry::AABBInterface*> stopSignCandidates = stop_sign_bvh.IntersectionCandidates(*outerBox);
-      for (const auto* ptr : stopSignCandidates) {
-          const geometry::Box* objPtr = dynamic_cast<const geometry::Box*>(ptr);
-          geometry::Vector2D otherRelativePos = ((objPtr->Endpoint0() + objPtr->Endpoint1())/2.0) - sourcePos;
-          float dist = otherRelativePos.Norm();
-
-          if (dist > viewDist){
-              continue;
-          }
-
-          float otherRelativeHeading = otherRelativePos.Angle();
-
-          float headingDiff = otherRelativeHeading - sourceHeading;
-          if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
-          if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
-
-          if (std::abs(headingDiff) <= halfViewAngle) {
-              visibleStopSigns.push_back(std::make_tuple(dist, headingDiff));
-          }
-      }
-
-      // we want all the stop signs sorted by distance to the agent
-      std::sort(
-          visibleStopSigns.begin(), 
-          visibleStopSigns.end(),
-          [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
-      );
-
-      int nStopSigns = visibleStopSigns.size();
-      for (size_t k = 0; k < std::min(nStopSigns, maxNumVisibleStopSigns); ++k) {
-          auto pointData = visibleStopSigns[k];
-          state[statePosCounter++] = std::get<0>(pointData);
-          state[statePosCounter++] = std::get<1>(pointData);
-      }
-      // increment the state counter appropriately if we have fewer than the maximum number of visible stop signs
-      if (nStopSigns < maxNumVisibleStopSigns){
-        statePosCounter += (maxNumVisibleStopSigns - nStopSigns) * 2;
-      }
-    } else{
-      statePosCounter += maxNumVisibleStopSigns * 2;
-    }
-
-    // //**************** Traffic Lights **********************
-    // // Okay now lets run the same process with traffic lights
-    // //**************** *********************************
-    if (tl_bvh_.getSize() > 0){
-      std::vector<std::tuple<float, float, int>> visibleTrafficLights;
-      std::vector<const geometry::AABBInterface*> tlCandidates = tl_bvh_.IntersectionCandidates(*outerBox);
-      for (const auto* ptr : tlCandidates) {
-          const TrafficLightBox* objPtr = dynamic_cast<const TrafficLightBox*>(ptr);
-          geometry::Vector2D otherRelativePos = objPtr->position - sourcePos;
-          float dist = otherRelativePos.Norm();
-
-          if (dist > viewDist){
-              continue;
-          }
-
-          float otherRelativeHeading = otherRelativePos.Angle();
-
-          float headingDiff = otherRelativeHeading - sourceHeading;
-          if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
-          if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
-
-          if (std::abs(headingDiff) <= halfViewAngle) {
-              visibleTrafficLights.push_back(std::make_tuple(dist, headingDiff, trafficLights[objPtr->tlIndex]->getLightState()));
-          }
-      }
-
-      // we want all the traffic lights sorted by distance to the agent
-      std::sort(
-          visibleTrafficLights.begin(), 
-          visibleTrafficLights.end(),
-          [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
-      );
-
-      int nTrafficLights = visibleTrafficLights.size();
-      for (size_t k = 0; k < std::min(nTrafficLights, maxNumTLSigns); ++k) {
-          auto pointData = visibleTrafficLights[k];
-          state[statePosCounter++] = std::get<0>(pointData);
-          state[statePosCounter++] = std::get<1>(pointData);
-          state[statePosCounter++] = std::get<2>(pointData);
-      }
-      // increment the state counter appropriately if we have fewer than the maximum number of visible traffic lights
-      if (nTrafficLights < maxNumTLSigns){
-        statePosCounter += (maxNumTLSigns - nTrafficLights) * 3;
-      }
-    } else{
-      statePosCounter += maxNumTLSigns * 3;
-    }
-
     return state;
 }
 
@@ -902,9 +934,9 @@ sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
   return roadNetworkBounds;
 }
 
-ImageMatrix Scenario::getCone(Object* object, float viewAngle, float headTilt,
+ImageMatrix Scenario::getCone(Object* object, float viewAngle, float viewDist, float headTilt,
                               bool obscuredView) {  // args in radians
-  float circleRadius = object->viewRadius;
+  float circleRadius = viewDist;
   float renderedCircleRadius = 300.0f;
 
   if (object->coneTexture == nullptr) {

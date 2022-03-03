@@ -36,7 +36,7 @@ class WaymoDataset(Dataset):
         veh_id = valid_vehs[int_val].getID()
         # TODO(ev) put this in when complete
         # veh_state = sim.scenario.getState(veh_id)
-        veh_state = scenario.getVisibleObjectsState(valid_vehs[int_val], 1.58)
+        veh_state = scenario.getVisibleObjectsState(valid_vehs[int_val], 1.58, 60.0)
         expert_action = np.array(scenario.getExpertAction(veh_id, start_time))
         return veh_state, expert_action
 

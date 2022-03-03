@@ -14,6 +14,7 @@
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
+#include "geometry/box.h"
 #include "json.hpp"
 
 namespace nocturne {
@@ -30,10 +31,10 @@ class Scenario : public sf::Drawable {
   void waymo_step(); // step forwards and place vehicles at their next position in the expert dict
 
   // TODO(ev) hardcoding, this is the maximum number of vehicles that can be returned in the state
-  int maxNumVisibleVehicles = 20;
+  int maxNumVisibleObjects = 20;
   int maxNumVisibleRoadPoints = 80;
   int maxNumVisibleStopSigns = 4;
-  int maxNumTLSigns = 20;
+  int maxNumVisibleTLSigns = 20;
 
   void removeVehicle(Vehicle* object);
 
@@ -49,12 +50,15 @@ class Scenario : public sf::Drawable {
                      // compute an expert action given the valid vector
   std::vector<bool> getValidExpertStates(int objID);
 
-  // state accessors
-  // get a list of vehicles that actually moved
+  /*********************** State Accessors *******************/
+  // get the box that encloses the view cone
+  const geometry::Box* getOuterBox(float sourceHeading, geometry::Vector2D sourcePos, float halfViewAngle, float viewDist);
+  std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(Object* sourceObject);
   sf::FloatRect getRoadNetworkBoundaries() const;
   ImageMatrix getCone(
       Object* object,
       float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
+      float viewDist = 60.0f,
       float headTilt = 0.0f, bool obscuredView = true);
   ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
   bool checkForCollision(const Object* object1, const Object* object2);
@@ -66,7 +70,13 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<Object>> getRoadObjects();
   std::vector<std::shared_ptr<RoadLine>> getRoadLines();
   std::vector<float> getEgoState(Object* obj);
-  std::vector<float> getVisibleObjectsState(Object* sourceObj, float viewAngle /* the total angle subtended by the view cone*/);
+  std::vector<float> getVisibleObjects(Object* sourceObj, float viewAngle, float viewDist = 60.0f);
+  std::vector<float> getVisibleRoadPoints(Object* sourceObj, float viewAngle, float viewDist = 60.0f);
+  std::vector<float> getVisibleStopSigns(Object* sourceObj, float viewAngle, float viewDist = 60.0f);
+  std::vector<float> getVisibleTrafficLights(Object* sourceObj, float viewAngle, float viewDist = 60.0f);
+  std::vector<float> getVisibleState(Object* sourceObj, float viewAngle /* the total angle subtended by the view cone*/,
+                                    float viewDist = 60.0f /* how many meters forwards the object can see */);
+  // get a list of vehicles that actually moved
   std::vector<std::shared_ptr<Object>> getObjectsThatMoved() {return objectsThatMoved;}
 
  private:
