@@ -79,7 +79,7 @@ bool ConvexPolygon::Contains(const Vector2D& p) const {
 }
 
 bool ConvexPolygon::Intersects(const ConvexPolygon& polygon) const {
-  std::vector<geometry::LineSegment> edges = Edges();
+  std::vector<LineSegment> edges = Edges();
   for (const LineSegment& edge : edges) {
     if (Separates(*this, polygon, edge.NormalVector())) {
       return false;
