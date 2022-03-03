@@ -57,12 +57,21 @@ class ConvexPolygon : public Polygon {
   explicit ConvexPolygon(const ConvexPolygon& polygon) : Polygon(polygon) {}
   explicit ConvexPolygon(ConvexPolygon&& polygon)
       : Polygon(std::move(polygon)) {}
+
   explicit ConvexPolygon(const std::initializer_list<Vector2D>& vertices)
-      : Polygon(vertices) {}
+      : Polygon(vertices) {
+    assert(VerifyVerticesOrder());
+  }
+
   explicit ConvexPolygon(const std::vector<Vector2D>& vertices)
-      : Polygon(vertices) {}
+      : Polygon(vertices) {
+    assert(VerifyVerticesOrder());
+  }
+
   explicit ConvexPolygon(std::vector<Vector2D>&& vertices)
-      : Polygon(std::move(vertices)) {}
+      : Polygon(std::move(vertices)) {
+    assert(VerifyVerticesOrder());
+  }
 
   ConvexPolygon& operator=(const ConvexPolygon& polyon) {
     Polygon::operator=(polyon);
@@ -76,6 +85,9 @@ class ConvexPolygon : public Polygon {
   bool Contains(const Vector2D& p) const;
 
   bool Intersects(const ConvexPolygon& polygon) const;
+
+ protected:
+  bool VerifyVerticesOrder() const;
 };
 
 }  // namespace geometry

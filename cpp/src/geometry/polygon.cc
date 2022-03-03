@@ -1,5 +1,6 @@
 #include "geometry/polygon.h"
 
+#include <cassert>
 #include <cmath>
 #include <limits>
 #include <utility>
@@ -86,6 +87,21 @@ bool ConvexPolygon::Intersects(const ConvexPolygon& polygon) const {
     }
   }
   return true;
+}
+
+bool ConvexPolygon::VerifyVerticesOrder() const {
+  const int64_t n = vertices_.size();
+  assert(n > 2);
+  for (int64_t i = 2; i < n; ++i) {
+    if (CrossProduct(vertices_[i] - vertices_[i - 1],
+                     vertices_[i - 1] - vertices_[i - 2]) > 0.0f) {
+      return false;
+    }
+  }
+  return CrossProduct(vertices_[0] - vertices_[n - 1],
+                      vertices_[n - 1] - vertices_[n - 2]) <= 0.0f &&
+         CrossProduct(vertices_[1] - vertices_[0],
+                      vertices_[0] - vertices_[n - 1]) <= 0.0f;
 }
 
 }  // namespace geometry
