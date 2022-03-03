@@ -118,6 +118,20 @@ Object::getLines() const {
   return lines;
 }
 
+geometry::ConvexPolygon Object::BoundingPolygon() const {
+  // Create points
+  std::vector<geometry::Vector2D> vertices = {
+      geometry::Vector2D(length * 0.5f, width * 0.5f),
+      geometry::Vector2D(length * 0.5f, -width * 0.5f),
+      geometry::Vector2D(-length * 0.5f, -width * 0.5f),
+      geometry::Vector2D(-length * 0.5f, width * 0.5f)};
+  // Rotate and translate points
+  for (auto& p : vertices) {
+    p = p.Rotate(heading) + position;
+  }
+  return geometry::ConvexPolygon(std::move(vertices));
+}
+
 void Object::setCollided(bool collided) { hasCollided = collided; }
 
 bool Object::getCollided() const { return hasCollided; }
