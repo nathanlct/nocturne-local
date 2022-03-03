@@ -105,7 +105,7 @@ bool Intersects(const ConvexPolygon& polygon, const LineSegment& segment) {
     return false;
   }
 
-  // Check if segment lies on the same side of one of the edges of polygon.
+  // Check if segment lies on the right of one of the edges of polygon.
   const std::vector<LineSegment> edges = polygon.Edges();
   for (const LineSegment& edge : edges) {
     const Vector2D cur_d = edge.Endpoint1() - edge.Endpoint0();

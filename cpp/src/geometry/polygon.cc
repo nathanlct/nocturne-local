@@ -71,8 +71,8 @@ bool ConvexPolygon::Contains(const Vector2D& p) const {
   return utils::AlmostEquals(s * 0.5f, Area());
 }
 
-// Assume polygon vertices are in counterclockwise order. Check if the other
-// polygon lies on the right some one of the edges.
+// Assume polygon vertices are in counterclockwise order.
+// Check if the other polygon lies on the right of one of the edges.
 bool ConvexPolygon::Intersects(const ConvexPolygon& polygon) const {
   std::vector<LineSegment> edges = Edges();
   for (const LineSegment& edge : edges) {
