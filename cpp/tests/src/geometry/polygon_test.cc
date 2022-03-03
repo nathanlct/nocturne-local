@@ -9,6 +9,8 @@ namespace nocturne {
 namespace geometry {
 namespace {
 
+constexpr float kEps = 1e-5f;
+
 TEST(PolygonTest, AABBTest) {
   const Vector2D a(1.0f, 2.0f);
   const Vector2D b(5.0f, 1.0f);
@@ -43,7 +45,6 @@ TEST(ConvexPolygonTest, ContainsTest) {
   EXPECT_TRUE(polygon.Contains(c));
   EXPECT_FALSE(polygon.Contains(Vector2D(0.0f, 0.0f)));
 
-  constexpr float kEps = 1e-5f;
   EXPECT_TRUE(polygon.Contains(a + kEps));
   EXPECT_FALSE(polygon.Contains(a - kEps));
   EXPECT_FALSE(polygon.Contains(b + kEps));
@@ -65,7 +66,6 @@ TEST(ConvexPolygonTest, IntersectsTest) {
   EXPECT_FALSE(polygon1.Intersects(polygon2));
   EXPECT_FALSE(polygon2.Intersects(polygon1));
 
-  constexpr float kEps = 1e-5f;
   q1 = Vector2D(1.0f - kEps, 1.0f - kEps);
   q2 = Vector2D(2.0f, 0.0f);
   q3 = Vector2D(2.0f, 2.0f);
