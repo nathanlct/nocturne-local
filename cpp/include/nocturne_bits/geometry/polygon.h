@@ -1,6 +1,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <utility>
 #include <vector>
 
 #include "geometry/aabb.h"
@@ -22,7 +23,8 @@ class Polygon : public AABBInterface {
       : vertices_(vertices) {}
   explicit Polygon(const std::vector<Vector2D>& vertices)
       : vertices_(vertices) {}
-  explicit Polygon(std::vector<Vector2D>&& vertices) : vertices_(vertices) {}
+  explicit Polygon(std::vector<Vector2D>&& vertices)
+      : vertices_(std::move(vertices)) {}
 
   Polygon& operator=(const Polygon& polyon) {
     vertices_ = polyon.vertices_;
@@ -60,7 +62,7 @@ class ConvexPolygon : public Polygon {
   explicit ConvexPolygon(const std::vector<Vector2D>& vertices)
       : Polygon(vertices) {}
   explicit ConvexPolygon(std::vector<Vector2D>&& vertices)
-      : Polygon(vertices) {}
+      : Polygon(std::move(vertices)) {}
 
   ConvexPolygon& operator=(const ConvexPolygon& polyon) {
     Polygon::operator=(polyon);
