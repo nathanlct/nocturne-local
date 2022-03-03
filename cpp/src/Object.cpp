@@ -117,37 +117,18 @@ Object::getLines() const {
   return lines;
 }
 
-bool Object::pointInside(geometry::Vector2D point) const {
-  std::vector<geometry::Vector2D> corners = getCorners();
-  // check
-  int counter = 0;
-  int N = corners.size();
-  double xinters;
-
-  geometry::Vector2D p1;
-  geometry::Vector2D p2;
-  p1 = corners[0];
-  for (int i = 1; i <= N; i++) {
-    p2 = corners[i % N];
-    if (point.y() > std::min(p1.y(), p2.y())) {
-      if (point.y() <= std::max(p1.y(), p2.y())) {
-        if (point.x() <= std::max(p1.x(), p2.x())) {
-          if (p1.y() != p2.y()) {
-            xinters =
-                (point.y() - p1.y()) * (p2.x() - p1.x()) / (p2.y() - p1.y()) +
-                p1.x();
-            if (p1.x() == p2.x() || point.x() <= xinters) counter++;
-          }
-        }
-      }
-    }
-    p1 = p2;
+geometry::ConvexPolygon Object::BoundingPolygon() const {
+  // Create points
+  std::vector<geometry::Vector2D> vertices = {
+      geometry::Vector2D(length * 0.5f, width * 0.5f),
+      geometry::Vector2D(-length * 0.5f, width * 0.5f),
+      geometry::Vector2D(-length * 0.5f, -width * 0.5f),
+      geometry::Vector2D(length * 0.5f, -width * 0.5f)};
+  // Rotate and translate points
+  for (auto& p : vertices) {
+    p = p.Rotate(heading) + position;
   }
-
-  if (counter % 2 == 0)
-    return false;
-  else
-    return true;
+  return geometry::ConvexPolygon(std::move(vertices));
 }
 
 void Object::setCollided(bool collided) { hasCollided = collided; }

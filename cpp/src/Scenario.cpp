@@ -1,13 +1,18 @@
 #include "Scenario.hpp"
 
+#include <algorithm>
+#include <limits>
+
 #include "geometry/aabb_interface.h"
 #include "geometry/line_segment.h"
-#include "geometry/box.h"
+#include "geometry/polygon.h"
 #include "geometry/vector_2d.h"
+#include "geometry/intersection.h"
 #include "utils.hpp"
 
 namespace nocturne {
 
+using geometry::utils::kPi;
 Scenario::Scenario(std::string path, int startTime, bool useNonVehicles)
     : currTime(startTime),
       useNonVehicles(useNonVehicles),
@@ -749,81 +754,22 @@ bool Scenario::checkForCollision(const Object* object1, const Object* object2) {
   // convex polygons
 
   // first check for circles collision
-  float dist =
+  // float dist = Vector2D::dist(object1->getPosition(),
+  // object2->getPosition());
+  const float dist =
       geometry::Distance(object1->getPosition(), object2->getPosition());
-  float minDist = object1->getRadius() + object2->getRadius();
-  if (dist > minDist) {
+  const float min_dist = object1->getRadius() + object2->getRadius();
+  if (dist > min_dist) {
     return false;
   }
-
-  // then for exact collision
-
-  // if the polygons don't intersect, then there exists a line, parallel
-  // to a side of one of the two polygons, that entirely separate the two
-  // polygons
-
-  // go over both polygons
-  for (const Object* polygon : {object1, object2}) {
-    // go over all of their sides
-    for (const auto& [p, q] : polygon->getLines()) {
-      // vector perpendicular to current polygon line
-      geometry::Vector2D normal = (q - p).Rotate(geometry::utils::kPi / 2.0f);
-      normal.Normalize();
-
-      // project all corners of polygon 1 onto that line
-      // min and max represent the boundaries of the polygon's projection on the
-      // line
-      double min1 = std::numeric_limits<double>::max();
-      double max1 = std::numeric_limits<double>::min();
-      for (const geometry::Vector2D& pt : object1->getCorners()) {
-        // const double projected = normal.dot(pt);
-        const double projected = geometry::DotProduct(normal, pt);
-        if (projected < min1) min1 = projected;
-        if (projected > max1) max1 = projected;
-      }
-
-      // same for polygon 2
-      double min2 = std::numeric_limits<double>::max();
-      double max2 = std::numeric_limits<double>::min();
-      for (const geometry::Vector2D& pt : object2->getCorners()) {
-        // const double projected = normal.dot(pt);
-        const double projected = geometry::DotProduct(normal, pt);
-        if (projected < min2) min2 = projected;
-        if (projected > max2) max2 = projected;
-      }
-
-      if (max1 < min2 || max2 < min1) {
-        // we have a line separating both polygons
-        return false;
-      }
-    }
-  }
-
-  // we didn't find any line separating both polygons
-  return true;
+  const geometry::ConvexPolygon polygon1 = object1->BoundingPolygon();
+  const geometry::ConvexPolygon polygon2 = object2->BoundingPolygon();
+  return polygon1.Intersects(polygon2);
 }
 
 bool Scenario::checkForCollision(const Object* object,
                                  const geometry::LineSegment* segment) {
-  // note: right now objects are rectangles but this code works for any pair of
-  // convex polygons
-
-  // check if the line intersects with any of the edges
-  for (std::pair<geometry::Vector2D, geometry::Vector2D> line :
-       object->getLines()) {
-    if (segment->Intersects(geometry::LineSegment(line.first, line.second))) {
-      return true;
-    }
-  }
-
-  // Now check if both points are inside the polygon
-  bool p1_inside = object->pointInside(segment->Endpoint0());
-  bool p2_inside = object->pointInside(segment->Endpoint1());
-  if (p1_inside && p2_inside) {
-    return true;
-  } else {
-    return false;
-  }
+  return geometry::Intersects(*segment, object->BoundingPolygon());
 }
 
 // TODO(ev) make smoother, also maybe return something named so that
@@ -974,17 +920,16 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float viewDist, f
   for (int quadrant = 0; quadrant < 4; ++quadrant) {
     std::vector<sf::Vertex> outerCircle;  // todo precompute just once
 
-    float angleShift = quadrant * geometry::utils::kPi / 2.0f;
+    float angleShift = quadrant * kPi / 2.0f;
 
-    geometry::Vector2D corner = geometry::PolarToVector2D(
-        diag, geometry::utils::kPi / 4.0f + angleShift);
+    geometry::Vector2D corner =
+        geometry::PolarToVector2D(diag, kPi / 4.0f + angleShift);
     outerCircle.push_back(
         sf::Vertex(utils::ToVector2f(corner), sf::Color::Black));
 
     int nPoints = 20;
     for (int i = 0; i < nPoints; ++i) {
-      float angle =
-          angleShift + i * (geometry::utils::kPi / 2.0f) / (nPoints - 1);
+      float angle = angleShift + i * (kPi / 2.0f) / (nPoints - 1);
 
       geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
       outerCircle.push_back(
@@ -1075,15 +1020,13 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float viewDist, f
 
   renderTransform.rotate(geometry::utils::Degrees(object->getHeading()) -
                          90.0f);
-  if (viewAngle < 2.0f * geometry::utils::kPi) {
+  if (viewAngle < 2.0f * kPi) {
     std::vector<sf::Vertex> innerCircle;  // todo precompute just once
 
     innerCircle.push_back(
         sf::Vertex(sf::Vector2f(0.0f, 0.0f), sf::Color::Black));
-    float startAngle =
-        geometry::utils::kPi / 2.0f + headTilt + viewAngle / 2.0f;
-    float endAngle = geometry::utils::kPi / 2.0f + headTilt +
-                     2.0f * geometry::utils::kPi - viewAngle / 2.0f;
+    float startAngle = kPi / 2.0f + headTilt + viewAngle / 2.0f;
+    float endAngle = kPi / 2.0f + headTilt + 2.0f * kPi - viewAngle / 2.0f;
 
     int nPoints = 80;  // todo function of angle
     for (int i = 0; i < nPoints; ++i) {

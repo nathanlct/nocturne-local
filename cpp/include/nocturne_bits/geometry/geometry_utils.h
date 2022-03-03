@@ -6,7 +6,13 @@ namespace nocturne {
 namespace geometry {
 namespace utils {
 
+constexpr double kEps = 1e-8;
 constexpr double kPi = M_PI;
+
+template <typename T>
+inline bool AlmostEquals(const T& lhs, const T& rhs, const T& eps = kEps) {
+  return std::fabs(lhs - rhs) < eps;
+}
 
 template <typename T>
 constexpr T Radians(const T& d) {

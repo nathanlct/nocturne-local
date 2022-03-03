@@ -9,6 +9,7 @@
 
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
+#include "geometry/polygon.h"
 #include "geometry/vector_2d.h"
 
 namespace nocturne {
@@ -40,7 +41,7 @@ class Object : public sf::Drawable, public geometry::AABBInterface {
   std::vector<geometry::Vector2D> getCorners() const;
   std::vector<std::pair<geometry::Vector2D, geometry::Vector2D>> getLines()
       const;
-  bool pointInside(geometry::Vector2D point) const;
+  geometry::ConvexPolygon BoundingPolygon() const;
 
   void setPosition(float x, float y) { position = geometry::Vector2D(x, y); }
 
