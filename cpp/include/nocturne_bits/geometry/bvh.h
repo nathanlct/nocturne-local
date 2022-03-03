@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <utility>
 #include <vector>
 
@@ -31,6 +32,9 @@ class BVH {
 
     bool IsLeaf() const { return object_ != nullptr; }
 
+    const Node* Child(int64_t index) const { return children_.at(index); }
+    Node* Child(int64_t index) { return children_.at(index); }
+
     const Node* LChild() const { return children_[0]; }
     Node* LChild() { return children_[0]; }
 
@@ -40,7 +44,7 @@ class BVH {
    protected:
     AABB aabb_;
     const AABBInterface* object_ = nullptr;
-    Node* children_[2] = {nullptr, nullptr};
+    std::array<Node*, 2> children_ = {nullptr, nullptr};
   };
 
   BVH() = default;
