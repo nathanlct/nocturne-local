@@ -11,10 +11,8 @@ constexpr double kPi = M_PI;
 
 template <typename T>
 constexpr bool AlmostEquals(const T& lhs, const T& rhs, const T& eps = kEps) {
-  return fabs(lhs - rhs) < eps;
+  return std::fabs(lhs - rhs) < eps;
 }
-
-constexpr bool DoubleEq(float lhs, float rhs) { return fabs(lhs - rhs) < kEps; }
 
 template <typename T>
 constexpr T Radians(const T& d) {
