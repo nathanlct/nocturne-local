@@ -14,11 +14,23 @@ namespace geometry {
 class Polygon : public AABBInterface {
  public:
   Polygon() = default;
+  explicit Polygon(const Polygon& polygon) : vertices_(polygon.vertices_) {}
+  explicit Polygon(Polygon&& polygon)
+      : vertices_(std::move(polygon.vertices_)) {}
   explicit Polygon(const std::initializer_list<Vector2D>& vertices)
       : vertices_(vertices) {}
   explicit Polygon(const std::vector<Vector2D>& vertices)
       : vertices_(vertices) {}
   explicit Polygon(std::vector<Vector2D>&& vertices) : vertices_(vertices) {}
+
+  Polygon& operator=(const Polygon& polyon) {
+    vertices_ = polyon.vertices_;
+    return *this;
+  }
+  Polygon& operator=(Polygon&& polyon) {
+    vertices_ = std::move(polyon.vertices_);
+    return *this;
+  }
 
   AABB GetAABB() const override;
 
@@ -38,12 +50,24 @@ class Polygon : public AABBInterface {
 class ConvexPolygon : public Polygon {
  public:
   ConvexPolygon() = default;
+  explicit ConvexPolygon(const ConvexPolygon& polygon) : Polygon(polygon) {}
+  explicit ConvexPolygon(ConvexPolygon&& polygon)
+      : Polygon(std::move(polygon)) {}
   explicit ConvexPolygon(const std::initializer_list<Vector2D>& vertices)
       : Polygon(vertices) {}
   explicit ConvexPolygon(const std::vector<Vector2D>& vertices)
       : Polygon(vertices) {}
   explicit ConvexPolygon(std::vector<Vector2D>&& vertices)
       : Polygon(vertices) {}
+
+  ConvexPolygon& operator=(const ConvexPolygon& polyon) {
+    Polygon::operator=(polyon);
+    return *this;
+  }
+  ConvexPolygon& operator=(ConvexPolygon&& polyon) {
+    Polygon::operator=(std::move(polyon));
+    return *this;
+  }
 
   bool Contains(const Vector2D& p) const;
 
