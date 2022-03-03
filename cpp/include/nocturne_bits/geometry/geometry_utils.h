@@ -10,7 +10,7 @@ constexpr double kEps = 1e-8;
 constexpr double kPi = M_PI;
 
 template <typename T>
-constexpr bool AlmostEquals(const T& lhs, const T& rhs, const T& eps = kEps) {
+inline bool AlmostEquals(const T& lhs, const T& rhs, const T& eps = kEps) {
   return std::fabs(lhs - rhs) < eps;
 }
 
