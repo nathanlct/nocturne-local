@@ -11,6 +11,7 @@
 namespace nocturne {
 namespace geometry {
 
+// Vertices must be in counterclockwise order.
 class Polygon : public AABBInterface {
  public:
   Polygon() = default;
@@ -47,6 +48,7 @@ class Polygon : public AABBInterface {
   std::vector<Vector2D> vertices_;
 };
 
+// Vertices must be in counterclockwise order.
 class ConvexPolygon : public Polygon {
  public:
   ConvexPolygon() = default;

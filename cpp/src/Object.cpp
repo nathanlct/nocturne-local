@@ -122,9 +122,9 @@ geometry::ConvexPolygon Object::BoundingPolygon() const {
   // Create points
   std::vector<geometry::Vector2D> vertices = {
       geometry::Vector2D(length * 0.5f, width * 0.5f),
-      geometry::Vector2D(length * 0.5f, -width * 0.5f),
+      geometry::Vector2D(-length * 0.5f, width * 0.5f),
       geometry::Vector2D(-length * 0.5f, -width * 0.5f),
-      geometry::Vector2D(-length * 0.5f, width * 0.5f)};
+      geometry::Vector2D(length * 0.5f, -width * 0.5f)};
   // Rotate and translate points
   for (auto& p : vertices) {
     p = p.Rotate(heading) + position;

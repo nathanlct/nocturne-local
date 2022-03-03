@@ -72,6 +72,13 @@ TEST(ConvexPolygonTest, IntersectsTest) {
   polygon2 = ConvexPolygon({q1, q2, q3});
   EXPECT_TRUE(polygon1.Intersects(polygon2));
   EXPECT_TRUE(polygon2.Intersects(polygon1));
+
+  q1 = Vector2D(1.0f, 1.0f);
+  q2 = Vector2D(2.0f, 0.0f);
+  q3 = Vector2D(2.0f, 2.0f);
+  polygon2 = ConvexPolygon({q1, q2, q3});
+  EXPECT_TRUE(polygon1.Intersects(polygon2));
+  EXPECT_TRUE(polygon2.Intersects(polygon1));
 }
 
 }  // namespace

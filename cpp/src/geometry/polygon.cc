@@ -11,22 +11,14 @@ namespace geometry {
 
 namespace {
 
-std::pair<float, float> MinMaxProjection(const Polygon& polygon,
-                                         const Vector2D& normal_vec) {
-  float min_proj = std::numeric_limits<float>::max();
-  float max_proj = std::numeric_limits<float>::lowest();
+bool Separates(const LineSegment& edge, const Polygon& polygon) {
+  const Vector2D d = edge.Endpoint1() - edge.Endpoint0();
   for (const Vector2D& p : polygon.vertices()) {
-    const float proj = DotProduct(normal_vec, p);
-    min_proj = std::min(min_proj, proj);
-    max_proj = std::max(max_proj, proj);
+    if (CrossProduct(p - edge.Endpoint0(), d) <= 0.0f) {
+      return false;
+    }
   }
-  return std::make_pair(min_proj, max_proj);
-}
-
-bool Separates(const Polygon& a, const Polygon& b, const Vector2D& normal_vec) {
-  const auto [min1, max1] = MinMaxProjection(a, normal_vec);
-  const auto [min2, max2] = MinMaxProjection(b, normal_vec);
-  return max1 < min2 || max2 < min1;
+  return true;
 }
 
 }  // namespace
@@ -78,16 +70,18 @@ bool ConvexPolygon::Contains(const Vector2D& p) const {
   return utils::AlmostEquals(s * 0.5f, Area());
 }
 
+// Assume polygon vertices are in counterclockwise order. Check if the other
+// polygon lies on the right some one of the edges.
 bool ConvexPolygon::Intersects(const ConvexPolygon& polygon) const {
   std::vector<LineSegment> edges = Edges();
   for (const LineSegment& edge : edges) {
-    if (Separates(*this, polygon, edge.NormalVector())) {
+    if (Separates(edge, polygon)) {
       return false;
     }
   }
   edges = polygon.Edges();
   for (const LineSegment& edge : edges) {
-    if (Separates(*this, polygon, edge.NormalVector())) {
+    if (Separates(edge, *this)) {
       return false;
     }
   }

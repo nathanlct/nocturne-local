@@ -1,5 +1,8 @@
 #include "geometry/intersection.h"
 
+#include <algorithm>
+#include <limits>
+
 namespace nocturne {
 namespace geometry {
 
@@ -30,18 +33,18 @@ int ComputeOutCode(const AABB& aabb, const Vector2D& p) {
 
 // Cohen–Sutherland algorithm
 // https://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
-bool Intersects(const AABB& aabb, const LineSegment& seg) {
+bool Intersects(const AABB& aabb, const LineSegment& segment) {
   const float min_x = aabb.MinX();
   const float min_y = aabb.MinY();
   const float max_x = aabb.MaxX();
   const float max_y = aabb.MaxY();
 
-  float x0 = seg.Endpoint0().x();
-  float y0 = seg.Endpoint0().y();
-  float x1 = seg.Endpoint1().x();
-  float y1 = seg.Endpoint1().y();
-  int code0 = ComputeOutCode(aabb, seg.Endpoint0());
-  int code1 = ComputeOutCode(aabb, seg.Endpoint1());
+  float x0 = segment.Endpoint0().x();
+  float y0 = segment.Endpoint0().y();
+  float x1 = segment.Endpoint1().x();
+  float y1 = segment.Endpoint1().y();
+  int code0 = ComputeOutCode(aabb, segment.Endpoint0());
+  int code1 = ComputeOutCode(aabb, segment.Endpoint1());
 
   while (true) {
     if ((code0 | code1) == 0) {
@@ -79,8 +82,47 @@ bool Intersects(const AABB& aabb, const LineSegment& seg) {
   return false;
 }
 
-bool Intersects(const LineSegment& seg, const AABB& aabb) {
-  return Intersects(aabb, seg);
+bool Intersects(const LineSegment& segment, const AABB& aabb) {
+  return Intersects(aabb, segment);
+}
+
+// Assume the vertices of polygon are in counterclockwise order.
+bool Intersects(const ConvexPolygon& polygon, const LineSegment& segment) {
+  if (segment.Endpoint0() == segment.Endpoint1()) {
+    return polygon.Contains(segment.Endpoint0());
+  }
+
+  // Check if polygon lies on the same side of segment.
+  const Vector2D d = segment.Endpoint1() - segment.Endpoint0();
+  float min_v = std::numeric_limits<float>::max();
+  float max_v = std::numeric_limits<float>::lowest();
+  for (const Vector2D& p : polygon.vertices()) {
+    const float cur = CrossProduct(p - segment.Endpoint0(), d);
+    min_v = std::min(min_v, cur);
+    max_v = std::max(max_v, cur);
+  }
+  if ((min_v < 0.0f && max_v < 0.0f) || (min_v > 0.0f && max_v > 0.0f)) {
+    return false;
+  }
+
+  // Check if segment lies on the same side of one of the edges of polygon.
+  const std::vector<LineSegment> edges = polygon.Edges();
+  for (const LineSegment& edge : edges) {
+    const Vector2D cur_d = edge.Endpoint1() - edge.Endpoint0();
+    const float v1 =
+        CrossProduct(segment.Endpoint0() - edge.Endpoint0(), cur_d);
+    const float v2 =
+        CrossProduct(segment.Endpoint1() - edge.Endpoint0(), cur_d);
+    if (v1 > 0.0f && v2 > 0.0f) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool Intersects(const LineSegment& segment, const ConvexPolygon& polygon) {
+  return Intersects(polygon, segment);
 }
 
 }  // namespace geometry
