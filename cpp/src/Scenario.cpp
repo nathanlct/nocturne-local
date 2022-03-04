@@ -506,7 +506,7 @@ std::vector<float> Scenario::getVisibleObjects(Object* sourceObj,
   std::fill(state.begin(), state.end(), -100);  // TODO(ev hardcoding)
   const geometry::Box* outerBox =
       getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
-  if (vehicle_bvh_.getSize() > 0) {
+  if (!vehicle_bvh_.Empty()) {
     std::vector<std::tuple<const Object*, float, float>> visibleVehicles;
     std::vector<const geometry::AABBInterface*> roadObjCandidates =
         vehicle_bvh_.IntersectionCandidates(*outerBox);
@@ -569,7 +569,7 @@ std::vector<float> Scenario::getVisibleRoadPoints(Object* sourceObj,
   std::fill(state.begin(), state.end(), -100);  // TODO(ev hardcoding)
   const geometry::Box* outerBox =
       getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
-  if (road_point_bvh.getSize() > 0) {
+  if (!road_point_bvh.Empty()) {
     std::vector<std::tuple<const RoadPoint*, float, float>> visibleRoadPoints;
     std::vector<const geometry::AABBInterface*> roadPointCandidates =
         road_point_bvh.IntersectionCandidates(*outerBox);
@@ -627,7 +627,7 @@ std::vector<float> Scenario::getVisibleStopSigns(Object* sourceObj,
   std::fill(state.begin(), state.end(), -100);  // TODO(ev hardcoding)
   const geometry::Box* outerBox =
       getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
-  if (stop_sign_bvh.getSize() > 0) {
+  if (!stop_sign_bvh.Empty()) {
     std::vector<std::tuple<float, float>> visibleStopSigns;
     std::vector<const geometry::AABBInterface*> stopSignCandidates =
         stop_sign_bvh.IntersectionCandidates(*outerBox);
@@ -687,7 +687,7 @@ std::vector<float> Scenario::getVisibleTrafficLights(Object* sourceObj,
   std::fill(state.begin(), state.end(), -100);  // TODO(ev hardcoding)
   const geometry::Box* outerBox =
       getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
-  if (tl_bvh_.getSize() > 0) {
+  if (!tl_bvh_.Empty()) {
     std::vector<std::tuple<float, float, int>> visibleTrafficLights;
     std::vector<const geometry::AABBInterface*> tlCandidates =
         tl_bvh_.IntersectionCandidates(*outerBox);
