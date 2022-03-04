@@ -7,7 +7,7 @@
 #include "geometry/line_segment.h"
 #include "geometry/polygon.h"
 #include "geometry/vector_2d.h"
-#include "utils.hpp"
+#include "utils/sf_utils.h"
 
 namespace nocturne {
 

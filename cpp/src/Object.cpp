@@ -1,7 +1,7 @@
 #include "Object.hpp"
 
 #include "geometry/geometry_utils.h"
-#include "utils.hpp"
+#include "utils/sf_utils.h"
 
 namespace nocturne {
 

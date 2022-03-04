@@ -1,5 +1,7 @@
 #include "Simulation.hpp"
 
+#include "utils/sf_utils.h"
+
 namespace nocturne {
 
 Simulation::Simulation(std::string scenarioFilePath)
@@ -25,7 +27,7 @@ void Simulation::render() {
         new sf::RenderWindow(sf::VideoMode(winWidth, winHeight), "Nocturne",
                              sf::Style::Default, settings);
 
-    font = nocturne::utils::getFont("Arial.ttf");
+    font = utils::GetFont("Arial.ttf");
   }
   if (renderWindow->isOpen()) {
     sf::Time elapsed = clock.restart();
