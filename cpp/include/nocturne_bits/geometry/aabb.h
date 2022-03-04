@@ -1,6 +1,7 @@
 #pragma once
 
 #include "geometry/vector_2d.h"
+#include <iostream>
 
 namespace nocturne {
 namespace geometry {

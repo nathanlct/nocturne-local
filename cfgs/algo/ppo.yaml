@@ -5,7 +5,7 @@ device: ${device}
 cuda_deterministic: True
 n_training_threads: 1 # "Number of torch threads for training"
 n_rollout_threads: 1 # Number of parallel envs for training rollouts
-n_eval_rollout_threads: 32 # Number of parallel envs for evaluating rollouts
+n_eval_rollout_threads: 1 # Number of parallel envs for evaluating rollouts
 n_render_rollout_threads: 1 # Number of parallel envs for rendering rollouts
 num_env_steps: 1e8 # Number of environment steps to train
 wandb: ${wandb}

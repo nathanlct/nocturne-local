@@ -15,7 +15,7 @@ debug: False
 
 # TODO(eugenevinitsky) don't hardcode this
 episode_length: 200
-scenario_path: '/private/home/eugenevinitsky/Code/nocturne/scenarios/twenty_car_intersection.json'
+scenario_path: '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json'
 dt: 1.0
 # TODO(eugenevinitsky) actually implement this
 sims_per_step: 10
@@ -31,7 +31,7 @@ rew_cfg:
   speed_rew: False
   speed_rew_coef: 0.01
   # find a dense set of waypoints and reward for getting closer to them
-  dense_waypoints: true
+  dense_waypoints: false
   dense_waypoint_spacing: 10.0
   num_visible_waypoints: 5
 subscriber:

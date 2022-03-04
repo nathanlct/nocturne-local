@@ -40,8 +40,10 @@ add_library(
   STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Object.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Road.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/RoadLine.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Scenario.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Simulation.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/TrafficLight.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Vehicle.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/sf_utils.cc
 )

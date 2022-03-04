@@ -8,9 +8,7 @@ scenario = sim.getScenario()
 
 sim.step(0.1)
 
-objects = scenario.getRoadObjects()
-print([o.getID() for o in objects])
-print([o.getType() for o in objects])
+objects = scenario.getRoadLines()
 
 vehicles = scenario.getVehicles()
 print([(v.getID(), v.getType()) for v in vehicles])

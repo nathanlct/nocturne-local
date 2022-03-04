@@ -586,7 +586,7 @@ def create_ppo_env(cfg, rank=0):
         env = WaypointEnv(cfg, should_terminate=False, rank=rank)
     else:
         env = BaseEnv(cfg, should_terminate=False, rank=rank)
-    env = DictToVecWrapper(env, use_images=cfg.img_as_state)
+    # env = DictToVecWrapper(env, use_images=cfg.img_as_state)
     # env = CurriculumGoalEnvWrapper(env, density_optim_samples=cfg.algo.density_optim_samples,
     #                             num_goal_samples=cfg.algo.num_goal_samples,
     #                             log_figure=cfg.algo.log_figure,
