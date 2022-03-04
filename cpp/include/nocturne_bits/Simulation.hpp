@@ -17,10 +17,10 @@ namespace nocturne {
 
 class Simulation {
  public:
-  Simulation(std::string scenarioFilePath = "");
-
+  Simulation(std::string scenarioFilePath = "", int startTime=0, bool useNonVehicles=true);
   void reset();
   void step(float dt);
+  void waymo_step();
   void render();
 
   void updateView(float padding = 100.0f) const;
@@ -34,15 +34,15 @@ class Simulation {
 
  private:
   Scenario* scenario;
-
-  sf::RenderWindow* renderWindow;
+  std::string scenarioPath;
 
   sf::Transform renderTransform;
+  sf::RenderWindow* renderWindow;
 
   sf::Font font;
   sf::Clock clock;
-
-  std::string scenarioPath;
+  int startTime;
+  bool useNonVehicles;
 };
 
 }  // namespace nocturne

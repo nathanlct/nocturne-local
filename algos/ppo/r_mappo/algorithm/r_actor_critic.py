@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from algos.ppo.ppo_utils.util import init, check
 from algos.ppo.ppo_utils.cnn import CNNBase
-from algos.ppo.ppo_utils.encoder import EncoderBase
+# from algos.ppo.ppo_utils.encoder import EncoderBase
 from algos.ppo.ppo_utils.mlp import MLPBase
 from algos.ppo.ppo_utils.rnn import RNNLayer
 from algos.ppo.ppo_utils.act import ACTLayer
@@ -31,7 +31,8 @@ class R_Actor(nn.Module):
         self.tpdv = dict(dtype=torch.float32, device=device)
 
         obs_shape = get_shape_from_obs_space(obs_space)
-        base = EncoderBase if len(obs_shape) == 3 else MLPBase
+        # base = EncoderBase if len(obs_shape) == 3 else MLPBase
+        base = MLPBase
         self.base = base(args, obs_shape)
 
         if self._use_naive_recurrent_policy or self._use_recurrent_policy:
