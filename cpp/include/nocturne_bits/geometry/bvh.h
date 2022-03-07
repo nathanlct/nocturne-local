@@ -77,7 +77,7 @@ class BVH {
     return candidates;
   }
 
- int getSize(){return nodes_.size();}
+  int getSize() { return nodes_.size(); }
 
  protected:
   Node* MakeNode(const AABBInterface* object) {
