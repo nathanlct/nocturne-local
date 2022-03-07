@@ -4,10 +4,10 @@
 #include <limits>
 
 #include "geometry/aabb_interface.h"
+#include "geometry/intersection.h"
 #include "geometry/line_segment.h"
 #include "geometry/polygon.h"
 #include "geometry/vector_2d.h"
-#include "geometry/intersection.h"
 #include "utils.hpp"
 
 namespace nocturne {
@@ -29,8 +29,7 @@ Scenario::Scenario(std::string path, int startTime, bool useNonVehicles)
       expertSpeeds(),
       expertHeadings(),
       lengths(),
-      expertValid()
-{
+      expertValid() {
   if (path.size() > 0) {
     loadScenario(path);
   } else {
@@ -83,7 +82,7 @@ void Scenario::loadScenario(std::string path) {
                                  obj["velocity"]["y"][i]);
       localExpertTrajectory.push_back(currPos);
       localExpertSpeeds.push_back(currVel);
-      if (currVel.Norm() > 0){
+      if (currVel.Norm() > 0) {
         didObjectMove = true;
       }
       localValid.push_back(bool(obj["valid"][i]));
@@ -94,8 +93,8 @@ void Scenario::loadScenario(std::string path) {
     // TODO(ev) make it a flag whether all vehicles are added or just the
     // vehicles that are valid
 
-    // we only want to store and load vehicles that are valid at this initialization
-    // time
+    // we only want to store and load vehicles that are valid at this
+    // initialization time
     if (bool(obj["valid"][currTime])) {
       expertTrajectories.push_back(localExpertTrajectory);
       expertSpeeds.push_back(localExpertSpeeds);
@@ -103,36 +102,33 @@ void Scenario::loadScenario(std::string path) {
       lengths.push_back(length);
       expertValid.push_back(localValid);
       if (type == "vehicle") {
-        Vehicle* veh = new Vehicle(pos, width, length, heading, occludes,
-                                   collides, checkForCollisions, goalPos,
-                                   IDCounter,
-                                   localExpertSpeeds[currTime].Norm());
+        Vehicle* veh = new Vehicle(
+            pos, width, length, heading, occludes, collides, checkForCollisions,
+            goalPos, IDCounter, localExpertSpeeds[currTime].Norm());
         auto ptr = std::shared_ptr<Vehicle>(veh);
         vehicles.push_back(ptr);
         roadObjects.push_back(ptr);
-        if (didObjectMove){
+        if (didObjectMove) {
           objectsThatMoved.push_back(ptr);
         }
       } else if (type == "pedestrian" && useNonVehicles) {
-        Pedestrian* ped = new Pedestrian(pos, width, length, heading, occludes,
-                                         collides, checkForCollisions, goalPos,
-                                         IDCounter,
-                                         localExpertSpeeds[currTime].Norm());
+        Pedestrian* ped = new Pedestrian(
+            pos, width, length, heading, occludes, collides, checkForCollisions,
+            goalPos, IDCounter, localExpertSpeeds[currTime].Norm());
         auto ptr = std::shared_ptr<Pedestrian>(ped);
         pedestrians.push_back(ptr);
         roadObjects.push_back(ptr);
-        if (didObjectMove){
+        if (didObjectMove) {
           objectsThatMoved.push_back(ptr);
         }
       } else if (type == "cyclist" && useNonVehicles) {
-        Cyclist* cyclist = new Cyclist(pos, width, length, heading, occludes,
-                                       collides, checkForCollisions, goalPos,
-                                       IDCounter,
-                                       localExpertSpeeds[currTime].Norm());
+        Cyclist* cyclist = new Cyclist(
+            pos, width, length, heading, occludes, collides, checkForCollisions,
+            goalPos, IDCounter, localExpertSpeeds[currTime].Norm());
         auto ptr = std::shared_ptr<Cyclist>(cyclist);
         cyclists.push_back(ptr);
         roadObjects.push_back(ptr);
-        if (didObjectMove){
+        if (didObjectMove) {
           objectsThatMoved.push_back(ptr);
         }
       }
@@ -269,25 +265,28 @@ void Scenario::loadScenario(std::string path) {
 
   // initialize the road objects bvh
   const int64_t nRoadObjects = roadObjects.size();
-  if (nRoadObjects > 0){
+  if (nRoadObjects > 0) {
     std::vector<const geometry::AABBInterface*> storeObjects;
     storeObjects.reserve(nRoadObjects);
     for (const auto& obj : roadObjects) {
-      storeObjects.push_back(dynamic_cast<const geometry::AABBInterface*>(obj.get()));
+      storeObjects.push_back(
+          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
     }
     vehicle_bvh_.InitHierarchy(storeObjects);
   }
 
-  // Now create the BVH for the inividual road points that will be passed to our agent as state
-  // Since the line segments never move we only need to define this once
+  // Now create the BVH for the inividual road points that will be passed to our
+  // agent as state Since the line segments never move we only need to define
+  // this once
   const int64_t nLines = roadLines.size();
   const int64_t nPointsPerLine = roadLines[0]->getRoadPoints().size();
   if ((nLines * nPointsPerLine) > 0) {
     std::vector<const geometry::AABBInterface*> roadPointObjects;
     roadPointObjects.reserve(nLines * nPointsPerLine);
     for (const auto& roadLine : roadLines) {
-      for (const auto& roadPoint : roadLine->getRoadPoints()){
-        roadPointObjects.push_back(dynamic_cast<const geometry::AABBInterface*>(roadPoint.get()));
+      for (const auto& roadPoint : roadLine->getRoadPoints()) {
+        roadPointObjects.push_back(
+            dynamic_cast<const geometry::AABBInterface*>(roadPoint.get()));
       }
     }
     road_point_bvh.InitHierarchy(roadPointObjects);
@@ -296,7 +295,7 @@ void Scenario::loadScenario(std::string path) {
   // // Now create the BVH for the stop signs
   // // Since the stop signs never move we only need to define this once
   const int64_t nStopSigns = stopSigns.size();
-  if (nStopSigns > 0){
+  if (nStopSigns > 0) {
     std::vector<const geometry::AABBInterface*> stopSignObjects;
     stopSignObjects.reserve(nStopSigns);
     for (const auto& obj : stopSigns) {
@@ -304,17 +303,18 @@ void Scenario::loadScenario(std::string path) {
       geometry::Vector2D rightElement = obj + 2;
       geometry::Vector2D leftElement = obj - 2;
       geometry::Box* box = new geometry::Box(leftElement, rightElement);
-      stopSignObjects.push_back(dynamic_cast<const geometry::AABBInterface*>(box));
+      stopSignObjects.push_back(
+          dynamic_cast<const geometry::AABBInterface*>(box));
     }
     stop_sign_bvh.InitHierarchy(stopSignObjects);
   }
 
   // // Now create the BVH for the traffic lights
   // // Since the line segments never move we only need to define this once but
-  // // we also need to push back an index into the traffic light states so that 
-  // // we can 
+  // // we also need to push back an index into the traffic light states so that
+  // // we can
   const int64_t nTrafficLights = trafficLights.size();
-  if (nTrafficLights > 0){
+  if (nTrafficLights > 0) {
     std::vector<const geometry::AABBInterface*> tlObjects;
     tlObjects.reserve(nTrafficLights);
     int i = 0;
@@ -325,10 +325,10 @@ void Scenario::loadScenario(std::string path) {
     }
     tl_bvh_.InitHierarchy(tlObjects);
   }
-
 }
 
-// void Scenario::createVehicle(float posX, float posY, float width, float length,
+// void Scenario::createVehicle(float posX, float posY, float width, float
+// length,
 //                              float heading, bool occludes, bool collides,
 //                              bool checkForCollisions, float goalPosX,
 //                              float goalPosY) {
@@ -350,11 +350,12 @@ void Scenario::step(float dt) {
 
   // update the vehicle bvh
   const int64_t n = roadObjects.size();
-  if (n > 0){
+  if (n > 0) {
     std::vector<const geometry::AABBInterface*> objects;
     objects.reserve(n);
     for (const auto& obj : roadObjects) {
-      objects.push_back(dynamic_cast<const geometry::AABBInterface*>(obj.get()));
+      objects.push_back(
+          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
     }
     vehicle_bvh_.InitHierarchy(objects);
     // check vehicle-vehicle collisions
@@ -379,7 +380,7 @@ void Scenario::step(float dt) {
       }
     }
   }
-  
+
   // check vehicle-lane segment collisions
   for (auto& obj1 : roadObjects) {
     std::vector<const geometry::AABBInterface*> candidates =
@@ -395,10 +396,11 @@ void Scenario::step(float dt) {
 }
 
 void Scenario::waymo_step() {
-  if (currTime < 91){
+  if (currTime < 91) {
     currTime += 1;  // TODO(ev) hardcoding
     for (auto& object : roadObjects) {
-      geometry::Vector2D expertPosition = expertTrajectories[int(object->getID())][currTime];
+      geometry::Vector2D expertPosition =
+          expertTrajectories[int(object->getID())][currTime];
       object->setPosition(expertPosition.x(), expertPosition.y());
       object->setHeading(expertHeadings[int(object->getID())][currTime]);
     }
@@ -408,11 +410,12 @@ void Scenario::waymo_step() {
 
     // initalize the vehicle bvh
     const int64_t n = roadObjects.size();
-    if (n > 0){
+    if (n > 0) {
       std::vector<const geometry::AABBInterface*> objects;
       objects.reserve(n);
       for (const auto& obj : roadObjects) {
-        objects.push_back(dynamic_cast<const geometry::AABBInterface*>(obj.get()));
+        objects.push_back(
+            dynamic_cast<const geometry::AABBInterface*>(obj.get()));
       }
       vehicle_bvh_.InitHierarchy(objects);
       // check vehicle-vehicle collisions
@@ -452,301 +455,351 @@ void Scenario::waymo_step() {
   }
 }
 
-std::pair<float, geometry::Vector2D> Scenario::getObjectHeadingAndPos(Object* sourceObject){
+std::pair<float, geometry::Vector2D> Scenario::getObjectHeadingAndPos(
+    Object* sourceObject) {
   float sourceHeading = sourceObject->getHeading();
   while (sourceHeading > geometry::utils::kPi)
-      sourceHeading -= 2.0f * geometry::utils::kPi;
+    sourceHeading -= 2.0f * geometry::utils::kPi;
   while (sourceHeading < -geometry::utils::kPi)
-      sourceHeading += 2.0f * geometry::utils::kPi;
+    sourceHeading += 2.0f * geometry::utils::kPi;
 
   geometry::Vector2D sourcePos = sourceObject->getPosition();
   return std::pair<float, geometry::Vector2D>(sourceHeading, sourcePos);
 }
 
-const geometry::Box* Scenario::getOuterBox(float sourceHeading, geometry::Vector2D sourcePos, float halfViewAngle, float viewDist){
+const geometry::Box* Scenario::getOuterBox(float sourceHeading,
+                                           geometry::Vector2D sourcePos,
+                                           float halfViewAngle,
+                                           float viewDist) {
   const geometry::Box* outerBox;
-  float leftAngle = sourceHeading + geometry::utils::kPi / 4.0f; // the angle pointing to the top left corner of the rectangle enclosing the cone
-  float scalingFactorLeft = viewDist / std::cos(halfViewAngle); // how long the vector should be
-  geometry::Vector2D topLeft = geometry::Vector2D(std::cos(leftAngle), std::sin(leftAngle));
+  float leftAngle =
+      sourceHeading +
+      geometry::utils::kPi / 4.0f;  // the angle pointing to the top left corner
+                                    // of the rectangle enclosing the cone
+  float scalingFactorLeft =
+      viewDist / std::cos(halfViewAngle);  // how long the vector should be
+  geometry::Vector2D topLeft =
+      geometry::Vector2D(std::cos(leftAngle), std::sin(leftAngle));
   topLeft *= scalingFactorLeft;
   topLeft += sourcePos;
-  float scalingFactorRight = viewDist / std::sin((geometry::utils::kPi / 2.0) - halfViewAngle);
-  float rightAngle = sourceHeading - 3 * geometry::utils::kPi / 4.0f; // the angle pointing to the bottom right hand corner of the rectangle enclosing the cone
-  geometry::Vector2D bottomRight = geometry::Vector2D(std::cos(rightAngle), std::sin(rightAngle));
+  float scalingFactorRight =
+      viewDist / std::sin((geometry::utils::kPi / 2.0) - halfViewAngle);
+  float rightAngle =
+      sourceHeading - 3 * geometry::utils::kPi /
+                          4.0f;  // the angle pointing to the bottom right hand
+                                 // corner of the rectangle enclosing the cone
+  geometry::Vector2D bottomRight =
+      geometry::Vector2D(std::cos(rightAngle), std::sin(rightAngle));
   bottomRight *= scalingFactorRight;
   bottomRight += sourcePos;
   outerBox = new geometry::Box(topLeft, bottomRight);
   return outerBox;
 }
 
-std::vector<float> Scenario::getVisibleObjects(Object* sourceObj, float viewAngle, float viewDist){
-  auto[sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
+std::vector<float> Scenario::getVisibleObjects(Object* sourceObj,
+                                               float viewAngle,
+                                               float viewDist) {
+  auto [sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
   float halfViewAngle = viewAngle / 2.0;
   int statePosCounter = 0;
   std::vector<float> state(maxNumVisibleObjects * 4);
-  std::fill(state.begin(), state.end(), -100); // TODO(ev hardcoding)
-  const geometry::Box* outerBox = getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
-  if (vehicle_bvh_.getSize() > 0){
+  std::fill(state.begin(), state.end(), -100);  // TODO(ev hardcoding)
+  const geometry::Box* outerBox =
+      getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
+  if (vehicle_bvh_.getSize() > 0) {
     std::vector<std::tuple<const Object*, float, float>> visibleVehicles;
-    std::vector<const geometry::AABBInterface*> roadObjCandidates = vehicle_bvh_.IntersectionCandidates(*outerBox);
+    std::vector<const geometry::AABBInterface*> roadObjCandidates =
+        vehicle_bvh_.IntersectionCandidates(*outerBox);
     for (const auto* ptr : roadObjCandidates) {
-        const Object* objPtr = dynamic_cast<const Object*>(ptr);
-        if (objPtr->getID() == sourceObj->getID()){
-            continue;
-        }
-        geometry::Vector2D otherRelativePos = objPtr->getPosition() - sourcePos;
-        float dist = otherRelativePos.Norm();
+      const Object* objPtr = dynamic_cast<const Object*>(ptr);
+      if (objPtr->getID() == sourceObj->getID()) {
+        continue;
+      }
+      geometry::Vector2D otherRelativePos = objPtr->getPosition() - sourcePos;
+      float dist = otherRelativePos.Norm();
 
-        if (dist > viewDist){
-            continue;
-        }
+      if (dist > viewDist) {
+        continue;
+      }
 
-        float otherRelativeHeading = otherRelativePos.Angle();
+      float otherRelativeHeading = otherRelativePos.Angle();
 
-        float headingDiff = otherRelativeHeading - sourceHeading;
-        if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
-        if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
+      float headingDiff = otherRelativeHeading - sourceHeading;
+      if (headingDiff > geometry::utils::kPi) {
+        headingDiff -= 2.0f * geometry::utils::kPi;
+      }
+      if (headingDiff < -geometry::utils::kPi) {
+        headingDiff += 2.0f * geometry::utils::kPi;
+      }
 
-        if (std::abs(headingDiff) <= halfViewAngle) {
-            visibleVehicles.push_back(std::make_tuple(objPtr, dist, headingDiff));
-        }
+      if (std::abs(headingDiff) <= halfViewAngle) {
+        visibleVehicles.push_back(std::make_tuple(objPtr, dist, headingDiff));
+      }
     }
 
     // we want all the vehicles sorted by distance to the agent
-    std::sort(
-        visibleVehicles.begin(), 
-        visibleVehicles.end(),
-        [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
-    );
+    std::sort(visibleVehicles.begin(), visibleVehicles.end(),
+              [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); });
 
     int nVeh = visibleVehicles.size();
     for (int k = 0; k < std::min(nVeh, maxNumVisibleObjects); ++k) {
-        auto vehData = visibleVehicles[k];
-        state[statePosCounter++] = std::get<1>(vehData);
-        state[statePosCounter++] = std::get<2>(vehData);
-        state[statePosCounter++] = std::get<0>(vehData)->getSpeed();
-        state[statePosCounter++] = std::get<0>(vehData)->getLength();
+      auto vehData = visibleVehicles[k];
+      state[statePosCounter++] = std::get<1>(vehData);
+      state[statePosCounter++] = std::get<2>(vehData);
+      state[statePosCounter++] = std::get<0>(vehData)->getSpeed();
+      state[statePosCounter++] = std::get<0>(vehData)->getLength();
     }
-    // increment the state counter appropriately if we have fewer than the maximum number of vehicles
-    if (nVeh < maxNumVisibleObjects){
+    // increment the state counter appropriately if we have fewer than the
+    // maximum number of vehicles
+    if (nVeh < maxNumVisibleObjects) {
       statePosCounter += (maxNumVisibleObjects - nVeh) * 4;
     }
-  } else{
+  } else {
     statePosCounter += maxNumVisibleObjects * 4;
   }
   return state;
 }
-std::vector<float> Scenario::getVisibleRoadPoints(Object* sourceObj, float viewAngle, float viewDist){
-  auto[sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
+std::vector<float> Scenario::getVisibleRoadPoints(Object* sourceObj,
+                                                  float viewAngle,
+                                                  float viewDist) {
+  auto [sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
   float halfViewAngle = viewAngle / 2.0;
   int statePosCounter = 0;
   std::vector<float> state(maxNumVisibleRoadPoints * 3);
-  std::fill(state.begin(), state.end(), -100); // TODO(ev hardcoding)
-  const geometry::Box* outerBox = getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
-  if (road_point_bvh.getSize() > 0){
+  std::fill(state.begin(), state.end(), -100);  // TODO(ev hardcoding)
+  const geometry::Box* outerBox =
+      getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
+  if (road_point_bvh.getSize() > 0) {
     std::vector<std::tuple<const RoadPoint*, float, float>> visibleRoadPoints;
-    std::vector<const geometry::AABBInterface*> roadPointCandidates = road_point_bvh.IntersectionCandidates(*outerBox);
+    std::vector<const geometry::AABBInterface*> roadPointCandidates =
+        road_point_bvh.IntersectionCandidates(*outerBox);
     for (const auto* ptr : roadPointCandidates) {
-        const RoadPoint* objPtr = dynamic_cast<const RoadPoint*>(ptr);
-        geometry::Vector2D otherRelativePos = objPtr->position - sourcePos;
-        float dist = otherRelativePos.Norm();
+      const RoadPoint* objPtr = dynamic_cast<const RoadPoint*>(ptr);
+      geometry::Vector2D otherRelativePos = objPtr->position - sourcePos;
+      float dist = otherRelativePos.Norm();
 
-        if (dist > viewDist){
-            continue;
-        }
+      if (dist > viewDist) {
+        continue;
+      }
 
-        float otherRelativeHeading = otherRelativePos.Angle();
+      float otherRelativeHeading = otherRelativePos.Angle();
 
-        float headingDiff = otherRelativeHeading - sourceHeading;
-        if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
-        if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
+      float headingDiff = otherRelativeHeading - sourceHeading;
+      if (headingDiff > geometry::utils::kPi) {
+        headingDiff -= 2.0f * geometry::utils::kPi;
+      }
+      if (headingDiff < -geometry::utils::kPi) {
+        headingDiff += 2.0f * geometry::utils::kPi;
+      }
 
-        if (std::abs(headingDiff) <= halfViewAngle) {
-            visibleRoadPoints.push_back(std::make_tuple(objPtr, dist, headingDiff));
-        }
+      if (std::abs(headingDiff) <= halfViewAngle) {
+        visibleRoadPoints.push_back(std::make_tuple(objPtr, dist, headingDiff));
+      }
     }
     // we want all the road points sorted by distance to the agent
-    std::sort(
-        visibleRoadPoints.begin(), 
-        visibleRoadPoints.end(),
-        [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
-    );
+    std::sort(visibleRoadPoints.begin(), visibleRoadPoints.end(),
+              [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); });
     int nRoadPoints = visibleRoadPoints.size();
     for (int k = 0; k < std::min(nRoadPoints, maxNumVisibleRoadPoints); ++k) {
-        auto pointData = visibleRoadPoints[k];
-        state[statePosCounter++] = std::get<1>(pointData);
-        state[statePosCounter++] = std::get<2>(pointData);
-        state[statePosCounter++] = float(std::get<0>(pointData)->type);
+      auto pointData = visibleRoadPoints[k];
+      state[statePosCounter++] = std::get<1>(pointData);
+      state[statePosCounter++] = std::get<2>(pointData);
+      state[statePosCounter++] = float(std::get<0>(pointData)->type);
     }
-    // increment the state counter appropriately if we have fewer than the maximum number of visible road points
-    if (nRoadPoints < maxNumVisibleRoadPoints){
+    // increment the state counter appropriately if we have fewer than the
+    // maximum number of visible road points
+    if (nRoadPoints < maxNumVisibleRoadPoints) {
       statePosCounter += (maxNumVisibleRoadPoints - nRoadPoints) * 3;
     }
-  } else{
+  } else {
     statePosCounter += maxNumVisibleRoadPoints * 3;
   }
   return state;
 }
 
-std::vector<float> Scenario::getVisibleStopSigns(Object* sourceObj, float viewAngle, float viewDist){
-  auto[sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
+std::vector<float> Scenario::getVisibleStopSigns(Object* sourceObj,
+                                                 float viewAngle,
+                                                 float viewDist) {
+  auto [sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
   float halfViewAngle = viewAngle / 2.0;
   int statePosCounter = 0;
   std::vector<float> state(maxNumVisibleStopSigns * 2);
-  std::fill(state.begin(), state.end(), -100); // TODO(ev hardcoding)
-  const geometry::Box* outerBox = getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
-  if (stop_sign_bvh.getSize() > 0){
+  std::fill(state.begin(), state.end(), -100);  // TODO(ev hardcoding)
+  const geometry::Box* outerBox =
+      getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
+  if (stop_sign_bvh.getSize() > 0) {
     std::vector<std::tuple<float, float>> visibleStopSigns;
-    std::vector<const geometry::AABBInterface*> stopSignCandidates = stop_sign_bvh.IntersectionCandidates(*outerBox);
+    std::vector<const geometry::AABBInterface*> stopSignCandidates =
+        stop_sign_bvh.IntersectionCandidates(*outerBox);
     for (const auto* ptr : stopSignCandidates) {
-        const geometry::Box* objPtr = dynamic_cast<const geometry::Box*>(ptr);
-        geometry::Vector2D otherRelativePos = ((objPtr->Endpoint0() + objPtr->Endpoint1())/2.0) - sourcePos;
-        float dist = otherRelativePos.Norm();
+      const geometry::Box* objPtr = dynamic_cast<const geometry::Box*>(ptr);
+      geometry::Vector2D otherRelativePos =
+          ((objPtr->Endpoint0() + objPtr->Endpoint1()) / 2.0) - sourcePos;
+      float dist = otherRelativePos.Norm();
 
-        if (dist > viewDist){
-            continue;
-        }
+      if (dist > viewDist) {
+        continue;
+      }
 
-        float otherRelativeHeading = otherRelativePos.Angle();
+      float otherRelativeHeading = otherRelativePos.Angle();
 
-        float headingDiff = otherRelativeHeading - sourceHeading;
-        if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
-        if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
+      float headingDiff = otherRelativeHeading - sourceHeading;
+      if (headingDiff > geometry::utils::kPi) {
+        headingDiff -= 2.0f * geometry::utils::kPi;
+      }
+      if (headingDiff < -geometry::utils::kPi) {
+        headingDiff += 2.0f * geometry::utils::kPi;
+      }
 
-        if (std::abs(headingDiff) <= halfViewAngle) {
-            visibleStopSigns.push_back(std::make_tuple(dist, headingDiff));
-        }
+      if (std::abs(headingDiff) <= halfViewAngle) {
+        visibleStopSigns.push_back(std::make_tuple(dist, headingDiff));
+      }
     }
 
     // we want all the stop signs sorted by distance to the agent
-    std::sort(
-        visibleStopSigns.begin(), 
-        visibleStopSigns.end(),
-        [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
-    );
+    std::sort(visibleStopSigns.begin(), visibleStopSigns.end(),
+              [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); });
 
     int nStopSigns = visibleStopSigns.size();
     for (size_t k = 0; k < std::min(nStopSigns, maxNumVisibleStopSigns); ++k) {
-        auto pointData = visibleStopSigns[k];
-        state[statePosCounter++] = std::get<0>(pointData);
-        state[statePosCounter++] = std::get<1>(pointData);
+      auto pointData = visibleStopSigns[k];
+      state[statePosCounter++] = std::get<0>(pointData);
+      state[statePosCounter++] = std::get<1>(pointData);
     }
-    // increment the state counter appropriately if we have fewer than the maximum number of visible stop signs
-    if (nStopSigns < maxNumVisibleStopSigns){
+    // increment the state counter appropriately if we have fewer than the
+    // maximum number of visible stop signs
+    if (nStopSigns < maxNumVisibleStopSigns) {
       statePosCounter += (maxNumVisibleStopSigns - nStopSigns) * 2;
     }
-  } else{
+  } else {
     statePosCounter += maxNumVisibleStopSigns * 2;
   }
   return state;
 }
 
-std::vector<float> Scenario::getVisibleTrafficLights(Object* sourceObj, float viewAngle, float viewDist){
-  auto[sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
+std::vector<float> Scenario::getVisibleTrafficLights(Object* sourceObj,
+                                                     float viewAngle,
+                                                     float viewDist) {
+  auto [sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
   float halfViewAngle = viewAngle / 2.0;
   int statePosCounter = 0;
   std::vector<float> state(maxNumVisibleTLSigns * 3);
-  std::fill(state.begin(), state.end(), -100); // TODO(ev hardcoding)
-  const geometry::Box* outerBox = getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
-  if (tl_bvh_.getSize() > 0){
+  std::fill(state.begin(), state.end(), -100);  // TODO(ev hardcoding)
+  const geometry::Box* outerBox =
+      getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
+  if (tl_bvh_.getSize() > 0) {
     std::vector<std::tuple<float, float, int>> visibleTrafficLights;
-    std::vector<const geometry::AABBInterface*> tlCandidates = tl_bvh_.IntersectionCandidates(*outerBox);
+    std::vector<const geometry::AABBInterface*> tlCandidates =
+        tl_bvh_.IntersectionCandidates(*outerBox);
     for (const auto* ptr : tlCandidates) {
-        const TrafficLightBox* objPtr = dynamic_cast<const TrafficLightBox*>(ptr);
-        geometry::Vector2D otherRelativePos = objPtr->position - sourcePos;
-        float dist = otherRelativePos.Norm();
+      const TrafficLightBox* objPtr = dynamic_cast<const TrafficLightBox*>(ptr);
+      geometry::Vector2D otherRelativePos = objPtr->position - sourcePos;
+      float dist = otherRelativePos.Norm();
 
-        if (dist > viewDist){
-            continue;
-        }
+      if (dist > viewDist) {
+        continue;
+      }
 
-        float otherRelativeHeading = otherRelativePos.Angle();
+      float otherRelativeHeading = otherRelativePos.Angle();
 
-        float headingDiff = otherRelativeHeading - sourceHeading;
-        if (headingDiff > geometry::utils::kPi) {headingDiff -= 2.0f * geometry::utils::kPi;}
-        if (headingDiff < -geometry::utils::kPi) {headingDiff += 2.0f * geometry::utils::kPi;}
+      float headingDiff = otherRelativeHeading - sourceHeading;
+      if (headingDiff > geometry::utils::kPi) {
+        headingDiff -= 2.0f * geometry::utils::kPi;
+      }
+      if (headingDiff < -geometry::utils::kPi) {
+        headingDiff += 2.0f * geometry::utils::kPi;
+      }
 
-        if (std::abs(headingDiff) <= halfViewAngle) {
-            visibleTrafficLights.push_back(std::make_tuple(dist, headingDiff, trafficLights[objPtr->tlIndex]->getLightState()));
-        }
+      if (std::abs(headingDiff) <= halfViewAngle) {
+        visibleTrafficLights.push_back(
+            std::make_tuple(dist, headingDiff,
+                            trafficLights[objPtr->tlIndex]->getLightState()));
+      }
     }
 
     // we want all the traffic lights sorted by distance to the agent
-    std::sort(
-        visibleTrafficLights.begin(), 
-        visibleTrafficLights.end(),
-        [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); }
-    );
+    std::sort(visibleTrafficLights.begin(), visibleTrafficLights.end(),
+              [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); });
 
     int nTrafficLights = visibleTrafficLights.size();
-    for (size_t k = 0; k < std::min(nTrafficLights, maxNumVisibleTLSigns); ++k) {
-        auto pointData = visibleTrafficLights[k];
-        state[statePosCounter++] = std::get<0>(pointData);
-        state[statePosCounter++] = std::get<1>(pointData);
-        state[statePosCounter++] = std::get<2>(pointData);
+    for (size_t k = 0; k < std::min(nTrafficLights, maxNumVisibleTLSigns);
+         ++k) {
+      auto pointData = visibleTrafficLights[k];
+      state[statePosCounter++] = std::get<0>(pointData);
+      state[statePosCounter++] = std::get<1>(pointData);
+      state[statePosCounter++] = std::get<2>(pointData);
     }
-    // increment the state counter appropriately if we have fewer than the maximum number of visible traffic lights
-    if (nTrafficLights < maxNumVisibleTLSigns){
+    // increment the state counter appropriately if we have fewer than the
+    // maximum number of visible traffic lights
+    if (nTrafficLights < maxNumVisibleTLSigns) {
       statePosCounter += (maxNumVisibleTLSigns - nTrafficLights) * 3;
     }
-  } else{
+  } else {
     statePosCounter += maxNumVisibleTLSigns * 3;
   }
 
   return state;
 }
 
-std::vector<float> Scenario::getVisibleState(Object* sourceObj, float viewAngle, float viewDist) {
-    // Vehicle state is: dist, heading-diff, speed, length
-    // TL state is: dist, heading-diff, current light color as an int
-    // Road point state is: dist, heading-diff, type of road point as an int i.e. roadEdge, laneEdge, etc.
-    // Stop sign state is: dist, heading-diff
-    const int64_t n = maxNumVisibleObjects * 4 + maxNumVisibleTLSigns * 3 + maxNumVisibleRoadPoints * 3 + 2 * maxNumVisibleStopSigns;
-    std::vector<float> state;
-    state.reserve(n);
-    std::vector<float> vehicleState = getVisibleObjects(sourceObj, viewAngle, viewDist);
-    std::vector<float> roadState = getVisibleRoadPoints(sourceObj, viewAngle, viewDist);
-    std::vector<float> stopSignState = getVisibleStopSigns(sourceObj, viewAngle, viewDist);
-    std::vector<float> tlState = getVisibleTrafficLights(sourceObj, viewAngle, viewDist);
-    state.insert( state.end(), vehicleState.begin(), vehicleState.end() );
-    state.insert( state.end(), roadState.begin(), roadState.end() );
-    state.insert( state.end(), stopSignState.begin(), stopSignState.end() );
-    state.insert( state.end(), tlState.begin(), tlState.end() );
-    for (float i : state){
-      std::cout << i << std::endl;
-    }
-    return state;
+std::vector<float> Scenario::getVisibleState(Object* sourceObj, float viewAngle,
+                                             float viewDist) {
+  // Vehicle state is: dist, heading-diff, speed, length
+  // TL state is: dist, heading-diff, current light color as an int
+  // Road point state is: dist, heading-diff, type of road point as an int i.e.
+  // roadEdge, laneEdge, etc. Stop sign state is: dist, heading-diff
+  const int64_t n = maxNumVisibleObjects * 4 + maxNumVisibleTLSigns * 3 +
+                    maxNumVisibleRoadPoints * 3 + 2 * maxNumVisibleStopSigns;
+  std::vector<float> state;
+  state.reserve(n);
+  std::vector<float> vehicleState =
+      getVisibleObjects(sourceObj, viewAngle, viewDist);
+  std::vector<float> roadState =
+      getVisibleRoadPoints(sourceObj, viewAngle, viewDist);
+  std::vector<float> stopSignState =
+      getVisibleStopSigns(sourceObj, viewAngle, viewDist);
+  std::vector<float> tlState =
+      getVisibleTrafficLights(sourceObj, viewAngle, viewDist);
+  state.insert(state.end(), vehicleState.begin(), vehicleState.end());
+  state.insert(state.end(), roadState.begin(), roadState.end());
+  state.insert(state.end(), stopSignState.begin(), stopSignState.end());
+  state.insert(state.end(), tlState.begin(), tlState.end());
+  for (float i : state) {
+    std::cout << i << std::endl;
+  }
+  return state;
 }
 
 std::vector<float> Scenario::getEgoState(Object* obj) {
-    std::vector<float> state(4);
+  std::vector<float> state(4);
 
-    state[0] = obj->getSpeed();
+  state[0] = obj->getSpeed();
 
-    float sourceHeading = obj->getHeading();
-    while (sourceHeading > geometry::utils::kPi)
-        sourceHeading -= 2.0f * geometry::utils::kPi;
-    while (sourceHeading < -geometry::utils::kPi)
-        sourceHeading += 2.0f * geometry::utils::kPi;
+  float sourceHeading = obj->getHeading();
+  while (sourceHeading > geometry::utils::kPi)
+    sourceHeading -= 2.0f * geometry::utils::kPi;
+  while (sourceHeading < -geometry::utils::kPi)
+    sourceHeading += 2.0f * geometry::utils::kPi;
 
-    geometry::Vector2D sourcePos = obj->getPosition();
+  geometry::Vector2D sourcePos = obj->getPosition();
 
-    geometry::Vector2D goalPos = obj->getGoalPosition();
+  geometry::Vector2D goalPos = obj->getGoalPosition();
 
-    geometry::Vector2D otherRelativePos = goalPos - sourcePos;
-    float dist = otherRelativePos.Norm();
+  geometry::Vector2D otherRelativePos = goalPos - sourcePos;
+  float dist = otherRelativePos.Norm();
 
-    float otherRelativeHeading = otherRelativePos.Angle();
+  float otherRelativeHeading = otherRelativePos.Angle();
 
-    float headingDiff = otherRelativeHeading - sourceHeading;
-    if (headingDiff > geometry::utils::kPi) headingDiff -= 2.0f * geometry::utils::kPi;
-    if (headingDiff < -geometry::utils::kPi) headingDiff += 2.0f * geometry::utils::kPi;
+  float headingDiff = otherRelativeHeading - sourceHeading;
+  if (headingDiff > geometry::utils::kPi)
+    headingDiff -= 2.0f * geometry::utils::kPi;
+  if (headingDiff < -geometry::utils::kPi)
+    headingDiff += 2.0f * geometry::utils::kPi;
 
-    state[1] = dist;
-    state[2] = headingDiff;
-    state[3] = obj->getLength();
+  state[1] = dist;
+  state[2] = headingDiff;
+  state[3] = obj->getLength();
 
-    return state;
+  return state;
 }
 
 bool Scenario::checkForCollision(const Object* object1, const Object* object2) {
@@ -782,8 +835,7 @@ std::vector<float> Scenario::getExpertAction(int objID, int timeIdx) {
       0.2;
   float accel = accel_vec.Norm();
   float speed = expertSpeeds[objID][timeIdx].Norm();
-  float dHeading = (geometry::utils::kPi / 180.0) *
-                   (expertHeadings[objID][timeIdx + 1] -
+  float dHeading = (expertHeadings[objID][timeIdx + 1] -
                     expertHeadings[objID][timeIdx - 1]) /
                    0.2;
   float steeringAngle;
@@ -880,7 +932,8 @@ sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
   return roadNetworkBounds;
 }
 
-ImageMatrix Scenario::getCone(Object* object, float viewAngle, float viewDist, float headTilt,
+ImageMatrix Scenario::getCone(Object* object, float viewAngle, float viewDist,
+                              float headTilt,
                               bool obscuredView) {  // args in radians
   float circleRadius = viewDist;
   float renderedCircleRadius = 300.0f;
@@ -1079,7 +1132,7 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
                       std::max(scenarioBounds.width / squareSide,
                                scenarioBounds.height / squareSide);
   sf::View view(center, size);
-  if (object != nullptr){
+  if (object != nullptr) {
     view.rotate(-geometry::utils::Degrees(object->getHeading()) + 90.0f);
   }
 
@@ -1121,11 +1174,11 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
     texture->draw(*obj, renderTransform);
   }
   for (geometry::Vector2D stopSign : stopSigns) {
-      float radius = 3;
-      sf::CircleShape hexagon(radius, 6);
-      hexagon.setFillColor(sf::Color::Red);
-      hexagon.setPosition(utils::ToVector2f(stopSign));
-      texture->draw(hexagon, renderTransform);
+    float radius = 3;
+    sf::CircleShape hexagon(radius, 6);
+    hexagon.setFillColor(sf::Color::Red);
+    hexagon.setPosition(utils::ToVector2f(stopSign));
+    texture->draw(hexagon, renderTransform);
   }
   // render texture and return
   texture->display();
