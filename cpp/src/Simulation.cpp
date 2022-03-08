@@ -2,7 +2,8 @@
 
 namespace nocturne {
 
-Simulation::Simulation(std::string scenarioFilePath, int startTime, bool useNonVehicles)
+Simulation::Simulation(std::string scenarioFilePath, int startTime,
+                       bool useNonVehicles)
     : scenario(new Scenario(scenarioFilePath, startTime, useNonVehicles)),
       scenarioPath(scenarioFilePath),
       renderTransform(),

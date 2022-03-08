@@ -36,7 +36,6 @@ class Box : public AABBInterface {
     return AABB(min_x, min_y, max_x, max_y);
   }
 
-
  protected:
   Vector2D endpoints_[2];
 };

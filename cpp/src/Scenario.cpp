@@ -590,8 +590,6 @@ std::vector<float> Scenario::getVisibleRoadPoints(Object* sourceObj,
         continue;
       }
 
-      float otherRelativeHeading = otherRelativePos.Angle();
-
       float headingDiff = getSignedAngle(sourceHeading, otherRelativeHeading);
 
       if (std::abs(headingDiff) <= halfViewAngle) {
@@ -644,7 +642,6 @@ std::vector<float> Scenario::getVisibleStopSigns(Object* sourceObj,
       }
 
       float otherRelativeHeading = otherRelativePos.Angle();
-
       float headingDiff = getSignedAngle(sourceHeading, otherRelativeHeading);
 
       if (std::abs(headingDiff) <= halfViewAngle) {
@@ -697,7 +694,6 @@ std::vector<float> Scenario::getVisibleTrafficLights(Object* sourceObj,
       }
 
       float otherRelativeHeading = otherRelativePos.Angle();
-
       float headingDiff = getSignedAngle(sourceHeading, otherRelativeHeading);
 
       if (std::abs(headingDiff) <= halfViewAngle) {
@@ -778,7 +774,6 @@ std::vector<float> Scenario::getEgoState(Object* obj) {
   float dist = otherRelativePos.Norm();
 
   float otherRelativeHeading = otherRelativePos.Angle();
-
   float headingDiff = getSignedAngle(sourceHeading, otherRelativeHeading);
 
   state[1] = dist;
@@ -821,8 +816,7 @@ std::vector<float> Scenario::getExpertAction(int objID, int timeIdx) {
       0.2;
   float accel = accel_vec.Norm();
   float speed = expertSpeeds[objID][timeIdx].Norm();
-  float dHeading = (geometry::utils::kPi / 180.0) *
-                   (expertHeadings[objID][timeIdx + 1] -
+  float dHeading = (expertHeadings[objID][timeIdx + 1] -
                     expertHeadings[objID][timeIdx - 1]) /
                    0.2;
   float steeringAngle;
