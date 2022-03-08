@@ -11,10 +11,10 @@
 #include "RoadLine.hpp"
 #include "TrafficLight.hpp"
 #include "Vehicle.hpp"
+#include "geometry/box.h"
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
-#include "geometry/box.h"
 #include "json.hpp"
 
 namespace nocturne {
@@ -28,9 +28,11 @@ class Scenario : public sf::Drawable {
   void loadScenario(std::string path);
 
   void step(float dt);
-  void waymo_step(); // step forwards and place vehicles at their next position in the expert dict
+  void waymo_step();  // step forwards and place vehicles at their next position
+                      // in the expert dict
 
-  // TODO(ev) hardcoding, this is the maximum number of vehicles that can be returned in the state
+  // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
+  // returned in the state
   int maxNumVisibleObjects = 20;
   int maxNumVisibleRoadPoints = 80;
   int maxNumVisibleStopSigns = 4;
@@ -46,20 +48,23 @@ class Scenario : public sf::Drawable {
       int timeIdx);  // return the expert action of object at time timeIDX
   bool hasExpertAction(
       int objID,
-      unsigned int timeIdx);  // given the currIndex, figure out if we actually can
+      unsigned int
+          timeIdx);  // given the currIndex, figure out if we actually can
                      // compute an expert action given the valid vector
   std::vector<bool> getValidExpertStates(int objID);
 
   /*********************** State Accessors *******************/
   // get the box that encloses the view cone
-  const geometry::Box* getOuterBox(float sourceHeading, geometry::Vector2D sourcePos, float halfViewAngle, float viewDist);
-  std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(Object* sourceObject);
+  const geometry::Box* getOuterBox(float sourceHeading,
+                                   geometry::Vector2D sourcePos,
+                                   float halfViewAngle, float viewDist);
+  std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
+      Object* sourceObject);
   sf::FloatRect getRoadNetworkBoundaries() const;
   ImageMatrix getCone(
       Object* object,
       float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
-      float viewDist = 60.0f,
-      float headTilt = 0.0f, bool obscuredView = true);
+      float viewDist = 60.0f, float headTilt = 0.0f, bool obscuredView = true);
   ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
   bool checkForCollision(const Object* object1, const Object* object2);
   bool checkForCollision(const Object* object,
@@ -70,14 +75,22 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<Object>> getRoadObjects();
   std::vector<std::shared_ptr<RoadLine>> getRoadLines();
   std::vector<float> getEgoState(Object* obj);
-  std::vector<float> getVisibleObjects(Object* sourceObj, float viewAngle, float viewDist = 60.0f);
-  std::vector<float> getVisibleRoadPoints(Object* sourceObj, float viewAngle, float viewDist = 60.0f);
-  std::vector<float> getVisibleStopSigns(Object* sourceObj, float viewAngle, float viewDist = 60.0f);
-  std::vector<float> getVisibleTrafficLights(Object* sourceObj, float viewAngle, float viewDist = 60.0f);
-  std::vector<float> getVisibleState(Object* sourceObj, float viewAngle /* the total angle subtended by the view cone*/,
-                                    float viewDist = 60.0f /* how many meters forwards the object can see */);
+  std::vector<float> getVisibleObjects(Object* sourceObj, float viewAngle,
+                                       float viewDist = 60.0f);
+  std::vector<float> getVisibleRoadPoints(Object* sourceObj, float viewAngle,
+                                          float viewDist = 60.0f);
+  std::vector<float> getVisibleStopSigns(Object* sourceObj, float viewAngle,
+                                         float viewDist = 60.0f);
+  std::vector<float> getVisibleTrafficLights(Object* sourceObj, float viewAngle,
+                                             float viewDist = 60.0f);
+  std::vector<float> getVisibleState(
+      Object* sourceObj,
+      float viewAngle /* the total angle subtended by the view cone*/,
+      float viewDist = 60.0f /* how many meters forwards the object can see */);
   // get a list of vehicles that actually moved
-  std::vector<std::shared_ptr<Object>> getObjectsThatMoved() {return objectsThatMoved;}
+  std::vector<std::shared_ptr<Object>> getObjectsThatMoved() {
+    return objectsThatMoved;
+  }
 
  private:
   virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
@@ -104,11 +117,13 @@ class Scenario : public sf::Drawable {
 
   sf::RenderTexture* imageTexture;
   sf::FloatRect roadNetworkBounds;
-  geometry::BVH vehicle_bvh_; // track vehicles for collisions
-  geometry::BVH line_segment_bvh_; // track line segments for collisions
-  geometry::BVH tl_bvh_; // track traffic light states to find visible traffic lights
-  geometry::BVH road_point_bvh; // track road points to find visible road points
-  geometry::BVH stop_sign_bvh; // track stop signs to find visible stop signs
+  geometry::BVH vehicle_bvh_;       // track vehicles for collisions
+  geometry::BVH line_segment_bvh_;  // track line segments for collisions
+  geometry::BVH
+      tl_bvh_;  // track traffic light states to find visible traffic lights
+  geometry::BVH
+      road_point_bvh;           // track road points to find visible road points
+  geometry::BVH stop_sign_bvh;  // track stop signs to find visible stop signs
 
   // expert data
   std::vector<std::vector<geometry::Vector2D>> expertTrajectories;
@@ -117,7 +132,8 @@ class Scenario : public sf::Drawable {
   std::vector<float> lengths;
   std::vector<std::vector<bool>> expertValid;
 
-  // track the object that moved, useful for figuring out which agents should actually be controlled
+  // track the object that moved, useful for figuring out which agents should
+  // actually be controlled
   std::vector<std::shared_ptr<Object>> objectsThatMoved;
 };
 
