@@ -7,15 +7,12 @@ namespace nocturne {
 Vehicle::Vehicle(const geometry::Vector2D& position, float width, float length,
                  float heading, bool occludes, bool collides,
                  bool checkForCollisions,
-                 const geometry::Vector2D& goalPosition,
-                 int objID,
-                 float speed)
+                 const geometry::Vector2D& goalPosition, int objID, float speed)
     : Object(position, width, length, heading, occludes, collides,
              checkForCollisions, goalPosition, objID, speed),
       accelAction(0),
       steeringAction(0),
-      yawRate(0) {
-}
+      yawRate(0) {}
 
 void Vehicle::step(float dt) {
   // if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
