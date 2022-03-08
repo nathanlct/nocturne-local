@@ -835,8 +835,7 @@ std::vector<float> Scenario::getExpertAction(int objID, int timeIdx) {
       0.2;
   float accel = accel_vec.Norm();
   float speed = expertSpeeds[objID][timeIdx].Norm();
-  float dHeading = (geometry::utils::kPi / 180.0) *
-                   (expertHeadings[objID][timeIdx + 1] -
+  float dHeading = (expertHeadings[objID][timeIdx + 1] -
                     expertHeadings[objID][timeIdx - 1]) /
                    0.2;
   float steeringAngle;
