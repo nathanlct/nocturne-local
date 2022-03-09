@@ -41,6 +41,7 @@ class Scenario : public sf::Drawable {
   void removeVehicle(Vehicle* object);
 
   int getMaxEnvTime() { return maxEnvTime; }
+  float getSignedAngle(float sourceAngle, float targetAngle);
 
   // query expert data
   std::vector<float> getExpertAction(

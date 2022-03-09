@@ -53,6 +53,12 @@ void Vehicle::kinematicsUpdate(float dt) {
   float dY = speed * sin(heading + slipAngle);
 
   heading += dHeading * dt;
+  if (heading > 2 * geometry::utils::kPi) {
+    heading -= 2 * geometry::utils::kPi;
+  }
+  if (heading < 2 * geometry::utils::kPi) {
+    heading += 2 * geometry::utils::kPi;
+  }
   position += geometry::Vector2D(dX, dY) * dt;
   speed += accel * dt;
 }
