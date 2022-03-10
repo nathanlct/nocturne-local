@@ -37,7 +37,7 @@ constexpr bool IsNormalizedAngle(float angle) {
 }
 
 constexpr bool IsNormalizedAngle(double angle) {
-  return angle >= kPi && angle <= kPi;
+  return angle >= -kPi && angle <= kPi;
 }
 
 inline float NormalizeAngle(float angle) {
