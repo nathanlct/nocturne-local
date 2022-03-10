@@ -97,4 +97,8 @@ void RoadLine::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   target.draw(&roadLines[0], roadLines.size(), sf::LineStrip, states);
 }
 
+<<<<<<< HEAD
 }  // namespace nocturne
+=======
+}  // namespace nocturne
+>>>>>>> 9ef266e206e62165218862c8044b815ba1abe71f

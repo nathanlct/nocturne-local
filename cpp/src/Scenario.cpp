@@ -59,6 +59,12 @@ void Scenario::loadScenario(std::string path) {
     float length = obj["length"];
     float heading =
         geometry::utils::Radians(static_cast<float>(obj["heading"][currTime]));
+    if (heading > 2 * geometry::utils::kPi) {
+      heading -= 2 * geometry::utils::kPi;
+    }
+    if (heading < 2 * geometry::utils::kPi) {
+      heading += 2 * geometry::utils::kPi;
+    }
 
     // TODO(ev) this should be set elsewhere
     bool occludes = true;
@@ -87,8 +93,16 @@ void Scenario::loadScenario(std::string path) {
       }
       localValid.push_back(bool(obj["valid"][i]));
       // waymo data is in degrees!
-      float heading = obj["heading"][i];
-      localHeadingVec.push_back(heading * float(geometry::utils::kPi / 180.0));
+      float expertHeading =
+          float(obj["heading"][i]) * float(geometry::utils::kPi / 180.0);
+      // keep the heading between 0 and 2 * pi
+      if (expertHeading > 2 * geometry::utils::kPi) {
+        expertHeading -= 2 * geometry::utils::kPi;
+      }
+      if (expertHeading < 2 * geometry::utils::kPi) {
+        expertHeading += 2 * geometry::utils::kPi;
+      }
+      localHeadingVec.push_back(expertHeading);
     }
     // TODO(ev) make it a flag whether all vehicles are added or just the
     // vehicles that are valid
@@ -524,13 +538,7 @@ std::vector<float> Scenario::getVisibleObjects(Object* sourceObj,
 
       float otherRelativeHeading = otherRelativePos.Angle();
 
-      float headingDiff = otherRelativeHeading - sourceHeading;
-      if (headingDiff > geometry::utils::kPi) {
-        headingDiff -= 2.0f * geometry::utils::kPi;
-      }
-      if (headingDiff < -geometry::utils::kPi) {
-        headingDiff += 2.0f * geometry::utils::kPi;
-      }
+      float headingDiff = getSignedAngle(sourceHeading, otherRelativeHeading);
 
       if (std::abs(headingDiff) <= halfViewAngle) {
         visibleVehicles.push_back(std::make_tuple(objPtr, dist, headingDiff));
@@ -582,15 +590,7 @@ std::vector<float> Scenario::getVisibleRoadPoints(Object* sourceObj,
         continue;
       }
 
-      float otherRelativeHeading = otherRelativePos.Angle();
-
-      float headingDiff = otherRelativeHeading - sourceHeading;
-      if (headingDiff > geometry::utils::kPi) {
-        headingDiff -= 2.0f * geometry::utils::kPi;
-      }
-      if (headingDiff < -geometry::utils::kPi) {
-        headingDiff += 2.0f * geometry::utils::kPi;
-      }
+      float headingDiff = getSignedAngle(sourceHeading, otherRelativeHeading);
 
       if (std::abs(headingDiff) <= halfViewAngle) {
         visibleRoadPoints.push_back(std::make_tuple(objPtr, dist, headingDiff));
@@ -642,14 +642,7 @@ std::vector<float> Scenario::getVisibleStopSigns(Object* sourceObj,
       }
 
       float otherRelativeHeading = otherRelativePos.Angle();
-
-      float headingDiff = otherRelativeHeading - sourceHeading;
-      if (headingDiff > geometry::utils::kPi) {
-        headingDiff -= 2.0f * geometry::utils::kPi;
-      }
-      if (headingDiff < -geometry::utils::kPi) {
-        headingDiff += 2.0f * geometry::utils::kPi;
-      }
+      float headingDiff = getSignedAngle(sourceHeading, otherRelativeHeading);
 
       if (std::abs(headingDiff) <= halfViewAngle) {
         visibleStopSigns.push_back(std::make_tuple(dist, headingDiff));
@@ -702,13 +695,7 @@ std::vector<float> Scenario::getVisibleTrafficLights(Object* sourceObj,
 
       float otherRelativeHeading = otherRelativePos.Angle();
 
-      float headingDiff = otherRelativeHeading - sourceHeading;
-      if (headingDiff > geometry::utils::kPi) {
-        headingDiff -= 2.0f * geometry::utils::kPi;
-      }
-      if (headingDiff < -geometry::utils::kPi) {
-        headingDiff += 2.0f * geometry::utils::kPi;
-      }
+      float headingDiff = getSignedAngle(sourceHeading, otherRelativeHeading);
 
       if (std::abs(headingDiff) <= halfViewAngle) {
         visibleTrafficLights.push_back(
@@ -788,12 +775,7 @@ std::vector<float> Scenario::getEgoState(Object* obj) {
   float dist = otherRelativePos.Norm();
 
   float otherRelativeHeading = otherRelativePos.Angle();
-
-  float headingDiff = otherRelativeHeading - sourceHeading;
-  if (headingDiff > geometry::utils::kPi)
-    headingDiff -= 2.0f * geometry::utils::kPi;
-  if (headingDiff < -geometry::utils::kPi)
-    headingDiff += 2.0f * geometry::utils::kPi;
+  float headingDiff = getSignedAngle(sourceHeading, otherRelativeHeading);
 
   state[1] = dist;
   state[2] = headingDiff;
@@ -835,8 +817,7 @@ std::vector<float> Scenario::getExpertAction(int objID, int timeIdx) {
       0.2;
   float accel = accel_vec.Norm();
   float speed = expertSpeeds[objID][timeIdx].Norm();
-  float dHeading = (geometry::utils::kPi / 180.0) *
-                   (expertHeadings[objID][timeIdx + 1] -
+  float dHeading = (expertHeadings[objID][timeIdx + 1] -
                     expertHeadings[objID][timeIdx - 1]) /
                    0.2;
   float steeringAngle;
@@ -909,6 +890,17 @@ std::vector<std::shared_ptr<Object>> Scenario::getRoadObjects() {
 }
 std::vector<std::shared_ptr<RoadLine>> Scenario::getRoadLines() {
   return roadLines;
+}
+
+float Scenario::getSignedAngle(float sourceAngle, float targetAngle) {
+  float angleDiff = targetAngle - sourceAngle;
+  if (angleDiff > geometry::utils::kPi) {
+    angleDiff -= 2 * geometry::utils::kPi;
+  }
+  if (angleDiff < -geometry::utils::kPi) {
+    angleDiff += 2 * geometry::utils::kPi;
+  }
+  return angleDiff;
 }
 
 void Scenario::removeVehicle(Vehicle* object) {

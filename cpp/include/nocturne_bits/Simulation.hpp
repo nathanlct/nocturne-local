@@ -16,7 +16,8 @@ namespace nocturne {
 
 class Simulation {
  public:
-  Simulation(std::string scenarioFilePath = "", int startTime=0, bool useNonVehicles=true);
+  Simulation(std::string scenarioFilePath = "", int startTime = 0,
+             bool useNonVehicles = true);
   void reset();
   void step(float dt);
   void waymo_step();
