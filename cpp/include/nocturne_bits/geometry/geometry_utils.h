@@ -33,22 +33,22 @@ constexpr float Degrees(float r) {
 constexpr double Degrees(double r) { return r / kPi * 180.0; }
 
 inline float AngleAdd(float lhs, float rhs) {
-  const float ret = fmod(lhs + rhs, static_cast<float>(kTau));
+  const float ret = std::fmod(lhs + rhs, static_cast<float>(kTau));
   return ret < 0.0f ? ret + static_cast<float>(kTau) : ret;
 }
 
 inline double AngleAdd(double lhs, double rhs) {
-  const float ret = fmod(lhs + rhs, kTau);
+  const float ret = std::fmod(lhs + rhs, kTau);
   return ret < 0.0 ? ret + kTau : ret;
 }
 
 inline float AngleSub(float lhs, float rhs) {
-  const float ret = fmod(lhs - rhs, static_cast<float>(kTau));
+  const float ret = std::fmod(lhs - rhs, static_cast<float>(kTau));
   return ret < 0.0f ? ret + static_cast<float>(kTau) : ret;
 }
 
 inline double AngleSub(double lhs, double rhs) {
-  const float ret = fmod(lhs - rhs, kTau);
+  const float ret = std::fmod(lhs - rhs, kTau);
   return ret < 0.0 ? ret + kTau : ret;
 }
 
