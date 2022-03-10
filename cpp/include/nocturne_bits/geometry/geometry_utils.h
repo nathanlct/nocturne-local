@@ -8,7 +8,6 @@ namespace utils {
 
 constexpr double kEps = 1e-8;
 constexpr double kPi = M_PI;
-constexpr double kTau = M_2_PI;
 constexpr double kTwoPi = M_2_PI;
 constexpr double kHalfPi = M_PI_2;
 
@@ -33,23 +32,23 @@ constexpr float Degrees(float r) {
 constexpr double Degrees(double r) { return r / kPi * 180.0; }
 
 inline float AngleAdd(float lhs, float rhs) {
-  const float ret = std::fmod(lhs + rhs, static_cast<float>(kTau));
-  return ret < 0.0f ? ret + static_cast<float>(kTau) : ret;
+  const float ret = std::fmod(lhs + rhs, static_cast<float>(kTwoPi));
+  return ret < 0.0f ? ret + static_cast<float>(kTwoPi) : ret;
 }
 
 inline double AngleAdd(double lhs, double rhs) {
-  const double ret = std::fmod(lhs + rhs, kTau);
-  return ret < 0.0 ? ret + kTau : ret;
+  const double ret = std::fmod(lhs + rhs, kTwoPi);
+  return ret < 0.0 ? ret + kTwoPi : ret;
 }
 
 inline float AngleSub(float lhs, float rhs) {
-  const float ret = std::fmod(lhs - rhs, static_cast<float>(kTau));
-  return ret < 0.0f ? ret + static_cast<float>(kTau) : ret;
+  const float ret = std::fmod(lhs - rhs, static_cast<float>(kTwoPi));
+  return ret < 0.0f ? ret + static_cast<float>(kTwoPi) : ret;
 }
 
 inline double AngleSub(double lhs, double rhs) {
-  const double ret = std::fmod(lhs - rhs, kTau);
-  return ret < 0.0 ? ret + kTau : ret;
+  const double ret = std::fmod(lhs - rhs, kTwoPi);
+  return ret < 0.0 ? ret + kTwoPi : ret;
 }
 
 }  // namespace utils
