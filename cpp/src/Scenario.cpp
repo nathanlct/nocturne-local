@@ -590,6 +590,7 @@ std::vector<float> Scenario::getVisibleRoadPoints(Object* sourceObj,
         continue;
       }
 
+      float otherRelativeHeading = otherRelativePos.Angle();
       float headingDiff = getSignedAngle(sourceHeading, otherRelativeHeading);
 
       if (std::abs(headingDiff) <= halfViewAngle) {
