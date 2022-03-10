@@ -40,14 +40,14 @@ constexpr bool IsNormalizedAngle(double angle) {
   return angle >= kPi && angle <= kPi;
 }
 
-constexpr float NormalizeAngle(float angle) {
+inline float NormalizeAngle(float angle) {
   constexpr float kPiF = kPi;
   constexpr float kTwoPiF = kTwoPi;
   const float ret = std::fmod(angle, kTwoPiF);
   return ret > kPiF ? ret - kTwoPiF : (ret < -kPiF ? ret + kTwoPiF : ret);
 }
 
-constexpr double NormalizeAngle(double angle) {
+inline double NormalizeAngle(double angle) {
   const double ret = std::fmod(angle, kTwoPi);
   return ret > kPi ? ret - kTwoPi : (ret < -kPi ? ret + kTwoPi : ret);
 }
