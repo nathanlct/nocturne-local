@@ -31,24 +31,41 @@ constexpr float Degrees(float r) {
 
 constexpr double Degrees(double r) { return r / kPi * 180.0; }
 
+// Check if angle is in the range of [-Pi, Pi].
+constexpr bool IsNormalizedAngle(float angle) {
+  return angle >= -static_cast<float>(kPi) && angle <= static_cast<float>(kPi);
+}
+
+constexpr bool IsNormalizedAngle(double angle) {
+  return angle >= -kPi && angle <= kPi;
+}
+
+inline float NormalizeAngle(float angle) {
+  constexpr float kPiF = kPi;
+  constexpr float kTwoPiF = kTwoPi;
+  const float ret = std::fmod(angle, kTwoPiF);
+  return ret > kPiF ? ret - kTwoPiF : (ret < -kPiF ? ret + kTwoPiF : ret);
+}
+
+inline double NormalizeAngle(double angle) {
+  const double ret = std::fmod(angle, kTwoPi);
+  return ret > kPi ? ret - kTwoPi : (ret < -kPi ? ret + kTwoPi : ret);
+}
+
 inline float AngleAdd(float lhs, float rhs) {
-  const float ret = std::fmod(lhs + rhs, static_cast<float>(kTwoPi));
-  return ret < 0.0f ? ret + static_cast<float>(kTwoPi) : ret;
+  return NormalizeAngle(lhs + rhs);
 }
 
 inline double AngleAdd(double lhs, double rhs) {
-  const double ret = std::fmod(lhs + rhs, kTwoPi);
-  return ret < 0.0 ? ret + kTwoPi : ret;
+  return NormalizeAngle(lhs + rhs);
 }
 
 inline float AngleSub(float lhs, float rhs) {
-  const float ret = std::fmod(lhs - rhs, static_cast<float>(kTwoPi));
-  return ret < 0.0f ? ret + static_cast<float>(kTwoPi) : ret;
+  return NormalizeAngle(lhs - rhs);
 }
 
 inline double AngleSub(double lhs, double rhs) {
-  const double ret = std::fmod(lhs - rhs, kTwoPi);
-  return ret < 0.0 ? ret + kTwoPi : ret;
+  return NormalizeAngle(lhs - rhs);
 }
 
 }  // namespace utils
