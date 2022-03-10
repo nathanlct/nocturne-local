@@ -567,6 +567,7 @@ std::vector<float> Scenario::getVisibleObjects(Object* sourceObj,
   }
   return state;
 }
+
 std::vector<float> Scenario::getVisibleRoadPoints(Object* sourceObj,
                                                   float viewAngle,
                                                   float viewDist) {
@@ -590,6 +591,7 @@ std::vector<float> Scenario::getVisibleRoadPoints(Object* sourceObj,
         continue;
       }
 
+      float otherRelativeHeading = otherRelativePos.Angle();
       float headingDiff = getSignedAngle(sourceHeading, otherRelativeHeading);
 
       if (std::abs(headingDiff) <= halfViewAngle) {
