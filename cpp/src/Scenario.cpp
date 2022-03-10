@@ -567,6 +567,7 @@ std::vector<float> Scenario::getVisibleObjects(Object* sourceObj,
   }
   return state;
 }
+
 std::vector<float> Scenario::getVisibleRoadPoints(Object* sourceObj,
                                                   float viewAngle,
                                                   float viewDist) {
