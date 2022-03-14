@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <limits>
+#include <memory>
 
 #include "geometry/aabb_interface.h"
+#include "geometry/geometry_utils.h"
 #include "geometry/intersection.h"
 #include "geometry/line_segment.h"
 #include "geometry/polygon.h"
@@ -57,14 +59,8 @@ void Scenario::loadScenario(std::string path) {
                            obj["position"]["y"][currTime]);
     float width = obj["width"];
     float length = obj["length"];
-    float heading =
-        geometry::utils::Radians(static_cast<float>(obj["heading"][currTime]));
-    if (heading > 2 * geometry::utils::kPi) {
-      heading -= 2 * geometry::utils::kPi;
-    }
-    if (heading < 2 * geometry::utils::kPi) {
-      heading += 2 * geometry::utils::kPi;
-    }
+    float heading = geometry::utils::NormalizeAngle(
+        geometry::utils::Radians(static_cast<float>(obj["heading"][currTime])));
 
     // TODO(ev) this should be set elsewhere
     bool occludes = true;
@@ -93,15 +89,8 @@ void Scenario::loadScenario(std::string path) {
       }
       localValid.push_back(bool(obj["valid"][i]));
       // waymo data is in degrees!
-      float expertHeading =
-          float(obj["heading"][i]) * float(geometry::utils::kPi / 180.0);
-      // keep the heading between 0 and 2 * pi
-      if (expertHeading > 2 * geometry::utils::kPi) {
-        expertHeading -= 2 * geometry::utils::kPi;
-      }
-      if (expertHeading < 2 * geometry::utils::kPi) {
-        expertHeading += 2 * geometry::utils::kPi;
-      }
+      float expertHeading = geometry::utils::NormalizeAngle(
+          geometry::utils::Radians(float(obj["heading"][i])));
       localHeadingVec.push_back(expertHeading);
     }
     // TODO(ev) make it a flag whether all vehicles are added or just the
@@ -116,34 +105,34 @@ void Scenario::loadScenario(std::string path) {
       lengths.push_back(length);
       expertValid.push_back(localValid);
       if (type == "vehicle") {
-        Vehicle* veh = new Vehicle(
-            pos, width, length, heading, occludes, collides, checkForCollisions,
-            goalPos, IDCounter, localExpertSpeeds[currTime].Norm());
-        auto ptr = std::shared_ptr<Vehicle>(veh);
-        vehicles.push_back(ptr);
-        roadObjects.push_back(ptr);
+        std::shared_ptr<Vehicle> vehicle = std::make_shared<Vehicle>(
+            IDCounter, length, width, pos, heading,
+            localExpertSpeeds[currTime].Norm(), goalPos, occludes, collides,
+            checkForCollisions);
+        vehicles.push_back(vehicle);
+        roadObjects.push_back(vehicle);
         if (didObjectMove) {
-          objectsThatMoved.push_back(ptr);
+          objectsThatMoved.push_back(vehicle);
         }
       } else if (type == "pedestrian" && useNonVehicles) {
-        Pedestrian* ped = new Pedestrian(
-            pos, width, length, heading, occludes, collides, checkForCollisions,
-            goalPos, IDCounter, localExpertSpeeds[currTime].Norm());
-        auto ptr = std::shared_ptr<Pedestrian>(ped);
-        pedestrians.push_back(ptr);
-        roadObjects.push_back(ptr);
+        std::shared_ptr<Pedestrian> pedestrian = std::make_shared<Pedestrian>(
+            IDCounter, length, width, pos, heading,
+            localExpertSpeeds[currTime].Norm(), goalPos, occludes, collides,
+            checkForCollisions);
+        pedestrians.push_back(pedestrian);
+        roadObjects.push_back(pedestrian);
         if (didObjectMove) {
-          objectsThatMoved.push_back(ptr);
+          objectsThatMoved.push_back(pedestrian);
         }
       } else if (type == "cyclist" && useNonVehicles) {
-        Cyclist* cyclist = new Cyclist(
-            pos, width, length, heading, occludes, collides, checkForCollisions,
-            goalPos, IDCounter, localExpertSpeeds[currTime].Norm());
-        auto ptr = std::shared_ptr<Cyclist>(cyclist);
-        cyclists.push_back(ptr);
-        roadObjects.push_back(ptr);
+        std::shared_ptr<Cyclist> cyclist = std::make_shared<Cyclist>(
+            IDCounter, length, width, pos, heading,
+            localExpertSpeeds[currTime].Norm(), goalPos, occludes, collides,
+            checkForCollisions);
+        cyclists.push_back(cyclist);
+        roadObjects.push_back(cyclist);
         if (didObjectMove) {
-          objectsThatMoved.push_back(ptr);
+          objectsThatMoved.push_back(cyclist);
         }
       }
       // No point in printing this if we are not using non-vehicles
@@ -356,7 +345,7 @@ void Scenario::loadScenario(std::string path) {
 void Scenario::step(float dt) {
   currTime += int(dt / 0.1);  // TODO(ev) hardcoding
   for (auto& object : roadObjects) {
-    object->step(dt);
+    object->Step(dt);
   }
   for (auto& object : trafficLights) {
     object->updateTime(currTime);
@@ -378,18 +367,18 @@ void Scenario::step(float dt) {
           vehicle_bvh_.IntersectionCandidates(*obj1);
       for (const auto* ptr : candidates) {
         const Object* obj2 = dynamic_cast<const Object*>(ptr);
-        if (obj1->getID() == obj2->getID()) {
+        if (obj1->id() == obj2->id()) {
           continue;
         }
-        if (!obj1->checkForCollisions && !obj2->checkForCollisions) {
+        if (!obj1->can_be_collided() || !obj2->can_be_collided()) {
           continue;
         }
-        if (!obj1->collides || !obj2->collides) {
+        if (!obj1->check_collision() && !obj2->check_collision()) {
           continue;
         }
-        if (checkForCollision(obj1.get(), obj2)) {
-          obj1->setCollided(true);
-          const_cast<Object*>(obj2)->setCollided(true);
+        if (checkForCollision(*obj1, *obj2)) {
+          obj1->set_collided(true);
+          const_cast<Object*>(obj2)->set_collided(true);
         }
       }
     }
@@ -402,8 +391,8 @@ void Scenario::step(float dt) {
     for (const auto* ptr : candidates) {
       const geometry::LineSegment* obj2 =
           dynamic_cast<const geometry::LineSegment*>(ptr);
-      if (checkForCollision(obj1.get(), obj2)) {
-        obj1->setCollided(true);
+      if (checkForCollision(*obj1, *obj2)) {
+        obj1->set_collided(true);
       }
     }
   }
@@ -414,9 +403,9 @@ void Scenario::waymo_step() {
     currTime += 1;  // TODO(ev) hardcoding
     for (auto& object : roadObjects) {
       geometry::Vector2D expertPosition =
-          expertTrajectories[int(object->getID())][currTime];
-      object->setPosition(expertPosition.x(), expertPosition.y());
-      object->setHeading(expertHeadings[int(object->getID())][currTime]);
+          expertTrajectories[object->id()][currTime];
+      object->set_position(expertPosition);
+      object->set_heading(expertHeadings[object->id()][currTime]);
     }
     for (auto& object : trafficLights) {
       object->updateTime(currTime);
@@ -438,18 +427,18 @@ void Scenario::waymo_step() {
             vehicle_bvh_.IntersectionCandidates(*obj1);
         for (const auto* ptr : candidates) {
           const Object* obj2 = dynamic_cast<const Object*>(ptr);
-          if (obj1->getID() == obj2->getID()) {
+          if (obj1->id() == obj2->id()) {
             continue;
           }
-          if (!obj1->checkForCollisions && !obj2->checkForCollisions) {
+          if (!obj1->can_be_collided() || !obj2->can_be_collided()) {
             continue;
           }
-          if (!obj1->collides || !obj2->collides) {
+          if (!obj1->check_collision() && !obj2->check_collision()) {
             continue;
           }
-          if (checkForCollision(obj1.get(), obj2)) {
-            obj1->setCollided(true);
-            const_cast<Object*>(obj2)->setCollided(true);
+          if (checkForCollision(*obj1, *obj2)) {
+            obj1->set_collided(true);
+            const_cast<Object*>(obj2)->set_collided(true);
           }
         }
       }
@@ -461,8 +450,8 @@ void Scenario::waymo_step() {
       for (const auto* ptr : candidates) {
         const geometry::LineSegment* obj2 =
             dynamic_cast<const geometry::LineSegment*>(ptr);
-        if (checkForCollision(obj1.get(), obj2)) {
-          obj1->setCollided(true);
+        if (checkForCollision(*obj1, *obj2)) {
+          obj1->set_collided(true);
         }
       }
     }
@@ -471,14 +460,10 @@ void Scenario::waymo_step() {
 
 std::pair<float, geometry::Vector2D> Scenario::getObjectHeadingAndPos(
     Object* sourceObject) {
-  float sourceHeading = sourceObject->getHeading();
-  while (sourceHeading > geometry::utils::kPi)
-    sourceHeading -= 2.0f * geometry::utils::kPi;
-  while (sourceHeading < -geometry::utils::kPi)
-    sourceHeading += 2.0f * geometry::utils::kPi;
-
-  geometry::Vector2D sourcePos = sourceObject->getPosition();
-  return std::pair<float, geometry::Vector2D>(sourceHeading, sourcePos);
+  float sourceHeading =
+      geometry::utils::NormalizeAngle(sourceObject->heading());
+  geometry::Vector2D sourcePos = sourceObject->position();
+  return std::make_pair(sourceHeading, sourcePos);
 }
 
 const geometry::Box* Scenario::getOuterBox(float sourceHeading,
@@ -526,10 +511,10 @@ std::vector<float> Scenario::getVisibleObjects(Object* sourceObj,
         vehicle_bvh_.IntersectionCandidates(*outerBox);
     for (const auto* ptr : roadObjCandidates) {
       const Object* objPtr = dynamic_cast<const Object*>(ptr);
-      if (objPtr->getID() == sourceObj->getID()) {
+      if (objPtr->id() == sourceObj->id()) {
         continue;
       }
-      geometry::Vector2D otherRelativePos = objPtr->getPosition() - sourcePos;
+      geometry::Vector2D otherRelativePos = objPtr->position() - sourcePos;
       float dist = otherRelativePos.Norm();
 
       if (dist > viewDist) {
@@ -554,8 +539,8 @@ std::vector<float> Scenario::getVisibleObjects(Object* sourceObj,
       auto vehData = visibleVehicles[k];
       state[statePosCounter++] = std::get<1>(vehData);
       state[statePosCounter++] = std::get<2>(vehData);
-      state[statePosCounter++] = std::get<0>(vehData)->getSpeed();
-      state[statePosCounter++] = std::get<0>(vehData)->getLength();
+      state[statePosCounter++] = std::get<0>(vehData)->speed();
+      state[statePosCounter++] = std::get<0>(vehData)->length();
     }
     // increment the state counter appropriately if we have fewer than the
     // maximum number of vehicles
@@ -761,17 +746,12 @@ std::vector<float> Scenario::getVisibleState(Object* sourceObj, float viewAngle,
 std::vector<float> Scenario::getEgoState(Object* obj) {
   std::vector<float> state(4);
 
-  state[0] = obj->getSpeed();
+  state[0] = obj->speed();
 
-  float sourceHeading = obj->getHeading();
-  while (sourceHeading > geometry::utils::kPi)
-    sourceHeading -= 2.0f * geometry::utils::kPi;
-  while (sourceHeading < -geometry::utils::kPi)
-    sourceHeading += 2.0f * geometry::utils::kPi;
+  float sourceHeading = geometry::utils::NormalizeAngle(obj->heading());
 
-  geometry::Vector2D sourcePos = obj->getPosition();
-
-  geometry::Vector2D goalPos = obj->getGoalPosition();
+  geometry::Vector2D sourcePos = obj->position();
+  geometry::Vector2D goalPos = obj->goal_position();
 
   geometry::Vector2D otherRelativePos = goalPos - sourcePos;
   float dist = otherRelativePos.Norm();
@@ -781,32 +761,30 @@ std::vector<float> Scenario::getEgoState(Object* obj) {
 
   state[1] = dist;
   state[2] = headingDiff;
-  state[3] = obj->getLength();
+  state[3] = obj->length();
 
   return state;
 }
 
-bool Scenario::checkForCollision(const Object* object1, const Object* object2) {
+bool Scenario::checkForCollision(const Object& object1,
+                                 const Object& object2) const {
   // note: right now objects are rectangles but this code works for any pair of
   // convex polygons
 
   // first check for circles collision
-  // float dist = Vector2D::dist(object1->getPosition(),
-  // object2->getPosition());
-  const float dist =
-      geometry::Distance(object1->getPosition(), object2->getPosition());
-  const float min_dist = object1->getRadius() + object2->getRadius();
+  const float dist = geometry::Distance(object1.position(), object2.position());
+  const float min_dist = object1.Radius() + object2.Radius();
   if (dist > min_dist) {
     return false;
   }
-  const geometry::ConvexPolygon polygon1 = object1->BoundingPolygon();
-  const geometry::ConvexPolygon polygon2 = object2->BoundingPolygon();
+  const geometry::ConvexPolygon polygon1 = object1.BoundingPolygon();
+  const geometry::ConvexPolygon polygon2 = object2.BoundingPolygon();
   return polygon1.Intersects(polygon2);
 }
 
-bool Scenario::checkForCollision(const Object* object,
-                                 const geometry::LineSegment* segment) {
-  return geometry::Intersects(*segment, object->BoundingPolygon());
+bool Scenario::checkForCollision(const Object& object,
+                                 const geometry::LineSegment& segment) const {
+  return geometry::Intersects(segment, object.BoundingPolygon());
 }
 
 // TODO(ev) make smoother, also maybe return something named so that
@@ -872,8 +850,8 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     float radius = 2;
     sf::CircleShape ptShape(radius);
     ptShape.setOrigin(radius, radius);
-    ptShape.setFillColor(object->color);
-    ptShape.setPosition(utils::ToVector2f(object->goalPosition));
+    ptShape.setFillColor(object->color());
+    ptShape.setPosition(utils::ToVector2f(object->goal_position()));
     target.draw(ptShape, states);
   }
 }
@@ -894,15 +872,8 @@ std::vector<std::shared_ptr<RoadLine>> Scenario::getRoadLines() {
   return roadLines;
 }
 
-float Scenario::getSignedAngle(float sourceAngle, float targetAngle) {
-  float angleDiff = targetAngle - sourceAngle;
-  if (angleDiff > geometry::utils::kPi) {
-    angleDiff -= 2 * geometry::utils::kPi;
-  }
-  if (angleDiff < -geometry::utils::kPi) {
-    angleDiff += 2 * geometry::utils::kPi;
-  }
-  return angleDiff;
+float Scenario::getSignedAngle(float sourceAngle, float targetAngle) const {
+  return geometry::utils::AngleSub(targetAngle, sourceAngle);
 }
 
 void Scenario::removeVehicle(Vehicle* object) {
@@ -933,25 +904,30 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float viewDist,
   float circleRadius = viewDist;
   float renderedCircleRadius = 300.0f;
 
-  if (object->coneTexture == nullptr) {
+  if (object->cone_texture() == nullptr) {
     sf::ContextSettings settings;
     settings.antialiasingLevel = 1;
 
-    object->coneTexture = new sf::RenderTexture();
-    object->coneTexture->create(2.0f * renderedCircleRadius,
-                                2.0f * renderedCircleRadius, settings);
+    // object->coneTexture = new sf::RenderTexture();
+    // object->coneTexture->create(2.0f * renderedCircleRadius,
+    //                             2.0f * renderedCircleRadius, settings);
+
+    // Potential memory leak?
+    object->set_cone_texture(new sf::RenderTexture());
+    object->cone_texture()->create(2.0f * renderedCircleRadius,
+                                   2.0f * renderedCircleRadius, settings);
   }
-  sf::RenderTexture* texture = object->coneTexture;
+  sf::RenderTexture* texture = object->cone_texture();
 
   sf::Transform renderTransform;
   renderTransform.scale(1, -1);  // horizontal flip
 
-  geometry::Vector2D center = object->getPosition();
+  geometry::Vector2D center = object->position();
 
   texture->clear(sf::Color(50, 50, 50));
   sf::View view(utils::ToVector2f(center, /*flip_y=*/true),
                 sf::Vector2f(2.0f * circleRadius, 2.0f * circleRadius));
-  view.rotate(-geometry::utils::Degrees(object->getHeading()) + 90.0f);
+  view.rotate(-geometry::utils::Degrees(object->heading()) + 90.0f);
   texture->setView(view);
 
   texture->draw(
@@ -988,8 +964,7 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float viewDist,
                   sf::TriangleFan);  //, renderTransform);
   }
 
-  renderTransform.rotate(-geometry::utils::Degrees(object->getHeading()) +
-                         90.0f);
+  renderTransform.rotate(-geometry::utils::Degrees(object->heading()) + 90.0f);
 
   // TODO(ev) do this for road objects too
   // draw obstructions
@@ -998,22 +973,27 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float viewDist,
         getVehicles();  // todo optimize with objects in range only (quadtree?)
 
     for (const auto& obj : roadObjects) {
-      if (obj.get() != object && obj->occludes) {
-        auto lines = obj->getLines();
-        for (const auto& [pt1, pt2] : lines) {
+      if (obj.get() != object && obj->can_block_sight()) {
+        const auto lines = obj->BoundingPolygon().Edges();
+        // auto lines = obj->getLines();
+        for (const auto& line1 : lines) {
+          const geometry::Vector2D& pt1 = line1.Endpoint0();
+          const geometry::Vector2D& pt2 = line1.Endpoint1();
           int nIntersections = 0;
-          for (const auto& [pt3, pt4] : lines) {
+          for (const auto& line2 : lines) {
+            const geometry::Vector2D& pt3 = line2.Endpoint0();
+            const geometry::Vector2D& pt4 = line2.Endpoint1();
             if (pt1 != pt3 && pt1 != pt4 &&
-                geometry::LineSegment(pt1, center)
-                    .Intersects(geometry::LineSegment(pt3, pt4))) {
+                geometry::LineSegment(pt1, center).Intersects(line2)) {
               nIntersections++;
               break;
             }
           }
-          for (const auto& [pt3, pt4] : lines) {
+          for (const auto& line2 : lines) {
+            const geometry::Vector2D& pt3 = line2.Endpoint0();
+            const geometry::Vector2D& pt4 = line2.Endpoint1();
             if (pt2 != pt3 && pt2 != pt4 &&
-                geometry::LineSegment(pt2, center)
-                    .Intersects(geometry::LineSegment(pt3, pt4))) {
+                geometry::LineSegment(pt2, center).Intersects(line2)) {
               nIntersections++;
               break;
             }
@@ -1066,8 +1046,7 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float viewDist,
   texture->setView(
       sf::View(sf::Vector2f(0.0f, 0.0f), sf::Vector2f(texture->getSize())));
 
-  renderTransform.rotate(geometry::utils::Degrees(object->getHeading()) -
-                         90.0f);
+  renderTransform.rotate(geometry::utils::Degrees(object->heading()) - 90.0f);
   if (viewAngle < 2.0f * kPi) {
     std::vector<sf::Vertex> innerCircle;  // todo precompute just once
 
@@ -1128,7 +1107,7 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
                                scenarioBounds.height / squareSide);
   sf::View view(center, size);
   if (object != nullptr) {
-    view.rotate(-geometry::utils::Degrees(object->getHeading()) + 90.0f);
+    view.rotate(-geometry::utils::Degrees(object->heading()) + 90.0f);
   }
 
   texture->setView(view);
@@ -1144,8 +1123,8 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
         float radius = 2;
         sf::CircleShape ptShape(radius);
         ptShape.setOrigin(radius, radius);
-        ptShape.setFillColor(obj->color);
-        ptShape.setPosition(utils::ToVector2f(obj->goalPosition));
+        ptShape.setFillColor(obj->color());
+        ptShape.setPosition(utils::ToVector2f(obj->position()));
         texture->draw(ptShape, renderTransform);
       }
     }
@@ -1157,8 +1136,8 @@ ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
       float radius = 2;
       sf::CircleShape ptShape(radius);
       ptShape.setOrigin(radius, radius);
-      ptShape.setFillColor(object->color);
-      ptShape.setPosition(utils::ToVector2f(object->goalPosition));
+      ptShape.setFillColor(object->color());
+      ptShape.setPosition(utils::ToVector2f(object->position()));
       texture->draw(ptShape, renderTransform);
     }
   }

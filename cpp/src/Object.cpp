@@ -1,138 +1,59 @@
 #include "Object.hpp"
 
+#include <algorithm>
+
 #include "geometry/geometry_utils.h"
 #include "utils/sf_utils.h"
 
 namespace nocturne {
 
-Object::Object(const geometry::Vector2D& position, float width, float length,
-               float heading, bool occludes, bool collides,
-               bool checkForCollisions, const geometry::Vector2D& goalPosition,
-               int objID, float speed)
-    : position(position),
-      width(width),
-      length(length),
-      heading(heading),
-      occludes(occludes),
-      collides(collides),
-      checkForCollisions(checkForCollisions),
-      goalPosition(goalPosition),
-      id(objID),
-      speed(speed),
-      type("Object"),
-      hasCollided(false),
-      coneTexture(nullptr) {
-  // generate random color for vehicle
-  std::srand(std::time(nullptr) +
-             id);  // use current time as seed for random generator
-  std::vector<int> colors;
-  for (int i = 0; i < 3; i++) {
-    colors.push_back(std::rand() / ((RAND_MAX + 1u) / 255));
-  }
-  colors[std::rand() / ((RAND_MAX + 1u) / 2)] = 255;
-  color = sf::Color(colors[0], colors[1], colors[2]);
+geometry::ConvexPolygon Object::BoundingPolygon() const {
+  const geometry::Vector2D p1 =
+      geometry::Vector2D(length_ * 0.5f, width_ * 0.5f).Rotate(heading_) +
+      position_;
+  const geometry::Vector2D p2 =
+      geometry::Vector2D(-length_ * 0.5f, width_ * 0.5f).Rotate(heading_) +
+      position_;
+  const geometry::Vector2D p3 =
+      geometry::Vector2D(-length_ * 0.5f, -width_ * 0.5f).Rotate(heading_) +
+      position_;
+  const geometry::Vector2D p4 =
+      geometry::Vector2D(length_ * 0.5f, -width_ * 0.5f).Rotate(heading_) +
+      position_;
+  return geometry::ConvexPolygon({p1, p2, p3, p4});
 }
-
-void Object::step(float dt) {}
 
 void Object::draw(sf::RenderTarget& target, sf::RenderStates states) const {
-  sf::RectangleShape rect(sf::Vector2f(length, width));
-  rect.setOrigin(length / 2.0f, width / 2.0f);
-  // rect.setPosition(position.toVector2f());
-  rect.setPosition(utils::ToVector2f(position));
-  // rect.setRotation(heading * 180 / pi);
-  rect.setRotation(geometry::utils::Degrees(heading));
+  sf::RectangleShape rect(sf::Vector2f(length_, width_));
+  rect.setOrigin(length_ / 2.0f, width_ / 2.0f);
+  rect.setPosition(utils::ToVector2f(position_));
+  rect.setRotation(geometry::utils::Degrees(heading_));
 
   sf::Color col;
-  if (occludes && collides) {
-    col = color;  // sf::Color::Red;
-  } else if (occludes && !collides) {
+  if (can_block_sight_ && can_be_collided_) {
+    col = color_;
+  } else if (can_block_sight_ && !can_be_collided_) {
     col = sf::Color::Blue;
-  } else if (!occludes && collides) {
+  } else if (!can_block_sight_ && can_be_collided_) {
     col = sf::Color::White;
-  } else if (!occludes && !collides) {
+  } else {
     col = sf::Color::Black;
   }
-
   rect.setFillColor(col);
   target.draw(rect, states);
-
-  // sf::CircleShape circle(3);
-  // circle.setOrigin(3, 3);
-  // circle.setFillColor(sf::Color::Red);
-  // circle.setPosition(position.toVector2f());
-  // target.draw(circle, states);
-
-  // for (Vector2D corner : getCorners()) {
-  //     sf::CircleShape circle(2);
-  //     circle.setOrigin(2, 2);
-  //     circle.setFillColor(sf::Color::Red);
-  //     circle.setPosition(corner.toVector2f());
-  //     target.draw(circle, states);
-  // }
 }
 
-// Vector2D Object::getPosition() const {
-//     return position;
-// }
-// Vector2D Object::getGoalPosition() const {
-//     return goalPosition;
-// }
-float Object::getSpeed() const { return speed; }
-float Object::getHeading() const { return heading; }
-float Object::getWidth() const { return width; }
-float Object::getLength() const { return length; }
-float Object::getRadius() const {
-  return std::sqrt(width * width + length * length) / 2.0f;
+void Object::InitRandomColor() {
+  std::uniform_int_distribution<int32_t> dis(0, 255);
+  int32_t r = dis(random_gen_);
+  int32_t g = dis(random_gen_);
+  int32_t b = dis(random_gen_);
+  // Rescale colors to avoid dark objects.
+  const int32_t max_rgb = std::max({r, g, b});
+  r = r * 255 / max_rgb;
+  g = g * 255 / max_rgb;
+  b = b * 255 / max_rgb;
+  color_ = sf::Color(r, g, b);
 }
-int Object::getID() const { return id; }
-std::string Object::getType() const { return type; }
-
-void Object::setSpeed(float newSpeed) { speed = newSpeed; }
-void Object::setHeading(float newHeading) { heading = newHeading; }
-
-std::vector<geometry::Vector2D> Object::getCorners() const {
-  // Create points
-  std::vector<geometry::Vector2D> corners = {
-      geometry::Vector2D(length * 0.5, width * 0.5),
-      geometry::Vector2D(length * 0.5, -width * 0.5),
-      geometry::Vector2D(-length * 0.5, -width * 0.5),
-      geometry::Vector2D(-length * 0.5, width * 0.5)};
-  // Rotate and translate points
-  for (auto& p : corners) {
-    p = p.Rotate(heading) + position;
-  }
-  return corners;
-}
-
-std::vector<std::pair<geometry::Vector2D, geometry::Vector2D>>
-Object::getLines() const {
-  std::vector<geometry::Vector2D> corners = getCorners();
-  std::vector<std::pair<geometry::Vector2D, geometry::Vector2D>> lines;
-  const int64_t n = corners.size();
-  lines.reserve(n);
-  for (int64_t i = 0; i < n; ++i) {
-    lines.emplace_back(corners[i], corners[(i + 1) % n]);
-  }
-  return lines;
-}
-
-geometry::ConvexPolygon Object::BoundingPolygon() const {
-  // Create points
-  std::vector<geometry::Vector2D> vertices = {
-      geometry::Vector2D(length * 0.5f, width * 0.5f),
-      geometry::Vector2D(-length * 0.5f, width * 0.5f),
-      geometry::Vector2D(-length * 0.5f, -width * 0.5f),
-      geometry::Vector2D(length * 0.5f, -width * 0.5f)};
-  // Rotate and translate points
-  for (auto& p : vertices) {
-    p = p.Rotate(heading) + position;
-  }
-  return geometry::ConvexPolygon(std::move(vertices));
-}
-
-void Object::setCollided(bool collided) { hasCollided = collided; }
-
-bool Object::getCollided() const { return hasCollided; }
 
 }  // namespace nocturne
