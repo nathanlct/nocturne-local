@@ -8,8 +8,9 @@ namespace utils {
 
 constexpr double kEps = 1e-8;
 constexpr double kPi = M_PI;
-constexpr double kTwoPi = M_2_PI;
+constexpr double kTwoPi = 2.0 * kPi;
 constexpr double kHalfPi = M_PI_2;
+constexpr double kQuarterPi = M_PI_4;
 
 inline bool AlmostEquals(float lhs, float rhs, float eps = kEps) {
   return std::fabs(lhs - rhs) < eps;
