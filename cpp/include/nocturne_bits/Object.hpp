@@ -13,7 +13,7 @@
 
 namespace nocturne {
 
-constexpr float kVeiwRadius = 120.0f;
+constexpr float kViewRadius = 120.0f;
 
 class Object : public sf::Drawable, public geometry::AABBInterface {
  public:
