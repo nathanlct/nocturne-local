@@ -11,6 +11,8 @@ namespace nocturne {
 namespace geometry {
 namespace {
 
+constexpr float kTestEps = 1e-5;
+
 TEST(LineSegmentTest, AABBTest) {
   const Vector2D p(0.0f, 2.0f);
   const Vector2D q(1.0f, 0.0f);
@@ -34,8 +36,21 @@ TEST(LineSegmentTest, NormalVectorTest) {
   p = Vector2D(-1.0f, -1.0f);
   q = Vector2D(-2.0f, -2.0f);
   normal_vector = LineSegment(p, q).NormalVector();
-  EXPECT_FLOAT_EQ(normal_vector.x(), std::sqrt(2.0f) / 2.0f);
-  EXPECT_FLOAT_EQ(normal_vector.y(), -std::sqrt(2.0f) / 2.0f);
+  EXPECT_FLOAT_EQ(normal_vector.x(), M_SQRT1_2);
+  EXPECT_FLOAT_EQ(normal_vector.y(), -M_SQRT1_2);
+}
+
+TEST(LineSegmentTest, ContainsTest) {
+  const Vector2D p(0.0, 0.0);
+  const Vector2D q(1.0, 1.0);
+  const LineSegment seg(p, q);
+  EXPECT_TRUE(seg.Contains(p));
+  EXPECT_TRUE(seg.Contains(q));
+  EXPECT_TRUE(seg.Contains(p + kTestEps));
+  EXPECT_TRUE(seg.Contains(q - kTestEps));
+  EXPECT_FALSE(seg.Contains(Vector2D(0.5f + kTestEps, 0.5f - kTestEps)));
+  EXPECT_FALSE(seg.Contains(Vector2D(0.0f - kTestEps, 0.0f)));
+  EXPECT_FALSE(seg.Contains(Vector2D(1.0f, 1.0f + kTestEps)));
 }
 
 TEST(LineSegmentTest, IntersectsTest) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <limits>
 
 namespace nocturne {
 namespace geometry {
@@ -12,52 +13,41 @@ constexpr double kTwoPi = 2.0 * kPi;
 constexpr double kHalfPi = M_PI_2;
 constexpr double kQuarterPi = M_PI_4;
 
-inline bool AlmostEquals(float lhs, float rhs, float eps = kEps) {
-  return std::fabs(lhs - rhs) < eps;
+template <typename T>
+inline bool AlmostEquals(T lhs, T rhs) {
+  return std::fabs(lhs - rhs) < std::numeric_limits<T>::epsilon() * T(32);
 }
 
-inline bool AlmostEquals(double lhs, double rhs, double eps = kEps) {
-  return std::fabs(lhs - rhs) < eps;
+template <typename T>
+constexpr T Radians(T d) {
+  return d / 180.0 * kPi;
 }
 
-constexpr float Radians(float d) { return d / 180.0f * kPi; }
-constexpr double Radians(double d) { return d / 180.0 * kPi; }
-
-constexpr float Degrees(float r) { return r / kPi * 180.0f; }
-constexpr double Degrees(double r) { return r / kPi * 180.0; }
+template <typename T>
+constexpr T Degrees(T r) {
+  return r / kPi * 180.0;
+}
 
 // Check if angle is in the range of [-Pi, Pi].
-constexpr bool IsNormalizedAngle(float angle) {
-  return angle >= -kPi && angle <= kPi;
-}
-constexpr bool IsNormalizedAngle(double angle) {
+template <typename T>
+constexpr bool IsNormalizedAngle(T angle) {
   return angle >= -kPi && angle <= kPi;
 }
 
-inline float NormalizeAngle(float angle) {
-  const float ret = std::fmod(angle, kTwoPi);
+template <typename T>
+inline float NormalizeAngle(T angle) {
+  const T ret = std::fmod(angle, kTwoPi);
   return ret > kPi ? ret - kTwoPi : (ret < -kPi ? ret + kTwoPi : ret);
 }
 
-inline double NormalizeAngle(double angle) {
-  const double ret = std::fmod(angle, kTwoPi);
-  return ret > kPi ? ret - kTwoPi : (ret < -kPi ? ret + kTwoPi : ret);
+template <typename T>
+inline T AngleAdd(T lhs, T rhs) {
+  return NormalizeAngle<T>(lhs + rhs);
 }
 
-inline float AngleAdd(float lhs, float rhs) {
-  return NormalizeAngle(lhs + rhs);
-}
-
-inline double AngleAdd(double lhs, double rhs) {
-  return NormalizeAngle(lhs + rhs);
-}
-
-inline float AngleSub(float lhs, float rhs) {
-  return NormalizeAngle(lhs - rhs);
-}
-
-inline double AngleSub(double lhs, double rhs) {
-  return NormalizeAngle(lhs - rhs);
+template <typename T>
+inline T AngleSub(T lhs, T rhs) {
+  return NormalizeAngle<T>(lhs - rhs);
 }
 
 }  // namespace utils
