@@ -43,6 +43,7 @@ class Object : public sf::Drawable, public geometry::AABBInterface {
   void set_position(const geometry::Vector2D& position) {
     position_ = position;
   }
+  void set_position(float x, float y) { position_ = geometry::Vector2D(x, y); }
 
   float length() const { return length_; }
   float width() const { return width_; }
@@ -56,6 +57,9 @@ class Object : public sf::Drawable, public geometry::AABBInterface {
   const geometry::Vector2D& goal_position() const { return goal_position_; }
   void set_goal_position(const geometry::Vector2D& goal_position) {
     goal_position_ = goal_position;
+  }
+  void set_goal_position(float x, float y) {
+    goal_position_ = geometry::Vector2D(x, y);
   }
 
   bool can_block_sight() const { return can_block_sight_; }

@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "Vehicle.hpp"
+#include "geometry/vector_2d.h"
 // #include <pybind11/stl.h>  // automatic conversion from C++ std::vector to
 // Python list
 
@@ -24,8 +25,16 @@ void init_object(py::module& m) {
       .def("getID", &nocturne::Object::id)
       .def("getType", &nocturne::Object::Type)
       .def("getCollided", &nocturne::Object::collided)
-      .def("setPosition", &nocturne::Object::set_position)
-      .def("setGoalPosition", &nocturne::Object::set_goal_position)
+      .def("setPosition",
+           py::overload_cast<const nocturne::geometry::Vector2D&>(
+               &nocturne::Object::set_position))
+      .def("setPosition",
+           py::overload_cast<float, float>(&nocturne::Object::set_position))
+      .def("setGoalPosition",
+           py::overload_cast<const nocturne::geometry::Vector2D&>(
+               &nocturne::Object::set_goal_position))
+      .def("setGoalPosition", py::overload_cast<float, float>(
+                                  &nocturne::Object::set_goal_position))
       .def("setSpeed", &nocturne::Object::set_speed)
       .def("setHeading", &nocturne::Object::set_heading);
 
@@ -41,8 +50,16 @@ void init_object(py::module& m) {
       .def("getCollided", &nocturne::Vehicle::collided)
       .def("setAccel", &nocturne::Vehicle::setAccel)
       .def("setSteeringAngle", &nocturne::Vehicle::setSteeringAngle)
-      .def("setPosition", &nocturne::Vehicle::set_position)
-      .def("setGoalPosition", &nocturne::Vehicle::set_goal_position)
+      .def("setPosition",
+           py::overload_cast<const nocturne::geometry::Vector2D&>(
+               &nocturne::Vehicle::set_position))
+      .def("setPosition",
+           py::overload_cast<float, float>(&nocturne::Vehicle::set_position))
+      .def("setGoalPosition",
+           py::overload_cast<const nocturne::geometry::Vector2D&>(
+               &nocturne::Vehicle::set_goal_position))
+      .def("setGoalPosition", py::overload_cast<float, float>(
+                                  &nocturne::Vehicle::set_goal_position))
       .def("setSpeed", &nocturne::Vehicle::set_speed)
       .def("setHeading", &nocturne::Vehicle::set_heading);
 }
