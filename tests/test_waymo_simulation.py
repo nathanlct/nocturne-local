@@ -6,7 +6,7 @@ from nocturne import Simulation
 
 import time
 
-file_path = file_path
+file_path = '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json/tfrecord-00002-of-01000_2.json'
 os.environ["DISPLAY"] = ":0.0"
 # sim = Simulation(scenarioFilePath='./nocturne_utils/output.json', startTime=10, showPeds=True, showCyclists=True)
 sim = Simulation(
