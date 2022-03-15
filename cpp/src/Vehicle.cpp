@@ -2,19 +2,11 @@
 
 #include <cmath>
 
+#include "geometry/geometry_utils.h"
+
 namespace nocturne {
 
-Vehicle::Vehicle(const geometry::Vector2D& position, float width, float length,
-                 float heading, bool occludes, bool collides,
-                 bool checkForCollisions,
-                 const geometry::Vector2D& goalPosition, int objID, float speed)
-    : Object(position, width, length, heading, occludes, collides,
-             checkForCollisions, goalPosition, objID, speed),
-      accelAction(0),
-      steeringAction(0),
-      yawRate(0) {}
-
-void Vehicle::step(float dt) {
+void Vehicle::Step(float dt) {
   // if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
   //     accelAction = 100.0f;
   // }
@@ -48,19 +40,13 @@ void Vehicle::kinematicsUpdate(float dt) {
   // kinematic model - table 2.1 from Vehicle Dynamics and Control, R. Rajamani,
   // Chapter 2
   float slipAngle = atan(tan(steering) / 2.0f);
-  float dHeading = speed * sin(steering) / length;
-  float dX = speed * cos(heading + slipAngle);
-  float dY = speed * sin(heading + slipAngle);
+  float dHeading = speed_ * sin(steering) / length_;
+  float dX = speed_ * cos(heading_ + slipAngle);
+  float dY = speed_ * sin(heading_ + slipAngle);
 
-  heading += dHeading * dt;
-  if (heading > 2 * geometry::utils::kPi) {
-    heading -= 2 * geometry::utils::kPi;
-  }
-  if (heading < 2 * geometry::utils::kPi) {
-    heading += 2 * geometry::utils::kPi;
-  }
-  position += geometry::Vector2D(dX, dY) * dt;
-  speed += accel * dt;
+  heading_ = geometry::utils::AngleAdd(heading_, dHeading * dt);
+  position_ += geometry::Vector2D(dX, dY) * dt;
+  speed_ += accel * dt;
 }
 
 void Vehicle::dynamicsUpdate() {}

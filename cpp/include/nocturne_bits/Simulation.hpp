@@ -11,7 +11,6 @@
 #include "Object.hpp"
 #include "Scenario.hpp"
 #include "geometry/vector_2d.h"
-#include "utils.hpp"
 
 namespace nocturne {
 

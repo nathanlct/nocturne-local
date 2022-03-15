@@ -41,7 +41,7 @@ class Scenario : public sf::Drawable {
   void removeVehicle(Vehicle* object);
 
   int getMaxEnvTime() { return maxEnvTime; }
-  float getSignedAngle(float sourceAngle, float targetAngle);
+  float getSignedAngle(float sourceAngle, float targetAngle) const;
 
   // query expert data
   std::vector<float> getExpertAction(
@@ -67,9 +67,9 @@ class Scenario : public sf::Drawable {
       float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
       float viewDist = 60.0f, float headTilt = 0.0f, bool obscuredView = true);
   ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
-  bool checkForCollision(const Object* object1, const Object* object2);
-  bool checkForCollision(const Object* object,
-                         const geometry::LineSegment* segment);
+  bool checkForCollision(const Object& object1, const Object& object2) const;
+  bool checkForCollision(const Object& object,
+                         const geometry::LineSegment& segment) const;
   std::vector<std::shared_ptr<Vehicle>> getVehicles();
   std::vector<std::shared_ptr<Pedestrian>> getPedestrians();
   std::vector<std::shared_ptr<Cyclist>> getCyclists();
