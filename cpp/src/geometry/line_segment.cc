@@ -20,5 +20,39 @@ bool LineSegment::Intersects(const LineSegment& seg) const {
          CCW(p2, q2, p1) != CCW(p2, q2, q1);
 }
 
+std::optional<Vector2D> LineSegment::Intersection(
+    const LineSegment& seg) const {
+  if (!Intersects(seg)) {
+    return std::nullopt;
+  }
+  const Vector2D& p0 = Endpoint0();
+  const Vector2D& q0 = Endpoint1();
+  const Vector2D& p1 = seg.Endpoint0();
+  const Vector2D& q1 = seg.Endpoint1();
+  const Vector2D d0 = q0 - p0;
+  const Vector2D d1 = q1 - p1;
+  const float c0 = CrossProduct(p0, d0);
+  const float c1 = CrossProduct(p1, d1);
+  const float x = d0.x() * c1 - d1.x() * c0;
+  const float y = d0.y() * c1 - d1.y() * c0;
+  return std::make_optional(Vector2D(x, y) / CrossProduct(d0, d1));
+}
+
+std::optional<float> LineSegment::ParametricIntersection(
+    const LineSegment& seg) const {
+  if (!Intersects(seg)) {
+    return std::nullopt;
+  }
+  const Vector2D& p0 = Endpoint0();
+  const Vector2D& q0 = Endpoint1();
+  const Vector2D& p1 = seg.Endpoint0();
+  const Vector2D& q1 = seg.Endpoint1();
+  const Vector2D d0 = q0 - p0;
+  const Vector2D d1 = q1 - p1;
+  const float c0 = CrossProduct(p0, d1);
+  const float c1 = CrossProduct(p1, d1);
+  return std::make_optional((c1 - c0) / CrossProduct(d0, d1));
+}
+
 }  // namespace geometry
 }  // namespace nocturne
