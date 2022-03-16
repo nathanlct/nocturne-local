@@ -9,7 +9,7 @@ namespace nocturne {
 namespace geometry {
 namespace {
 
-constexpr float kEps = 1e-5f;
+constexpr float kTestEps = 1e-5;
 
 TEST(PolygonTest, AABBTest) {
   const Vector2D a(1.0f, 2.0f);
@@ -45,12 +45,12 @@ TEST(ConvexPolygonTest, ContainsTest) {
   EXPECT_TRUE(polygon.Contains(c));
   EXPECT_FALSE(polygon.Contains(Vector2D(0.0f, 0.0f)));
 
-  EXPECT_TRUE(polygon.Contains(a + kEps));
-  EXPECT_FALSE(polygon.Contains(a - kEps));
-  EXPECT_FALSE(polygon.Contains(b + kEps));
-  EXPECT_FALSE(polygon.Contains(b - kEps));
-  EXPECT_FALSE(polygon.Contains(c + kEps));
-  EXPECT_FALSE(polygon.Contains(c - kEps));
+  EXPECT_TRUE(polygon.Contains(a + kTestEps));
+  EXPECT_FALSE(polygon.Contains(a - kTestEps));
+  EXPECT_FALSE(polygon.Contains(b + kTestEps));
+  EXPECT_FALSE(polygon.Contains(b - kTestEps));
+  EXPECT_FALSE(polygon.Contains(c + kTestEps));
+  EXPECT_FALSE(polygon.Contains(c - kTestEps));
 }
 
 TEST(ConvexPolygonTest, IntersectsTest) {
@@ -66,7 +66,7 @@ TEST(ConvexPolygonTest, IntersectsTest) {
   EXPECT_FALSE(polygon1.Intersects(polygon2));
   EXPECT_FALSE(polygon2.Intersects(polygon1));
 
-  q1 = Vector2D(1.0f - kEps, 1.0f - kEps);
+  q1 = Vector2D(1.0f - kTestEps, 1.0f - kTestEps);
   q2 = Vector2D(2.0f, 0.0f);
   q3 = Vector2D(2.0f, 2.0f);
   polygon2 = ConvexPolygon({q1, q2, q3});

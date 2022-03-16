@@ -42,8 +42,12 @@ class LineSegment : public AABBInterface {
     return Vector2D(-d.y(), d.x()) / d.Norm();
   }
 
-  bool Contains(const Vector2D& o) const {
-    return DotProduct(endpoints_[0] - o, endpoints_[1] - o) <= 0;
+  bool Contains(const Vector2D& p) const {
+    const Vector2D u = endpoints_[0] - p;
+    const Vector2D v = endpoints_[1] - p;
+    // return CrossProduct(u, v) == 0.0f && DotProduct(u, v) <= 0.0f;
+    return utils::AlmostEquals(CrossProduct(u, v), 0.0f) &&
+           DotProduct(u, v) <= 0.0f;
   }
 
   bool Intersects(const LineSegment& seg) const;
