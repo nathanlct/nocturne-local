@@ -1,9 +1,11 @@
+#include "TrafficLight.hpp"
+
 #include <SFML/Graphics.hpp>
-#include <TrafficLight.hpp>
 #include <iostream>
 
 #include "geometry/vector_2d.h"
-#include "utils.hpp"
+#include "utils/sf_utils.h"
+
 using namespace std;
 
 namespace nocturne {

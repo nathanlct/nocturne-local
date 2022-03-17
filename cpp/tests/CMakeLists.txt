@@ -33,6 +33,7 @@ set(
 add_executable(
   nocturne_test 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/bvh_test.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/circular_sector_test.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/intersection_test.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/line_segment_test.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/polygon_test.cc

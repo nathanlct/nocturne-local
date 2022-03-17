@@ -56,6 +56,9 @@ class BVH {
     InitHierarchy(objects);
   }
 
+  bool Empty() const { return nodes_.empty(); }
+  int64_t Size() const { return nodes_.size(); }
+
   void Clear() {
     root_ = nullptr;
     nodes_.clear();
@@ -76,8 +79,6 @@ class BVH {
     IntersectionCandidatesImpl(segment, root_, candidates);
     return candidates;
   }
-
-  int getSize() { return nodes_.size(); }
 
  protected:
   Node* MakeNode(const AABBInterface* object) {
