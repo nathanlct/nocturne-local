@@ -44,7 +44,7 @@ void VisibleObjectsImpl(const LineSegment& sight,
     }
   }
 
-  // Blocking object is vibile.
+  // Blocking object is visible.
   if (min_idx >= 0) {
     mask[min_idx] = true;
   }
