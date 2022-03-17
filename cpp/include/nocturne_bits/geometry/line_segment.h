@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <optional>
 
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
@@ -14,14 +15,8 @@ namespace geometry {
 class LineSegment : public AABBInterface {
  public:
   LineSegment() = default;
-  LineSegment(const Vector2D& p, const Vector2D& q) {
-    endpoints_[0] = p;
-    endpoints_[1] = q;
-  }
-  LineSegment(const LineSegment& seg) {
-    endpoints_[0] = seg.endpoints_[0];
-    endpoints_[1] = seg.endpoints_[1];
-  }
+  LineSegment(const Vector2D& p, const Vector2D& q) : endpoints_({p, q}) {}
+  LineSegment(const LineSegment& seg) : endpoints_(seg.endpoints_) {}
 
   const Vector2D& Endpoint0() const { return endpoints_[0]; }
   const Vector2D& Endpoint1() const { return endpoints_[1]; }
@@ -35,6 +30,12 @@ class LineSegment : public AABBInterface {
     const float min_y = std::min(endpoints_[0].y(), endpoints_[1].y());
     const float max_y = std::max(endpoints_[0].y(), endpoints_[1].y());
     return AABB(min_x, min_y, max_x, max_y);
+  }
+
+  // Returns r(t) = (1 - t) * P0 + t * P1
+  Vector2D Point(float t) const {
+    assert(t >= 0.0f && t <= 1.0f);
+    return Endpoint0() * (1.0f - t) + Endpoint1() * t;
   }
 
   Vector2D NormalVector() const {
@@ -52,8 +53,16 @@ class LineSegment : public AABBInterface {
 
   bool Intersects(const LineSegment& seg) const;
 
+  // Returns the intersection point if *this intersects with seg.
+  std::optional<Vector2D> Intersection(const LineSegment& seg) const;
+
+  // Parametric equation for *this: r(t) = (1 - t) * P0 + t * P1
+  // where t is in [0, 1].
+  // Returns the intersection point parameter t if *this intersects with seg.
+  std::optional<float> ParametricIntersection(const LineSegment& seg) const;
+
  protected:
-  std::array<Vector2D, 2> endpoints_;
+  const std::array<Vector2D, 2> endpoints_;
 };
 
 }  // namespace geometry

@@ -1,7 +1,11 @@
 #include "geometry/intersection.h"
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <limits>
+
+#include "geometry/geometry_utils.h"
 
 namespace nocturne {
 namespace geometry {
@@ -27,6 +31,18 @@ int ComputeOutCode(const AABB& aabb, const Vector2D& p) {
     code |= kTop;
   }
   return code;
+}
+
+std::optional<Vector2D> ArcLineIntersection(
+    const CircularSector& circular_sector, const LineSegment& segment,
+    float t) {
+  if (t >= 0.0f && t <= 1.0f) {
+    const Vector2D x = segment.Point(t);
+    if (circular_sector.Contains(x)) {
+      return x;
+    }
+  }
+  return std::nullopt;
 }
 
 }  // namespace
@@ -123,6 +139,72 @@ bool Intersects(const ConvexPolygon& polygon, const LineSegment& segment) {
 
 bool Intersects(const LineSegment& segment, const ConvexPolygon& polygon) {
   return Intersects(polygon, segment);
+}
+
+std::pair<std::optional<Vector2D>, std::optional<Vector2D>> Intersection(
+    const CircularSector& circular_sector, const LineSegment& segment) {
+  std::array<Vector2D, 2> ret;
+  int64_t cnt = 0;
+
+  const Vector2D& o = circular_sector.center();
+  const LineSegment edge0(o, o + circular_sector.Radius0());
+  const LineSegment edge1(o, o + circular_sector.Radius1());
+  const auto u = edge0.Intersection(segment);
+  if (u.has_value()) {
+    ret[cnt++] = *u;
+  }
+  const auto v = edge1.Intersection(segment);
+  if (v.has_value()) {
+    ret[cnt++] = *v;
+  }
+  if (cnt == 2) {
+    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
+        std::make_optional(ret[0]), std::make_optional(ret[1]));
+  }
+
+  const Vector2D& p = segment.Endpoint0();
+  const Vector2D& q = segment.Endpoint1();
+  const Vector2D d1 = q - p;
+  const Vector2D d2 = p - o;
+  const float r = circular_sector.radius();
+  const float a = DotProduct(d1, d1);
+  const float b = DotProduct(d1, d2) * 2.0f;
+  const float c = DotProduct(d2, d2) - r * r;
+  const float delta = b * b - 4.0f * a * c;
+  if (utils::AlmostEquals(delta, 0.0f)) {
+    const float t = -b / (2.0f * a);
+    const auto x = ArcLineIntersection(circular_sector, segment, t);
+    if (x.has_value()) {
+      ret[cnt++] = *x;
+    }
+  } else if (delta > 0.0f) {
+    const float t0 = (-b - std::sqrt(delta)) / (2.0f * a);
+    const float t1 = (-b + std::sqrt(delta)) / (2.0f * a);
+    const auto x = ArcLineIntersection(circular_sector, segment, t0);
+    const auto y = ArcLineIntersection(circular_sector, segment, t1);
+    if (x.has_value()) {
+      ret[cnt++] = *x;
+    }
+    if (y.has_value()) {
+      ret[cnt++] = *y;
+    }
+  }
+
+  if (cnt == 0) {
+    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
+        std::nullopt, std::nullopt);
+  } else if (cnt == 1) {
+    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
+        std::make_optional(ret[0]), std::nullopt);
+  } else {
+    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
+        std::make_optional(ret[0]), std::make_optional(ret[1]));
+  }
+}
+
+std::pair<std::optional<Vector2D>, std::optional<Vector2D>> Intersection(
+    const LineSegment& segment, const CircularSector& circular_sector) {
+  return Intersection(circular_sector, segment);
 }
 
 }  // namespace geometry

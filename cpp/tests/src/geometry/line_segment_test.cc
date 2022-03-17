@@ -41,8 +41,8 @@ TEST(LineSegmentTest, NormalVectorTest) {
 }
 
 TEST(LineSegmentTest, ContainsTest) {
-  const Vector2D p(0.0, 0.0);
-  const Vector2D q(1.0, 1.0);
+  const Vector2D p(0.0f, 0.0f);
+  const Vector2D q(1.0f, 1.0f);
   const LineSegment seg(p, q);
   EXPECT_TRUE(seg.Contains(p));
   EXPECT_TRUE(seg.Contains(q));
@@ -54,17 +54,78 @@ TEST(LineSegmentTest, ContainsTest) {
 }
 
 TEST(LineSegmentTest, IntersectsTest) {
-  Vector2D p1(0.0, 0.0);
-  Vector2D q1(1.0, 1.0);
-  Vector2D p2(1.0, 0.0);
-  Vector2D q2(0.0, 1.0);
+  Vector2D p1(0.0f, 0.0f);
+  Vector2D q1(1.0f, 1.0f);
+  Vector2D p2(1.0f, 0.0f);
+  Vector2D q2(0.0f, 1.0f);
   EXPECT_TRUE(LineSegment(p1, q1).Intersects(LineSegment(p2, q2)));
 
-  p1 = Vector2D(0.0, 0.0);
-  q1 = Vector2D(0.0, 1.0);
-  p2 = Vector2D(1.0, 0.0);
-  q2 = Vector2D(0.0, 1.0);
+  p1 = Vector2D(0.0f, 0.0f);
+  q1 = Vector2D(0.0f, 1.0f);
+  p2 = Vector2D(1.0f, 0.0f);
+  q2 = Vector2D(0.0f, 1.0f);
   EXPECT_FALSE(LineSegment(p1, q1).Intersects(LineSegment(p2, q2)));
+}
+
+TEST(LineSegmentTest, IntersectionTest) {
+  Vector2D p1(-1.0f, 0.0f);
+  Vector2D q1(10.0f, 0.0f);
+  Vector2D p2(-1.0f, -1.0f);
+  Vector2D q2(10.0f, 10.0f);
+  auto ret = LineSegment(p1, q1).Intersection(LineSegment(p2, q2));
+  ASSERT_TRUE(ret.has_value());
+  EXPECT_FLOAT_EQ(ret->x(), 0.0f);
+  EXPECT_FLOAT_EQ(ret->y(), 0.0f);
+
+  p1 = Vector2D(1.0f, 1.0f);
+  q1 = Vector2D(1.0f, 2.0f);
+  p2 = Vector2D(2.0f, 1.0f);
+  q2 = Vector2D(0.0f, 2.0f);
+  ret = LineSegment(p1, q1).Intersection(LineSegment(p2, q2));
+  ASSERT_TRUE(ret.has_value());
+  EXPECT_FLOAT_EQ(ret->x(), 1.0f);
+  EXPECT_FLOAT_EQ(ret->y(), 1.5f);
+
+  p1 = Vector2D(-3.0f, -2.0f);
+  q1 = Vector2D(-1.0f, -4.0f);
+  p2 = Vector2D(-3.0f, -4.0f);
+  q2 = Vector2D(-1.0f, -2.0f);
+  ret = LineSegment(p1, q1).Intersection(LineSegment(p2, q2));
+  ASSERT_TRUE(ret.has_value());
+  EXPECT_FLOAT_EQ(ret->x(), -2.0f);
+  EXPECT_FLOAT_EQ(ret->y(), -3.0f);
+
+  p1 = Vector2D(0.0f, 0.0f);
+  q1 = Vector2D(1.0f, -2.0f);
+  p2 = Vector2D(0.0f, 1.0f);
+  q2 = Vector2D(1.0f, -1.0f);
+  ret = LineSegment(p1, q1).Intersection(LineSegment(p2, q2));
+  ASSERT_FALSE(ret.has_value());
+}
+
+TEST(LineSegmentTest, ParametricIntersectionTest) {
+  Vector2D p1(-1.0f, 0.0f);
+  Vector2D q1(9.0f, 0.0f);
+  Vector2D p2(-1.0f, -1.0f);
+  Vector2D q2(9.0f, 9.0f);
+  auto ret = LineSegment(p1, q1).ParametricIntersection(LineSegment(p2, q2));
+  ASSERT_TRUE(ret.has_value());
+  EXPECT_FLOAT_EQ(*ret, 0.1f);
+
+  p1 = Vector2D(1.0f, 1.0f);
+  q1 = Vector2D(1.0f, 2.0f);
+  p2 = Vector2D(2.0f, 1.0f);
+  q2 = Vector2D(0.0f, 2.0f);
+  ret = LineSegment(p1, q1).ParametricIntersection(LineSegment(p2, q2));
+  ASSERT_TRUE(ret.has_value());
+  EXPECT_FLOAT_EQ(*ret, 0.5f);
+
+  p1 = Vector2D(0.0f, 0.0f);
+  q1 = Vector2D(1.0f, -2.0f);
+  p2 = Vector2D(0.0f, 1.0f);
+  q2 = Vector2D(1.0f, -1.0f);
+  ret = LineSegment(p1, q1).ParametricIntersection(LineSegment(p2, q2));
+  ASSERT_FALSE(ret.has_value());
 }
 
 }  // namespace
