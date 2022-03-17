@@ -9,10 +9,7 @@ import time
 file_path = '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json/tfrecord-00002-of-01000_2.json'
 os.environ["DISPLAY"] = ":0.0"
 # sim = Simulation(scenarioFilePath='./nocturne_utils/output.json', startTime=10, showPeds=True, showCyclists=True)
-sim = Simulation(
-    scenario_path=
-    '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json/tfrecord-00002-of-01000_2.json',
-)
+sim = Simulation(scenario_path=file_path, )
 scenario = sim.getScenario()
 
 print('all veh IDS are', [veh.getID() for veh in scenario.getVehicles()])
@@ -31,22 +28,23 @@ plt.imshow(img)
 plt.savefig('goalImg.png')
 print('saved at ./goalImg.png')
 
-img = np.array(scenario.getCone(scenario.getVehicles()[3], 1.58, 0.0),
+img = np.array(scenario.getCone(scenario.getVehicles()[3], 1.58, 120.0, 0.0),
                copy=False)
 plt.figure()
 plt.imshow(img)
 plt.savefig('egoImg.png')
 print('saved at ./egoImg.png')
 
-img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 0.0),
+img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 120.0,
+                                0.0),
                copy=False)
 plt.figure()
 plt.imshow(img)
 plt.savefig('fullEgoImg.png')
 print('saved at ./fullEgoImg.png')
 
-img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 0.0,
-                                False),
+img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 120.0,
+                                0.0, False),
                copy=False)
 plt.figure()
 plt.imshow(img)
@@ -62,7 +60,7 @@ print('agent position after step',
       scenario.getVehicles()[3].getPosition().x,
       scenario.getVehicles()[3].getPosition().y)
 
-img = np.array(scenario.getCone(scenario.getVehicles()[3], 1.58, 0.0),
+img = np.array(scenario.getCone(scenario.getVehicles()[3], 1.58, 120.0, 0.0),
                copy=False)
 plt.figure()
 plt.imshow(img)
@@ -197,8 +195,8 @@ assert veh0.getCollided(
 sim = Simulation(scenario_path=file_path, start_time=0)
 scenario = sim.getScenario()
 
-img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 0.0,
-                                False),
+img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 120.0,
+                                0.0, False),
                copy=False)
 plt.figure()
 plt.imshow(img)
@@ -209,8 +207,8 @@ plt.savefig('t0.png')
 sim = Simulation(scenario_path=file_path, start_time=20)
 scenario = sim.getScenario()
 
-img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 0.0,
-                                False),
+img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 120.0,
+                                0.0, False),
                copy=False)
 plt.figure()
 plt.imshow(img)
@@ -223,8 +221,8 @@ sim = Simulation(scenario_path=file_path,
                  use_non_vehicles=False)
 scenario = sim.getScenario()
 
-img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 0.0,
-                                False),
+img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 120.0,
+                                0.0, False),
                copy=False)
 plt.figure()
 plt.imshow(img)
