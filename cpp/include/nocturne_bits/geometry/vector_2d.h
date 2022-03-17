@@ -25,6 +25,10 @@ class Vector2D {
   bool operator==(const Vector2D& v) const { return x_ == v.x_ && y_ == v.y_; }
   bool operator!=(const Vector2D& v) const { return x_ != v.x_ || y_ != v.y_; }
 
+  bool operator<(const Vector2D& v) const {
+    return x_ == v.x_ ? y_ < v.y_ : x_ < v.x_;
+  }
+
   Vector2D operator-() const { return Vector2D(-x_, -y_); }
 
   Vector2D operator+(float d) const { return Vector2D(x_ + d, y_ + d); }
