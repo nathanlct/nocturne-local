@@ -7,13 +7,14 @@
 #include <vector>
 
 #include "ImageMatrix.hpp"
-#include "RoadLine.hpp"
 #include "geometry/box.h"
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
 #include "json.hpp"
 #include "object.h"
+#include "road.h"
+#include "stop_sign.h"
 #include "traffic_light.h"
 #include "vehicle.h"
 
@@ -76,6 +77,7 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<Cyclist>> getCyclists();
   std::vector<std::shared_ptr<KineticObject>> getRoadObjects();
   std::vector<std::shared_ptr<RoadLine>> getRoadLines();
+
   std::vector<float> getEgoState(KineticObject* obj);
   std::vector<float> getVisibleObjects(KineticObject* sourceObj,
                                        float viewAngle, float viewDist = 60.0f);
@@ -117,7 +119,7 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<Pedestrian>> pedestrians;
   std::vector<std::shared_ptr<Cyclist>> cyclists;
   std::vector<std::shared_ptr<KineticObject>> roadObjects;
-  std::vector<geometry::Vector2D> stopSigns;
+  std::vector<std::shared_ptr<StopSign>> stopSigns;
   std::vector<std::shared_ptr<TrafficLight>> trafficLights;
 
   sf::RenderTexture* imageTexture;

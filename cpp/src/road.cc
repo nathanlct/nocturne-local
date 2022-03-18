@@ -31,7 +31,7 @@ sf::Color RoadLine::Color() const {
     case RoadType::kStopSign: {
       return sf::Color::Red;
     }
-    case RoadType::kCrossWalk: {
+    case RoadType::kCrosswalk: {
       return sf::Color::Magenta;
     }
     case RoadType::kSpeedBump: {
@@ -75,6 +75,24 @@ void RoadLine::InitRoadLineGraphics() {
   graphic_points_.reserve(n);
   for (const geometry::Vector2D& p : geometry_points_) {
     graphic_points_.emplace_back(sf::Vertex(utils::ToVector2f(p), Color()));
+  }
+}
+
+RoadType ParseRoadType(const std::string& s) {
+  if (s == "lane") {
+    return RoadType::kLane;
+  } else if (s == "road_line") {
+    return RoadType::kRoadLine;
+  } else if (s == "road_edge") {
+    return RoadType::kRoadEdge;
+  } else if (s == "stop_sign") {
+    return RoadType::kStopSign;
+  } else if (s == "crosswalk") {
+    return RoadType::kCrosswalk;
+  } else if (s == "speed_bump") {
+    return RoadType::kSpeedBump;
+  } else {
+    return RoadType::kNone;
   }
 }
 

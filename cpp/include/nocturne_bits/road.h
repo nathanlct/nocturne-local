@@ -20,7 +20,7 @@ enum class RoadType {
   kRoadLine = 2,
   kRoadEdge = 3,
   kStopSign = 4,
-  kCrossWalk = 5,
+  kCrosswalk = 5,
   kSpeedBump = 6,
 };
 
@@ -45,7 +45,8 @@ class RoadPoint : public Object {
   }
 
  protected:
-  void draw(sf::RenderTarget& target, sf::RenderStates states) const override {}
+  void draw(sf::RenderTarget& /*target*/,
+            sf::RenderStates /*states*/) const override {}
 
   const RoadType road_type_ = RoadType::kNone;
 };
@@ -114,5 +115,7 @@ class RoadLine : public sf::Drawable {
 
   std::vector<sf::Vertex> graphic_points_;
 };
+
+RoadType ParseRoadType(const std::string& s);
 
 }  // namespace nocturne

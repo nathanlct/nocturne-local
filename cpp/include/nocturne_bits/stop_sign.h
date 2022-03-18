@@ -29,9 +29,10 @@ class StopSign : public Object {
                           position_ + kStopSignRadius);
   }
 
+  sf::Color Color() const { return sf::Color::Red; }
+
  protected:
-  // TODO: Implement this if needed.
-  void draw(sf::RenderTarget& target, sf::RenderStates states) const override {}
+  void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 };
 
 }  // namespace nocturne
