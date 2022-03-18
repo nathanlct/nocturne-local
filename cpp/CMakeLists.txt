@@ -44,9 +44,9 @@ add_library(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Scenario.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Simulation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/TrafficLight.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/Vehicle.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/object.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/sf_utils.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/vehicle.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/view_field.cc
 )
 # set_property(TARGET nocturne_lib PROPERTY POSITION_INDEPENDENT_CODE 1)

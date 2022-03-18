@@ -2,6 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <fstream>
+#include <json.hpp>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -9,13 +10,12 @@
 #include "ImageMatrix.hpp"
 #include "RoadLine.hpp"
 #include "TrafficLight.hpp"
-#include "Vehicle.hpp"
 #include "geometry/box.h"
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
-#include "json.hpp"
 #include "object.h"
+#include "vehicle.h"
 
 namespace nocturne {
 
