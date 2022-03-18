@@ -2,19 +2,19 @@
 
 #include <SFML/Graphics.hpp>
 #include <fstream>
-#include <json.hpp>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "ImageMatrix.hpp"
 #include "RoadLine.hpp"
-#include "TrafficLight.hpp"
 #include "geometry/box.h"
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
+#include "json.hpp"
 #include "object.h"
+#include "traffic_light.h"
 #include "vehicle.h"
 
 namespace nocturne {
@@ -60,13 +60,13 @@ class Scenario : public sf::Drawable {
                                    geometry::Vector2D sourcePos,
                                    float halfViewAngle, float viewDist);
   std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
-      MovingObject* sourceObject);
+      KineticObject* sourceObject);
   sf::FloatRect getRoadNetworkBoundaries() const;
   ImageMatrix getCone(
-      MovingObject* object,
+      KineticObject* object,
       float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
       float viewDist = 60.0f, float headTilt = 0.0f, bool obscuredView = true);
-  ImageMatrix getImage(MovingObject* object = nullptr,
+  ImageMatrix getImage(KineticObject* object = nullptr,
                        bool renderGoals = false);
   bool checkForCollision(const Object& object1, const Object& object2) const;
   bool checkForCollision(const Object& object,
@@ -74,26 +74,26 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<Vehicle>> getVehicles();
   std::vector<std::shared_ptr<Pedestrian>> getPedestrians();
   std::vector<std::shared_ptr<Cyclist>> getCyclists();
-  std::vector<std::shared_ptr<MovingObject>> getRoadObjects();
+  std::vector<std::shared_ptr<KineticObject>> getRoadObjects();
   std::vector<std::shared_ptr<RoadLine>> getRoadLines();
-  std::vector<float> getEgoState(MovingObject* obj);
-  std::vector<float> getVisibleObjects(MovingObject* sourceObj, float viewAngle,
-                                       float viewDist = 60.0f);
-  std::vector<float> getVisibleRoadPoints(MovingObject* sourceObj,
+  std::vector<float> getEgoState(KineticObject* obj);
+  std::vector<float> getVisibleObjects(KineticObject* sourceObj,
+                                       float viewAngle, float viewDist = 60.0f);
+  std::vector<float> getVisibleRoadPoints(KineticObject* sourceObj,
                                           float viewAngle,
                                           float viewDist = 60.0f);
-  std::vector<float> getVisibleStopSigns(MovingObject* sourceObj,
+  std::vector<float> getVisibleStopSigns(KineticObject* sourceObj,
                                          float viewAngle,
                                          float viewDist = 60.0f);
-  std::vector<float> getVisibleTrafficLights(MovingObject* sourceObj,
+  std::vector<float> getVisibleTrafficLights(KineticObject* sourceObj,
                                              float viewAngle,
                                              float viewDist = 60.0f);
   std::vector<float> getVisibleState(
-      MovingObject* sourceObj,
+      KineticObject* sourceObj,
       float viewAngle /* the total angle subtended by the view cone*/,
       float viewDist = 60.0f /* how many meters forwards the object can see */);
   // get a list of vehicles that actually moved
-  std::vector<std::shared_ptr<MovingObject>> getObjectsThatMoved() {
+  std::vector<std::shared_ptr<KineticObject>> getObjectsThatMoved() {
     return objectsThatMoved;
   }
 
@@ -116,7 +116,7 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<Vehicle>> vehicles;
   std::vector<std::shared_ptr<Pedestrian>> pedestrians;
   std::vector<std::shared_ptr<Cyclist>> cyclists;
-  std::vector<std::shared_ptr<MovingObject>> roadObjects;
+  std::vector<std::shared_ptr<KineticObject>> roadObjects;
   std::vector<geometry::Vector2D> stopSigns;
   std::vector<std::shared_ptr<TrafficLight>> trafficLights;
 
@@ -139,7 +139,7 @@ class Scenario : public sf::Drawable {
 
   // track the object that moved, useful for figuring out which agents should
   // actually be controlled
-  std::vector<std::shared_ptr<MovingObject>> objectsThatMoved;
+  std::vector<std::shared_ptr<KineticObject>> objectsThatMoved;
 };
 
 }  // namespace nocturne

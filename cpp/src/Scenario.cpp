@@ -232,38 +232,21 @@ void Scenario::loadScenario(std::string path) {
     // element
     float x_pos = float(tl["x"][0]);
     float y_pos = float(tl["y"][0]);
-    std::vector<int> validTimes;
-    std::vector<LightState> lightStates;
+    std::vector<int64_t> validTimes;
+    std::vector<TrafficLightState> lightStates;
 
     for (size_t i = 0; i < tl["state"].size(); i++) {
       // TODO(ev) do this more compactly
-      LightState lightState;
-      if (tl["state"][i] == "unknown") {
-        lightState = LightState::unknown;
-      } else if (tl["state"][i] == "arrow_stop") {
-        lightState = LightState::arrow_stop;
-      } else if (tl["state"][i] == "arrow_caution") {
-        lightState = LightState::arrow_caution;
-      } else if (tl["state"][i] == "arrow_go") {
-        lightState = LightState::arrow_go;
-      } else if (tl["state"][i] == "stop") {
-        lightState = LightState::stop;
-      } else if (tl["state"][i] == "caution") {
-        lightState = LightState::caution;
-      } else if (tl["state"][i] == "go") {
-        lightState = LightState::go;
-      } else if (tl["state"][i] == "flashing_stop") {
-        lightState = LightState::flashing_stop;
-      } else if (tl["state"][i] == "flashing_caution") {
-        lightState = LightState::flashing_caution;
-      }
-      lightStates.push_back(lightState);
+      const TrafficLightState light_state =
+          ParseTrafficLightState(tl["state"][i]);
+      lightStates.push_back(light_state);
       validTimes.push_back(int(tl["time_index"][i]));
     }
-    TrafficLight* t_light =
-        new TrafficLight(x_pos, y_pos, lightStates, currTime, validTimes);
-    auto ptr = std::shared_ptr<TrafficLight>(t_light);
-    trafficLights.push_back(ptr);
+    std::shared_ptr<TrafficLight> traffic_light =
+        std::make_shared<TrafficLight>(trafficLights.size(),
+                                       geometry::Vector2D(x_pos, y_pos),
+                                       validTimes, lightStates, currTime);
+    trafficLights.push_back(traffic_light);
   }
 
   // initialize the road objects bvh
@@ -320,11 +303,8 @@ void Scenario::loadScenario(std::string path) {
   if (nTrafficLights > 0) {
     std::vector<const geometry::AABBInterface*> tlObjects;
     tlObjects.reserve(nTrafficLights);
-    int i = 0;
     for (const auto& obj : trafficLights) {
-      TrafficLightBox* tlBox = new TrafficLightBox(obj->getPosition(), i);
-      tlObjects.push_back(dynamic_cast<const geometry::AABBInterface*>(tlBox));
-      i++;
+      tlObjects.push_back(dynamic_cast<geometry::AABBInterface*>(obj.get()));
     }
     tl_bvh_.InitHierarchy(tlObjects);
   }
@@ -348,7 +328,7 @@ void Scenario::step(float dt) {
     object->Step(dt);
   }
   for (auto& object : trafficLights) {
-    object->updateTime(currTime);
+    object->set_current_time(currTime);
   }
 
   // update the vehicle bvh
@@ -366,7 +346,7 @@ void Scenario::step(float dt) {
       std::vector<const geometry::AABBInterface*> candidates =
           vehicle_bvh_.IntersectionCandidates(*obj1);
       for (const auto* ptr : candidates) {
-        const MovingObject* obj2 = dynamic_cast<const MovingObject*>(ptr);
+        const KineticObject* obj2 = dynamic_cast<const KineticObject*>(ptr);
         if (obj1->id() == obj2->id()) {
           continue;
         }
@@ -378,7 +358,7 @@ void Scenario::step(float dt) {
         }
         if (checkForCollision(*obj1, *obj2)) {
           obj1->set_collided(true);
-          const_cast<MovingObject*>(obj2)->set_collided(true);
+          const_cast<KineticObject*>(obj2)->set_collided(true);
         }
       }
     }
@@ -408,7 +388,7 @@ void Scenario::waymo_step() {
       object->set_heading(expertHeadings[object->id()][currTime]);
     }
     for (auto& object : trafficLights) {
-      object->updateTime(currTime);
+      object->set_current_time(currTime);
     }
 
     // initalize the vehicle bvh
@@ -426,7 +406,7 @@ void Scenario::waymo_step() {
         std::vector<const geometry::AABBInterface*> candidates =
             vehicle_bvh_.IntersectionCandidates(*obj1);
         for (const auto* ptr : candidates) {
-          const MovingObject* obj2 = dynamic_cast<const MovingObject*>(ptr);
+          const KineticObject* obj2 = dynamic_cast<const KineticObject*>(ptr);
           if (obj1->id() == obj2->id()) {
             continue;
           }
@@ -438,7 +418,7 @@ void Scenario::waymo_step() {
           }
           if (checkForCollision(*obj1, *obj2)) {
             obj1->set_collided(true);
-            const_cast<MovingObject*>(obj2)->set_collided(true);
+            const_cast<KineticObject*>(obj2)->set_collided(true);
           }
         }
       }
@@ -459,7 +439,7 @@ void Scenario::waymo_step() {
 }
 
 std::pair<float, geometry::Vector2D> Scenario::getObjectHeadingAndPos(
-    MovingObject* sourceObject) {
+    KineticObject* sourceObject) {
   float sourceHeading =
       geometry::utils::NormalizeAngle(sourceObject->heading());
   geometry::Vector2D sourcePos = sourceObject->position();
@@ -495,7 +475,7 @@ const geometry::Box* Scenario::getOuterBox(float sourceHeading,
   return outerBox;
 }
 
-std::vector<float> Scenario::getVisibleObjects(MovingObject* sourceObj,
+std::vector<float> Scenario::getVisibleObjects(KineticObject* sourceObj,
                                                float viewAngle,
                                                float viewDist) {
   auto [sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
@@ -506,11 +486,11 @@ std::vector<float> Scenario::getVisibleObjects(MovingObject* sourceObj,
   const geometry::Box* outerBox =
       getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
   if (!vehicle_bvh_.Empty()) {
-    std::vector<std::tuple<const MovingObject*, float, float>> visibleVehicles;
+    std::vector<std::tuple<const KineticObject*, float, float>> visibleVehicles;
     std::vector<const geometry::AABBInterface*> roadObjCandidates =
         vehicle_bvh_.IntersectionCandidates(*outerBox);
     for (const auto* ptr : roadObjCandidates) {
-      const MovingObject* objPtr = dynamic_cast<const MovingObject*>(ptr);
+      const KineticObject* objPtr = dynamic_cast<const KineticObject*>(ptr);
       if (objPtr->id() == sourceObj->id()) {
         continue;
       }
@@ -553,7 +533,7 @@ std::vector<float> Scenario::getVisibleObjects(MovingObject* sourceObj,
   return state;
 }
 
-std::vector<float> Scenario::getVisibleRoadPoints(MovingObject* sourceObj,
+std::vector<float> Scenario::getVisibleRoadPoints(KineticObject* sourceObj,
                                                   float viewAngle,
                                                   float viewDist) {
   auto [sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
@@ -604,7 +584,7 @@ std::vector<float> Scenario::getVisibleRoadPoints(MovingObject* sourceObj,
   return state;
 }
 
-std::vector<float> Scenario::getVisibleStopSigns(MovingObject* sourceObj,
+std::vector<float> Scenario::getVisibleStopSigns(KineticObject* sourceObj,
                                                  float viewAngle,
                                                  float viewDist) {
   auto [sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
@@ -657,7 +637,7 @@ std::vector<float> Scenario::getVisibleStopSigns(MovingObject* sourceObj,
   return state;
 }
 
-std::vector<float> Scenario::getVisibleTrafficLights(MovingObject* sourceObj,
+std::vector<float> Scenario::getVisibleTrafficLights(KineticObject* sourceObj,
                                                      float viewAngle,
                                                      float viewDist) {
   auto [sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
@@ -665,57 +645,59 @@ std::vector<float> Scenario::getVisibleTrafficLights(MovingObject* sourceObj,
   int statePosCounter = 0;
   std::vector<float> state(maxNumVisibleTLSigns * 3);
   std::fill(state.begin(), state.end(), -100);  // TODO(ev hardcoding)
-  const geometry::Box* outerBox =
-      getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
-  if (!tl_bvh_.Empty()) {
-    std::vector<std::tuple<float, float, int>> visibleTrafficLights;
-    std::vector<const geometry::AABBInterface*> tlCandidates =
-        tl_bvh_.IntersectionCandidates(*outerBox);
-    for (const auto* ptr : tlCandidates) {
-      const TrafficLightBox* objPtr = dynamic_cast<const TrafficLightBox*>(ptr);
-      geometry::Vector2D otherRelativePos = objPtr->position - sourcePos;
-      float dist = otherRelativePos.Norm();
-
-      if (dist > viewDist) {
-        continue;
-      }
-
-      float otherRelativeHeading = otherRelativePos.Angle();
-
-      float headingDiff = getSignedAngle(sourceHeading, otherRelativeHeading);
-
-      if (std::abs(headingDiff) <= halfViewAngle) {
-        visibleTrafficLights.push_back(
-            std::make_tuple(dist, headingDiff,
-                            trafficLights[objPtr->tlIndex]->getLightState()));
-      }
-    }
-
-    // we want all the traffic lights sorted by distance to the agent
-    std::sort(visibleTrafficLights.begin(), visibleTrafficLights.end(),
-              [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b); });
-
-    int nTrafficLights = visibleTrafficLights.size();
-    for (size_t k = 0; k < std::min(nTrafficLights, maxNumVisibleTLSigns);
-         ++k) {
-      auto pointData = visibleTrafficLights[k];
-      state[statePosCounter++] = std::get<0>(pointData);
-      state[statePosCounter++] = std::get<1>(pointData);
-      state[statePosCounter++] = std::get<2>(pointData);
-    }
-    // increment the state counter appropriately if we have fewer than the
-    // maximum number of visible traffic lights
-    if (nTrafficLights < maxNumVisibleTLSigns) {
-      statePosCounter += (maxNumVisibleTLSigns - nTrafficLights) * 3;
-    }
-  } else {
-    statePosCounter += maxNumVisibleTLSigns * 3;
-  }
+  // const geometry::Box* outerBox =
+  //     getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
+  // if (!tl_bvh_.Empty()) {
+  //   std::vector<std::tuple<float, float, int>> visibleTrafficLights;
+  //   std::vector<const geometry::AABBInterface*> tlCandidates =
+  //       tl_bvh_.IntersectionCandidates(*outerBox);
+  //   for (const auto* ptr : tlCandidates) {
+  //     const TrafficLightBox* objPtr = dynamic_cast<const
+  //     TrafficLightBox*>(ptr); geometry::Vector2D otherRelativePos =
+  //     objPtr->position - sourcePos; float dist = otherRelativePos.Norm();
+  //
+  //     if (dist > viewDist) {
+  //       continue;
+  //     }
+  //
+  //     float otherRelativeHeading = otherRelativePos.Angle();
+  //
+  //     float headingDiff = getSignedAngle(sourceHeading,
+  //     otherRelativeHeading);
+  //
+  //     if (std::abs(headingDiff) <= halfViewAngle) {
+  //       visibleTrafficLights.push_back(
+  //           std::make_tuple(dist, headingDiff,
+  //                           trafficLights[objPtr->tlIndex]->getLightState()));
+  //     }
+  //   }
+  //
+  //   // we want all the traffic lights sorted by distance to the agent
+  //   std::sort(visibleTrafficLights.begin(), visibleTrafficLights.end(),
+  //             [](auto a, auto b) { return std::get<1>(a) < std::get<1>(b);
+  //             });
+  //
+  //   int nTrafficLights = visibleTrafficLights.size();
+  //   for (size_t k = 0; k < std::min(nTrafficLights, maxNumVisibleTLSigns);
+  //        ++k) {
+  //     auto pointData = visibleTrafficLights[k];
+  //     state[statePosCounter++] = std::get<0>(pointData);
+  //     state[statePosCounter++] = std::get<1>(pointData);
+  //     state[statePosCounter++] = std::get<2>(pointData);
+  //   }
+  //   // increment the state counter appropriately if we have fewer than the
+  //   // maximum number of visible traffic lights
+  //   if (nTrafficLights < maxNumVisibleTLSigns) {
+  //     statePosCounter += (maxNumVisibleTLSigns - nTrafficLights) * 3;
+  //   }
+  // } else {
+  //   statePosCounter += maxNumVisibleTLSigns * 3;
+  // }
 
   return state;
 }
 
-std::vector<float> Scenario::getVisibleState(MovingObject* sourceObj,
+std::vector<float> Scenario::getVisibleState(KineticObject* sourceObj,
                                              float viewAngle, float viewDist) {
   // Vehicle state is: dist, heading-diff, speed, length
   // TL state is: dist, heading-diff, current light color as an int
@@ -743,7 +725,7 @@ std::vector<float> Scenario::getVisibleState(MovingObject* sourceObj,
   return state;
 }
 
-std::vector<float> Scenario::getEgoState(MovingObject* obj) {
+std::vector<float> Scenario::getEgoState(KineticObject* obj) {
   std::vector<float> state(4);
 
   state[0] = obj->speed();
@@ -865,7 +847,7 @@ std::vector<std::shared_ptr<Pedestrian>> Scenario::getPedestrians() {
 std::vector<std::shared_ptr<Cyclist>> Scenario::getCyclists() {
   return cyclists;
 }
-std::vector<std::shared_ptr<MovingObject>> Scenario::getRoadObjects() {
+std::vector<std::shared_ptr<KineticObject>> Scenario::getRoadObjects() {
   return roadObjects;
 }
 std::vector<std::shared_ptr<RoadLine>> Scenario::getRoadLines() {
@@ -898,7 +880,7 @@ sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
   return roadNetworkBounds;
 }
 
-ImageMatrix Scenario::getCone(MovingObject* object, float viewAngle,
+ImageMatrix Scenario::getCone(KineticObject* object, float viewAngle,
                               float viewDist, float headTilt,
                               bool obscuredView) {  // args in radians
   float circleRadius = viewDist;
@@ -1075,7 +1057,7 @@ ImageMatrix Scenario::getCone(MovingObject* object, float viewAngle,
                      renderedCircleRadius * 2, 4);
 }
 
-ImageMatrix Scenario::getImage(MovingObject* object, bool renderGoals) {
+ImageMatrix Scenario::getImage(KineticObject* object, bool renderGoals) {
   int squareSide = 600;
 
   if (imageTexture == nullptr) {

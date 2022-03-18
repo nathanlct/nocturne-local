@@ -8,14 +8,14 @@
 
 namespace nocturne {
 
-class Vehicle : public MovingObject {
+class Vehicle : public KineticObject {
  public:
   Vehicle(int64_t id, float length, float width,
           const geometry::Vector2D& position,
           const geometry::Vector2D& destination, float heading, float speed,
           bool can_block_sight, bool can_be_collided, bool check_collision)
-      : MovingObject(id, length, width, position, destination, heading, speed,
-                     can_block_sight, can_be_collided, check_collision) {}
+      : KineticObject(id, length, width, position, destination, heading, speed,
+                      can_block_sight, can_be_collided, check_collision) {}
 
   std::string Type() const override { return "Vehicle"; }
 

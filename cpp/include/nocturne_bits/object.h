@@ -85,14 +85,14 @@ class Object : public sf::Drawable, public geometry::AABBInterface {
   bool collided_ = false;
 };
 
-class MovingObject : public Object {
+class KineticObject : public Object {
  public:
-  MovingObject() = default;
-  MovingObject(int64_t id, float length, float width,
-               const geometry::Vector2D& position,
-               const geometry::Vector2D& destination, float heading,
-               float speed, bool can_block_sight, bool can_be_collided,
-               bool check_collision)
+  KineticObject() = default;
+  KineticObject(int64_t id, float length, float width,
+                const geometry::Vector2D& position,
+                const geometry::Vector2D& destination, float heading,
+                float speed, bool can_block_sight, bool can_be_collided,
+                bool check_collision)
       : Object(id, length, width, position, heading, can_block_sight,
                can_be_collided, check_collision),
         destination_(destination),
@@ -101,7 +101,7 @@ class MovingObject : public Object {
     InitRandomColor();
   }
 
-  std::string Type() const override { return "MovingObject"; }
+  std::string Type() const override { return "KineticObject"; }
 
   float speed() const { return speed_; }
   void set_speed(float speed) { speed_ = speed; }

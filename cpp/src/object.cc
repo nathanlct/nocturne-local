@@ -8,23 +8,23 @@
 namespace nocturne {
 
 geometry::ConvexPolygon Object::BoundingPolygon() const {
-  const geometry::Vector2D p1 =
+  const geometry::Vector2D p0 =
       geometry::Vector2D(length_ * 0.5f, width_ * 0.5f).Rotate(heading_) +
       position_;
-  const geometry::Vector2D p2 =
+  const geometry::Vector2D p1 =
       geometry::Vector2D(-length_ * 0.5f, width_ * 0.5f).Rotate(heading_) +
       position_;
-  const geometry::Vector2D p3 =
+  const geometry::Vector2D p2 =
       geometry::Vector2D(-length_ * 0.5f, -width_ * 0.5f).Rotate(heading_) +
       position_;
-  const geometry::Vector2D p4 =
+  const geometry::Vector2D p3 =
       geometry::Vector2D(length_ * 0.5f, -width_ * 0.5f).Rotate(heading_) +
       position_;
-  return geometry::ConvexPolygon({p1, p2, p3, p4});
+  return geometry::ConvexPolygon({p0, p1, p2, p3});
 }
 
-void MovingObject::draw(sf::RenderTarget& target,
-                        sf::RenderStates states) const {
+void KineticObject::draw(sf::RenderTarget& target,
+                         sf::RenderStates states) const {
   sf::RectangleShape rect(sf::Vector2f(length_, width_));
   rect.setOrigin(length_ / 2.0f, width_ / 2.0f);
   rect.setPosition(utils::ToVector2f(position_));
@@ -44,7 +44,7 @@ void MovingObject::draw(sf::RenderTarget& target,
   target.draw(rect, states);
 }
 
-void MovingObject::InitRandomColor() {
+void KineticObject::InitRandomColor() {
   std::uniform_int_distribution<int32_t> dis(0, 255);
   int32_t r = dis(random_gen_);
   int32_t g = dis(random_gen_);
