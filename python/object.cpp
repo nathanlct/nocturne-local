@@ -4,8 +4,8 @@
 
 #include <memory>
 
-#include "Vehicle.hpp"
 #include "geometry/vector_2d.h"
+#include "vehicle.h"
 // #include <pybind11/stl.h>  // automatic conversion from C++ std::vector to
 // Python list
 
@@ -15,29 +15,29 @@ namespace py = pybind11;
 void init_object(py::module& m) {
   m.doc() = "nocturne documentation for class Object and subclass Vehicle";
 
-  py::class_<nocturne::MovingObject, std::shared_ptr<nocturne::MovingObject>>(
+  py::class_<nocturne::KineticObject, std::shared_ptr<nocturne::KineticObject>>(
       m, "Object")
-      .def("getWidth", &nocturne::MovingObject::width)
-      .def("getLength", &nocturne::MovingObject::length)
-      .def("getPosition", &nocturne::MovingObject::position)
-      .def("getGoalPosition", &nocturne::MovingObject::destination)
-      .def("getSpeed", &nocturne::MovingObject::speed)
-      .def("getHeading", &nocturne::MovingObject::heading)
-      .def("getID", &nocturne::MovingObject::id)
-      .def("getType", &nocturne::MovingObject::Type)
-      .def("getCollided", &nocturne::MovingObject::collided)
+      .def("getWidth", &nocturne::KineticObject::width)
+      .def("getLength", &nocturne::KineticObject::length)
+      .def("getPosition", &nocturne::KineticObject::position)
+      .def("getGoalPosition", &nocturne::KineticObject::destination)
+      .def("getSpeed", &nocturne::KineticObject::speed)
+      .def("getHeading", &nocturne::KineticObject::heading)
+      .def("getID", &nocturne::KineticObject::id)
+      .def("getType", &nocturne::KineticObject::Type)
+      .def("getCollided", &nocturne::KineticObject::collided)
       .def("setPosition",
            py::overload_cast<const nocturne::geometry::Vector2D&>(
-               &nocturne::MovingObject::set_position))
+               &nocturne::KineticObject::set_position))
       .def("setPosition", py::overload_cast<float, float>(
-                              &nocturne::MovingObject::set_position))
+                              &nocturne::KineticObject::set_position))
       .def("setGoalPosition",
            py::overload_cast<const nocturne::geometry::Vector2D&>(
-               &nocturne::MovingObject::set_destination))
+               &nocturne::KineticObject::set_destination))
       .def("setGoalPosition", py::overload_cast<float, float>(
-                                  &nocturne::MovingObject::set_destination))
-      .def("setSpeed", &nocturne::MovingObject::set_speed)
-      .def("setHeading", &nocturne::MovingObject::set_heading);
+                                  &nocturne::KineticObject::set_destination))
+      .def("setSpeed", &nocturne::KineticObject::set_speed)
+      .def("setHeading", &nocturne::KineticObject::set_heading);
 
   py::class_<nocturne::Vehicle, std::shared_ptr<nocturne::Vehicle>,
              nocturne::Object>(m, "Vehicle")
