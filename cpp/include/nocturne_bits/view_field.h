@@ -2,11 +2,11 @@
 
 #include <vector>
 
-#include "Object.hpp"
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
 #include "geometry/circular_sector.h"
 #include "geometry/vector_2d.h"
+#include "object.h"
 
 namespace nocturne {
 
@@ -18,7 +18,7 @@ class ViewField : public geometry::CircularSector {
       : geometry::CircularSector(center, radius, heading, theta) {}
 
   std::vector<const Object*> VisibleObjects(
-      const std::vector<const Object*>& objects) const;
+      const std::vector<const Object*>& objects, int64_t limit = -1) const;
 
  protected:
   geometry::Vector2D MakeSightEndpoint(const geometry::Vector2D& p) const {
@@ -31,6 +31,10 @@ class ViewField : public geometry::CircularSector {
   template <class T>
   std::vector<geometry::Vector2D> ComputeSightEndpoints(
       const std::vector<const T*>& objects) const;
+
+  template <class T>
+  std::vector<const T*> NearestK(const std::vector<const T*>& objects,
+                                 int64_t k) const;
 };
 
 }  // namespace nocturne

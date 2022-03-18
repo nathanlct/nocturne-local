@@ -39,13 +39,13 @@ target_include_directories(
 add_library(
   nocturne_core
   STATIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/Object.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Road.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/RoadLine.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Scenario.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Simulation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/TrafficLight.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Vehicle.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/object.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/sf_utils.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/view_field.cc
 )

@@ -80,7 +80,7 @@ void VisibleObjectsImpl(const LineSegment& sight,
 // O(N^2) algorithm.
 // TODO: Implment O(NlogN) algorithm when there are too many objects.
 std::vector<const Object*> ViewField::VisibleObjects(
-    const std::vector<const Object*>& objects) const {
+    const std::vector<const Object*>& objects, int64_t limit) const {
   const int64_t n = objects.size();
   const Vector2D& o = center();
   const std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
@@ -94,14 +94,15 @@ std::vector<const Object*> ViewField::VisibleObjects(
       ret.push_back(objects[i]);
     }
   }
-  return ret;
+  const int64_t m = ret.size();
+  return (limit < 0 || m <= limit) ? ret : NearestK(ret, limit);
 }
 
 template <class T>
 std::vector<Vector2D> ViewField::ComputeSightEndpoints(
     const std::vector<const T*>& objects) const {
   std::vector<Vector2D> ret;
-  const Vector2D o = center();
+  const Vector2D& o = center();
   ret.push_back(o + Radius0());
   ret.push_back(o + Radius1());
   for (const T* obj : objects) {
@@ -109,7 +110,7 @@ std::vector<Vector2D> ViewField::ComputeSightEndpoints(
     for (const LineSegment& edge : edges) {
       // Check one endpoint should be enough, the othe one will be checked in
       // the next edge.
-      const Vector2D x = edge.Endpoint0();
+      const Vector2D& x = edge.Endpoint0();
       if (Contains(x)) {
         ret.push_back(MakeSightEndpoint(x));
       }
@@ -126,6 +127,28 @@ std::vector<Vector2D> ViewField::ComputeSightEndpoints(
   std::sort(ret.begin(), ret.end());
   auto it = std::unique(ret.begin(), ret.end());
   ret.resize(std::distance(ret.begin(), it));
+  return ret;
+}
+
+template <class T>
+std::vector<const T*> ViewField::NearestK(const std::vector<const T*>& objects,
+                                          int64_t k) const {
+  const int64_t n = objects.size();
+  if (n <= k) {
+    return objects;
+  }
+  const Vector2D& o = center();
+  std::vector<std::pair<float, const T*>> dis;
+  dis.reserve(n);
+  for (const T* obj : objects) {
+    dis.emplace_back(Distance(o, obj->position()), obj);
+  }
+  std::partial_sort(dis.begin(), dis.begin() + k, dis.end());
+  std::vector<const T*> ret;
+  ret.reserve(k);
+  for (int64_t i = 0; i < k; ++i) {
+    ret.push_back(dis[i].second);
+  }
   return ret;
 }
 

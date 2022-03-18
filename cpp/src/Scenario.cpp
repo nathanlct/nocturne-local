@@ -106,8 +106,8 @@ void Scenario::loadScenario(std::string path) {
       expertValid.push_back(localValid);
       if (type == "vehicle") {
         std::shared_ptr<Vehicle> vehicle = std::make_shared<Vehicle>(
-            IDCounter, length, width, pos, heading,
-            localExpertSpeeds[currTime].Norm(), goalPos, occludes, collides,
+            IDCounter, length, width, pos, goalPos, heading,
+            localExpertSpeeds[currTime].Norm(), occludes, collides,
             checkForCollisions);
         vehicles.push_back(vehicle);
         roadObjects.push_back(vehicle);
@@ -116,8 +116,8 @@ void Scenario::loadScenario(std::string path) {
         }
       } else if (type == "pedestrian" && useNonVehicles) {
         std::shared_ptr<Pedestrian> pedestrian = std::make_shared<Pedestrian>(
-            IDCounter, length, width, pos, heading,
-            localExpertSpeeds[currTime].Norm(), goalPos, occludes, collides,
+            IDCounter, length, width, pos, goalPos, heading,
+            localExpertSpeeds[currTime].Norm(), occludes, collides,
             checkForCollisions);
         pedestrians.push_back(pedestrian);
         roadObjects.push_back(pedestrian);
@@ -126,8 +126,8 @@ void Scenario::loadScenario(std::string path) {
         }
       } else if (type == "cyclist" && useNonVehicles) {
         std::shared_ptr<Cyclist> cyclist = std::make_shared<Cyclist>(
-            IDCounter, length, width, pos, heading,
-            localExpertSpeeds[currTime].Norm(), goalPos, occludes, collides,
+            IDCounter, length, width, pos, goalPos, heading,
+            localExpertSpeeds[currTime].Norm(), occludes, collides,
             checkForCollisions);
         cyclists.push_back(cyclist);
         roadObjects.push_back(cyclist);
@@ -366,7 +366,7 @@ void Scenario::step(float dt) {
       std::vector<const geometry::AABBInterface*> candidates =
           vehicle_bvh_.IntersectionCandidates(*obj1);
       for (const auto* ptr : candidates) {
-        const Object* obj2 = dynamic_cast<const Object*>(ptr);
+        const MovingObject* obj2 = dynamic_cast<const MovingObject*>(ptr);
         if (obj1->id() == obj2->id()) {
           continue;
         }
@@ -378,7 +378,7 @@ void Scenario::step(float dt) {
         }
         if (checkForCollision(*obj1, *obj2)) {
           obj1->set_collided(true);
-          const_cast<Object*>(obj2)->set_collided(true);
+          const_cast<MovingObject*>(obj2)->set_collided(true);
         }
       }
     }
@@ -426,7 +426,7 @@ void Scenario::waymo_step() {
         std::vector<const geometry::AABBInterface*> candidates =
             vehicle_bvh_.IntersectionCandidates(*obj1);
         for (const auto* ptr : candidates) {
-          const Object* obj2 = dynamic_cast<const Object*>(ptr);
+          const MovingObject* obj2 = dynamic_cast<const MovingObject*>(ptr);
           if (obj1->id() == obj2->id()) {
             continue;
           }
@@ -438,7 +438,7 @@ void Scenario::waymo_step() {
           }
           if (checkForCollision(*obj1, *obj2)) {
             obj1->set_collided(true);
-            const_cast<Object*>(obj2)->set_collided(true);
+            const_cast<MovingObject*>(obj2)->set_collided(true);
           }
         }
       }
@@ -459,7 +459,7 @@ void Scenario::waymo_step() {
 }
 
 std::pair<float, geometry::Vector2D> Scenario::getObjectHeadingAndPos(
-    Object* sourceObject) {
+    MovingObject* sourceObject) {
   float sourceHeading =
       geometry::utils::NormalizeAngle(sourceObject->heading());
   geometry::Vector2D sourcePos = sourceObject->position();
@@ -495,7 +495,7 @@ const geometry::Box* Scenario::getOuterBox(float sourceHeading,
   return outerBox;
 }
 
-std::vector<float> Scenario::getVisibleObjects(Object* sourceObj,
+std::vector<float> Scenario::getVisibleObjects(MovingObject* sourceObj,
                                                float viewAngle,
                                                float viewDist) {
   auto [sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
@@ -506,11 +506,11 @@ std::vector<float> Scenario::getVisibleObjects(Object* sourceObj,
   const geometry::Box* outerBox =
       getOuterBox(sourceHeading, sourcePos, halfViewAngle, viewDist);
   if (!vehicle_bvh_.Empty()) {
-    std::vector<std::tuple<const Object*, float, float>> visibleVehicles;
+    std::vector<std::tuple<const MovingObject*, float, float>> visibleVehicles;
     std::vector<const geometry::AABBInterface*> roadObjCandidates =
         vehicle_bvh_.IntersectionCandidates(*outerBox);
     for (const auto* ptr : roadObjCandidates) {
-      const Object* objPtr = dynamic_cast<const Object*>(ptr);
+      const MovingObject* objPtr = dynamic_cast<const MovingObject*>(ptr);
       if (objPtr->id() == sourceObj->id()) {
         continue;
       }
@@ -553,7 +553,7 @@ std::vector<float> Scenario::getVisibleObjects(Object* sourceObj,
   return state;
 }
 
-std::vector<float> Scenario::getVisibleRoadPoints(Object* sourceObj,
+std::vector<float> Scenario::getVisibleRoadPoints(MovingObject* sourceObj,
                                                   float viewAngle,
                                                   float viewDist) {
   auto [sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
@@ -604,7 +604,7 @@ std::vector<float> Scenario::getVisibleRoadPoints(Object* sourceObj,
   return state;
 }
 
-std::vector<float> Scenario::getVisibleStopSigns(Object* sourceObj,
+std::vector<float> Scenario::getVisibleStopSigns(MovingObject* sourceObj,
                                                  float viewAngle,
                                                  float viewDist) {
   auto [sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
@@ -657,7 +657,7 @@ std::vector<float> Scenario::getVisibleStopSigns(Object* sourceObj,
   return state;
 }
 
-std::vector<float> Scenario::getVisibleTrafficLights(Object* sourceObj,
+std::vector<float> Scenario::getVisibleTrafficLights(MovingObject* sourceObj,
                                                      float viewAngle,
                                                      float viewDist) {
   auto [sourceHeading, sourcePos] = getObjectHeadingAndPos(sourceObj);
@@ -715,8 +715,8 @@ std::vector<float> Scenario::getVisibleTrafficLights(Object* sourceObj,
   return state;
 }
 
-std::vector<float> Scenario::getVisibleState(Object* sourceObj, float viewAngle,
-                                             float viewDist) {
+std::vector<float> Scenario::getVisibleState(MovingObject* sourceObj,
+                                             float viewAngle, float viewDist) {
   // Vehicle state is: dist, heading-diff, speed, length
   // TL state is: dist, heading-diff, current light color as an int
   // Road point state is: dist, heading-diff, type of road point as an int i.e.
@@ -743,7 +743,7 @@ std::vector<float> Scenario::getVisibleState(Object* sourceObj, float viewAngle,
   return state;
 }
 
-std::vector<float> Scenario::getEgoState(Object* obj) {
+std::vector<float> Scenario::getEgoState(MovingObject* obj) {
   std::vector<float> state(4);
 
   state[0] = obj->speed();
@@ -751,7 +751,7 @@ std::vector<float> Scenario::getEgoState(Object* obj) {
   float sourceHeading = geometry::utils::NormalizeAngle(obj->heading());
 
   geometry::Vector2D sourcePos = obj->position();
-  geometry::Vector2D goalPos = obj->goal_position();
+  geometry::Vector2D goalPos = obj->destination();
 
   geometry::Vector2D otherRelativePos = goalPos - sourcePos;
   float dist = otherRelativePos.Norm();
@@ -851,7 +851,7 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     sf::CircleShape ptShape(radius);
     ptShape.setOrigin(radius, radius);
     ptShape.setFillColor(object->color());
-    ptShape.setPosition(utils::ToVector2f(object->goal_position()));
+    ptShape.setPosition(utils::ToVector2f(object->destination()));
     target.draw(ptShape, states);
   }
 }
@@ -865,7 +865,7 @@ std::vector<std::shared_ptr<Pedestrian>> Scenario::getPedestrians() {
 std::vector<std::shared_ptr<Cyclist>> Scenario::getCyclists() {
   return cyclists;
 }
-std::vector<std::shared_ptr<Object>> Scenario::getRoadObjects() {
+std::vector<std::shared_ptr<MovingObject>> Scenario::getRoadObjects() {
   return roadObjects;
 }
 std::vector<std::shared_ptr<RoadLine>> Scenario::getRoadLines() {
@@ -898,8 +898,8 @@ sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
   return roadNetworkBounds;
 }
 
-ImageMatrix Scenario::getCone(Object* object, float viewAngle, float viewDist,
-                              float headTilt,
+ImageMatrix Scenario::getCone(MovingObject* object, float viewAngle,
+                              float viewDist, float headTilt,
                               bool obscuredView) {  // args in radians
   float circleRadius = viewDist;
   float renderedCircleRadius = 300.0f;
@@ -1075,7 +1075,7 @@ ImageMatrix Scenario::getCone(Object* object, float viewAngle, float viewDist,
                      renderedCircleRadius * 2, 4);
 }
 
-ImageMatrix Scenario::getImage(Object* object, bool renderGoals) {
+ImageMatrix Scenario::getImage(MovingObject* object, bool renderGoals) {
   int squareSide = 600;
 
   if (imageTexture == nullptr) {

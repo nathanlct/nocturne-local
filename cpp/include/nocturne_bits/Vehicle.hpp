@@ -2,20 +2,20 @@
 
 #include <string>
 
-#include "Object.hpp"
 #include "geometry/geometry_utils.h"
 #include "geometry/vector_2d.h"
+#include "object.h"
 
 namespace nocturne {
 
-class Vehicle : public Object {
+class Vehicle : public MovingObject {
  public:
   Vehicle(int64_t id, float length, float width,
-          const geometry::Vector2D& position, float heading, float speed,
-          const geometry::Vector2D& goal_position, bool can_block_sight,
-          bool can_be_collided, bool check_collision)
-      : Object(id, length, width, position, heading, speed, goal_position,
-               can_block_sight, can_be_collided, check_collision) {}
+          const geometry::Vector2D& position,
+          const geometry::Vector2D& destination, float heading, float speed,
+          bool can_block_sight, bool can_be_collided, bool check_collision)
+      : MovingObject(id, length, width, position, destination, heading, speed,
+                     can_block_sight, can_be_collided, check_collision) {}
 
   std::string Type() const override { return "Vehicle"; }
 

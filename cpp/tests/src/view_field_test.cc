@@ -5,9 +5,9 @@
 
 #include <string>
 
-#include "Object.hpp"
 #include "geometry/geometry_utils.h"
 #include "geometry/vector_2d.h"
+#include "object.h"
 
 namespace nocturne {
 namespace {
@@ -22,11 +22,14 @@ class MockObject : public Object {
   MockObject() = default;
   MockObject(int64_t id, float length, float width, const Vector2D& position,
              bool can_block_sight)
-      : Object(id, length, width, position, /*heading=*/0.0f, /*speed=*/0.0f,
-               /*goal_position=*/position, can_block_sight,
-               /*can_be_collided=*/false, /*check_collision=*/false) {}
+      : Object(id, length, width, position, /*heading=*/0.0f, can_block_sight,
+               /*can_be_collided=*/true, /*check_collision=*/true) {}
 
   std::string Type() const override { return "MockObject"; }
+
+ protected:
+  void draw(sf::RenderTarget& /*target*/,
+            sf::RenderStates /*states*/) const override {}
 };
 
 TEST(ViewFieldTest, VisibleObjectsTest) {

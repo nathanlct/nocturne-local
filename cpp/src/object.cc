@@ -1,4 +1,4 @@
-#include "Object.hpp"
+#include "object.h"
 
 #include <algorithm>
 
@@ -23,7 +23,8 @@ geometry::ConvexPolygon Object::BoundingPolygon() const {
   return geometry::ConvexPolygon({p1, p2, p3, p4});
 }
 
-void Object::draw(sf::RenderTarget& target, sf::RenderStates states) const {
+void MovingObject::draw(sf::RenderTarget& target,
+                        sf::RenderStates states) const {
   sf::RectangleShape rect(sf::Vector2f(length_, width_));
   rect.setOrigin(length_ / 2.0f, width_ / 2.0f);
   rect.setPosition(utils::ToVector2f(position_));
@@ -43,7 +44,7 @@ void Object::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   target.draw(rect, states);
 }
 
-void Object::InitRandomColor() {
+void MovingObject::InitRandomColor() {
   std::uniform_int_distribution<int32_t> dis(0, 255);
   int32_t r = dis(random_gen_);
   int32_t g = dis(random_gen_);
