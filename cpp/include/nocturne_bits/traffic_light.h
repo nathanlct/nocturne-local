@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "geometry/aabb.h"
-#include "geometry/aabb_interface.h"
 #include "geometry/polygon.h"
 #include "object.h"
 
@@ -35,7 +34,8 @@ class TrafficLight : public Object {
                int64_t current_time)
       : Object(id, /*length=*/kTrafficLightRadius * 2.0f,
                /*width=*/kTrafficLightRadius * 2.0f, position,
-               /*heading=*/0.0f),
+               /*heading=*/0.0f, /*can_block_sight=*/false,
+               /*can_be_collided=*/false, /*check_collision=*/false),
         timestamps_(timestamps),
         light_states_(light_states),
         current_time_(current_time) {

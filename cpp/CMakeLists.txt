@@ -44,6 +44,7 @@ add_library(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Scenario.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Simulation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/object.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/stop_sign.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/traffic_light.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/sf_utils.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/vehicle.cc

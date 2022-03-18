@@ -79,8 +79,8 @@ class Object : public sf::Drawable, public geometry::AABBInterface {
   geometry::Vector2D position_;
   float heading_ = 0.0f;
 
-  const bool can_block_sight_ = true;
-  const bool can_be_collided_ = true;
+  const bool can_block_sight_ = false;
+  const bool can_be_collided_ = false;
   const bool check_collision_ = false;
   bool collided_ = false;
 };

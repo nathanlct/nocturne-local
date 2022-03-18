@@ -73,8 +73,7 @@ void TrafficLight::draw(sf::RenderTarget& target,
     }
   }
 
-  constexpr float kRadius = 3.0f;
-  sf::CircleShape pentagon(kRadius, 5);
+  sf::CircleShape pentagon(kTrafficLightRadius, 5);
   pentagon.setFillColor(color);
   pentagon.setPosition(utils::ToVector2f(position_));
   target.draw(pentagon, states);
