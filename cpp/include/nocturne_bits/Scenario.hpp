@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "ImageMatrix.hpp"
-#include "geometry/box.h"
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
@@ -56,10 +55,6 @@ class Scenario : public sf::Drawable {
   std::vector<bool> getValidExpertStates(int objID);
 
   /*********************** State Accessors *******************/
-  // get the box that encloses the view cone
-  const geometry::Box* getOuterBox(float sourceHeading,
-                                   geometry::Vector2D sourcePos,
-                                   float halfViewAngle, float viewDist);
   std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
       KineticObject* sourceObject);
   sf::FloatRect getRoadNetworkBoundaries() const;
