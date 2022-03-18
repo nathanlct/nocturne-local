@@ -18,9 +18,8 @@ using geometry::ConvexPolygon;
 using geometry::LineSegment;
 using geometry::Vector2D;
 
-template <class T>
 void VisibleObjectsImpl(const LineSegment& sight,
-                        const std::vector<const T*>& objects,
+                        const std::vector<const Object*>& objects,
                         std::vector<bool>& mask) {
   const int64_t n = objects.size();
 
@@ -29,7 +28,7 @@ void VisibleObjectsImpl(const LineSegment& sight,
   float min_dis = std::numeric_limits<float>::max();
   int64_t min_idx = -1;
   for (int64_t i = 0; i < n; ++i) {
-    const T* obj = objects[i];
+    const Object* obj = objects[i];
     const auto edges = obj->BoundingPolygon().Edges();
     for (const LineSegment& edge : edges) {
       const auto t = sight.ParametricIntersection(edge);
@@ -57,7 +56,7 @@ void VisibleObjectsImpl(const LineSegment& sight,
     if (mask[i]) {
       continue;
     }
-    const T* obj = objects[i];
+    const Object* obj = objects[i];
     // Non blocking nearby objects are visible.
     if (!obj->can_block_sight() && dis[i] < min_dis) {
       mask[i] = true;
@@ -98,14 +97,37 @@ std::vector<const Object*> ViewField::VisibleObjects(
   return (limit < 0 || m <= limit) ? ret : NearestK(ret, limit);
 }
 
-template <class T>
+std::vector<const Object*> ViewField::VisibleUnblockingObjects(
+    const std::vector<const Object*>& objects, int64_t limit) const {
+  std::vector<const Object*> ret;
+  for (const Object* obj : objects) {
+    const auto edges = obj->BoundingPolygon().Edges();
+    for (const LineSegment& edge : edges) {
+      // Check one endpoint should be enough, the othe one will be checked in
+      // the next edge.
+      const Vector2D& x = edge.Endpoint0();
+      if (Contains(x)) {
+        ret.push_back(obj);
+        break;
+      }
+      const auto [p, q] = Intersection(*this, edge);
+      if (p.has_value() || q.has_value()) {
+        ret.push_back(obj);
+        break;
+      }
+    }
+  }
+  const int64_t m = ret.size();
+  return (limit < 0 || m <= limit) ? ret : NearestK(ret, limit);
+}
+
 std::vector<Vector2D> ViewField::ComputeSightEndpoints(
-    const std::vector<const T*>& objects) const {
+    const std::vector<const Object*>& objects) const {
   std::vector<Vector2D> ret;
   const Vector2D& o = center();
   ret.push_back(o + Radius0());
   ret.push_back(o + Radius1());
-  for (const T* obj : objects) {
+  for (const Object* obj : objects) {
     const auto edges = obj->BoundingPolygon().Edges();
     for (const LineSegment& edge : edges) {
       // Check one endpoint should be enough, the othe one will be checked in
@@ -130,21 +152,20 @@ std::vector<Vector2D> ViewField::ComputeSightEndpoints(
   return ret;
 }
 
-template <class T>
-std::vector<const T*> ViewField::NearestK(const std::vector<const T*>& objects,
-                                          int64_t k) const {
+std::vector<const Object*> ViewField::NearestK(
+    const std::vector<const Object*>& objects, int64_t k) const {
   const int64_t n = objects.size();
   if (n <= k) {
     return objects;
   }
   const Vector2D& o = center();
-  std::vector<std::pair<float, const T*>> dis;
+  std::vector<std::pair<float, const Object*>> dis;
   dis.reserve(n);
-  for (const T* obj : objects) {
+  for (const Object* obj : objects) {
     dis.emplace_back(Distance(o, obj->position()), obj);
   }
   std::partial_sort(dis.begin(), dis.begin() + k, dis.end());
-  std::vector<const T*> ret;
+  std::vector<const Object*> ret;
   ret.reserve(k);
   for (int64_t i = 0; i < k; ++i) {
     ret.push_back(dis[i].second);

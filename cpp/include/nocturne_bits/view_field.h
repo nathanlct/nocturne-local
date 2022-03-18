@@ -20,6 +20,9 @@ class ViewField : public geometry::CircularSector {
   std::vector<const Object*> VisibleObjects(
       const std::vector<const Object*>& objects, int64_t limit = -1) const;
 
+  std::vector<const Object*> VisibleUnblockingObjects(
+      const std::vector<const Object*>& objects, int64_t limit = -1) const;
+
  protected:
   geometry::Vector2D MakeSightEndpoint(const geometry::Vector2D& p) const {
     const geometry::Vector2D& o = center();
@@ -28,13 +31,11 @@ class ViewField : public geometry::CircularSector {
     return o + d / d.Norm() * r;
   }
 
-  template <class T>
   std::vector<geometry::Vector2D> ComputeSightEndpoints(
-      const std::vector<const T*>& objects) const;
+      const std::vector<const Object*>& objects) const;
 
-  template <class T>
-  std::vector<const T*> NearestK(const std::vector<const T*>& objects,
-                                 int64_t k) const;
+  std::vector<const Object*> NearestK(const std::vector<const Object*>& objects,
+                                      int64_t k) const;
 };
 
 }  // namespace nocturne
