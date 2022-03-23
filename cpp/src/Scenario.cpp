@@ -443,7 +443,7 @@ std::vector<const Object*> Scenario::getVisibleObjects(
     std::vector<const Object*> objects;
     objects.reserve(candidates.size());
     for (const auto* obj : candidates) {
-      objects.push_back(dynamic_cast<const Object*>(obj));
+      if (obj != sourceObj) objects.push_back(dynamic_cast<const Object*>(obj));
     }
     visible_objects = vf.VisibleObjects(objects, maxNumVisibleObjects);
   }
