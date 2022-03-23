@@ -847,7 +847,6 @@ ImageMatrix Scenario::getCone(KineticObject* object, float viewAngle,
 
             float angle1 = (pt1 - center).Angle();
             float angle2 = (pt2 - center).Angle();
-            while (angle2 > angle1) angle2 -= 2.0f * geometry::utils::kPi;
 
             int nPoints = 80;  // todo function of angle
             hiddenArea.setPointCount(nPoints + 2);
