@@ -23,9 +23,9 @@ pybind11_add_module(
   ${CMAKE_CURRENT_SOURCE_DIR}/python/maths.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/python/nocturne.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/python/object.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/road.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/python/scenario.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/python/simulation.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/python/road_line.cpp
 )
 target_include_directories(
   nocturne

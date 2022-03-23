@@ -8,9 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "Object.hpp"
 #include "Scenario.hpp"
 #include "geometry/vector_2d.h"
+#include "object.h"
 
 namespace nocturne {
 

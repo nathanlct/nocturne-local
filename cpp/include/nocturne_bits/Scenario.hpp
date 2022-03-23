@@ -7,15 +7,15 @@
 #include <vector>
 
 #include "ImageMatrix.hpp"
-#include "Object.hpp"
-#include "RoadLine.hpp"
-#include "TrafficLight.hpp"
-#include "Vehicle.hpp"
-#include "geometry/box.h"
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
 #include "json.hpp"
+#include "object.h"
+#include "road.h"
+#include "stop_sign.h"
+#include "traffic_light.h"
+#include "vehicle.h"
 
 namespace nocturne {
 
@@ -55,41 +55,42 @@ class Scenario : public sf::Drawable {
   std::vector<bool> getValidExpertStates(int objID);
 
   /*********************** State Accessors *******************/
-  // get the box that encloses the view cone
-  const geometry::Box* getOuterBox(float sourceHeading,
-                                   geometry::Vector2D sourcePos,
-                                   float halfViewAngle, float viewDist);
   std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
-      Object* sourceObject);
+      KineticObject* sourceObject);
   sf::FloatRect getRoadNetworkBoundaries() const;
   ImageMatrix getCone(
-      Object* object,
+      KineticObject* object,
       float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
       float viewDist = 60.0f, float headTilt = 0.0f, bool obscuredView = true);
-  ImageMatrix getImage(Object* object = nullptr, bool renderGoals = false);
+  ImageMatrix getImage(KineticObject* object = nullptr,
+                       bool renderGoals = false);
   bool checkForCollision(const Object& object1, const Object& object2) const;
   bool checkForCollision(const Object& object,
                          const geometry::LineSegment& segment) const;
   std::vector<std::shared_ptr<Vehicle>> getVehicles();
   std::vector<std::shared_ptr<Pedestrian>> getPedestrians();
   std::vector<std::shared_ptr<Cyclist>> getCyclists();
-  std::vector<std::shared_ptr<Object>> getRoadObjects();
+  std::vector<std::shared_ptr<KineticObject>> getRoadObjects();
   std::vector<std::shared_ptr<RoadLine>> getRoadLines();
-  std::vector<float> getEgoState(Object* obj);
-  std::vector<float> getVisibleObjects(Object* sourceObj, float viewAngle,
-                                       float viewDist = 60.0f);
-  std::vector<float> getVisibleRoadPoints(Object* sourceObj, float viewAngle,
+
+  std::vector<float> getEgoState(KineticObject* obj);
+  std::vector<float> getVisibleObjects(KineticObject* sourceObj,
+                                       float viewAngle, float viewDist = 60.0f);
+  std::vector<float> getVisibleRoadPoints(KineticObject* sourceObj,
+                                          float viewAngle,
                                           float viewDist = 60.0f);
-  std::vector<float> getVisibleStopSigns(Object* sourceObj, float viewAngle,
+  std::vector<float> getVisibleStopSigns(KineticObject* sourceObj,
+                                         float viewAngle,
                                          float viewDist = 60.0f);
-  std::vector<float> getVisibleTrafficLights(Object* sourceObj, float viewAngle,
+  std::vector<float> getVisibleTrafficLights(KineticObject* sourceObj,
+                                             float viewAngle,
                                              float viewDist = 60.0f);
   std::vector<float> getVisibleState(
-      Object* sourceObj,
+      KineticObject* sourceObj,
       float viewAngle /* the total angle subtended by the view cone*/,
       float viewDist = 60.0f /* how many meters forwards the object can see */);
   // get a list of vehicles that actually moved
-  std::vector<std::shared_ptr<Object>> getObjectsThatMoved() {
+  std::vector<std::shared_ptr<KineticObject>> getObjectsThatMoved() {
     return objectsThatMoved;
   }
 
@@ -112,8 +113,8 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<Vehicle>> vehicles;
   std::vector<std::shared_ptr<Pedestrian>> pedestrians;
   std::vector<std::shared_ptr<Cyclist>> cyclists;
-  std::vector<std::shared_ptr<Object>> roadObjects;
-  std::vector<geometry::Vector2D> stopSigns;
+  std::vector<std::shared_ptr<KineticObject>> roadObjects;
+  std::vector<std::shared_ptr<StopSign>> stopSigns;
   std::vector<std::shared_ptr<TrafficLight>> trafficLights;
 
   sf::RenderTexture* imageTexture;
@@ -135,7 +136,7 @@ class Scenario : public sf::Drawable {
 
   // track the object that moved, useful for figuring out which agents should
   // actually be controlled
-  std::vector<std::shared_ptr<Object>> objectsThatMoved;
+  std::vector<std::shared_ptr<KineticObject>> objectsThatMoved;
 };
 
 }  // namespace nocturne
