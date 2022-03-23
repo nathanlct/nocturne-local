@@ -431,15 +431,15 @@ std::pair<float, geometry::Vector2D> Scenario::getObjectHeadingAndPos(
 
 std::vector<const Object*> Scenario::getVisibleObjects(
     KineticObject* sourceObj, float viewAngle, float viewDist,
-    int64_t maxNumVisibleObjects, const geometry::BVH& bhv) {
+    int64_t maxNumVisibleObjects, const geometry::BVH& bvh) {
   const float heading = sourceObj->heading();
   const geometry::Vector2D& position = sourceObj->position();
   const ViewField vf(position, viewDist, heading, viewAngle);
 
   std::vector<const Object*> visible_objects;
-  if (!bhv.Empty()) {
+  if (!bvh.Empty()) {
     const std::vector<const geometry::AABBInterface*> candidates =
-        bhv.IntersectionCandidates(vf);
+        bvh.IntersectionCandidates(vf);
     std::vector<const Object*> objects;
     objects.reserve(candidates.size());
     for (const auto* obj : candidates) {

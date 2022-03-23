@@ -77,7 +77,7 @@ class Scenario : public sf::Drawable {
   std::vector<const Object*> getVisibleObjects(KineticObject* sourceObj,
                                                float viewAngle, float viewDist,
                                                int64_t maxNumVisibleObjects,
-                                               const geometry::BVH& bhv);
+                                               const geometry::BVH& bvh);
   std::vector<const KineticObject*> getVisibleKineticObjects(
       KineticObject* sourceObj, float viewAngle, float viewDist = 60.0f);
   std::vector<const RoadPoint*> getVisibleRoadPoints(KineticObject* sourceObj,
