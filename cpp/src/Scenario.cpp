@@ -878,8 +878,8 @@ ImageMatrix Scenario::getCone(KineticObject* object, float viewAngle,
   renderTransform2.scale(1, -1);
 
   texture->setView(view);
-  for (const auto& object : trafficLights) {
-    texture->draw(*object, renderTransform2);
+  for (const auto& tl : getVisibleTrafficLights(object, viewAngle, viewDist)) {
+    texture->draw(*tl, renderTransform2);
   }
 
   texture->display();
