@@ -2,6 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <fstream>
+#include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -10,7 +11,6 @@
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
-#include "json.hpp"
 #include "object.h"
 #include "road.h"
 #include "stop_sign.h"
