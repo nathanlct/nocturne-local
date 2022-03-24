@@ -28,14 +28,15 @@ class RoadPoint : public Object {
  public:
   RoadPoint() = default;
   RoadPoint(int64_t id, const geometry::Vector2D& position, RoadType road_type)
-      : Object(id, /*length=*/kRoadPointRadius * 2.0f,
-               /*width=*/kRoadPointRadius * 2.0f, position,
-               /*heading=*/0.0f, /*can_block_sight=*/false,
+      : Object(id, position,
+               /*can_block_sight=*/false,
                /*can_be_collided=*/false, /*check_collision=*/false),
         road_type_(road_type) {}
 
-  std::string Type() const override { return "RoadPoint"; }
+  ObjectType Type() const override { return ObjectType::kRoadPoint; }
   RoadType road_type() const { return road_type_; }
+
+  float Radius() const { return kRoadPointRadius; }
 
   geometry::ConvexPolygon BoundingPolygon() const override;
 

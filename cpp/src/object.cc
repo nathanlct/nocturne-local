@@ -7,7 +7,7 @@
 
 namespace nocturne {
 
-geometry::ConvexPolygon Object::BoundingPolygon() const {
+geometry::ConvexPolygon KineticObject::BoundingPolygon() const {
   const geometry::Vector2D p0 =
       geometry::Vector2D(length_ * 0.5f, width_ * 0.5f).Rotate(heading_) +
       position_;
@@ -55,6 +55,26 @@ void KineticObject::InitRandomColor() {
   g = g * 255 / max_rgb;
   b = b * 255 / max_rgb;
   color_ = sf::Color(r, g, b);
+}
+
+ObjectType ParseObjectType(const std::string& type) {
+  if (type == "unset") {
+    return ObjectType::kUnset;
+  } else if (type == "vehicle") {
+    return ObjectType::kVehicle;
+  } else if (type == "pedestrian") {
+    return ObjectType::kPedestrian;
+  } else if (type == "cyclist") {
+    return ObjectType::kCyclist;
+  } else if (type == "traffic_light") {
+    return ObjectType::kTrafficLight;
+  } else if (type == "stop_sign") {
+    return ObjectType::kStopSign;
+  } else if (type == "road_point") {
+    return ObjectType::kRoadPoint;
+  } else {
+    return ObjectType::kOthers;
+  }
 }
 
 }  // namespace nocturne
