@@ -40,7 +40,7 @@ void init_object(py::module& m) {
       .def("setHeading", &nocturne::KineticObject::set_heading);
 
   py::class_<nocturne::Vehicle, std::shared_ptr<nocturne::Vehicle>,
-             nocturne::Object>(m, "Vehicle")
+             nocturne::KineticObject>(m, "Vehicle")
       .def("getWidth", &nocturne::Vehicle::width)
       .def("getPosition", &nocturne::Vehicle::position)
       .def("getGoalPosition", &nocturne::Vehicle::destination)
