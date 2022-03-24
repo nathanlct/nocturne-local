@@ -33,7 +33,7 @@ class Scenario : public sf::Drawable {
 
   // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
   // returned in the state
-  int maxNumVisibleObjects = 20;
+  int maxNumVisibleKineticObjects = 20;
   int maxNumVisibleRoadPoints = 80;
   int maxNumVisibleStopSigns = 4;
   int maxNumVisibleTLSigns = 20;
@@ -74,17 +74,20 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<RoadLine>> getRoadLines();
 
   std::vector<float> getEgoState(KineticObject* obj);
-  std::vector<float> getVisibleObjects(KineticObject* sourceObj,
-                                       float viewAngle, float viewDist = 60.0f);
-  std::vector<float> getVisibleRoadPoints(KineticObject* sourceObj,
-                                          float viewAngle,
-                                          float viewDist = 60.0f);
-  std::vector<float> getVisibleStopSigns(KineticObject* sourceObj,
-                                         float viewAngle,
-                                         float viewDist = 60.0f);
-  std::vector<float> getVisibleTrafficLights(KineticObject* sourceObj,
-                                             float viewAngle,
-                                             float viewDist = 60.0f);
+  std::vector<const Object*> getVisibleObjects(KineticObject* sourceObj,
+                                               float viewAngle, float viewDist,
+                                               int64_t maxNumVisibleObjects,
+                                               const geometry::BVH& bvh);
+  std::vector<const KineticObject*> getVisibleKineticObjects(
+      KineticObject* sourceObj, float viewAngle, float viewDist = 60.0f);
+  std::vector<const RoadPoint*> getVisibleRoadPoints(KineticObject* sourceObj,
+                                                     float viewAngle,
+                                                     float viewDist = 60.0f);
+  std::vector<const StopSign*> getVisibleStopSigns(KineticObject* sourceObj,
+                                                   float viewAngle,
+                                                   float viewDist = 60.0f);
+  std::vector<const TrafficLight*> getVisibleTrafficLights(
+      KineticObject* sourceObj, float viewAngle, float viewDist = 60.0f);
   std::vector<float> getVisibleState(
       KineticObject* sourceObj,
       float viewAngle /* the total angle subtended by the view cone*/,
