@@ -54,6 +54,7 @@ target_include_directories(
   nocturne_core
   PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/nocturne_bits
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/json/include
 )
 
 # Link SFML
