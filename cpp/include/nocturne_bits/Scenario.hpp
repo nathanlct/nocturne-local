@@ -106,23 +106,6 @@ class Scenario : public sf::Drawable {
 
   std::vector<float> getEgoState(KineticObject* obj);
 
-  // std::vector<const Object*> getVisibleObjects(KineticObject* sourceObj,
-  //                                              float viewAngle, float
-  //                                              viewDist, int64_t
-  //                                              maxNumVisibleObjects, const
-  //                                              geometry::BVH& bvh);
-  // std::vector<const KineticObject*> getVisibleKineticObjects(
-  //     KineticObject* sourceObj, float viewAngle, float viewDist = 60.0f);
-  // std::vector<const RoadPoint*> getVisibleRoadPoints(KineticObject*
-  // sourceObj,
-  //                                                    float viewAngle,
-  //                                                    float viewDist = 60.0f);
-  // std::vector<const StopSign*> getVisibleStopSigns(KineticObject* sourceObj,
-  //                                                  float viewAngle,
-  //                                                  float viewDist = 60.0f);
-  // std::vector<const TrafficLight*> getVisibleTrafficLights(
-  //     KineticObject* sourceObj, float viewAngle, float viewDist = 60.0f);
-
   pybind11::array_t<float, kNumpyArrayForcecast> Observation(
       const KineticObject& src, float view_dist, float view_angle) const;
 
@@ -170,14 +153,6 @@ class Scenario : public sf::Drawable {
   geometry::BVH vehicle_bvh_;       // track vehicles for collisions
   geometry::BVH line_segment_bvh_;  // track line segments for collisions
   geometry::BVH static_bvh_;        // static objects
-
-  // geometry::BVH
-  //     tl_bvh_;  // track traffic light states to find visible traffic lights
-  // geometry::BVH
-  //     road_point_bvh;           // track road points to find visible road
-  //     points
-  // geometry::BVH stop_sign_bvh;  // track stop signs to find visible stop
-  // signs
 
   // expert data
   std::vector<std::vector<geometry::Vector2D>> expertTrajectories;
