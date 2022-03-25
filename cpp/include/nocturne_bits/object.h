@@ -20,9 +20,9 @@ enum class ObjectType {
   kVehicle = 1,
   kPedestrian = 2,
   kCyclist = 3,
-  kTrafficLight = 4,
-  kStopSign = 5,
-  kRoadPoint = 6,
+  kRoadPoint = 4,
+  kTrafficLight = 5,
+  kStopSign = 6,
   kOthers = 7,
 };
 

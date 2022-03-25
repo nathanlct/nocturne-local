@@ -20,7 +20,7 @@ class ViewField : public geometry::CircularSector {
   std::vector<const Object*> VisibleObjects(
       const std::vector<const Object*>& objects, int64_t limit = -1) const;
 
-  std::vector<const Object*> VisibleUnblockingObjects(
+  std::vector<const Object*> VisibleNonblockingObjects(
       const std::vector<const Object*>& objects, int64_t limit = -1) const;
 
  protected:

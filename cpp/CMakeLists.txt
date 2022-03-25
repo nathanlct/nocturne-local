@@ -11,13 +11,6 @@ set(
 
 project(nocturne)
 
-# nocturne files
-# include_directories(/usr/local/include)
-# AUX_SOURCE_DIRECTORY(src SRC_FILES)
-# set(PROJECT_SOURCE_DIR "src")
-# set(PROJECT_INCLUDE_DIR "include/nocturne_bits")
-# file (GLOB SOURCE_FILES "${PROJECT_INCLUDE_DIR}/*.hpp" "${PROJECT_SOURCE_DIR}/*.cpp")
-
 add_library(
   nocturne_geometry
   STATIC
@@ -53,8 +46,8 @@ add_library(
 target_include_directories(
   nocturne_core
   PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/nocturne_bits
   ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/json/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/nocturne_bits
 )
 
 # Link SFML
