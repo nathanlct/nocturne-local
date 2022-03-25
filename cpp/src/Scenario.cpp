@@ -320,75 +320,22 @@ void Scenario::loadScenario(std::string path) {
   }
 
   std::vector<const geometry::AABBInterface*> static_objects;
-
-  // Now create the BVH for the inividual road points that will be passed to our
-  // agent as state Since the line segments never move we only need to define
-  // this once
-  // const int64_t nLines = roadLines.size();
-  // const int64_t nPointsPerLine = roadLines[0]->num_road_points();
-  // if ((nLines * nPointsPerLine) > 0) {
-  // std::vector<const geometry::AABBInterface*> roadPointObjects;
-  // roadPointObjects.reserve(nLines * nPointsPerLine);
   for (const auto& roadLine : roadLines) {
     for (const auto& roadPoint : roadLine->road_points()) {
-      // roadPointObjects.push_back(
-      //     dynamic_cast<const geometry::AABBInterface*>(&roadPoint));
       static_objects.push_back(
           dynamic_cast<const geometry::AABBInterface*>(&roadPoint));
     }
-    // }
-    // road_point_bvh.InitHierarchy(roadPointObjects);
   }
-
-  // // Now create the BVH for the stop signs
-  // // Since the stop signs never move we only need to define this once
-  // const int64_t nStopSigns = stopSigns.size();
-  // if (nStopSigns > 0) {
-  //   std::vector<const geometry::AABBInterface*> stopSignObjects;
-  //   stopSignObjects.reserve(nStopSigns);
-  //   for (const auto& obj : stopSigns) {
-  //     stopSignObjects.push_back(
-  //         dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-  //   }
-  //   stop_sign_bvh.InitHierarchy(stopSignObjects);
-  // }
   for (const auto& obj : stopSigns) {
     static_objects.push_back(
         dynamic_cast<const geometry::AABBInterface*>(obj.get()));
   }
-
-  // // Now create the BVH for the traffic lights
-  // // Since the line segments never move we only need to define this once but
-  // // we also need to push back an index into the traffic light states so that
-  // // we can
-  // const int64_t nTrafficLights = trafficLights.size();
-  // if (nTrafficLights > 0) {
-  //   std::vector<const geometry::AABBInterface*> tlObjects;
-  //   tlObjects.reserve(nTrafficLights);
-  //   for (const auto& obj : trafficLights) {
-  //     tlObjects.push_back(dynamic_cast<geometry::AABBInterface*>(obj.get()));
-  //   }
-  //   tl_bvh_.InitHierarchy(tlObjects);
-  // }
   for (const auto& obj : trafficLights) {
     static_objects.push_back(
         dynamic_cast<const geometry::AABBInterface*>(obj.get()));
   }
-
   static_bvh_.InitHierarchy(static_objects);
 }
-
-// void Scenario::createVehicle(float posX, float posY, float width, float
-// length,
-//                              float heading, bool occludes, bool collides,
-//                              bool checkForCollisions, float goalPosX,
-//                              float goalPosY) {
-//   Vehicle* veh = new Vehicle(geometry::Vector2D(posX, posY), width, length,
-//                              heading, occludes, collides, checkForCollisions,
-//                              geometry::Vector2D(goalPosX, goalPosY));
-//   auto ptr = std::shared_ptr<Vehicle>(veh);
-//   vehicles.push_back(ptr);
-// }
 
 void Scenario::step(float dt) {
   currTime += int(dt / 0.1);  // TODO(ev) hardcoding
