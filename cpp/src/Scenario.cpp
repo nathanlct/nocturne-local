@@ -72,22 +72,22 @@ void ExtractKineticObjectFeature(const KineticObject& src,
 
 void ExtractRoadPointFeature(const KineticObject& src, const RoadPoint& obj,
                              float dis, float* feature) {
-  std::memset(feature, 0, kRoadPointFeatureSize * sizeof(float));
   const float azimuth = (obj.position() - src.position()).Angle();
   const int64_t road_type = static_cast<int64_t>(obj.road_type());
   feature[0] = dis;
   feature[1] = azimuth;
+  // One-hot vector for road_type, assume feature is initially 0.
   feature[2 + road_type] = 1.0f;
 }
 
 void ExtractTrafficLightFeature(const KineticObject& src,
                                 const TrafficLight& obj, float dis,
                                 float* feature) {
-  std::memset(feature, 0, kTrafficLightFeatureSize * sizeof(float));
   const float azimuth = (obj.position() - src.position()).Angle();
   const int64_t light_state = static_cast<int64_t>(obj.LightState());
   feature[0] = dis;
   feature[1] = azimuth;
+  // One-hot vector for light_state, assume feature is initially 0.
   feature[2 + light_state] = 1.0f;
 }
 
