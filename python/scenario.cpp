@@ -12,7 +12,7 @@ namespace nocturne {
 pybind11::array_t<float> Scenario::Observation(const KineticObject& src,
                                                float view_dist,
                                                float view_angle) const {
-  return utils::ToNumpyArray<float>(
+  return utils::AsNumpyArray<float>(
       ObservationImpl(src, view_dist, view_angle));
 }
 
