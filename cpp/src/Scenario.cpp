@@ -573,12 +573,17 @@ std::vector<const TrafficLight*> Scenario::VisibleTrafficLights(
   const geometry::Vector2D& position = src.position();
   const ViewField vf(position, view_dist, heading, view_angle);
 
-  const std::vector<const Object*> static_candidates =
-      VisibleCandidates(static_bvh_, src, vf);
-  for (const Object* obj : static_candidates) {
-    if (obj->Type() == ObjectType::kTrafficLight) {
-      ret.push_back(dynamic_cast<const TrafficLight*>(obj));
-    }
+  // Assume limited number of TrafficLights, check all of them.
+  std::vector<const Object*> objects;
+  objects.reserve(trafficLights.size());
+  for (const auto& obj : trafficLights) {
+    objects.push_back(dynamic_cast<const Object*>(obj.get()));
+  }
+  objects = vf.VisibleNonblockingObjects(objects);
+
+  ret.reserve(objects.size());
+  for (const Object* obj : objects) {
+    ret.push_back(dynamic_cast<const TrafficLight*>(obj));
   }
 
   return ret;
