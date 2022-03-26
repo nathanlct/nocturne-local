@@ -62,22 +62,26 @@ void ExtractKineticObjectFeature(const KineticObject& src,
   const float azimuth = (obj.position() - src.position()).Angle();
   const float relative_heading =
       geometry::utils::AngleSub(obj.heading(), src.heading());
-  feature[0] = dis;
-  feature[1] = azimuth;
-  feature[2] = obj.length();
-  feature[3] = obj.width();
-  feature[4] = relative_heading;
-  feature[5] = obj.speed();
+  const int64_t obj_type = static_cast<int64_t>(obj.KineticType());
+  feature[0] = 1.0f;  // Valid
+  feature[1] = dis;
+  feature[2] = azimuth;
+  feature[3] = obj.length();
+  feature[4] = obj.width();
+  feature[5] = relative_heading;
+  feature[6] = obj.speed();
+  feature[7 + obj_type] = 1.0f;
 }
 
 void ExtractRoadPointFeature(const KineticObject& src, const RoadPoint& obj,
                              float dis, float* feature) {
   const float azimuth = (obj.position() - src.position()).Angle();
   const int64_t road_type = static_cast<int64_t>(obj.road_type());
-  feature[0] = dis;
-  feature[1] = azimuth;
+  feature[0] = 1.0f;  // Valid
+  feature[1] = dis;
+  feature[2] = azimuth;
   // One-hot vector for road_type, assume feature is initially 0.
-  feature[2 + road_type] = 1.0f;
+  feature[3 + road_type] = 1.0f;
 }
 
 void ExtractTrafficLightFeature(const KineticObject& src,
@@ -85,17 +89,19 @@ void ExtractTrafficLightFeature(const KineticObject& src,
                                 float* feature) {
   const float azimuth = (obj.position() - src.position()).Angle();
   const int64_t light_state = static_cast<int64_t>(obj.LightState());
-  feature[0] = dis;
-  feature[1] = azimuth;
+  feature[0] = 1.0f;  // Valid
+  feature[1] = dis;
+  feature[2] = azimuth;
   // One-hot vector for light_state, assume feature is initially 0.
-  feature[2 + light_state] = 1.0f;
+  feature[3 + light_state] = 1.0f;
 }
 
 void ExtractStopSignFeature(const KineticObject& src, const StopSign& obj,
                             float dis, float* feature) {
   const float azimuth = (obj.position() - src.position()).Angle();
-  feature[0] = dis;
-  feature[1] = azimuth;
+  feature[0] = 1.0f;  // Valid
+  feature[1] = dis;
+  feature[2] = azimuth;
 }
 
 }  // namespace

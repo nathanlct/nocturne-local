@@ -37,20 +37,21 @@ constexpr int64_t kMaxVisibleTrafficLights = 20;
 constexpr int64_t kMaxVisibleStopSigns = 4;
 
 // KineticObject features are:
-// [ distance, azimuth, length, witdh, relative_heading, speed ]
-constexpr int64_t kKineticObjectFeatureSize = 6;
+// [ valid, distance, azimuth, length, witdh, relative_heading, speed,
+//   type (one_hot of 5) ]
+constexpr int64_t kKineticObjectFeatureSize = 12;
 
 // RoadPoint features are:
-// [ distance, azimuth, road_type (one_hot of 7) ]
-constexpr int64_t kRoadPointFeatureSize = 9;
+// [ valid, distance, azimuth, road_type (one_hot of 7) ]
+constexpr int64_t kRoadPointFeatureSize = 10;
 
 // TrafficLight features are:
-// [ distance, azimuth, current_state (one_hot of 9) ]
-constexpr int64_t kTrafficLightFeatureSize = 11;
+// [ valid, distance, azimuth, current_state (one_hot of 9) ]
+constexpr int64_t kTrafficLightFeatureSize = 12;
 
 // StopSign features are:
-// [ distance, azimuth ]
-constexpr int64_t kStopSignsFeatureSize = 2;
+// [ valid, distance, azimuth ]
+constexpr int64_t kStopSignsFeatureSize = 3;
 
 // For py::array_t forward declaration.
 constexpr int kNumpyArrayForcecast = 0x0010;
