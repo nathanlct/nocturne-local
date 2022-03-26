@@ -62,7 +62,7 @@ void ExtractKineticObjectFeature(const KineticObject& src,
   const float azimuth = (obj.position() - src.position()).Angle();
   const float relative_heading =
       geometry::utils::AngleSub(obj.heading(), src.heading());
-  const int64_t obj_type = static_cast<int64_t>(obj.KineticType());
+  const int64_t obj_type = static_cast<int64_t>(obj.Type());
   feature[0] = 1.0f;  // Valid
   feature[1] = dis;
   feature[2] = azimuth;

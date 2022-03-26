@@ -75,14 +75,6 @@ class Object : public sf::Drawable, public geometry::AABBInterface {
   bool collided_ = false;
 };
 
-enum class KineticObjectType {
-  kUnset = 0,
-  kVehicle = 1,
-  kPedestrian = 2,
-  kCyclist = 3,
-  kOthers = 4,
-};
-
 class KineticObject : public Object {
  public:
   KineticObject() = default;
@@ -100,8 +92,6 @@ class KineticObject : public Object {
         random_gen_(std::random_device()()) {
     InitRandomColor();
   }
-
-  virtual KineticObjectType KineticType() const = 0;
 
   float Radius() const override {
     return std::sqrt(length_ * length_ + width_ * width_) * 0.5f;

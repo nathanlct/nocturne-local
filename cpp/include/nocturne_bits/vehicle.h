@@ -19,10 +19,6 @@ class Vehicle : public KineticObject {
 
   ObjectType Type() const override { return ObjectType::kVehicle; }
 
-  KineticObjectType KineticType() const override {
-    return KineticObjectType::kVehicle;
-  }
-
   void setAccel(float acceleration) { accelAction = acceleration; }
 
   void setSteeringAngle(float steeringAngle) { steeringAction = steeringAngle; }
@@ -46,10 +42,6 @@ class Pedestrian : public Vehicle {
   using Vehicle ::Vehicle;
 
   ObjectType Type() const override { return ObjectType::kPedestrian; }
-
-  KineticObjectType KineticType() const override {
-    return KineticObjectType::kPedestrian;
-  }
 };
 
 class Cyclist : public Vehicle {
@@ -57,10 +49,6 @@ class Cyclist : public Vehicle {
   using Vehicle ::Vehicle;
 
   ObjectType Type() const override { return ObjectType::kCyclist; }
-
-  KineticObjectType KineticType() const override {
-    return KineticObjectType::kCyclist;
-  }
 };
 
 }  // namespace nocturne
