@@ -59,7 +59,8 @@ std::vector<std::pair<const Object*, float>> NearestK(
 void ExtractKineticObjectFeature(const KineticObject& src,
                                  const KineticObject& obj, float dis,
                                  float* feature) {
-  const float azimuth = (obj.position() - src.position()).Angle();
+  const float azimuth = geometry::utils::AngleSub(
+      (obj.position() - src.position()).Angle(), src.heading());
   const float relative_heading =
       geometry::utils::AngleSub(obj.heading(), src.heading());
   const int64_t obj_type = static_cast<int64_t>(obj.Type());
@@ -75,7 +76,8 @@ void ExtractKineticObjectFeature(const KineticObject& src,
 
 void ExtractRoadPointFeature(const KineticObject& src, const RoadPoint& obj,
                              float dis, float* feature) {
-  const float azimuth = (obj.position() - src.position()).Angle();
+  const float azimuth = geometry::utils::AngleSub(
+      (obj.position() - src.position()).Angle(), src.heading());
   const int64_t road_type = static_cast<int64_t>(obj.road_type());
   feature[0] = 1.0f;  // Valid
   feature[1] = dis;
@@ -87,7 +89,8 @@ void ExtractRoadPointFeature(const KineticObject& src, const RoadPoint& obj,
 void ExtractTrafficLightFeature(const KineticObject& src,
                                 const TrafficLight& obj, float dis,
                                 float* feature) {
-  const float azimuth = (obj.position() - src.position()).Angle();
+  const float azimuth = geometry::utils::AngleSub(
+      (obj.position() - src.position()).Angle(), src.heading());
   const int64_t light_state = static_cast<int64_t>(obj.LightState());
   feature[0] = 1.0f;  // Valid
   feature[1] = dis;
@@ -98,7 +101,8 @@ void ExtractTrafficLightFeature(const KineticObject& src,
 
 void ExtractStopSignFeature(const KineticObject& src, const StopSign& obj,
                             float dis, float* feature) {
-  const float azimuth = (obj.position() - src.position()).Angle();
+  const float azimuth = geometry::utils::AngleSub(
+      (obj.position() - src.position()).Angle(), src.heading());
   feature[0] = 1.0f;  // Valid
   feature[1] = dis;
   feature[2] = azimuth;
