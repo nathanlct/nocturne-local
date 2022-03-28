@@ -151,43 +151,8 @@ veh_length = veh0.getLength()
 new_center += veh_length / 2 * road_segment_dir
 veh0.setPosition(new_center[0], new_center[1])
 sim.step(1e-6)
-cone = np.array(scenario.getCone(veh0, 2 * np.pi, 0.0), copy=False)
-plt.figure()
-plt.imshow(cone)
-plt.savefig('line_veh_check2.png')
 assert veh0.getCollided(
 ) == True, 'vehicle0 should have collided since a road edge intersects it'
-
-# TODO(ev) unfortunately non-colliding road lines and colliding road lines can overlap
-# so the below check is not guaranteed to return a position where the vehicle has not
-# collided
-
-# # quick check that when we place the vehicle onto a non-colliding edge (like a lane line)
-# # no collision occurs
-# sim.reset()
-# scenario = sim.getScenario()
-# veh0 = scenario.getVehicles()[0]
-# non_colliding_road_line = None
-# for roadline in scenario.getRoadLines():
-#     if not roadline.canCollide():
-#         non_colliding_road_line = roadline
-#         break
-# roadpoints = non_colliding_road_line.getAllPoints()
-# start_point = np.array([roadpoints[0].x, roadpoints[0].y])
-# road_segment_dir = np.array([roadpoints[1].x, roadpoints[1].y]) - np.array([roadpoints[0].x, roadpoints[0].y])
-# assert np.linalg.norm(road_segment_dir) < 1 # it should be able to fit inside the vehicle
-# road_segment_angle = np.arctan2(road_segment_dir[1], road_segment_dir[0]) #atan2 is (y, x) not (x,y)
-# veh0.setHeading(road_segment_angle)
-
-# # place the vehicle so that the segment is contained inside of it
-# new_center = start_point + 0.5 * road_segment_dir
-# veh0.setPosition(new_center[0], new_center[1])
-# sim.step(1e-6)
-# cone = np.array(scenario.getCone(veh0, 2 * np.pi, 0.0), copy=False)
-# plt.figure()
-# plt.imshow(cone)
-# plt.savefig('line_veh_check3.png')
-# assert veh0.getCollided() == False, 'a non-colliding object shouldn\'t register collisions'
 
 ######################
 # Waymo Scene Construction
@@ -207,12 +172,9 @@ plt.savefig('t0.png')
 sim = Simulation(scenario_path=file_path, start_time=20)
 scenario = sim.getScenario()
 
-img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 120.0,
-                                0.0, False),
-               copy=False)
-plt.figure()
-plt.imshow(img)
-plt.savefig('t20.png')
+img1 = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 120.0,
+                                 0.0, False),
+                copy=False)
 
 # check that initializing things with and without pedestrians leads to a different
 # image
@@ -221,9 +183,8 @@ sim = Simulation(scenario_path=file_path,
                  use_non_vehicles=False)
 scenario = sim.getScenario()
 
-img = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 120.0,
-                                0.0, False),
-               copy=False)
-plt.figure()
-plt.imshow(img)
-plt.savefig('t20_no_peds.png')
+img2 = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi, 120.0,
+                                 0.0, False),
+                copy=False)
+assert not np.isclose(np.sum(img1 - img2),
+                      0.0), 'adding pedestrians doesn\'t change the image'
