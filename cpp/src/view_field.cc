@@ -97,7 +97,7 @@ std::vector<const Object*> ViewField::VisibleObjects(
   return (limit < 0 || m <= limit) ? ret : NearestK(ret, limit);
 }
 
-std::vector<const Object*> ViewField::VisibleUnblockingObjects(
+std::vector<const Object*> ViewField::VisibleNonblockingObjects(
     const std::vector<const Object*>& objects, int64_t limit) const {
   std::vector<const Object*> ret;
   for (const Object* obj : objects) {

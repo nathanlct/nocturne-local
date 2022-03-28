@@ -3,6 +3,7 @@
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <string>
 
 #include "geometry/geometry_utils.h"
@@ -12,6 +13,7 @@
 namespace nocturne {
 namespace {
 
+using geometry::ConvexPolygon;
 using geometry::Vector2D;
 using geometry::utils::kHalfPi;
 using geometry::utils::kPi;
@@ -22,14 +24,33 @@ class MockObject : public Object {
   MockObject() = default;
   MockObject(int64_t id, float length, float width, const Vector2D& position,
              bool can_block_sight)
-      : Object(id, length, width, position, /*heading=*/0.0f, can_block_sight,
-               /*can_be_collided=*/true, /*check_collision=*/true) {}
+      : Object(id, position, can_block_sight,
+               /*can_be_collided=*/true, /*check_collision=*/true),
+        length_(length),
+        width_(width) {}
 
-  std::string Type() const override { return "MockObject"; }
+  float Radius() const override {
+    return std::sqrt(length_ * length_ + width_ * width_) * 0.5f;
+  }
+
+  ConvexPolygon BoundingPolygon() const override {
+    const geometry::Vector2D p0 =
+        geometry::Vector2D(length_ * 0.5f, width_ * 0.5f) + position_;
+    const geometry::Vector2D p1 =
+        geometry::Vector2D(-length_ * 0.5f, width_ * 0.5f) + position_;
+    const geometry::Vector2D p2 =
+        geometry::Vector2D(-length_ * 0.5f, -width_ * 0.5f) + position_;
+    const geometry::Vector2D p3 =
+        geometry::Vector2D(length_ * 0.5f, -width_ * 0.5f) + position_;
+    return ConvexPolygon({p0, p1, p2, p3});
+  }
 
  protected:
   void draw(sf::RenderTarget& /*target*/,
             sf::RenderStates /*states*/) const override {}
+
+  const float length_ = 0.0f;
+  const float width_ = 0.0f;
 };
 
 TEST(ViewFieldTest, VisibleObjectsTest) {
