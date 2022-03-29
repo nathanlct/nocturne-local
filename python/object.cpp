@@ -21,7 +21,7 @@ void init_object(py::module& m) {
       .def("getLength", &nocturne::KineticObject::length)
       .def("getPosition", &nocturne::KineticObject::position)
       .def("getGoalPosition", &nocturne::KineticObject::destination)
-      .def("getSpeed", &nocturne::KineticObject::speed)
+      .def("getSpeed", &nocturne::KineticObject::Speed)
       .def("getHeading", &nocturne::KineticObject::heading)
       .def("getID", &nocturne::KineticObject::id)
       .def("getType", &nocturne::KineticObject::Type)
@@ -36,15 +36,20 @@ void init_object(py::module& m) {
                &nocturne::KineticObject::set_destination))
       .def("setGoalPosition", py::overload_cast<float, float>(
                                   &nocturne::KineticObject::set_destination))
-      .def("setSpeed", &nocturne::KineticObject::set_speed)
-      .def("setHeading", &nocturne::KineticObject::set_heading);
+      .def("setHeading", &nocturne::KineticObject::set_heading)
+      .def("set_velocity",
+           py::overload_cast<const nocturne::geometry::Vector2D&>(
+               &nocturne::KineticObject::set_velocity))
+      .def("set_velocity", py::overload_cast<float, float>(
+                               &nocturne::KineticObject::set_velocity))
+      .def("setSpeed", &nocturne::KineticObject::SetSpeed);
 
   py::class_<nocturne::Vehicle, std::shared_ptr<nocturne::Vehicle>,
              nocturne::KineticObject>(m, "Vehicle")
       .def("getWidth", &nocturne::Vehicle::width)
       .def("getPosition", &nocturne::Vehicle::position)
       .def("getGoalPosition", &nocturne::Vehicle::destination)
-      .def("getSpeed", &nocturne::Vehicle::speed)
+      .def("getSpeed", &nocturne::Vehicle::Speed)
       .def("getHeading", &nocturne::Vehicle::heading)
       .def("getID", &nocturne::Vehicle::id)
       .def("getType", &nocturne::Vehicle::Type)
@@ -61,6 +66,11 @@ void init_object(py::module& m) {
                &nocturne::Vehicle::set_destination))
       .def("setGoalPosition",
            py::overload_cast<float, float>(&nocturne::Vehicle::set_destination))
-      .def("setSpeed", &nocturne::Vehicle::set_speed)
-      .def("setHeading", &nocturne::Vehicle::set_heading);
+      .def("setHeading", &nocturne::Vehicle::set_heading)
+      .def("set_velocity",
+           py::overload_cast<const nocturne::geometry::Vector2D&>(
+               &nocturne::KineticObject::set_velocity))
+      .def("set_velocity", py::overload_cast<float, float>(
+                               &nocturne::KineticObject::set_velocity))
+      .def("setSpeed", &nocturne::Vehicle::SetSpeed);
 }

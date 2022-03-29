@@ -34,19 +34,25 @@ void Vehicle::Step(float dt) {
 }
 
 void Vehicle::kinematicsUpdate(float dt) {
+  const float speed = Speed();
   float steering = steeringAction;  // todo clip
   float accel = accelAction;        // todo clip
 
   // kinematic model - table 2.1 from Vehicle Dynamics and Control, R. Rajamani,
   // Chapter 2
   float slipAngle = atan(tan(steering) / 2.0f);
-  float dHeading = speed_ * sin(steering) / length_;
-  float dX = speed_ * cos(heading_ + slipAngle);
-  float dY = speed_ * sin(heading_ + slipAngle);
+  float dHeading = speed * sin(steering) / length_;
+  float dX = speed * cos(heading_ + slipAngle);
+  float dY = speed * sin(heading_ + slipAngle);
 
   heading_ = geometry::utils::AngleAdd(heading_, dHeading * dt);
-  position_ += geometry::Vector2D(dX, dY) * dt;
-  speed_ += accel * dt;
+  // position_ += geometry::Vector2D(dX, dY) * dt;
+  // speed += accel * dt;
+
+  // TODO: Update this later.
+  velocity_ = geometry::Vector2D(dX, dY);
+  position_ += velocity_ * dt;
+  SetSpeed(speed + accel * dt);
 }
 
 void Vehicle::dynamicsUpdate() {}

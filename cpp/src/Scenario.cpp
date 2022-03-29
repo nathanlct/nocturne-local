@@ -63,7 +63,7 @@ void ExtractKineticObjectFeature(const KineticObject& src,
       (obj.position() - src.position()).Angle(), src.heading());
   const float relative_heading =
       geometry::utils::AngleSub(obj.heading(), src.heading());
-  const geometry::Vector2D relative_velocity = obj.Velocity() - src.Velocity();
+  const geometry::Vector2D relative_velocity = obj.velocity() - src.velocity();
   const int64_t obj_type = static_cast<int64_t>(obj.Type());
   feature[0] = 1.0f;  // Valid
   feature[1] = dis;
@@ -71,10 +71,10 @@ void ExtractKineticObjectFeature(const KineticObject& src,
   feature[3] = obj.length();
   feature[4] = obj.width();
   feature[5] = relative_heading;
-  feature[6] = obj.speed();
-  feature[7] = relative_velocity.Norm();
-  feature[8] = relative_velocity.Angle();
-  feature[9 + obj_type] = 1.0f;
+  feature[6] = relative_velocity.x();
+  feature[7] = relative_velocity.y();
+  // One-hot vector for object_type, assume feature is initially 0.
+  feature[8 + obj_type] = 1.0f;
 }
 
 void ExtractRoadPointFeature(const KineticObject& src, const RoadPoint& obj,
@@ -607,7 +607,7 @@ std::vector<float> Scenario::egoObservationImpl(
     const KineticObject& src) const {
   std::vector<float> state(kEgoFeatureSize);
 
-  state[0] = src.speed();
+  state[0] = obj->Speed();
 
   float sourceHeading = geometry::utils::NormalizeAngle(src.heading());
 

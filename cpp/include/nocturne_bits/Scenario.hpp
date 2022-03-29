@@ -37,9 +37,9 @@ constexpr int64_t kMaxVisibleTrafficLights = 20;
 constexpr int64_t kMaxVisibleStopSigns = 4;
 
 // KineticObject features are:
-// [ valid, distance, azimuth, length, witdh, relative_heading, speed,
-//   relative_velocity_speed, relative_velocity_angle, type (one_hot of 8) ]
-constexpr int64_t kKineticObjectFeatureSize = 17;
+// [ valid, distance, azimuth, length, witdh, relative_heading,
+//   relative_velocity_x, relative_velocity_y, object_type (one_hot of 8) ]
+constexpr int64_t kKineticObjectFeatureSize = 16;
 
 // RoadPoint features are:
 // [ valid, distance, azimuth, road_type (one_hot of 7) ]
@@ -59,6 +59,8 @@ constexpr int64_t kStopSignsFeatureSize = 3;
 constexpr int64_t kEgoFeatureSize = 5;
 
 // For py::array_t forward declaration.
+// https://github.com/pybind/pybind11/blob/master/include/pybind11/numpy.h#L986
+// https://github.com/pybind/pybind11/blob/master/include/pybind11/numpy.h#L143
 constexpr int kNumpyArrayForcecast = 0x0010;
 
 class Scenario : public sf::Drawable {
