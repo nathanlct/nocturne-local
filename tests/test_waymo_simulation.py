@@ -7,7 +7,7 @@ from nocturne import Simulation
 
 def test_scenario_functions():
 
-    file_path = '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json/tfrecord-00002-of-01000_2.json'
+    file_path = 'tests/large_file.json'
     os.environ["DISPLAY"] = ":0.0"
     ################################
     # Vehicle Collision checking
