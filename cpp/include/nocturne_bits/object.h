@@ -78,6 +78,22 @@ class Object : public sf::Drawable, public geometry::AABBInterface {
 class KineticObject : public Object {
  public:
   KineticObject() = default;
+
+  KineticObject(int64_t id, float length, float width,
+                const geometry::Vector2D& position,
+                const geometry::Vector2D& destination, float heading,
+                const geometry::Vector2D& velocity, bool can_block_sight,
+                bool can_be_collided, bool check_collision)
+      : Object(id, position, can_block_sight, can_be_collided, check_collision),
+        length_(length),
+        width_(width),
+        destination_(destination),
+        heading_(heading),
+        velocity_(velocity),
+        random_gen_(std::random_device()()) {
+    InitRandomColor();
+  }
+
   KineticObject(int64_t id, float length, float width,
                 const geometry::Vector2D& position,
                 const geometry::Vector2D& destination, float heading,
@@ -88,7 +104,7 @@ class KineticObject : public Object {
         width_(width),
         destination_(destination),
         heading_(heading),
-        speed_(speed),
+        velocity_(geometry::PolarToVector2D(speed, heading)),
         random_gen_(std::random_device()()) {
     InitRandomColor();
   }
@@ -105,11 +121,20 @@ class KineticObject : public Object {
   float heading() const { return heading_; }
   void set_heading(float heading) { heading_ = heading; }
 
-  float speed() const { return speed_; }
-  void set_speed(float speed) { speed_ = speed; }
+  // float speed() const { return speed_; }
+  // void set_speed(float speed) { speed_ = speed; }
 
-  geometry::Vector2D Velocity() const {
-    return geometry::PolarToVector2D(speed_, heading_);
+  const geometry::Vector2D& velocity() const { return velocity_; }
+  void set_velocity(const geometry::Vector2D& velocity) {
+    velocity_ = velocity;
+  }
+  void set_velocity(float v_x, float v_y) {
+    velocity_ = geometry::Vector2D(v_x, v_y);
+  }
+
+  float Speed() const { return velocity_.Norm(); }
+  void SetSpeed(float speed) {
+    velocity_ = velocity_ / velocity_.Norm() * speed;
   }
 
   const geometry::Vector2D& destination() const { return destination_; }
@@ -139,7 +164,8 @@ class KineticObject : public Object {
 
   geometry::Vector2D destination_;
   float heading_ = 0.0f;
-  float speed_ = 0.0f;
+  // float speed_ = 0.0f;
+  geometry::Vector2D velocity_;
 
   sf::Color color_;
   sf::RenderTexture* cone_texture_ = nullptr;
