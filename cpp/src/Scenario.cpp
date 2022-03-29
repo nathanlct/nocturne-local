@@ -63,6 +63,7 @@ void ExtractKineticObjectFeature(const KineticObject& src,
       (obj.position() - src.position()).Angle(), src.heading());
   const float relative_heading =
       geometry::utils::AngleSub(obj.heading(), src.heading());
+  const geometry::Vector2D relative_velocity = obj.Velocity() - src.Velocity();
   const int64_t obj_type = static_cast<int64_t>(obj.Type());
   feature[0] = 1.0f;  // Valid
   feature[1] = dis;
@@ -71,7 +72,9 @@ void ExtractKineticObjectFeature(const KineticObject& src,
   feature[4] = obj.width();
   feature[5] = relative_heading;
   feature[6] = obj.speed();
-  feature[7 + obj_type] = 1.0f;
+  feature[7] = relative_velocity.Norm();
+  feature[8] = relative_velocity.Angle();
+  feature[9 + obj_type] = 1.0f;
 }
 
 void ExtractRoadPointFeature(const KineticObject& src, const RoadPoint& obj,

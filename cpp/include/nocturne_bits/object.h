@@ -108,6 +108,10 @@ class KineticObject : public Object {
   float speed() const { return speed_; }
   void set_speed(float speed) { speed_ = speed; }
 
+  geometry::Vector2D Velocity() const {
+    return geometry::PolarToVector2D(speed_, heading_);
+  }
+
   const geometry::Vector2D& destination() const { return destination_; }
   void set_destination(const geometry::Vector2D& destination) {
     destination_ = destination;
