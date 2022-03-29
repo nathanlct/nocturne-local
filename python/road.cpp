@@ -13,7 +13,7 @@ void init_roadline(py::module& m) {
 
   py::class_<nocturne::RoadLine, std::shared_ptr<nocturne::RoadLine>>(
       m, "RoadLine")
-      // .def("getRoadPoints", &nocturne::RoadLine::getRoadPoints)
+      .def("getGeometry", &nocturne::RoadLine::getGeometry)
       // .def("getAllPoints", &nocturne::RoadLine::getAllPoints)
       .def("canCollide", &nocturne::RoadLine::check_collision);
   //   .def("getRoadType", &nocturne::RoadLine::getRoadType);

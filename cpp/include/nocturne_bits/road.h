@@ -94,6 +94,9 @@ class RoadLine : public sf::Drawable {
 
   int64_t num_road_points() const { return num_road_points_; }
   const std::vector<RoadPoint>& road_points() const { return road_points_; }
+  const std::vector<geometry::Vector2D> getGeometry() const {
+    return geometry_points_;
+  }
 
   bool check_collision() const { return check_collision_; }
 
