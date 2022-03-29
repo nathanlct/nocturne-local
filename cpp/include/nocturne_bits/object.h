@@ -133,9 +133,7 @@ class KineticObject : public Object {
   }
 
   float Speed() const { return velocity_.Norm(); }
-  void SetSpeed(float speed) {
-    velocity_ = velocity_ / velocity_.Norm() * speed;
-  }
+  void SetSpeed(float speed) { velocity_ *= speed / velocity_.Norm(); }
 
   const geometry::Vector2D& destination() const { return destination_; }
   void set_destination(const geometry::Vector2D& destination) {
