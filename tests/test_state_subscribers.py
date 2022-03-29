@@ -41,11 +41,12 @@ def test_state_subscribers():
     # check that the observed vehicle has the right state
     # the vehicle is 10 meters away northwards, pointed east, we are pointed north
     # so our result should be
-    # [1 #valid, 10 #distance, 0 # azimuth, 2 # length, 1 # width, -pi/2 # relative-heading, 5 # speed]
+    # [1 #valid, 10 #distance, 0 # azimuth, 2 # length, 1 # width, -pi/2 # relative-heading, 5 # relative x-speed
+    # -5 * np.sqrt(2) relative y speed]
     # the object is a vehicle so it gets one-hot to [0, 1, 0, 0, 0, 0, 0, 0]
     np.testing.assert_allclose(new_state[0:num_object_states], [
         1, 10.0, 0.0, vehs[1].getLength(), vehs[1].getWidth(), -np.pi / 2, 5.0,
-        0, 1, 0, 0, 0, 0, 0, 0
+        -5 * np.sqrt(2), 0, 1, 0, 0, 0, 0, 0, 0
     ],
                                rtol=1e-5,
                                atol=1e-5)
@@ -77,7 +78,7 @@ def test_state_subscribers():
     # vehicle
     np.testing.assert_allclose(new_state[0:num_object_states], [
         1, 10.0, 0.0, vehs[1].getLength(), vehs[1].getWidth(), -np.pi / 2, 5.0,
-        0, 1, 0, 0, 0, 0, 0, 0
+        -5 * np.sqrt(2), 0, 1, 0, 0, 0, 0, 0, 0
     ],
                                rtol=1e-5,
                                atol=1e-5)
@@ -93,7 +94,6 @@ def test_state_subscribers():
     ########################## now rotate the vehicle so it sees the road points but not the vehicle ##############
     vehs[0].setHeading(np.pi / 4)
     new_state = scenario.observation(vehs[0], 120, 0.1)
-    print(vehs[0].getHeading())
     # vehicle
     np.testing.assert_allclose(new_state[0:num_object_states],
                                [0] * num_object_states,

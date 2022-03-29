@@ -607,7 +607,7 @@ std::vector<float> Scenario::egoObservationImpl(
     const KineticObject& src) const {
   std::vector<float> state(kEgoFeatureSize);
 
-  state[0] = obj->Speed();
+  state[0] = src.Speed();
 
   float sourceHeading = geometry::utils::NormalizeAngle(src.heading());
 
