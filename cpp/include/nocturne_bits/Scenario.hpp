@@ -37,7 +37,7 @@ constexpr int64_t kMaxVisibleTrafficLights = 20;
 constexpr int64_t kMaxVisibleStopSigns = 4;
 
 // KineticObject features are:
-// [ valid, distance, azimuth, length, witdh, relative_heading, speed,
+// [ valid, distance, azimuth, length, width, relative_heading, speed,
 //   type (one_hot of 8) ]
 constexpr int64_t kKineticObjectFeatureSize = 15;
 
@@ -52,6 +52,11 @@ constexpr int64_t kTrafficLightFeatureSize = 12;
 // StopSign features are:
 // [ valid, distance, azimuth ]
 constexpr int64_t kStopSignsFeatureSize = 3;
+
+// Ego features are:
+// [ ego speed, distance to goal position, relative angle to goal position,
+// length, width ]
+constexpr int64_t kEgoFeatureSize = 5;
 
 // For py::array_t forward declaration.
 constexpr int kNumpyArrayForcecast = 0x0010;
@@ -105,8 +110,8 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<KineticObject>> getRoadObjects();
   std::vector<std::shared_ptr<RoadLine>> getRoadLines();
 
-  std::vector<float> getEgoState(KineticObject* obj);
-
+  pybind11::array_t<float, kNumpyArrayForcecast> egoStateObservation(
+      const KineticObject& src) const;
   pybind11::array_t<float, kNumpyArrayForcecast> Observation(
       const KineticObject& src, float view_dist, float view_angle) const;
 
@@ -114,10 +119,20 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<KineticObject>> getObjectsThatMoved() {
     return objectsThatMoved;
   }
+  int64_t getMaxNumVisibleKineticObjects() { return kMaxVisibleKineticObjects; }
+  int64_t getMaxNumVisibleRoadPoints() { return kMaxVisibleRoadPoints; }
+  int64_t getMaxNumVisibleTrafficLights() { return kMaxVisibleTrafficLights; }
+  int64_t getMaxNumVisibleStopSigns() { return kMaxVisibleStopSigns; }
+  int64_t getKineticObjectFeatureSize() { return kKineticObjectFeatureSize; }
+  int64_t getRoadPointFeatureSize() { return kRoadPointFeatureSize; }
+  int64_t getTrafficLightFeatureSize() { return kTrafficLightFeatureSize; }
+  int64_t getStopSignsFeatureSize() { return kStopSignsFeatureSize; }
+  int64_t getEgoFeatureSize() { return kEgoFeatureSize; }
 
  protected:
   void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 
+  std::vector<float> egoObservationImpl(const KineticObject& src) const;
   std::vector<float> ObservationImpl(const KineticObject& src, float view_dist,
                                      float view_angle) const;
 

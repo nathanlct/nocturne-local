@@ -270,16 +270,17 @@ void Scenario::loadScenario(std::string path) {
           lineSegments.push_back(lineSegment);
         }
       }
+      // Now finish constructing the entire roadline object which is what will
+      // be used for drawing
+      int road_size = road["geometry"].size();
+      laneGeometry.emplace_back(road["geometry"][road_size - 1]["x"],
+                                road["geometry"][road_size - 1]["y"]);
+      // TODO(ev) 8 is a hardcoding
+      std::shared_ptr<RoadLine> roadLine =
+          std::make_shared<RoadLine>(road_type, std::move(laneGeometry),
+                                     /*num_road_points=*/8, checkForCollisions);
+      roadLines.push_back(roadLine);
     }
-    // Now construct the entire roadline object which is what will be used for
-    // drawing
-    int road_size = road["geometry"].size();
-    laneGeometry.emplace_back(road["geometry"][road_size - 1]["x"],
-                              road["geometry"][road_size - 1]["y"]);
-    std::shared_ptr<RoadLine> roadLine =
-        std::make_shared<RoadLine>(road_type, std::move(laneGeometry),
-                                   /*num_road_points=*/8, checkForCollisions);
-    roadLines.push_back(roadLine);
   }
   roadNetworkBounds = sf::FloatRect(minX, minY, maxX - minX, maxY - minY);
 
@@ -599,15 +600,16 @@ std::vector<const TrafficLight*> Scenario::VisibleTrafficLights(
   return ret;
 }
 
-std::vector<float> Scenario::getEgoState(KineticObject* obj) {
-  std::vector<float> state(4);
+std::vector<float> Scenario::egoObservationImpl(
+    const KineticObject& src) const {
+  std::vector<float> state(kEgoFeatureSize);
 
-  state[0] = obj->speed();
+  state[0] = src.speed();
 
-  float sourceHeading = geometry::utils::NormalizeAngle(obj->heading());
+  float sourceHeading = geometry::utils::NormalizeAngle(src.heading());
 
-  geometry::Vector2D sourcePos = obj->position();
-  geometry::Vector2D goalPos = obj->destination();
+  geometry::Vector2D sourcePos = src.position();
+  geometry::Vector2D goalPos = src.destination();
 
   geometry::Vector2D otherRelativePos = goalPos - sourcePos;
   float dist = otherRelativePos.Norm();
@@ -617,7 +619,8 @@ std::vector<float> Scenario::getEgoState(KineticObject* obj) {
 
   state[1] = dist;
   state[2] = headingDiff;
-  state[3] = obj->length();
+  state[3] = src.length();
+  state[4] = src.width();
 
   return state;
 }

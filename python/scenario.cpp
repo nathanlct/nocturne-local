@@ -9,6 +9,11 @@ namespace py = pybind11;
 
 namespace nocturne {
 
+pybind11::array_t<float> Scenario::egoStateObservation(
+    const KineticObject& src) const {
+  return utils::AsNumpyArray<float>(egoObservationImpl(src));
+}
+
 pybind11::array_t<float> Scenario::Observation(const KineticObject& src,
                                                float view_dist,
                                                float view_angle) const {
@@ -48,13 +53,31 @@ void init_scenario(py::module& m) {
       .def("hasExpertAction", &nocturne::Scenario::hasExpertAction)
       .def("getExpertAction", &nocturne::Scenario::getExpertAction)
       .def("getValidExpertStates", &nocturne::Scenario::getValidExpertStates)
-      .def("getEgoState", &nocturne::Scenario::getEgoState)
+      .def("getMaxNumVisibleKineticObjects",
+           &nocturne::Scenario::getMaxNumVisibleKineticObjects)
+      .def("getMaxNumVisibleRoadPoints",
+           &nocturne::Scenario::getMaxNumVisibleRoadPoints)
+      .def("getMaxNumVisibleStopSigns",
+           &nocturne::Scenario::getMaxNumVisibleStopSigns)
+      .def("getMaxNumVisibleTrafficLights",
+           &nocturne::Scenario::getMaxNumVisibleTrafficLights)
+      .def("getKineticObjectFeatureSize",
+           &nocturne::Scenario::getKineticObjectFeatureSize)
+      .def("getRoadPointFeatureSize",
+           &nocturne::Scenario::getRoadPointFeatureSize)
+      .def("getTrafficLightFeatureSize",
+           &nocturne::Scenario::getTrafficLightFeatureSize)
+      .def("getStopSignsFeatureSize",
+           &nocturne::Scenario::getStopSignsFeatureSize)
+      .def("getEgoFeatureSize", &nocturne::Scenario::getEgoFeatureSize)
       // .def("getVisibleObjects", &nocturne::Scenario::getVisibleObjects)
       // .def("getVisibleRoadPoints", &nocturne::Scenario::getVisibleRoadPoints)
       // .def("getVisibleStopSigns", &nocturne::Scenario::getVisibleStopSigns)
       // .def("getVisibleTrafficLights",
       // &nocturne::Scenario::getVisibleTrafficLights)
-      .def("observation", &nocturne::Scenario::Observation);
+      .def("observation", &nocturne::Scenario::Observation, py::arg("object"),
+           py::arg("view_dist") = 60, py ::arg("view_angle") = 1.58)
+      .def("egoStateObservation", &nocturne::Scenario::egoStateObservation);
   // .def(
   //     py::init<std::string>(),
   //     "Constructor for Scenario",
