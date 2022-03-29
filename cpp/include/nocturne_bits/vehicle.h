@@ -10,6 +10,17 @@ namespace nocturne {
 
 class Vehicle : public KineticObject {
  public:
+  Vehicle() = default;
+
+  Vehicle(int64_t id, float length, float width,
+          const geometry::Vector2D& position,
+          const geometry::Vector2D& destination, float heading,
+          const geometry::Vector2D& velocity, bool can_block_sight,
+          bool can_be_collided, bool check_collision)
+      : KineticObject(id, length, width, position, destination, heading,
+                      velocity, can_block_sight, can_be_collided,
+                      check_collision) {}
+
   Vehicle(int64_t id, float length, float width,
           const geometry::Vector2D& position,
           const geometry::Vector2D& destination, float heading, float speed,
@@ -17,7 +28,7 @@ class Vehicle : public KineticObject {
       : KineticObject(id, length, width, position, destination, heading, speed,
                       can_block_sight, can_be_collided, check_collision) {}
 
-  std::string Type() const override { return "Vehicle"; }
+  ObjectType Type() const override { return ObjectType::kVehicle; }
 
   void setAccel(float acceleration) { accelAction = acceleration; }
 
@@ -41,14 +52,14 @@ class Pedestrian : public Vehicle {
  public:
   using Vehicle ::Vehicle;
 
-  std::string Type() const override { return "Pedestrian"; }
+  ObjectType Type() const override { return ObjectType::kPedestrian; }
 };
 
 class Cyclist : public Vehicle {
  public:
   using Vehicle ::Vehicle;
 
-  std::string Type() const override { return "Cyclist"; }
+  ObjectType Type() const override { return ObjectType::kCyclist; }
 };
 
 }  // namespace nocturne

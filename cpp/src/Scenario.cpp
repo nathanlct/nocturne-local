@@ -1,6 +1,7 @@
 #include "Scenario.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
 #include <memory>
 
@@ -15,24 +16,107 @@
 
 namespace nocturne {
 
+namespace {
+
+std::vector<const Object*> VisibleCandidates(const geometry::BVH& bvh,
+                                             const Object& src,
+                                             const ViewField& vf) {
+  std::vector<const Object*> objects;
+  if (!bvh.Empty()) {
+    const std::vector<const geometry::AABBInterface*> candidates =
+        bvh.IntersectionCandidates(vf);
+    for (const auto* obj : candidates) {
+      if (obj != &src) {
+        objects.push_back(dynamic_cast<const Object*>(obj));
+      }
+    }
+  }
+  return objects;
+}
+
+std::vector<std::pair<const Object*, float>> NearestK(
+    const Object& src, const std::vector<const Object*>& objects, int64_t k) {
+  const geometry::Vector2D& src_pos = src.position();
+  const int64_t n = objects.size();
+  std::vector<std::pair<const Object*, float>> ret;
+  ret.reserve(n);
+  for (const Object* obj : objects) {
+    ret.emplace_back(obj, geometry::Distance(src_pos, obj->position()));
+  }
+  const auto cmp = [](const std::pair<const Object*, float>& lhs,
+                      const std::pair<const Object*, float>& rhs) {
+    return lhs.second < rhs.second;
+  };
+  if (n <= k) {
+    std::sort(ret.begin(), ret.end(), cmp);
+  } else {
+    std::partial_sort(ret.begin(), ret.begin() + k, ret.end(), cmp);
+    ret.resize(k);
+  }
+  return ret;
+}
+
+void ExtractKineticObjectFeature(const KineticObject& src,
+                                 const KineticObject& obj, float dis,
+                                 float* feature) {
+  const float azimuth = geometry::utils::AngleSub(
+      (obj.position() - src.position()).Angle(), src.heading());
+  const float relative_heading =
+      geometry::utils::AngleSub(obj.heading(), src.heading());
+  const geometry::Vector2D relative_velocity = obj.velocity() - src.velocity();
+  const int64_t obj_type = static_cast<int64_t>(obj.Type());
+  feature[0] = 1.0f;  // Valid
+  feature[1] = dis;
+  feature[2] = azimuth;
+  feature[3] = obj.length();
+  feature[4] = obj.width();
+  feature[5] = relative_heading;
+  feature[6] = relative_velocity.x();
+  feature[7] = relative_velocity.y();
+  // One-hot vector for object_type, assume feature is initially 0.
+  feature[8 + obj_type] = 1.0f;
+}
+
+void ExtractRoadPointFeature(const KineticObject& src, const RoadPoint& obj,
+                             float dis, float* feature) {
+  const float azimuth = geometry::utils::AngleSub(
+      (obj.position() - src.position()).Angle(), src.heading());
+  const int64_t road_type = static_cast<int64_t>(obj.road_type());
+  feature[0] = 1.0f;  // Valid
+  feature[1] = dis;
+  feature[2] = azimuth;
+  // One-hot vector for road_type, assume feature is initially 0.
+  feature[3 + road_type] = 1.0f;
+}
+
+void ExtractTrafficLightFeature(const KineticObject& src,
+                                const TrafficLight& obj, float dis,
+                                float* feature) {
+  const float azimuth = geometry::utils::AngleSub(
+      (obj.position() - src.position()).Angle(), src.heading());
+  const int64_t light_state = static_cast<int64_t>(obj.LightState());
+  feature[0] = 1.0f;  // Valid
+  feature[1] = dis;
+  feature[2] = azimuth;
+  // One-hot vector for light_state, assume feature is initially 0.
+  feature[3 + light_state] = 1.0f;
+}
+
+void ExtractStopSignFeature(const KineticObject& src, const StopSign& obj,
+                            float dis, float* feature) {
+  const float azimuth = geometry::utils::AngleSub(
+      (obj.position() - src.position()).Angle(), src.heading());
+  feature[0] = 1.0f;  // Valid
+  feature[1] = dis;
+  feature[2] = azimuth;
+}
+
+}  // namespace
+
 using geometry::utils::kPi;
+
 Scenario::Scenario(std::string path, int startTime, bool useNonVehicles)
-    : currTime(startTime),
-      useNonVehicles(useNonVehicles),
-      lineSegments(),
-      roadLines(),
-      vehicles(),
-      pedestrians(),
-      cyclists(),
-      roadObjects(),
-      stopSigns(),
-      trafficLights(),
-      imageTexture(nullptr),
-      expertTrajectories(),
-      expertSpeeds(),
-      expertHeadings(),
-      lengths(),
-      expertValid() {
+    : currTime(startTime), useNonVehicles(useNonVehicles) {
   if (path.size() > 0) {
     loadScenario(path);
   } else {
@@ -248,62 +332,23 @@ void Scenario::loadScenario(std::string path) {
     vehicle_bvh_.InitHierarchy(storeObjects);
   }
 
-  // Now create the BVH for the inividual road points that will be passed to our
-  // agent as state Since the line segments never move we only need to define
-  // this once
-  const int64_t nLines = roadLines.size();
-  const int64_t nPointsPerLine = roadLines[0]->num_road_points();
-  if ((nLines * nPointsPerLine) > 0) {
-    std::vector<const geometry::AABBInterface*> roadPointObjects;
-    roadPointObjects.reserve(nLines * nPointsPerLine);
-    for (const auto& roadLine : roadLines) {
-      for (const auto& roadPoint : roadLine->road_points()) {
-        roadPointObjects.push_back(
-            dynamic_cast<const geometry::AABBInterface*>(&roadPoint));
-      }
+  std::vector<const geometry::AABBInterface*> static_objects;
+  for (const auto& roadLine : roadLines) {
+    for (const auto& roadPoint : roadLine->road_points()) {
+      static_objects.push_back(
+          dynamic_cast<const geometry::AABBInterface*>(&roadPoint));
     }
-    road_point_bvh.InitHierarchy(roadPointObjects);
   }
-
-  // // Now create the BVH for the stop signs
-  // // Since the stop signs never move we only need to define this once
-  const int64_t nStopSigns = stopSigns.size();
-  if (nStopSigns > 0) {
-    std::vector<const geometry::AABBInterface*> stopSignObjects;
-    stopSignObjects.reserve(nStopSigns);
-    for (const auto& obj : stopSigns) {
-      stopSignObjects.push_back(
-          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-    }
-    stop_sign_bvh.InitHierarchy(stopSignObjects);
+  for (const auto& obj : stopSigns) {
+    static_objects.push_back(
+        dynamic_cast<const geometry::AABBInterface*>(obj.get()));
   }
-
-  // // Now create the BVH for the traffic lights
-  // // Since the line segments never move we only need to define this once but
-  // // we also need to push back an index into the traffic light states so that
-  // // we can
-  const int64_t nTrafficLights = trafficLights.size();
-  if (nTrafficLights > 0) {
-    std::vector<const geometry::AABBInterface*> tlObjects;
-    tlObjects.reserve(nTrafficLights);
-    for (const auto& obj : trafficLights) {
-      tlObjects.push_back(dynamic_cast<geometry::AABBInterface*>(obj.get()));
-    }
-    tl_bvh_.InitHierarchy(tlObjects);
+  for (const auto& obj : trafficLights) {
+    static_objects.push_back(
+        dynamic_cast<const geometry::AABBInterface*>(obj.get()));
   }
+  static_bvh_.InitHierarchy(static_objects);
 }
-
-// void Scenario::createVehicle(float posX, float posY, float width, float
-// length,
-//                              float heading, bool occludes, bool collides,
-//                              bool checkForCollisions, float goalPosX,
-//                              float goalPosY) {
-//   Vehicle* veh = new Vehicle(geometry::Vector2D(posX, posY), width, length,
-//                              heading, occludes, collides, checkForCollisions,
-//                              geometry::Vector2D(goalPosX, goalPosY));
-//   auto ptr = std::shared_ptr<Vehicle>(veh);
-//   vehicles.push_back(ptr);
-// }
 
 void Scenario::step(float dt) {
   currTime += int(dt / 0.1);  // TODO(ev) hardcoding
@@ -429,175 +474,138 @@ std::pair<float, geometry::Vector2D> Scenario::getObjectHeadingAndPos(
   return std::make_pair(sourceHeading, sourcePos);
 }
 
-std::vector<const Object*> Scenario::getVisibleObjects(
-    KineticObject* sourceObj, float viewAngle, float viewDist,
-    int64_t maxNumVisibleObjects, const geometry::BVH& bvh) {
-  const float heading = sourceObj->heading();
-  const geometry::Vector2D& position = sourceObj->position();
-  const ViewField vf(position, viewDist, heading, viewAngle);
+std::vector<float> Scenario::ObservationImpl(const KineticObject& src,
+                                             float view_dist,
+                                             float view_angle) const {
+  constexpr int64_t kKineticObjectFeatureStride = 0;
+  constexpr int64_t kRoadPointFeatureStride =
+      kKineticObjectFeatureStride +
+      kMaxVisibleKineticObjects * kKineticObjectFeatureSize;
+  constexpr int64_t kTrafficLightFeatureStride =
+      kRoadPointFeatureStride + kMaxVisibleRoadPoints * kRoadPointFeatureSize;
+  constexpr int64_t kStopSignFeatureStride =
+      kTrafficLightFeatureStride +
+      kMaxVisibleTrafficLights * kTrafficLightFeatureSize;
+  constexpr int64_t kFeatureSize =
+      kStopSignFeatureStride + kMaxVisibleStopSigns * kStopSignsFeatureSize;
 
-  std::vector<const Object*> visible_objects;
-  if (!bvh.Empty()) {
-    const std::vector<const geometry::AABBInterface*> candidates =
-        bvh.IntersectionCandidates(vf);
-    std::vector<const Object*> objects;
-    objects.reserve(candidates.size());
-    for (const auto* obj : candidates) {
-      if (obj != sourceObj) objects.push_back(dynamic_cast<const Object*>(obj));
+  const auto [kinetic_objects, road_points, traffic_lights, stop_signs] =
+      VisibleObjects(src, view_dist, view_angle);
+
+  const auto k_targets =
+      NearestK(src, kinetic_objects, kMaxVisibleKineticObjects);
+  const auto r_targets = NearestK(src, road_points, kMaxVisibleRoadPoints);
+  const auto t_targets =
+      NearestK(src, traffic_lights, kMaxVisibleTrafficLights);
+  const auto s_targets = NearestK(src, stop_signs, kMaxVisibleStopSigns);
+
+  std::vector<float> obs(kFeatureSize, 0.0f);
+
+  // KineticObject feature.
+  float* k_feature_ptr = obs.data() + kKineticObjectFeatureStride;
+  for (const auto [obj, dis] : k_targets) {
+    ExtractKineticObjectFeature(src, *(dynamic_cast<const KineticObject*>(obj)),
+                                dis, k_feature_ptr);
+    k_feature_ptr += kKineticObjectFeatureSize;
+  }
+
+  // RoadPoint feature.
+  float* r_feature_ptr = obs.data() + kRoadPointFeatureStride;
+  for (const auto [obj, dis] : r_targets) {
+    ExtractRoadPointFeature(src, *(dynamic_cast<const RoadPoint*>(obj)), dis,
+                            r_feature_ptr);
+    r_feature_ptr += kRoadPointFeatureSize;
+  }
+
+  // TrafficLight feature.
+  float* t_feature_ptr = obs.data() + kTrafficLightFeatureStride;
+  for (const auto [obj, dis] : t_targets) {
+    ExtractTrafficLightFeature(src, *(dynamic_cast<const TrafficLight*>(obj)),
+                               dis, t_feature_ptr);
+    t_feature_ptr += kTrafficLightFeatureSize;
+  }
+
+  // StopSign feature.
+  float* s_feature_ptr = obs.data() + kStopSignFeatureStride;
+  for (const auto [obj, dis] : s_targets) {
+    ExtractStopSignFeature(src, *(dynamic_cast<const StopSign*>(obj)), dis,
+                           s_feature_ptr);
+    s_feature_ptr += kStopSignsFeatureSize;
+  }
+
+  return obs;
+}
+
+std::tuple<std::vector<const Object*>, std::vector<const Object*>,
+           std::vector<const Object*>, std::vector<const Object*>>
+Scenario::VisibleObjects(const KineticObject& src, float view_dist,
+                         float view_angle) const {
+  const float heading = src.heading();
+  const geometry::Vector2D& position = src.position();
+  const ViewField vf(position, view_dist, heading, view_angle);
+
+  std::vector<const Object*> ground_objects =
+      VisibleCandidates(vehicle_bvh_, src, vf);
+  const std::vector<const Object*> static_candidates =
+      VisibleCandidates(static_bvh_, src, vf);
+  std::vector<const Object*> traffic_lights;
+  std::vector<const Object*> stop_signs;
+  for (const Object* obj : static_candidates) {
+    if (obj->Type() == ObjectType::kTrafficLight) {
+      traffic_lights.push_back(obj);
+    } else if (obj->Type() == ObjectType::kStopSign) {
+      stop_signs.push_back(obj);
+    } else if (obj->Type() == ObjectType::kRoadPoint) {
+      // Vehicles can block road_points, check together.
+      ground_objects.push_back(obj);
     }
-    visible_objects = vf.VisibleObjects(objects, maxNumVisibleObjects);
   }
 
-  return visible_objects;
+  ground_objects = vf.VisibleObjects(ground_objects);
+  traffic_lights = vf.VisibleNonblockingObjects(traffic_lights);
+  stop_signs = vf.VisibleNonblockingObjects(stop_signs);
+  std::vector<const Object*> kinetic_objects;
+  std::vector<const Object*> road_points;
+  for (const Object* obj : ground_objects) {
+    if (obj->Type() == ObjectType::kRoadPoint) {
+      road_points.push_back(obj);
+    } else {
+      kinetic_objects.push_back(obj);
+    }
+  }
+
+  return std::make_tuple(kinetic_objects, road_points, traffic_lights,
+                         stop_signs);
 }
 
-std::vector<const KineticObject*> Scenario::getVisibleKineticObjects(
-    KineticObject* sourceObj, float viewAngle, float viewDist) {
-  const std::vector<const Object*> objects =
-      getVisibleObjects(sourceObj, viewAngle, viewDist,
-                        maxNumVisibleKineticObjects, vehicle_bvh_);
-  const size_t n = objects.size();
-  std::vector<const KineticObject*> kinetic_objects;
-  kinetic_objects.reserve(n);
-  for (size_t i = 0; i < n; i++) {
-    kinetic_objects.push_back(dynamic_cast<const KineticObject*>(objects[i]));
+std::vector<const TrafficLight*> Scenario::VisibleTrafficLights(
+    const KineticObject& src, float view_dist, float view_angle) const {
+  std::vector<const TrafficLight*> ret;
+
+  const float heading = src.heading();
+  const geometry::Vector2D& position = src.position();
+  const ViewField vf(position, view_dist, heading, view_angle);
+
+  // Assume limited number of TrafficLights, check all of them.
+  std::vector<const Object*> objects;
+  objects.reserve(trafficLights.size());
+  for (const auto& obj : trafficLights) {
+    objects.push_back(dynamic_cast<const Object*>(obj.get()));
   }
-  return kinetic_objects;
-}
+  objects = vf.VisibleNonblockingObjects(objects);
 
-std::vector<const RoadPoint*> Scenario::getVisibleRoadPoints(
-    KineticObject* sourceObj, float viewAngle, float viewDist) {
-  const std::vector<const Object*> objects = getVisibleObjects(
-      sourceObj, viewAngle, viewDist, maxNumVisibleRoadPoints, road_point_bvh);
-  const size_t n = objects.size();
-  std::vector<const RoadPoint*> road_points;
-  road_points.reserve(n);
-  for (size_t i = 0; i < n; i++) {
-    road_points.push_back(dynamic_cast<const RoadPoint*>(objects[i]));
-  }
-  return road_points;
-}
-
-std::vector<const StopSign*> Scenario::getVisibleStopSigns(
-    KineticObject* sourceObj, float viewAngle, float viewDist) {
-  const std::vector<const Object*> objects = getVisibleObjects(
-      sourceObj, viewAngle, viewDist, maxNumVisibleStopSigns, stop_sign_bvh);
-  const size_t n = objects.size();
-  std::vector<const StopSign*> stop_signs;
-  stop_signs.reserve(n);
-  for (size_t i = 0; i < n; i++) {
-    stop_signs.push_back(dynamic_cast<const StopSign*>(objects[i]));
-  }
-  return stop_signs;
-}
-
-std::vector<const TrafficLight*> Scenario::getVisibleTrafficLights(
-    KineticObject* sourceObj, float viewAngle, float viewDist) {
-  const std::vector<const Object*> objects = getVisibleObjects(
-      sourceObj, viewAngle, viewDist, maxNumVisibleTLSigns, tl_bvh_);
-  const size_t n = objects.size();
-  std::vector<const TrafficLight*> traffic_lights;
-  traffic_lights.reserve(n);
-  for (size_t i = 0; i < n; i++) {
-    traffic_lights.push_back(dynamic_cast<const TrafficLight*>(objects[i]));
-  }
-  return traffic_lights;
-}
-
-std::vector<float> Scenario::getVisibleState(KineticObject* sourceObj,
-                                             float viewAngle, float viewDist) {
-  // Vehicle state is: dist, heading-diff, speed, length
-  // TL state is: dist, heading-diff, current light color as an int
-  // Road point state is: dist, heading-diff, type of road point as an int i.e.
-  // roadEdge, laneEdge, etc. Stop sign state is: dist, heading-diff
-  constexpr uint64_t n_kinetic_objects_features = 4;
-  constexpr uint64_t n_roads_features = 3;
-  constexpr uint64_t n_stop_signs_features = 2;
-  constexpr uint64_t n_traffic_lights_features = 2;
-
-  const int64_t n = maxNumVisibleKineticObjects * n_kinetic_objects_features +
-                    maxNumVisibleTLSigns * n_traffic_lights_features +
-                    maxNumVisibleRoadPoints * n_roads_features +
-                    maxNumVisibleStopSigns * n_stop_signs_features;
-  std::vector<float> state;
-  state.reserve(n);
-
-  const float heading = sourceObj->heading();
-  const geometry::Vector2D& position = sourceObj->position();
-
-  // vehicles state
-  const std::vector<const KineticObject*> vehicles =
-      getVisibleKineticObjects(sourceObj, viewAngle, viewDist);
-  std::vector<float> vehicle_state(
-      maxNumVisibleKineticObjects * n_kinetic_objects_features, -100.0f);
-  for (size_t i = 0; i < vehicles.size(); ++i) {
-    const KineticObject* obj = vehicles[i];
-    const geometry::Vector2D d = obj->position() - position;
-    vehicle_state[i * n_kinetic_objects_features + 0] = d.Norm();
-    vehicle_state[i * n_kinetic_objects_features + 1] =
-        geometry::utils::AngleSub(d.Angle(), heading);
-    vehicle_state[i * n_kinetic_objects_features + 2] = obj->speed();
-    vehicle_state[i * n_kinetic_objects_features + 3] = obj->length();
+  ret.reserve(objects.size());
+  for (const Object* obj : objects) {
+    ret.push_back(dynamic_cast<const TrafficLight*>(obj));
   }
 
-  // roads state
-  const std::vector<const RoadPoint*> road_points =
-      getVisibleRoadPoints(sourceObj, viewAngle, viewDist);
-  std::vector<float> road_state(maxNumVisibleRoadPoints * n_roads_features,
-                                -100.0f);
-  for (size_t i = 0; i < road_points.size(); ++i) {
-    const RoadPoint* obj = road_points[i];
-    const geometry::Vector2D d = obj->position() - position;
-    road_state[i * n_roads_features + 0] = d.Norm();
-    road_state[i * n_roads_features + 1] =
-        geometry::utils::AngleSub(d.Angle(), heading);
-    road_state[i * n_roads_features + 2] = static_cast<float>(obj->road_type());
-  }
-
-  // stop signs state
-  const std::vector<const StopSign*> stop_signs =
-      getVisibleStopSigns(sourceObj, viewAngle, viewDist);
-  std::vector<float> stop_sign_state(
-      maxNumVisibleStopSigns * n_stop_signs_features, -100.0f);
-  for (size_t i = 0; i < stop_signs.size(); ++i) {
-    const StopSign* obj = stop_signs[i];
-    const geometry::Vector2D d = obj->position() - position;
-    stop_sign_state[i * n_stop_signs_features + 0] = d.Norm();
-    stop_sign_state[i * n_stop_signs_features + 1] =
-        geometry::utils::AngleSub(d.Angle(), heading);
-  }
-
-  // traffic lights state
-  const std::vector<const TrafficLight*> traffic_lights =
-      getVisibleTrafficLights(sourceObj, viewAngle, viewDist);
-  std::vector<float> traffic_light_state(
-      maxNumVisibleTLSigns * n_traffic_lights_features, -100.0f);
-  for (size_t i = 0; i < traffic_lights.size(); ++i) {
-    const TrafficLight* obj = traffic_lights[i];
-    const geometry::Vector2D d = obj->position() - position;
-    traffic_light_state[i * n_traffic_lights_features + 0] = d.Norm();
-    traffic_light_state[i * n_traffic_lights_features + 1] =
-        geometry::utils::AngleSub(d.Angle(), heading);
-    traffic_light_state[i * n_traffic_lights_features + 2] =
-        static_cast<float>(obj->LightState());
-  }
-
-  // concatenate all states
-  state.insert(state.end(), vehicle_state.begin(), vehicle_state.end());
-  state.insert(state.end(), road_state.begin(), road_state.end());
-  state.insert(state.end(), stop_sign_state.begin(), stop_sign_state.end());
-  state.insert(state.end(), traffic_light_state.begin(),
-               traffic_light_state.end());
-  for (float i : state) {
-    std::cout << i << std::endl;
-  }
-  return state;
+  return ret;
 }
 
 std::vector<float> Scenario::getEgoState(KineticObject* obj) {
   std::vector<float> state(4);
 
-  state[0] = obj->speed();
+  state[0] = obj->Speed();
 
   float sourceHeading = geometry::utils::NormalizeAngle(obj->heading());
 
@@ -745,8 +753,8 @@ sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
   return roadNetworkBounds;
 }
 
-ImageMatrix Scenario::getCone(KineticObject* object, float viewAngle,
-                              float viewDist, float headTilt,
+ImageMatrix Scenario::getCone(KineticObject* object, float viewDist,
+                              float viewAngle, float headTilt,
                               bool obscuredView) {  // args in radians
   float circleRadius = viewDist;
   float renderedCircleRadius = 300.0f;
@@ -877,8 +885,10 @@ ImageMatrix Scenario::getCone(KineticObject* object, float viewAngle,
   sf::Transform renderTransform2;
   renderTransform2.scale(1, -1);
 
+  const auto traffic_lights =
+      VisibleTrafficLights(*object, viewDist, viewAngle);
   texture->setView(view);
-  for (const auto& tl : getVisibleTrafficLights(object, viewAngle, viewDist)) {
+  for (const auto& tl : traffic_lights) {
     texture->draw(*tl, renderTransform2);
   }
 

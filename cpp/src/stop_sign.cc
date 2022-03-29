@@ -1,24 +1,27 @@
 #include "stop_sign.h"
 
+#include <vector>
+
+#include "geometry/geometry_utils.h"
 #include "geometry/vector_2d.h"
 #include "utils/sf_utils.h"
 
 namespace nocturne {
 
 geometry::ConvexPolygon StopSign::BoundingPolygon() const {
-  const geometry::Vector2D p0 =
-      position_ + geometry::Vector2D(kStopSignRadius, kStopSignRadius);
-  const geometry::Vector2D p1 =
-      position_ + geometry::Vector2D(-kStopSignRadius, kStopSignRadius);
-  const geometry::Vector2D p2 =
-      position_ + geometry::Vector2D(-kStopSignRadius, -kStopSignRadius);
-  const geometry::Vector2D p3 =
-      position_ + geometry::Vector2D(kStopSignRadius, -kStopSignRadius);
-  return geometry::ConvexPolygon({p0, p1, p2, p3});
+  constexpr float kTheta = geometry::utils::kTwoPi / kStopSignNumEdges;
+  float angle = geometry::utils::kHalfPi;
+  std::vector<geometry::Vector2D> vertices;
+  vertices.reserve(kStopSignNumEdges);
+  for (int i = 0; i < kStopSignNumEdges; ++i) {
+    vertices.push_back(geometry::PolarToVector2D(kStopSignRadius, angle));
+    angle = geometry::utils::AngleAdd(angle, kTheta);
+  }
+  return geometry::ConvexPolygon(std::move(vertices));
 }
 
 void StopSign::draw(sf::RenderTarget& target, sf::RenderStates states) const {
-  sf::CircleShape hexagon(kStopSignRadius, 6);
+  sf::CircleShape hexagon(kStopSignRadius, kStopSignNumEdges);
   hexagon.setFillColor(Color());
   hexagon.setPosition(utils::ToVector2f(position_));
   target.draw(hexagon, states);
