@@ -46,10 +46,12 @@ void Vehicle::kinematicsUpdate(float dt) {
   float dY = speed * sin(heading_ + slipAngle);
 
   heading_ = geometry::utils::AngleAdd(heading_, dHeading * dt);
-  position_ += geometry::Vector2D(dX, dY) * dt;
+  // position_ += geometry::Vector2D(dX, dY) * dt;
   // speed += accel * dt;
+
   // TODO: Update this later.
-  velocity_ = velocity_.Rotate(dHeading * dt);
+  velocity_ = geometry::Vector2D(dX, dY);
+  position_ += velocity_ * dt;
   velocity_ += accel * dt;
 }
 
