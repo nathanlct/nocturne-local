@@ -54,6 +54,8 @@ constexpr int64_t kTrafficLightFeatureSize = 12;
 constexpr int64_t kStopSignsFeatureSize = 3;
 
 // For py::array_t forward declaration.
+// https://github.com/pybind/pybind11/blob/master/include/pybind11/numpy.h#L986
+// https://github.com/pybind/pybind11/blob/master/include/pybind11/numpy.h#L143
 constexpr int kNumpyArrayForcecast = 0x0010;
 
 class Scenario : public sf::Drawable {
