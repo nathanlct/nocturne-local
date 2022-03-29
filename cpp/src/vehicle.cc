@@ -52,7 +52,7 @@ void Vehicle::kinematicsUpdate(float dt) {
   // TODO: Update this later.
   velocity_ = geometry::Vector2D(dX, dY);
   position_ += velocity_ * dt;
-  velocity_ += accel * dt;
+  velocity_ *= (speed + accel * dt) / speed;
 }
 
 void Vehicle::dynamicsUpdate() {}
