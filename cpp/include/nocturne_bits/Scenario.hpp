@@ -9,10 +9,13 @@
 #include <vector>
 
 #include "ImageMatrix.hpp"
+#include "cyclist.h"
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
+#include "kinetic_object.h"
 #include "object.h"
+#include "pedestrian.h"
 #include "road.h"
 #include "stop_sign.h"
 #include "traffic_light.h"
