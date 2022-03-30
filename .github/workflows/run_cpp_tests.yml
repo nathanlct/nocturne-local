@@ -1,4 +1,4 @@
-name: Run C++ tests
+name: C++ tests
 on: [push]
 jobs:
     build:
