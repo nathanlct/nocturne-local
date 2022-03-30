@@ -79,7 +79,7 @@ void VisibleObjectsImpl(const LineSegment& sight,
 // O(N^2) algorithm.
 // TODO: Implment O(NlogN) algorithm when there are too many objects.
 std::vector<const Object*> ViewField::VisibleObjects(
-    const std::vector<const Object*>& objects, int64_t limit) const {
+    const std::vector<const Object*>& objects) const {
   const int64_t n = objects.size();
   const Vector2D& o = center();
   const std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
@@ -93,32 +93,66 @@ std::vector<const Object*> ViewField::VisibleObjects(
       ret.push_back(objects[i]);
     }
   }
-  const int64_t m = ret.size();
-  return (limit < 0 || m <= limit) ? ret : NearestK(ret, limit);
+  return ret;
+}
+
+void ViewField::FilterVisibleObjects(
+    std::vector<const Object*>& objects) const {
+  const int64_t n = objects.size();
+  const Vector2D& o = center();
+  const std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
+  std::vector<bool> mask(n, false);
+  for (const Vector2D& p : sight_endpoints) {
+    VisibleObjectsImpl(LineSegment(o, p), objects, mask);
+  }
+  int64_t pivot = 0;
+  for (; pivot < n && mask[pivot]; ++pivot)
+    ;
+  for (int64_t i = pivot + 1; i < n; ++i) {
+    if (mask[i]) {
+      std::swap(objects[pivot], objects[i]);
+      ++pivot;
+    }
+  }
+  objects.resize(pivot);
 }
 
 std::vector<const Object*> ViewField::VisibleNonblockingObjects(
-    const std::vector<const Object*>& objects, int64_t limit) const {
+    const std::vector<const Object*>& objects) const {
   std::vector<const Object*> ret;
   for (const Object* obj : objects) {
-    const auto edges = obj->BoundingPolygon().Edges();
-    for (const LineSegment& edge : edges) {
-      // Check one endpoint should be enough, the othe one will be checked in
-      // the next edge.
-      const Vector2D& x = edge.Endpoint0();
-      if (Contains(x)) {
-        ret.push_back(obj);
-        break;
-      }
-      const auto [p, q] = Intersection(*this, edge);
-      if (p.has_value() || q.has_value()) {
-        ret.push_back(obj);
-        break;
-      }
+    if (IsVisibleNonblockingObject(obj)) {
+      ret.push_back(obj);
     }
   }
-  const int64_t m = ret.size();
-  return (limit < 0 || m <= limit) ? ret : NearestK(ret, limit);
+  return ret;
+}
+
+void ViewField::FilterVisibleNonblockingObjects(
+    std::vector<const Object*>& objects) const {
+  auto pivot =
+      std::partition(objects.begin(), objects.end(), [this](const Object* obj) {
+        return this->IsVisibleNonblockingObject(obj);
+      });
+  objects.resize(std::distance(objects.begin(), pivot));
+}
+
+std::vector<const Object*> ViewField::VisiblePoints(
+    const std::vector<const Object*>& objects) const {
+  std::vector<const Object*> ret;
+  for (const Object* obj : objects) {
+    if (Contains(obj->position())) {
+      ret.push_back(obj);
+    }
+  }
+  return ret;
+}
+
+void ViewField::FilterVisiblePoints(std::vector<const Object*>& objects) const {
+  auto pivot = std::partition(
+      objects.begin(), objects.end(),
+      [this](const Object* obj) { return this->Contains(obj->position()); });
+  objects.resize(std::distance(objects.begin(), pivot));
 }
 
 std::vector<Vector2D> ViewField::ComputeSightEndpoints(
@@ -152,25 +186,21 @@ std::vector<Vector2D> ViewField::ComputeSightEndpoints(
   return ret;
 }
 
-std::vector<const Object*> ViewField::NearestK(
-    const std::vector<const Object*>& objects, int64_t k) const {
-  const int64_t n = objects.size();
-  if (n <= k) {
-    return objects;
+bool ViewField::IsVisibleNonblockingObject(const Object* obj) const {
+  const auto edges = obj->BoundingPolygon().Edges();
+  for (const LineSegment& edge : edges) {
+    // Check one endpoint should be enough, the othe one will be checked in
+    // the next edge.
+    const Vector2D& x = edge.Endpoint0();
+    if (Contains(x)) {
+      return true;
+    }
+    const auto [p, q] = Intersection(*this, edge);
+    if (p.has_value() || q.has_value()) {
+      return true;
+    }
   }
-  const Vector2D& o = center();
-  std::vector<std::pair<float, const Object*>> dis;
-  dis.reserve(n);
-  for (const Object* obj : objects) {
-    dis.emplace_back(Distance(o, obj->position()), obj);
-  }
-  std::partial_sort(dis.begin(), dis.begin() + k, dis.end());
-  std::vector<const Object*> ret;
-  ret.reserve(k);
-  for (int64_t i = 0; i < k; ++i) {
-    ret.push_back(dis[i].second);
-  }
-  return ret;
+  return false;
 }
 
 }  // namespace nocturne

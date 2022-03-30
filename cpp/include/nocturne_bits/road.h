@@ -12,7 +12,9 @@
 
 namespace nocturne {
 
-constexpr float kRoadPointRadius = 2.0f;
+// RoadPoint should be treated as a single point.
+// Add a dummy radius here for AABB.
+constexpr float kRoadPointRadius = 1e-3;
 
 enum class RoadType {
   kNone = 0,
