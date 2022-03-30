@@ -1,4 +1,4 @@
-name: Build and test the Python nocturne library
+name: Build and Python tests
 on: [push]
 jobs:
     build:
