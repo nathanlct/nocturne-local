@@ -96,7 +96,7 @@ std::vector<const Object*> ViewField::VisibleObjects(
   return ret;
 }
 
-void ViewField::InplaceVisibleObjects(
+void ViewField::FilterVisibleObjects(
     std::vector<const Object*>& objects) const {
   const int64_t n = objects.size();
   const Vector2D& o = center();
@@ -128,7 +128,7 @@ std::vector<const Object*> ViewField::VisibleNonblockingObjects(
   return ret;
 }
 
-void ViewField::InplaceVisibleNonblockingObjects(
+void ViewField::FilterVisibleNonblockingObjects(
     std::vector<const Object*>& objects) const {
   auto pivot =
       std::partition(objects.begin(), objects.end(), [this](const Object* obj) {
@@ -148,8 +148,7 @@ std::vector<const Object*> ViewField::VisiblePoints(
   return ret;
 }
 
-void ViewField::InplaceVisiblePoints(
-    std::vector<const Object*>& objects) const {
+void ViewField::FilterVisiblePoints(std::vector<const Object*>& objects) const {
   auto pivot = std::partition(
       objects.begin(), objects.end(),
       [this](const Object* obj) { return this->Contains(obj->position()); });

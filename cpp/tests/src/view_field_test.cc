@@ -70,7 +70,7 @@ TEST(ViewFieldTest, VisibleObjectsTest) {
   EXPECT_THAT(ret, ElementsAre(&obj6));
 }
 
-TEST(ViewFieldTest, InplaceVisibleObjectsTest) {
+TEST(ViewFieldTest, FilterVisibleObjectsTest) {
   const ViewField vf(Vector2D(1.0f, 1.0f), 10.0f, kHalfPi,
                      geometry::utils::Radians(120.0f));
 
@@ -80,12 +80,12 @@ TEST(ViewFieldTest, InplaceVisibleObjectsTest) {
   const MockObject obj4(4, 1.5f, 1.0f, Vector2D(1.0f, 2.0f), false);
   const MockObject obj5(5, 2.0f, 1.0f, Vector2D(4.5f, 4.0f), true);
   std::vector<const Object*> objects = {&obj1, &obj2, &obj3, &obj4, &obj5};
-  vf.InplaceVisibleObjects(objects);
+  vf.FilterVisibleObjects(objects);
   EXPECT_THAT(objects, ElementsAre(&obj1, &obj4, &obj5));
 
   const MockObject obj6(6, 10.0f, 1.0f, Vector2D(1.0f, 10.4f), true);
   objects = std::vector<const Object*>{&obj6};
-  vf.InplaceVisibleObjects(objects);
+  vf.FilterVisibleObjects(objects);
   EXPECT_THAT(objects, ElementsAre(&obj6));
 }
 

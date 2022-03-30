@@ -585,11 +585,11 @@ Scenario::VisibleObjects(const KineticObject& src, float view_dist,
     }
   }
 
-  vf.InplaceVisibleObjects(kinetic_objects);
-  vf.InplaceVisiblePoints(road_points);
+  vf.FilterVisibleObjects(kinetic_objects);
+  vf.FilterVisiblePoints(road_points);
   VisibleRoadPoints(src, kinetic_objects, road_points);
-  vf.InplaceVisibleNonblockingObjects(traffic_lights);
-  vf.InplaceVisibleNonblockingObjects(stop_signs);
+  vf.FilterVisibleNonblockingObjects(traffic_lights);
+  vf.FilterVisibleNonblockingObjects(stop_signs);
 
   return std::make_tuple(kinetic_objects, road_points, traffic_lights,
                          stop_signs);

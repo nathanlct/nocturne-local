@@ -19,16 +19,16 @@ class ViewField : public geometry::CircularSector {
 
   std::vector<const Object*> VisibleObjects(
       const std::vector<const Object*>& objects) const;
-  void InplaceVisibleObjects(std::vector<const Object*>& objects) const;
+  void FilterVisibleObjects(std::vector<const Object*>& objects) const;
 
   std::vector<const Object*> VisibleNonblockingObjects(
       const std::vector<const Object*>& objects) const;
-  void InplaceVisibleNonblockingObjects(
+  void FilterVisibleNonblockingObjects(
       std::vector<const Object*>& objects) const;
 
   std::vector<const Object*> VisiblePoints(
       const std::vector<const Object*>& objects) const;
-  void InplaceVisiblePoints(std::vector<const Object*>& objects) const;
+  void FilterVisiblePoints(std::vector<const Object*>& objects) const;
 
  protected:
   geometry::Vector2D MakeSightEndpoint(const geometry::Vector2D& p) const {
