@@ -4,9 +4,9 @@ jobs:
     build:
         runs-on: ubuntu-latest
         steps:
-            - name: The job was automatically triggered by a ${{ github.event_name }} event.
-            - name: This job is now running on a ${{ runner.os }} server.
-            - name: Running on branch ${{ github.ref }} of repository ${{ github.repository }}.
+            - name: echo "The job was automatically triggered by a ${{ github.event_name }} event."
+            - name: echo "This job is now running on a ${{ runner.os }} server."
+            - name: echo "Running on branch ${{ github.ref }} of repository ${{ github.repository }}."
             - name: Check out repository code.
               uses: actions/checkout@v2
             - name: Install dependencies.
@@ -15,7 +15,7 @@ jobs:
                   sudo apt-get install libsfml-dev
                   git submodule sync
                   git submodule update --init --recursive
-              - name: Build C++ nocturne library.  # same as python setup.py build?
+            - name: Build C++ nocturne library.
               run: |
                   export LIB_INSTALL_DIR=${{ github.workspace }}/build_usr_local
                   cd ${{ github.workspace }}/cpp
@@ -24,7 +24,7 @@ jobs:
                   cmake .. -DCMAKE_INSTALL_PREFIX=${LIB_INSTALL_DIR}
                   make
                   make install
-            - name: Build C++ tests.  #  not working
+            - name: Build C++ tests.
               run: |
                   export LIB_INSTALL_DIR=${{ github.workspace }}/build_usr_local
                   cd ${{ github.workspace }}/cpp/tests

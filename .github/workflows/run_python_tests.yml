@@ -4,9 +4,9 @@ jobs:
     build:
         runs-on: ubuntu-latest
         steps:
-            - name: The job was automatically triggered by a ${{ github.event_name }} event.
-            - name: This job is now running on a ${{ runner.os }} server.
-            - name: Running on branch ${{ github.ref }} of repository ${{ github.repository }}.
+            - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
+            - run: echo "This job is now running on a ${{ runner.os }} server."
+            - run: echo "Running on branch ${{ github.ref }} of repository ${{ github.repository }}."
             - name: Check out repository code.
               uses: actions/checkout@v2
             - name: Install dependencies.
