@@ -47,16 +47,15 @@ bool IsVisibleRoadPoint(const KineticObject& src, const Object& road_point,
   return true;
 }
 
-std::vector<const Object*> VisibleRoadPoints(
-    const KineticObject& src, const std::vector<const Object*>& road_points,
-    const std::vector<const Object*>& kinetic_objects) {
-  std::vector<const Object*> ret;
-  for (const Object* road_point : road_points) {
-    if (IsVisibleRoadPoint(src, *road_point, kinetic_objects)) {
-      ret.push_back(road_point);
-    }
-  }
-  return ret;
+void VisibleRoadPoints(const KineticObject& src,
+                       const std::vector<const Object*>& kinetic_objects,
+                       std::vector<const Object*>& road_points) {
+  auto pivot = std::partition(
+      road_points.begin(), road_points.end(),
+      [&src, &kinetic_objects](const Object* road_point) {
+        return IsVisibleRoadPoint(src, *road_point, kinetic_objects);
+      });
+  road_points.resize(std::distance(road_points.begin(), pivot));
 }
 
 std::vector<std::pair<const Object*, float>> NearestK(
@@ -586,11 +585,11 @@ Scenario::VisibleObjects(const KineticObject& src, float view_dist,
     }
   }
 
-  kinetic_objects = vf.VisibleObjects(kinetic_objects);
-  road_points = vf.VisiblePoints(road_points);
-  road_points = VisibleRoadPoints(src, road_points, kinetic_objects);
-  traffic_lights = vf.VisibleNonblockingObjects(traffic_lights);
-  stop_signs = vf.VisibleNonblockingObjects(stop_signs);
+  vf.InplaceVisibleObjects(kinetic_objects);
+  vf.InplaceVisiblePoints(road_points);
+  VisibleRoadPoints(src, kinetic_objects, road_points);
+  vf.InplaceVisibleNonblockingObjects(traffic_lights);
+  vf.InplaceVisibleNonblockingObjects(stop_signs);
 
   return std::make_tuple(kinetic_objects, road_points, traffic_lights,
                          stop_signs);
