@@ -23,3 +23,6 @@ dependencies:
     - imageio
     - setproctitle
     - tensorboardX
+    - pytest
+    - flake8
+    - pydocstyle
