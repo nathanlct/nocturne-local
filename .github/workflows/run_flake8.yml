@@ -13,6 +13,7 @@ jobs:
               uses: conda-incubator/setup-miniconda@v2
               with:
                   activate-environment: nocturne
+                  environment-file: environment.yml
                   python-version: 3.8.11
             - name: Run linter.
               shell: bash -l {0}
