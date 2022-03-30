@@ -35,7 +35,9 @@ jobs:
               shell: bash -l {0}
               run: |
                   cd ${{ github.workspace }}
-                  find ./tests -name test_\*.py \
-                   -exec printf "\n\n>>> Running Python test at {}\n\n" \; \
-                   -exec python {} \;
+                  run_test () {
+                    printf "\n\nRunning Python test at $1"
+                    python $1
+                  }
+                  find ./tests -name test_\*.py -print0 | xargs -0 run_test
             - run: echo "Job finished with status ${{ job.status }}."
