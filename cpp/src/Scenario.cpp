@@ -587,7 +587,7 @@ Scenario::VisibleObjects(const KineticObject& src, float view_dist,
   }
 
   kinetic_objects = vf.VisibleObjects(kinetic_objects);
-  road_points = vf.VisibleNonblockingObjects(road_points);
+  road_points = vf.VisiblePoints(road_points);
   road_points = VisibleRoadPoints(src, road_points, kinetic_objects);
   traffic_lights = vf.VisibleNonblockingObjects(traffic_lights);
   stop_signs = vf.VisibleNonblockingObjects(stop_signs);

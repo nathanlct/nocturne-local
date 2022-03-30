@@ -23,6 +23,9 @@ class ViewField : public geometry::CircularSector {
   std::vector<const Object*> VisibleNonblockingObjects(
       const std::vector<const Object*>& objects, int64_t limit = -1) const;
 
+  std::vector<const Object*> VisiblePoints(
+      const std::vector<const Object*>& objects, int64_t limit = -1) const;
+
  protected:
   geometry::Vector2D MakeSightEndpoint(const geometry::Vector2D& p) const {
     const geometry::Vector2D& o = center();

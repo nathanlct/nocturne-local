@@ -121,6 +121,18 @@ std::vector<const Object*> ViewField::VisibleNonblockingObjects(
   return (limit < 0 || m <= limit) ? ret : NearestK(ret, limit);
 }
 
+std::vector<const Object*> ViewField::VisiblePoints(
+    const std::vector<const Object*>& objects, int64_t limit) const {
+  std::vector<const Object*> ret;
+  for (const Object* obj : objects) {
+    if (Contains(obj->position())) {
+      ret.push_back(obj);
+    }
+  }
+  const int64_t m = ret.size();
+  return (limit < 0 || m <= limit) ? ret : NearestK(ret, limit);
+}
+
 std::vector<Vector2D> ViewField::ComputeSightEndpoints(
     const std::vector<const Object*>& objects) const {
   std::vector<Vector2D> ret;
