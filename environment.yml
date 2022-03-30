@@ -13,7 +13,6 @@ dependencies:
     - seaborn
     - wandb==0.12.6
     - setproctitle==1.2.2
-    - sklearn==1.0.1
     - imageio==2.10.1
     - moviepy==1.0.3
     - opencv-python
