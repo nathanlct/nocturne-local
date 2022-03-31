@@ -65,7 +65,7 @@ void KineticObject::SetActionFromKeyboard() {
     acceleration_ = 1.5f;
   } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
     // brake faster than moving backwards
-    acceleration_ = speed > 0 : -3.0f : -1.5f;
+    acceleration_ = speed > 0 ? -3.0f : -1.5f;
   } else if (std::abs(speed) < 0.1) {
     // clip to 0
     velocity_ = geometry::PolarToVector2D(0, heading_);
