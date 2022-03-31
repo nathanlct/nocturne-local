@@ -58,14 +58,19 @@ void KineticObject::InitRandomColor() {
 }
 
 void KineticObject::SetActionFromKeyboard() {
+  const float speed = Speed();
+
   // up: accelerate ; down: brake
   if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
     acceleration_ = 1.5f;
   } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
     acceleration_ = -3.0f;
+  } else if (std::abs(speed) < 0.1) {
+    // clip to 0
+    velocity_ = geometry::PolarToVector2D(0, heading_);
   } else {
     // friction
-    acceleration_ = -0.5f;
+    acceleration_ = 0.5f * (speed > 0 ? -1.0f : 1.0f);
   }
 
   // right: turn right; left: turn left
