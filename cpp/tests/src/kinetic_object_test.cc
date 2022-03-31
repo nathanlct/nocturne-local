@@ -58,14 +58,15 @@ TEST(KineticObjectTest, ConstantAccelerationMotionTest) {
   const float length = 2.0f;
   const float width = 1.0f;
   const float heading = kQuarterPi;
-  const float speed = 0.0f;
-  const float acceleration = 2.0f;
-  const geometry::Vector2D velocity = geometry::PolarToVector2D(speed, heading);
+  float speed = 0.0f;
+  float acceleration = 2.0f;
+  geometry::Vector2D velocity = geometry::PolarToVector2D(speed, heading);
   const geometry::Vector2D position(1.0f, 1.0f);
-  const geometry::Vector2D destination =
+  geometry::Vector2D destination =
       position + velocity * t +
       geometry::PolarToVector2D(acceleration, heading) * (t * t * 0.5f);
 
+  // Forward test.
   KineticObject obj(/*id=*/0, length, width, position, destination, heading,
                     speed,
                     /*can_block_sigh=*/true, /*can_be_collided=*/true,
@@ -77,6 +78,25 @@ TEST(KineticObjectTest, ConstantAccelerationMotionTest) {
     obj.Step(dt);
   }
 
+  EXPECT_FLOAT_EQ(obj.heading(), heading);
+  EXPECT_NEAR(obj.Speed(), speed + acceleration * t, kTol);
+  EXPECT_NEAR(obj.position().x(), destination.x(), kTol);
+  EXPECT_NEAR(obj.position().y(), destination.y(), kTol);
+
+  // Backward test.
+  speed = 10.0f;
+  acceleration = -2.0f;
+  velocity = geometry::PolarToVector2D(speed, heading);
+  destination =
+      position + velocity * t +
+      geometry::PolarToVector2D(acceleration, heading) * (t * t * 0.5f);
+  obj.set_position(position);
+  obj.set_destination(destination);
+  obj.SetSpeed(speed);
+  obj.set_acceleration(acceleration);
+  for (int i = 0; i < num_steps; ++i) {
+    obj.Step(dt);
+  }
   EXPECT_FLOAT_EQ(obj.heading(), heading);
   EXPECT_NEAR(obj.Speed(), speed + acceleration * t, kTol);
   EXPECT_NEAR(obj.position().x(), destination.x(), kTol);

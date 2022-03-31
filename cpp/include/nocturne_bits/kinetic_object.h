@@ -67,7 +67,12 @@ class KineticObject : public Object {
     velocity_ = geometry::Vector2D(v_x, v_y);
   }
 
-  float Speed() const { return velocity_.Norm(); }
+  // Postive for moving forward, negative for moving backward.
+  float Speed() const {
+    return geometry::DotProduct(velocity_,
+                                geometry::PolarToVector2D(1.0f, heading_));
+  }
+
   void SetSpeed(float speed) {
     const float cur_speed = Speed();
     if (geometry::utils::AlmostEquals(cur_speed, 0.0f)) {
