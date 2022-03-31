@@ -41,7 +41,8 @@ constexpr int64_t kMaxVisibleStopSigns = 4;
 
 // KineticObject features are:
 // [ valid, distance, azimuth, length, witdh, relative_heading,
-//   relative_velocity_x, relative_velocity_y, object_type (one_hot of 8) ]
+//   relative_velocity_speed, relative_velocity_direction,
+//   object_type (one_hot of 8) ]
 constexpr int64_t kKineticObjectFeatureSize = 16;
 
 // RoadPoint features are:

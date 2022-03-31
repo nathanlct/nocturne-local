@@ -68,7 +68,6 @@ class KineticObject : public Object {
   }
 
   float Speed() const { return velocity_.Norm(); }
-
   void SetSpeed(float speed) {
     const float cur_speed = Speed();
     if (geometry::utils::AlmostEquals(cur_speed, 0.0f)) {

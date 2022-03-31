@@ -60,15 +60,16 @@ void KineticObject::InitRandomColor() {
 // Kinematic Bicycle Model
 // https://thef1clan.com/2020/09/21/vehicle-dynamics-the-kinematic-bicycle-model/
 void KineticObject::KinematicBicycleStep(float dt) {
-  const float v = Speed();
-  const float zeta = steering_;
-  const float tan_zeta = std::tan(zeta);
+  const float v = Speed() + acceleration_ * dt * 0.5f;  // Average speed
+  const float tan_zeta = std::tan(steering_);
   const float beta = std::atan(tan_zeta * 0.5f);
-  const geometry::Vector2D dposition = velocity_.Rotate(beta);
+  const geometry::Vector2D dposition =
+      geometry::PolarToVector2D(v, heading_ + beta);
   const float dheading = v * tan_zeta * std::cos(beta) / length_;
   position_ += dposition * dt;
   heading_ = geometry::utils::AngleAdd(heading_, dheading * dt);
-  velocity_ = geometry::PolarToVector2D(v + acceleration_, heading_);
+  velocity_ =
+      geometry::PolarToVector2D(v + acceleration_ * dt * 0.5f, heading_);
 }
 
 }  // namespace nocturne

@@ -95,8 +95,9 @@ void ExtractKineticObjectFeature(const KineticObject& src,
   feature[3] = obj.length();
   feature[4] = obj.width();
   feature[5] = relative_heading;
-  feature[6] = relative_velocity.x();
-  feature[7] = relative_velocity.y();
+  feature[6] = relative_velocity.Norm();
+  feature[7] =
+      geometry::utils::AngleSub(relative_velocity.Angle(), src.heading());
   // One-hot vector for object_type, assume feature is initially 0.
   feature[8 + obj_type] = 1.0f;
 }
