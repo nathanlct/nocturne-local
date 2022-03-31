@@ -62,11 +62,11 @@ void KineticObject::SetActionFromKeyboard() {
 
   // up: accelerate ; down: brake
   if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-    acceleration_ = 1.5f;
+    acceleration_ = 1.0f;
   } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
     // brake faster than moving backwards
-    acceleration_ = speed > 0 ? -3.0f : -1.5f;
-  } else if (std::abs(speed) < 0.1) {
+    acceleration_ = speed > 0 ? -2.0f : -1.0f;
+  } else if (std::abs(speed) < 0.05) {
     // clip to 0
     velocity_ = geometry::PolarToVector2D(0, heading_);
   } else {
@@ -76,9 +76,9 @@ void KineticObject::SetActionFromKeyboard() {
 
   // right: turn right; left: turn left
   if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-    steering_ = geometry::utils::Radians(-30.0f);
+    steering_ = geometry::utils::Radians(-10.0f);
   } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-    steering_ = geometry::utils::Radians(30.0f);
+    steering_ = geometry::utils::Radians(10.0f);
   } else {
     steering_ = 0.0f;
   }
