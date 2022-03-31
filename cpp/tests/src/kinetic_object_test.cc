@@ -24,7 +24,7 @@ std::pair<geometry::Vector2D, float> KinematicBicycleModel(
   const float dy = speed * std::sin(heading + beta);
   const float dtheta = speed * std::tan(zeta) * std::cos(beta) / length;
   return std::make_pair(position + geometry::Vector2D(dx * dt, dy * dt),
-                        heading + dtheta * dt);
+                        geometry::utils::NormalizeAngle(heading + dtheta * dt));
 }
 
 TEST(KineticObjectTest, UniformLinearMotionTest) {
