@@ -58,6 +58,8 @@ float Polygon::Area() const {
   return std::fabs(s) * 0.5f;
 }
 
+// Check if p lies on the left of all the edges given the vertices are in
+// counterclockwise order.
 // Time Complexy: O(N)
 // TODO: Add O(logN) algorithm if some polygon contains many vertices.
 bool ConvexPolygon::Contains(const Vector2D& p) const {
