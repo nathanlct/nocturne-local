@@ -64,17 +64,15 @@ float Polygon::Area() const {
 // TODO: Add O(logN) algorithm if some polygon contains many vertices.
 bool ConvexPolygon::Contains(const Vector2D& p) const {
   const int64_t n = vertices_.size();
-  if (CrossProduct(p - vertices_.back(), vertices_.front() - vertices_.back()) >
-      0.0f) {
-    return false;
-  }
   for (int64_t i = 1; i < n; ++i) {
     if (CrossProduct(p - vertices_[i - 1], vertices_[i] - vertices_[i - 1]) >
         0.0f) {
       return false;
     }
   }
-  return true;
+  // Check the last edge which is (V_{n - 1}, V_{0}).
+  return CrossProduct(p - vertices_.back(),
+                      vertices_.front() - vertices_.back()) <= 0.0f;
 }
 
 // Assume polygon vertices are in counterclockwise order.
