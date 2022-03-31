@@ -57,6 +57,27 @@ void KineticObject::InitRandomColor() {
   color_ = sf::Color(r, g, b);
 }
 
+void KineticObject::SetActionFromKeyboard() {
+  // up: accelerate ; down: brake
+  if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+    acceleration_ = 1.5f;
+  } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+    acceleration_ = -3.0f;
+  } else {
+    // friction
+    acceleration_ = -0.5f;
+  }
+
+  // right: turn right; left: turn left
+  if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+    steering_ = geometry::utils::Radians(-60.0f);
+  } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+    steering_ = geometry::utils::Radians(60.0f);
+  } else {
+    steering_ = 0.0f;
+  }
+}
+
 // Kinematic Bicycle Model
 // https://thef1clan.com/2020/09/21/vehicle-dynamics-the-kinematic-bicycle-model/
 void KineticObject::KinematicBicycleStep(float dt) {

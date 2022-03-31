@@ -85,6 +85,11 @@ class KineticObject : public Object {
     destination_ = geometry::Vector2D(x, y);
   }
 
+  float keyboard_controllable() const { return keyboard_controllable_; }
+  void set_keyboard_controllable(bool keyboard_controllable) {
+    keyboard_controllable_ = keyboard_controllable;
+  }
+
   float acceleration() const { return acceleration_; }
   void set_acceleration(float acceleration) { acceleration_ = acceleration; }
 
@@ -98,7 +103,14 @@ class KineticObject : public Object {
     cone_texture_ = cone_texture;
   }
 
-  virtual void Step(float dt) { KinematicBicycleStep(dt); }
+  void SetActionFromKeyboard();
+
+  virtual void Step(float dt) {
+    if (keyboard_controllable_) {
+      SetActionFromKeyboard();
+    }
+    KinematicBicycleStep(dt);
+  }
 
  protected:
   void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
@@ -116,6 +128,8 @@ class KineticObject : public Object {
 
   float acceleration_ = 0.0f;
   float steering_ = 0.0f;
+
+  bool keyboard_controllable_ = false;
 
   sf::Color color_;
   sf::RenderTexture* cone_texture_ = nullptr;
