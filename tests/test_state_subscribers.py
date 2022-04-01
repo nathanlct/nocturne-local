@@ -1,16 +1,17 @@
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 from pyvirtualdisplay import Display
-from nocturne import Simulation
-import time
 
-import os
+from cfgs.config import PROJECT_PATH
+from nocturne import Simulation
 
 
 def test_state_subscribers():
 
     os.environ["DISPLAY"] = ":0.0"
-    sim = Simulation(scenario_path='tests/scenario_test.json')
+    sim = Simulation(scenario_path=PROJECT_PATH / 'tests/scenario_test.json')
     scenario = sim.getScenario()
     vehs = scenario.getVehicles()
 

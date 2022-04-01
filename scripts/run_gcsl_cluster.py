@@ -7,8 +7,11 @@ import pathlib, shutil
 from datetime import datetime
 from subprocess import Popen, DEVNULL
 
+from cfgs.config import PROJECT_PATH
+
 
 class Overrides(object):
+
     def __init__(self):
         self.kvs = dict()
 
@@ -33,30 +36,34 @@ def make_code_snap(experiment, code_path, slurm_dir='exp'):
     snap_dir /= now.strftime('%Y.%m.%d')
     snap_dir /= now.strftime('%H%M%S') + f'_{experiment}'
     snap_dir.mkdir(exist_ok=True, parents=True)
-    
+
     def copy_dir(dir, pat):
         dst_dir = snap_dir / 'code' / dir
         dst_dir.mkdir(exist_ok=True, parents=True)
         for f in (src_dir / dir).glob(pat):
             shutil.copy(f, dst_dir / f.name)
-    
-    dirs_to_copy = ['.', './cfgs/', './cfgs/algo', './algos/', './algos/ppo/', 
-                './algos/gcsl/', './envs/', './nocturne_utils/', './python/', './scenarios/', './build']
+
+    dirs_to_copy = [
+        '.', './cfgs/', './cfgs/algo', './algos/', './algos/ppo/',
+        './algos/gcsl/', './envs/', './nocturne_utils/', './python/',
+        './scenarios/', './build'
+    ]
     src_dir = pathlib.Path(os.path.dirname(os.getcwd()))
     for dir in dirs_to_copy:
         copy_dir(dir, '*.py')
         copy_dir(dir, '*.yaml')
-    
-    return snap_dir 
+
+    return snap_dir
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('experiment', type=str)
-    parser.add_argument('--code_path', default='/checkpoint/eugenevinitsky/nocturne')
+    parser.add_argument('--code_path',
+                        default='/checkpoint/eugenevinitsky/nocturne')
     parser.add_argument('--dry', action='store_true')
     args = parser.parse_args()
-   
+
     snap_dir = make_code_snap(args.experiment, args.code_path)
     print(str(snap_dir))
     overrides = Overrides()
@@ -68,10 +75,13 @@ def main():
     overrides.add('algo.quartile_cutoff', [0])
     overrides.add('algo.batch_size', [256])
     # misc
-    overrides.add('scenario_path', ['/private/home/eugenevinitsky/Code/nocturne/scenarios/four_car_intersection.json'])
-    # overrides.add('scenario_path', ['/private/home/eugenevinitsky/Code/nocturne/scenarios/intersection.json'])
-    
-    cmd = ['python', str(snap_dir / 'code' / 'algos' / 'gcsl'/ 'gcsl_example.py'), '-m']
+    overrides.add('scenario_path',
+                  [PROJECT_PATH / 'scenarios/four_car_intersection.json'])
+
+    cmd = [
+        'python',
+        str(snap_dir / 'code' / 'algos' / 'gcsl' / 'gcsl_example.py'), '-m'
+    ]
     print(cmd)
     cmd += overrides.cmd()
 

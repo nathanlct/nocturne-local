@@ -1,16 +1,13 @@
 from collections import OrderedDict
-import time
 import sys
 
-import cv2
+from gym.spaces import Box, Discrete
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.lib import index_tricks
 import seaborn as sns
 import wandb
 
-# from algos.gcsl.env_utils import ImageandProprio, normalize_image
-from gym.spaces import Box, Discrete
+from cfgs.config import PROJECT_PATH
 from envs import BaseEnv, WaypointEnv
 from nocturne_utils.density_estimators import RawKernelDensity
 
@@ -548,9 +545,7 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
             if self.wandb and self.rank == 0:
                 wandb.log({"final_goals": wandb.Image(fig)})
             else:
-                plt.savefig(
-                    '/private/home/eugenevinitsky/Code/nocturne/final_goals.png'
-                )
+                plt.savefig(PROJECT_PATH / 'final_goals.png')
             plt.close(fig)
 
             if self.rkd_is_ready:
@@ -567,9 +562,7 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                 if self.wandb and self.rank == 0:
                     wandb.log({"desired_goals": wandb.Image(fig)})
                 else:
-                    plt.savefig(
-                        '/private/home/eugenevinitsky/Code/nocturne/desired_goals.png'
-                    )
+                    plt.savefig(PROJECT_PATH / 'desired_goals.png')
                 plt.close(fig)
 
                 fig, ax = plt.subplots()
@@ -592,9 +585,7 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                 if self.wandb and self.rank == 0:
                     wandb.log({"density_sample": wandb.Image(fig)})
                 else:
-                    plt.savefig(
-                        '/private/home/eugenevinitsky/Code/nocturne/sampled_density.png'
-                    )
+                    plt.savefig(PROJECT_PATH / 'sampled_density.png')
                 plt.close(fig)
 
         obs = super().reset()

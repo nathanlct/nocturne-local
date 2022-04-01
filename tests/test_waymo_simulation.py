@@ -2,12 +2,14 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+
+from cfgs.config import PROJECT_PATH
 from nocturne import Simulation
 
 
 def test_scenario_functions():
 
-    file_path = 'tests/large_file.json'
+    file_path = PROJECT_PATH / 'tests/large_file.json'
     os.environ["DISPLAY"] = ":0.0"
     ################################
     # Vehicle Collision checking
