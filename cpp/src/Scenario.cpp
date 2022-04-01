@@ -34,6 +34,30 @@ std::vector<const Object*> VisibleCandidates(const geometry::BVH& bvh,
   return objects;
 }
 
+bool IsVisibleRoadPoint(const KineticObject& src, const Object& road_point,
+                        const std::vector<const Object*>& kinetic_objects) {
+  // Assume road_point is a point with nearly 0 radius.
+  const geometry::LineSegment seg(src.position(), road_point.position());
+  for (const Object* obj : kinetic_objects) {
+    if (obj->can_block_sight() &&
+        geometry::Intersects(seg, obj->BoundingPolygon())) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void VisibleRoadPoints(const KineticObject& src,
+                       const std::vector<const Object*>& kinetic_objects,
+                       std::vector<const Object*>& road_points) {
+  auto pivot = std::partition(
+      road_points.begin(), road_points.end(),
+      [&src, &kinetic_objects](const Object* road_point) {
+        return IsVisibleRoadPoint(src, *road_point, kinetic_objects);
+      });
+  road_points.resize(std::distance(road_points.begin(), pivot));
+}
+
 std::vector<std::pair<const Object*, float>> NearestK(
     const Object& src, const std::vector<const Object*>& objects, int64_t k) {
   const geometry::Vector2D& src_pos = src.position();
@@ -71,8 +95,9 @@ void ExtractKineticObjectFeature(const KineticObject& src,
   feature[3] = obj.length();
   feature[4] = obj.width();
   feature[5] = relative_heading;
-  feature[6] = relative_velocity.x();
-  feature[7] = relative_velocity.y();
+  feature[6] = relative_velocity.Norm();
+  feature[7] =
+      geometry::utils::AngleSub(relative_velocity.Angle(), src.heading());
   // One-hot vector for object_type, assume feature is initially 0.
   feature[8 + obj_type] = 1.0f;
 }
@@ -169,7 +194,7 @@ void Scenario::loadScenario(std::string path) {
                                  obj["velocity"]["y"][i]);
       localExpertTrajectory.push_back(currPos);
       localExpertSpeeds.push_back(currVel);
-      if (currVel.Norm() > 0) {
+      if (currVel.Norm() > 0 && bool(obj["valid"][i])) {
         didObjectMove = true;
       }
       localValid.push_back(bool(obj["valid"][i]));
@@ -545,35 +570,28 @@ Scenario::VisibleObjects(const KineticObject& src, float view_dist,
   const geometry::Vector2D& position = src.position();
   const ViewField vf(position, view_dist, heading, view_angle);
 
-  std::vector<const Object*> ground_objects =
-      VisibleCandidates(vehicle_bvh_, src, vf);
   const std::vector<const Object*> static_candidates =
       VisibleCandidates(static_bvh_, src, vf);
+  std::vector<const Object*> kinetic_objects =
+      VisibleCandidates(vehicle_bvh_, src, vf);
+  std::vector<const Object*> road_points;
   std::vector<const Object*> traffic_lights;
   std::vector<const Object*> stop_signs;
   for (const Object* obj : static_candidates) {
-    if (obj->Type() == ObjectType::kTrafficLight) {
+    if (obj->Type() == ObjectType::kRoadPoint) {
+      road_points.push_back(obj);
+    } else if (obj->Type() == ObjectType::kTrafficLight) {
       traffic_lights.push_back(obj);
     } else if (obj->Type() == ObjectType::kStopSign) {
       stop_signs.push_back(obj);
-    } else if (obj->Type() == ObjectType::kRoadPoint) {
-      // Vehicles can block road_points, check together.
-      ground_objects.push_back(obj);
     }
   }
 
-  ground_objects = vf.VisibleObjects(ground_objects);
-  traffic_lights = vf.VisibleNonblockingObjects(traffic_lights);
-  stop_signs = vf.VisibleNonblockingObjects(stop_signs);
-  std::vector<const Object*> kinetic_objects;
-  std::vector<const Object*> road_points;
-  for (const Object* obj : ground_objects) {
-    if (obj->Type() == ObjectType::kRoadPoint) {
-      road_points.push_back(obj);
-    } else {
-      kinetic_objects.push_back(obj);
-    }
-  }
+  vf.FilterVisibleObjects(kinetic_objects);
+  vf.FilterVisiblePoints(road_points);
+  VisibleRoadPoints(src, kinetic_objects, road_points);
+  vf.FilterVisibleNonblockingObjects(traffic_lights);
+  vf.FilterVisibleNonblockingObjects(stop_signs);
 
   return std::make_tuple(kinetic_objects, road_points, traffic_lights,
                          stop_signs);

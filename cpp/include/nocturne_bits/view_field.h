@@ -18,10 +18,17 @@ class ViewField : public geometry::CircularSector {
       : geometry::CircularSector(center, radius, heading, theta) {}
 
   std::vector<const Object*> VisibleObjects(
-      const std::vector<const Object*>& objects, int64_t limit = -1) const;
+      const std::vector<const Object*>& objects) const;
+  void FilterVisibleObjects(std::vector<const Object*>& objects) const;
 
   std::vector<const Object*> VisibleNonblockingObjects(
-      const std::vector<const Object*>& objects, int64_t limit = -1) const;
+      const std::vector<const Object*>& objects) const;
+  void FilterVisibleNonblockingObjects(
+      std::vector<const Object*>& objects) const;
+
+  std::vector<const Object*> VisiblePoints(
+      const std::vector<const Object*>& objects) const;
+  void FilterVisiblePoints(std::vector<const Object*>& objects) const;
 
  protected:
   geometry::Vector2D MakeSightEndpoint(const geometry::Vector2D& p) const {
@@ -34,8 +41,7 @@ class ViewField : public geometry::CircularSector {
   std::vector<geometry::Vector2D> ComputeSightEndpoints(
       const std::vector<const Object*>& objects) const;
 
-  std::vector<const Object*> NearestK(const std::vector<const Object*>& objects,
-                                      int64_t k) const;
+  bool IsVisibleNonblockingObject(const Object* obj) const;
 };
 
 }  // namespace nocturne
