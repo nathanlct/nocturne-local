@@ -24,9 +24,10 @@ class BaseEnv(object):
                 that insist that the number of agents throughout an episode are consistent. 
             rank (int, optional): [description]. Defaults to 0.
         """
-        self.files = list(Path(cfg.scenario_path).glob('**/*.json'))
-        self.simulation = Simulation(os.path.join(
-            cfg.scenario_path, self.files[np.random.randint(len(self.files))]),
+        self.files = os.listdir(cfg['scenario_path'])
+        self.file = self.files[np.random.randint(len(self.files))]
+        self.simulation = Simulation(os.path.join(cfg.scenario_path,
+                                                  self.file),
                                      use_non_vehicles=False)
         self.scenario = self.simulation.getScenario()
         self.vehicles = self.scenario.getVehicles()
@@ -157,36 +158,13 @@ class BaseEnv(object):
         self.step_num = 0
         # TODO(eugenevinitsky) remove this once the PPO code doesn't have this restriction
         # track dead agents for PPO.
-        self.simulation = Simulation(os.path.join(
-            self.cfg.scenario_path,
-            self.files[np.random.randint(len(self.files))]),
+        self.file = self.files[np.random.randint(len(self.files))]
+        self.simulation = Simulation(os.path.join(self.cfg.scenario_path,
+                                                  self.file),
                                      use_non_vehicles=False)
         self.scenario = self.simulation.getScenario()
         self.vehicles = self.scenario.getVehicles()
         self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
-        # initialize the vehicle speeds
-        # TODO(eugenevinitsky) make this work with Waymo scenes
-        # for veh_obj in self.simulation.getScenario().getVehicles():
-        #     veh_id = veh_obj.getID()
-        #     veh_obj.setSpeed(self.cfg.initial_speed)
-        #     if self.cfg.randomize_goals:
-        #         invalid_goal = True
-        #         obj_pos = veh_obj.getPosition()
-        #         obj_pos = np.array([obj_pos.x, obj_pos.y])
-        #         new_goal = None
-        #         while invalid_goal:
-        #             new_goal = 800 * (np.random.uniform(size=(2,)) - 0.5)
-        #             on_road = self.scenario.isPointOnRoad(new_goal[0], new_goal[1])
-        #             far_away = np.linalg.norm(obj_pos - new_goal) > 200
-        #             # TODO(eugenevinitsky) make this more general
-        #             in_intersection = (np.abs(new_goal[0]) < 40) and (np.abs(new_goal[1]) < 40)
-        #             if on_road and far_away and not in_intersection:
-        #                 max_index = np.argmax(np.abs(new_goal))
-        #                 # move it to near the end of the road
-        #                 new_goal[max_index] = 380 * np.sign(new_goal[max_index])
-        #                 invalid_goal = False
-
-        #         veh_obj.setGoalPosition(new_goal[0], new_goal[1])
 
         obs_dict = {}
         for veh_obj in self.simulation.getScenario().getVehicles():

@@ -49,7 +49,7 @@ void RoadLine::draw(sf::RenderTarget& target, sf::RenderStates states) const {
 }
 
 void RoadLine::InitRoadPoints() {
-  int num_possible_points =
+  const int64_t num_possible_points =
       std::min(num_road_points_, int64_t(geometry_points_.size()));
   road_points_.reserve(num_possible_points);
   const int64_t n = geometry_points_.size();
