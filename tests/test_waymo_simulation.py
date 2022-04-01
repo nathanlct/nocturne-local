@@ -9,7 +9,7 @@ from nocturne import Simulation
 
 def test_scenario_functions():
 
-    file_path = PROJECT_PATH / 'tests/large_file.json'
+    file_path = str(PROJECT_PATH / 'tests/large_file.json')
     os.environ["DISPLAY"] = ":0.0"
     ################################
     # Vehicle Collision checking

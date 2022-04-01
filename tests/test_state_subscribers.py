@@ -11,7 +11,8 @@ from nocturne import Simulation
 def test_state_subscribers():
 
     os.environ["DISPLAY"] = ":0.0"
-    sim = Simulation(scenario_path=PROJECT_PATH / 'tests/scenario_test.json')
+    sim = Simulation(scenario_path=str(PROJECT_PATH /
+                                       'tests/scenario_test.json'))
     scenario = sim.getScenario()
     vehs = scenario.getVehicles()
 
@@ -21,7 +22,7 @@ def test_state_subscribers():
     state = scenario.egoStateObservation(vehs[0])
     # speed, goal dist, goal angle, length, width
     np.testing.assert_allclose(state, [
-        5.0 * np.sqrt(2), 100 * np.sqrt(2), 3 * np.pi / 4, vehs[0].getLength(),
+        5.0, 100 * np.sqrt(2), 3 * np.pi / 4, vehs[0].getLength(),
         vehs[0].getWidth()
     ],
                                rtol=1e-5)
@@ -47,7 +48,7 @@ def test_state_subscribers():
     # the object is a vehicle so it gets one-hot to [0, 1, 0, 0, 0, 0, 0, 0]
     np.testing.assert_allclose(new_state[0:num_object_states], [
         1, 10.0, 0.0, vehs[1].getLength(), vehs[1].getWidth(), -np.pi / 2, 5.0,
-        -5 * np.sqrt(2), 0, 1, 0, 0, 0, 0, 0, 0
+        -5, 0, 1, 0, 0, 0, 0, 0, 0
     ],
                                rtol=1e-5,
                                atol=1e-5)
@@ -79,7 +80,7 @@ def test_state_subscribers():
     # vehicle
     np.testing.assert_allclose(new_state[0:num_object_states], [
         1, 10.0, 0.0, vehs[1].getLength(), vehs[1].getWidth(), -np.pi / 2, 5.0,
-        -5 * np.sqrt(2), 0, 1, 0, 0, 0, 0, 0, 0
+        -5, 0, 1, 0, 0, 0, 0, 0, 0
     ],
                                rtol=1e-5,
                                atol=1e-5)
