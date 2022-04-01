@@ -42,13 +42,15 @@ def test_state_subscribers():
     new_state = scenario.observation(vehs[0], 120.0, 1.99 * np.pi)
     # check that the observed vehicle has the right state
     # the vehicle is 10 meters away northwards, pointed east, we are pointed north
+    # we are going to [0,5], they are going at [5, 0]
     # so our result should be
-    # [1 #valid, 10 #distance, 0 # azimuth, 2 # length, 1 # width, -pi/2 # relative-heading, 5 # relative x-speed
-    # -5 * np.sqrt(2) relative y speed]
+    # [1 #valid, 10 #distance, 0 # azimuth, 2 # length, 1 # width, -pi/2 # relative-heading,
+    # 5 * sqrt(2) # relative speed norm
+    # -3 * pi / 4 # relative angle between heading and relative speed.]
     # the object is a vehicle so it gets one-hot to [0, 1, 0, 0, 0, 0, 0, 0]
     np.testing.assert_allclose(new_state[0:num_object_states], [
-        1, 10.0, 0.0, vehs[1].getLength(), vehs[1].getWidth(), -np.pi / 2, 5.0,
-        -5, 0, 1, 0, 0, 0, 0, 0, 0
+        1, 10.0, 0.0, vehs[1].getLength(), vehs[1].getWidth(), -np.pi / 2,
+        5.0 * np.sqrt(2), -3 * np.pi / 4, 0, 1, 0, 0, 0, 0, 0, 0
     ],
                                rtol=1e-5,
                                atol=1e-5)
@@ -79,8 +81,8 @@ def test_state_subscribers():
     new_state = scenario.observation(vehs[0], 120, 0.1)
     # vehicle
     np.testing.assert_allclose(new_state[0:num_object_states], [
-        1, 10.0, 0.0, vehs[1].getLength(), vehs[1].getWidth(), -np.pi / 2, 5.0,
-        -5, 0, 1, 0, 0, 0, 0, 0, 0
+        1, 10.0, 0.0, vehs[1].getLength(), vehs[1].getWidth(), -np.pi / 2,
+        5.0 * np.sqrt(2), -3 * np.pi / 4, 0, 1, 0, 0, 0, 0, 0, 0
     ],
                                rtol=1e-5,
                                atol=1e-5)
