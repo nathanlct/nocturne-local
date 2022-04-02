@@ -994,7 +994,7 @@ ImageMatrix Scenario::getImage(KineticObject* object, bool renderGoals) {
         sf::CircleShape ptShape(radius);
         ptShape.setOrigin(radius, radius);
         ptShape.setFillColor(obj->color());
-        ptShape.setPosition(utils::ToVector2f(obj->position()));
+        ptShape.setPosition(utils::ToVector2f(obj->destination()));
         texture->draw(ptShape, renderTransform);
       }
     }
@@ -1007,7 +1007,7 @@ ImageMatrix Scenario::getImage(KineticObject* object, bool renderGoals) {
       sf::CircleShape ptShape(radius);
       ptShape.setOrigin(radius, radius);
       ptShape.setFillColor(object->color());
-      ptShape.setPosition(utils::ToVector2f(object->position()));
+      ptShape.setPosition(utils::ToVector2f(object->destination()));
       texture->draw(ptShape, renderTransform);
     }
   }
