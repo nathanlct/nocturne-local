@@ -57,6 +57,33 @@ void KineticObject::InitRandomColor() {
   color_ = sf::Color(r, g, b);
 }
 
+void KineticObject::SetActionFromKeyboard() {
+  const float speed = Speed();
+
+  // up: accelerate ; down: brake
+  if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+    acceleration_ = 1.0f;
+  } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+    // larger acceleration for braking than for moving backwards
+    acceleration_ = speed > 0 ? -2.0f : -1.0f;
+  } else if (std::abs(speed) < 0.05) {
+    // clip to 0
+    velocity_ = geometry::PolarToVector2D(0, heading_);
+  } else {
+    // friction
+    acceleration_ = 0.5f * (speed > 0 ? -1.0f : 1.0f);
+  }
+
+  // right: turn right; left: turn left
+  if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+    steering_ = geometry::utils::Radians(-10.0f);
+  } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+    steering_ = geometry::utils::Radians(10.0f);
+  } else {
+    steering_ = 0.0f;
+  }
+}
+
 // Kinematic Bicycle Model
 // https://thef1clan.com/2020/09/21/vehicle-dynamics-the-kinematic-bicycle-model/
 void KineticObject::KinematicBicycleStep(float dt) {

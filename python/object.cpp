@@ -35,6 +35,9 @@ void init_object(py::module& m) {
                         &nocturne::KineticObject::set_velocity))
       .def_property("speed", &nocturne::KineticObject::Speed,
                     &nocturne::KineticObject::SetSpeed)
+      .def_property("keyboard_controllable",
+                    &nocturne::KineticObject::keyboard_controllable,
+                    &nocturne::KineticObject::set_keyboard_controllable)
       .def_property_readonly("collided", &nocturne::KineticObject::collided)
       .def("set_position", py::overload_cast<float, float>(
                                &nocturne::KineticObject::set_position))

@@ -20,7 +20,8 @@ std::vector<std::string> GetFontPaths() {
 
 std::vector<std::string> GetFontPaths() {
   const std::string username = std::getenv("USER");
-  return {"/usr/share/fonts", "/usr/local/share/fonts", "~/.fonts/",
+  return {"/usr/share/fonts", "/usr/local/share/fonts",
+          "/home/" + username + "/.fonts/",
           "/private/home/" + username + "/.fonts/"};
 }
 
@@ -32,7 +33,7 @@ bool FindFontPath(const std::string& font_name, std::string& font_path) {
     const std::string cur_path = fp + font_name;
     std::ifstream font(cur_path);
     if (font.is_open()) {
-      font_path = font_path;
+      font_path = cur_path;
       return true;
     }
   }
