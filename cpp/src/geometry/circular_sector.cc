@@ -83,10 +83,10 @@ CircularSector::Intersection(const LineSegment& segment) const {
   }
 
   auto [p, q] = CircleLike::Intersection(segment);
-  if (p.has_value() && Contains(*p)) {
+  if (p.has_value() && CenterAngleContains(*p)) {
     ret[cnt++] = *p;
   }
-  if (q.has_value() && Contains(*q)) {
+  if (q.has_value() && CenterAngleContains(*q)) {
     ret[cnt++] = *q;
   }
 
