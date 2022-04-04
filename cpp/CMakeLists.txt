@@ -78,6 +78,6 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 add_subdirectory(
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests
-    ${CMAKE_CURRENT_BINARY_DIR}/tests
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests
+  ${CMAKE_CURRENT_BINARY_DIR}/tests
 )
