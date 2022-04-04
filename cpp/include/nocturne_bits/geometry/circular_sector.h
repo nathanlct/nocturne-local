@@ -1,9 +1,13 @@
 #pragma once
 
+#include <optional>
+#include <utility>
+
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
 #include "geometry/circle.h"
 #include "geometry/geometry_utils.h"
+#include "geometry/line_segment.h"
 #include "geometry/vector_2d.h"
 
 namespace nocturne {
@@ -43,6 +47,9 @@ class CircularSector : public CircleLike {
   }
 
   bool Contains(const Vector2D& p) const override;
+
+  std::pair<std::optional<Vector2D>, std::optional<Vector2D>> Intersection(
+      const LineSegment& segment) const override;
 
  protected:
   bool CenterAngleContains(const Vector2D& p) const;

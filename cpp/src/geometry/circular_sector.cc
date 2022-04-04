@@ -1,6 +1,7 @@
 #include "geometry/circular_sector.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 
 namespace nocturne {
@@ -58,6 +59,47 @@ bool CircularSector::CenterAngleContains(const Vector2D& p) const {
   return theta_ < 0.0f
              ? (CrossProduct(d, r0) <= 0.0f || CrossProduct(d, r1) >= 0.0f)
              : (CrossProduct(d, r0) <= 0.0f && CrossProduct(d, r1) >= 0.0f);
+}
+
+std::pair<std::optional<Vector2D>, std::optional<Vector2D>>
+CircularSector::Intersection(const LineSegment& segment) const {
+  std::array<Vector2D, 2> ret;
+  int64_t cnt = 0;
+
+  const Vector2D& o = center();
+  const LineSegment edge0(o, o + Radius0());
+  const LineSegment edge1(o, o + Radius1());
+  const auto u = edge0.Intersection(segment);
+  if (u.has_value()) {
+    ret[cnt++] = *u;
+  }
+  const auto v = edge1.Intersection(segment);
+  if (v.has_value()) {
+    ret[cnt++] = *v;
+  }
+  if (cnt == 2) {
+    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
+        std::make_optional(ret[0]), std::make_optional(ret[1]));
+  }
+
+  auto [p, q] = CircleLike::Intersection(segment);
+  if (p.has_value() && Contains(*p)) {
+    ret[cnt++] = *p;
+  }
+  if (q.has_value() && Contains(*q)) {
+    ret[cnt++] = *q;
+  }
+
+  if (cnt == 0) {
+    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
+        std::nullopt, std::nullopt);
+  } else if (cnt == 1) {
+    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
+        std::make_optional(ret[0]), std::nullopt);
+  } else {
+    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
+        std::make_optional(ret[0]), std::make_optional(ret[1]));
+  }
 }
 
 }  // namespace geometry

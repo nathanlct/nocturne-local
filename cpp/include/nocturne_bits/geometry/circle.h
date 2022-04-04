@@ -1,8 +1,11 @@
 #pragma once
 
+#include <optional>
+#include <utility>
+
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
-#include "geometry/geometry_utils.h"
+#include "geometry/line_segment.h"
 #include "geometry/vector_2d.h"
 
 namespace nocturne {
@@ -19,6 +22,8 @@ class CircleLike : public AABBInterface {
 
   virtual float Area() const = 0;
   virtual bool Contains(const Vector2D& p) const = 0;
+  virtual std::pair<std::optional<Vector2D>, std::optional<Vector2D>>
+  Intersection(const LineSegment& segment) const;
 
  protected:
   const Vector2D center_;

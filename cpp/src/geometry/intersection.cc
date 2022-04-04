@@ -33,49 +33,6 @@ int ComputeOutCode(const AABB& aabb, const Vector2D& p) {
   return code;
 }
 
-std::pair<std::optional<Vector2D>, std::optional<Vector2D>>
-CircleLineIntersection(const CircleLike& circle, const LineSegment& segment) {
-  std::array<Vector2D, 2> ret;
-  int64_t cnt = 0;
-
-  const Vector2D& o = circle.center();
-  const Vector2D& p = segment.Endpoint0();
-  const Vector2D& q = segment.Endpoint1();
-  const Vector2D d1 = q - p;
-  const Vector2D d2 = p - o;
-  const float r = circle.radius();
-  const float a = DotProduct(d1, d1);
-  const float b = DotProduct(d1, d2) * 2.0f;
-  const float c = DotProduct(d2, d2) - r * r;
-  const float delta = b * b - 4.0f * a * c;
-  if (utils::AlmostEquals(delta, 0.0f)) {
-    const float t = -b / (2.0f * a);
-    if (t >= 0.0f && t <= 1.0f) {
-      ret[cnt++] = segment.Point(t);
-    }
-  } else if (delta > 0.0f) {
-    const float t0 = (-b - std::sqrt(delta)) / (2.0f * a);
-    const float t1 = (-b + std::sqrt(delta)) / (2.0f * a);
-    if (t0 >= 0.0f && t0 <= 1.0f) {
-      ret[cnt++] = segment.Point(t0);
-    }
-    if (t1 >= 0.0f && t1 <= 1.0f) {
-      ret[cnt++] = segment.Point(t1);
-    }
-  }
-
-  if (cnt == 0) {
-    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
-        std::nullopt, std::nullopt);
-  } else if (cnt == 1) {
-    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
-        std::make_optional(ret[0]), std::nullopt);
-  } else {
-    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
-        std::make_optional(ret[0]), std::make_optional(ret[1]));
-  }
-}
-
 }  // namespace
 
 // Cohen–Sutherland algorithm
@@ -170,62 +127,6 @@ bool Intersects(const ConvexPolygon& polygon, const LineSegment& segment) {
 
 bool Intersects(const LineSegment& segment, const ConvexPolygon& polygon) {
   return Intersects(polygon, segment);
-}
-
-std::pair<std::optional<Vector2D>, std::optional<Vector2D>> Intersection(
-    const Circle& circle, const LineSegment& segment) {
-  return CircleLineIntersection(circle, segment);
-}
-
-std::pair<std::optional<Vector2D>, std::optional<Vector2D>> Intersection(
-    const LineSegment& segment, const Circle& circle) {
-  return CircleLineIntersection(circle, segment);
-}
-
-std::pair<std::optional<Vector2D>, std::optional<Vector2D>> Intersection(
-    const CircularSector& circular_sector, const LineSegment& segment) {
-  std::array<Vector2D, 2> ret;
-  int64_t cnt = 0;
-
-  const Vector2D& o = circular_sector.center();
-  const LineSegment edge0(o, o + circular_sector.Radius0());
-  const LineSegment edge1(o, o + circular_sector.Radius1());
-  const auto u = edge0.Intersection(segment);
-  if (u.has_value()) {
-    ret[cnt++] = *u;
-  }
-  const auto v = edge1.Intersection(segment);
-  if (v.has_value()) {
-    ret[cnt++] = *v;
-  }
-  if (cnt == 2) {
-    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
-        std::make_optional(ret[0]), std::make_optional(ret[1]));
-  }
-
-  auto [p, q] = CircleLineIntersection(circular_sector, segment);
-  if (p.has_value() && circular_sector.Contains(*p)) {
-    ret[cnt++] = *p;
-  }
-  if (q.has_value() && circular_sector.Contains(*q)) {
-    ret[cnt++] = *q;
-  }
-
-  if (cnt == 0) {
-    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
-        std::nullopt, std::nullopt);
-  } else if (cnt == 1) {
-    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
-        std::make_optional(ret[0]), std::nullopt);
-  } else {
-    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
-        std::make_optional(ret[0]), std::make_optional(ret[1]));
-  }
-}
-
-std::pair<std::optional<Vector2D>, std::optional<Vector2D>> Intersection(
-    const LineSegment& segment, const CircularSector& circular_sector) {
-  return Intersection(circular_sector, segment);
 }
 
 }  // namespace geometry
