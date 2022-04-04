@@ -28,19 +28,19 @@ AABB CircularSector::GetAABB() const {
 
   // TODO: Optimize this.
   const Vector2D q0 = center_ + Vector2D(radius_, 0.0f);
-  if (Contains(q0)) {
+  if (CenterAngleContains(q0)) {
     CheckMinMaxCoordinates(q0, min_x, min_y, max_x, max_y);
   }
   const Vector2D q1 = center_ + Vector2D(0.0f, radius_);
-  if (Contains(q1)) {
+  if (CenterAngleContains(q1)) {
     CheckMinMaxCoordinates(q1, min_x, min_y, max_x, max_y);
   }
   const Vector2D q2 = center_ - Vector2D(radius_, 0.0f);
-  if (Contains(q2)) {
+  if (CenterAngleContains(q2)) {
     CheckMinMaxCoordinates(q2, min_x, min_y, max_x, max_y);
   }
   const Vector2D q3 = center_ - Vector2D(0.0f, radius_);
-  if (Contains(q3)) {
+  if (CenterAngleContains(q3)) {
     CheckMinMaxCoordinates(q3, min_x, min_y, max_x, max_y);
   }
 
@@ -48,9 +48,10 @@ AABB CircularSector::GetAABB() const {
 }
 
 bool CircularSector::Contains(const Vector2D& p) const {
-  if (Distance(p, center_) > radius_) {
-    return false;
-  }
+  return Distance(p, center_) <= radius_ && CenterAngleContains(p);
+}
+
+bool CircularSector::CenterAngleContains(const Vector2D& p) const {
   const Vector2D d = p - center_;
   const Vector2D r0 = Radius0();
   const Vector2D r1 = Radius1();
