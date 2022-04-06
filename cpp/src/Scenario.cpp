@@ -768,6 +768,13 @@ void Scenario::removeVehicle(Vehicle* object) {
       it++;
     }
   }
+  for (auto it = objectsThatMoved.begin(); it != objectsThatMoved.end();) {
+    if ((*it).get() == object) {
+      it = objectsThatMoved.erase(it);
+    } else {
+      it++;
+    }
+  }
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
