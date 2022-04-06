@@ -125,15 +125,23 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<KineticObject>> getObjectsThatMoved() {
     return objectsThatMoved;
   }
-  int64_t getMaxNumVisibleKineticObjects() { return kMaxVisibleKineticObjects; }
-  int64_t getMaxNumVisibleRoadPoints() { return kMaxVisibleRoadPoints; }
-  int64_t getMaxNumVisibleTrafficLights() { return kMaxVisibleTrafficLights; }
-  int64_t getMaxNumVisibleStopSigns() { return kMaxVisibleStopSigns; }
-  int64_t getKineticObjectFeatureSize() { return kKineticObjectFeatureSize; }
-  int64_t getRoadPointFeatureSize() { return kRoadPointFeatureSize; }
-  int64_t getTrafficLightFeatureSize() { return kTrafficLightFeatureSize; }
-  int64_t getStopSignsFeatureSize() { return kStopSignsFeatureSize; }
-  int64_t getEgoFeatureSize() { return kEgoFeatureSize; }
+  int64_t getMaxNumVisibleKineticObjects() const {
+    return kMaxVisibleKineticObjects;
+  }
+  int64_t getMaxNumVisibleRoadPoints() const { return kMaxVisibleRoadPoints; }
+  int64_t getMaxNumVisibleTrafficLights() const {
+    return kMaxVisibleTrafficLights;
+  }
+  int64_t getMaxNumVisibleStopSigns() const { return kMaxVisibleStopSigns; }
+  int64_t getKineticObjectFeatureSize() const {
+    return kKineticObjectFeatureSize;
+  }
+  int64_t getRoadPointFeatureSize() const { return kRoadPointFeatureSize; }
+  int64_t getTrafficLightFeatureSize() const {
+    return kTrafficLightFeatureSize;
+  }
+  int64_t getStopSignsFeatureSize() const { return kStopSignsFeatureSize; }
+  int64_t getEgoFeatureSize() const { return kEgoFeatureSize; }
 
  protected:
   void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
