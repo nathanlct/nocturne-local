@@ -57,6 +57,11 @@ constexpr int64_t kTrafficLightFeatureSize = 12;
 // [ valid, distance, azimuth ]
 constexpr int64_t kStopSignsFeatureSize = 3;
 
+// Ego features are:
+// [ ego speed, distance to goal position, relative angle to goal position,
+// length, width ]
+constexpr int64_t kEgoFeatureSize = 5;
+
 // For py::array_t forward declaration.
 // https://github.com/pybind/pybind11/blob/master/include/pybind11/numpy.h#L986
 // https://github.com/pybind/pybind11/blob/master/include/pybind11/numpy.h#L143
@@ -111,8 +116,8 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<KineticObject>> getRoadObjects();
   std::vector<std::shared_ptr<RoadLine>> getRoadLines();
 
-  std::vector<float> getEgoState(KineticObject* obj);
-
+  pybind11::array_t<float, kNumpyArrayForcecast> egoStateObservation(
+      const KineticObject& src) const;
   pybind11::array_t<float, kNumpyArrayForcecast> Observation(
       const KineticObject& src, float view_dist, float view_angle) const;
 
@@ -120,10 +125,28 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<KineticObject>> getObjectsThatMoved() {
     return objectsThatMoved;
   }
+  int64_t getMaxNumVisibleKineticObjects() const {
+    return kMaxVisibleKineticObjects;
+  }
+  int64_t getMaxNumVisibleRoadPoints() const { return kMaxVisibleRoadPoints; }
+  int64_t getMaxNumVisibleTrafficLights() const {
+    return kMaxVisibleTrafficLights;
+  }
+  int64_t getMaxNumVisibleStopSigns() const { return kMaxVisibleStopSigns; }
+  int64_t getKineticObjectFeatureSize() const {
+    return kKineticObjectFeatureSize;
+  }
+  int64_t getRoadPointFeatureSize() const { return kRoadPointFeatureSize; }
+  int64_t getTrafficLightFeatureSize() const {
+    return kTrafficLightFeatureSize;
+  }
+  int64_t getStopSignsFeatureSize() const { return kStopSignsFeatureSize; }
+  int64_t getEgoFeatureSize() const { return kEgoFeatureSize; }
 
  protected:
   void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 
+  std::vector<float> egoObservationImpl(const KineticObject& src) const;
   std::vector<float> ObservationImpl(const KineticObject& src, float view_dist,
                                      float view_angle) const;
 
