@@ -30,22 +30,34 @@ _WAYMO_ROAD_STR = {
     map_pb2.TrafficSignalLaneState.LANE_STATE_CAUTION: "caution",
     map_pb2.TrafficSignalLaneState.LANE_STATE_GO: "go",
     map_pb2.TrafficSignalLaneState.LANE_STATE_FLASHING_STOP: "flashing_stop",
-    map_pb2.TrafficSignalLaneState.LANE_STATE_FLASHING_CAUTION: "flashing_caution",
+    map_pb2.TrafficSignalLaneState.LANE_STATE_FLASHING_CAUTION:
+    "flashing_caution",
 }
 
-def _parse_object_state(states: scenario_pb2.ObjectState, 
-                        final_state: scenario_pb2.ObjectState) -> Dict[str, Any]:
+
+def _parse_object_state(
+        states: scenario_pb2.ObjectState,
+        final_state: scenario_pb2.ObjectState) -> Dict[str, Any]:
     return {
         "position": {
-            "x": [state.center_x if state.valid else ERR_VAL for state in states],
-            "y": [state.center_y if state.valid else ERR_VAL for state in states],
+            "x":
+            [state.center_x if state.valid else ERR_VAL for state in states],
+            "y":
+            [state.center_y if state.valid else ERR_VAL for state in states],
         },
-        "width": states[0].width,
-        "length": states[0].length,
-        "heading": [math.degrees(state.heading) if state.valid else ERR_VAL for state in states],  # Use rad here?
+        "width":
+        states[0].width,
+        "length":
+        states[0].length,
+        "heading": [
+            math.degrees(state.heading) if state.valid else ERR_VAL
+            for state in states
+        ],  # Use rad here?
         "velocity": {
-            "x": [state.velocity_x if state.valid else ERR_VAL for state in states],
-            "y": [state.velocity_y if state.valid else ERR_VAL for state in states],
+            "x":
+            [state.velocity_x if state.valid else ERR_VAL for state in states],
+            "y":
+            [state.velocity_y if state.valid else ERR_VAL for state in states],
         },
         "valid": [state.valid for state in states],
         "goalPosition": {
@@ -54,12 +66,17 @@ def _parse_object_state(states: scenario_pb2.ObjectState,
         }
     }
 
+
 def _init_tl_object(track):
     returned_dict = {}
     for lane_state in track.lane_states:
-        returned_dict[lane_state.lane] = {'state': _WAYMO_ROAD_STR[lane_state.state],
-                                          'x': lane_state.stop_point.x, 'y': lane_state.stop_point.y}
+        returned_dict[lane_state.lane] = {
+            'state': _WAYMO_ROAD_STR[lane_state.state],
+            'x': lane_state.stop_point.x,
+            'y': lane_state.stop_point.y
+        }
     return returned_dict
+
 
 def _init_object(track: scenario_pb2.Track) -> Optional[Dict[str, Any]]:
     final_valid_index = 0
@@ -76,15 +93,24 @@ def _init_object(track: scenario_pb2.Track) -> Optional[Dict[str, Any]]:
 def _init_road(map_feature: map_pb2.MapFeature) -> Optional[Dict[str, Any]]:
     feature = map_feature.WhichOneof("feature_data")
     if feature == 'stop_sign':
-        p = getattr(map_feature, map_feature.WhichOneof("feature_data")).position
+        p = getattr(map_feature,
+                    map_feature.WhichOneof("feature_data")).position
         geometry = [{"x": p.x, "y": p.y}]
     elif feature != 'crosswalk' and feature != 'speed_bump':
         try:
-            geometry = [{"x": p.x, "y": p.y} for p in getattr(map_feature, map_feature.WhichOneof("feature_data")).polyline]
+            geometry = [{
+                "x": p.x,
+                "y": p.y
+            } for p in getattr(
+                map_feature, map_feature.WhichOneof("feature_data")).polyline]
         except:
             return None
     else:
-        geometry = [{"x": p.x, "y": p.y} for p in getattr(map_feature, map_feature.WhichOneof("feature_data")).polygon]
+        geometry = [{
+            "x": p.x,
+            "y": p.y
+        } for p in getattr(map_feature, map_feature.WhichOneof(
+            "feature_data")).polygon]
     return {
         "geometry": geometry,
         "type": map_feature.WhichOneof("feature_data"),
@@ -110,7 +136,11 @@ def get_actions_from_protobuf(protobuf: scenario_pb2.Scenario, veh_id: int,
 
 
 def waymo_to_scenario(scenario_path: str,
-                      protobuf: scenario_pb2.Scenario) -> None:
+                      protobuf: scenario_pb2.Scenario,
+                      no_tl: bool = False) -> None:
+    """
+    no_tl: if no_tl is true, do not dump the file if there is a traffic light in there
+    """
     # read the protobuf file to get the right state
 
     # write the json file
@@ -127,9 +157,13 @@ def waymo_to_scenario(scenario_path: str,
         road = _init_road(map_feature)
         if road is not None:
             roads.append(road)
-        
-    tl_dict = defaultdict(lambda: {'state': [], 'x': [], 'y': [],
-                                   'time_index': []})
+
+    tl_dict = defaultdict(lambda: {
+        'state': [],
+        'x': [],
+        'y': [],
+        'time_index': []
+    })
     all_keys = ['state', 'x', 'y']
     i = 0
     for dynamic_map_state in protobuf.dynamic_map_states:
@@ -139,12 +173,15 @@ def waymo_to_scenario(scenario_path: str,
                 tl_dict[id][state_key].append(value[state_key])
             tl_dict[id]['time_index'].append(i)
         i += 1
-            
+
     scenario = {
         "name": scenario_path.split('/')[-1],
         "objects": objects,
         "roads": roads,
         "tl_states": tl_dict
     }
+    # there is a traffic light but we don't want traffic light scenes so just return
+    if (no_tl and len(tl_dict) > 0):
+        return
     with open(scenario_path, "w") as f:
         json.dump(scenario, f)
