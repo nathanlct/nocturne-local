@@ -1,28 +1,26 @@
 import os
 
-import hydra
-import matplotlib.pyplot as plt
+from hydra import compose, initialize
+from pathlib import Path
 
-from envs.base_env import BaseEnv
+from cfgs.config import PROJECT_PATH
 from nocturne_utils.wrappers import create_env
 
-from pyvirtualdisplay import Display
+os.environ["DISPLAY"] = ":0.0"
 
-@hydra.main(config_path='../cfgs/', config_name='config')
-def main(cfg):
-    disp = Display()
-    disp.start()
 
-    cfg.scenario_path = '/private/home/eugenevinitsky/Code/nocturne/scenarios/two_car_intersection.json'
-    cfg.subscriber.ego_subscriber.include_goal_img = True
+def test_rl_env():
+    initialize(config_path="../cfgs/")
+    cfg = compose(config_name="config")
     env = create_env(cfg)
+    env.file = str(PROJECT_PATH / "tests/large_file.json")
     obs = env.reset()
+    # quick check that rendering works
+    img = env.scenario.getCone(env.scenario.getVehicles()[0], 120.0,
+                               1.99 * 3.14, 0.0, False)
     for _ in range(10):
         obs, rew, done, info = env.step({8: {'accel': 2.0, 'turn': 1.0}})
-    goal_img = obs[9]['goal_img']
-    plt.figure()
-    plt.imshow(goal_img)
-    plt.savefig('./goal_img.png')
+
 
 if __name__ == '__main__':
-    main()
+    test_rl_env()

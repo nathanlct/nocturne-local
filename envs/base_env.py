@@ -4,7 +4,6 @@ from copy import copy
 from collections import defaultdict
 import os
 
-from gym.spaces import Box
 import numpy as np
 import torch
 
@@ -12,6 +11,7 @@ from nocturne import Simulation
 
 
 class BaseEnv(object):
+
     def __init__(self, cfg, should_terminate=True, rank=0):
         """[summary]
 
@@ -22,24 +22,30 @@ class BaseEnv(object):
                 that insist that the number of agents throughout an episode are consistent. 
             rank (int, optional): [description]. Defaults to 0.
         """
-        self.files = os.listdir(cfg.scenario_path)
-        self.simulation = Simulation(os.path.join(cfg.scenario_path, self.files[np.random.randint(len(self.files))]),
-                                    use_non_vehicles=False)
+        self.files = os.listdir(cfg['scenario_path'])
+        self.file = self.files[np.random.randint(len(self.files))]
+        self.simulation = Simulation(os.path.join(cfg.scenario_path,
+                                                  self.file),
+                                     use_non_vehicles=False)
         self.scenario = self.simulation.getScenario()
         self.vehicles = self.scenario.getVehicles()
         self.cfg = cfg
         self.episode_length = cfg.episode_length
         self.t = 0
         self.step_num = 0
-        self.rank=rank
+        self.rank = rank
         # If true, agents observations stop being sent back once they're dead
         # If false, a vector of zeros will persist till the episode ends
         self.should_terminate = should_terminate
         # TODO(eugenevinitsky) remove this once the PPO code doesn't have this restriction
         # track dead agents for PPO.
         self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
-        self.dead_feat =  -np.ones_like(self.scenario.getVisibleState(self.vehicles[0], self.cfg.subscriber.view_angle, 
-                                                                      self.cfg.subscriber.view_dist))
+        self.dead_feat = -np.ones_like(
+            self.scenario.observation(
+                self.vehicles[0],
+                self.cfg.subscriber.view_dist,
+                self.cfg.subscriber.view_angle,
+            ))
 
     @property
     def observation_space(self):
@@ -74,7 +80,12 @@ class BaseEnv(object):
         objs_to_remove = []
         for veh_obj in self.simulation.getScenario().getVehicles():
             veh_id = veh_obj.getID()
-            obs_dict[veh_id] = np.array(self.scenario.getVisibleObjectsState(veh_obj, self.cfg.subscriber.view_angle, self.cfg.subscriber.view_dist), copy=False)
+            obs_dict[veh_id] = np.array(self.scenario.observation(
+                veh_obj,
+                self.cfg.subscriber.view_dist,
+                self.cfg.subscriber.view_angle,
+            ),
+                                        copy=False)
             rew_dict[veh_id] = 0
             done_dict[veh_id] = False
             info_dict[veh_id]['goal_achieved'] = False
@@ -90,10 +101,11 @@ class BaseEnv(object):
                 info_dict[veh_id]['goal_achieved'] = True
             if rew_cfg.shaped_goal_distance:
                 # the minus one is to ensure that it's not beneficial to collide
-                rew_dict[veh_id] -= ((np.linalg.norm((goal_pos - obj_pos) / (400 * 1.5), ord=2) ** 2) - 1)
+                rew_dict[veh_id] -= ((np.linalg.norm(
+                    (goal_pos - obj_pos) / (400 * 1.5), ord=2)**2) - 1)
             if rew_cfg.speed_rew:
                 rew_dict[veh_id] += veh_obj.getSpeed() * rew_cfg.speed_rew_coef
-                
+
             ######################## Handle potential done conditions #######################
             # achieved our goal
             if info_dict[veh_id]['goal_achieved']:
@@ -106,10 +118,10 @@ class BaseEnv(object):
             # in the multi-agent setting.
             if done_dict[veh_id]:
                 objs_to_remove.append(veh_obj)
-        
+
         for veh_obj in objs_to_remove:
             self.scenario.removeVehicle(veh_obj)
-        
+
         # TODO(eugenevinitsky) remove this once the PPO code doesn't have this restriction
         # track dead agents and make sure they get something returned for PPO.
         if not self.should_terminate:
@@ -120,12 +132,15 @@ class BaseEnv(object):
                     obs_dict[veh_id] = copy(self.dead_feat)
                     rew_dict[veh_id] = 0
                     done_dict[veh_id] = True
-                    info_dict[veh_id] = {'goal_achieved': False, 'collided': False}
+                    info_dict[veh_id] = {
+                        'goal_achieved': False,
+                        'collided': False
+                    }
 
         if self.cfg.rew_cfg.shared_reward:
             total_reward = np.sum([rew_dict[key] for key in rew_dict.keys()])
             rew_dict = {key: total_reward for key in rew_dict.keys()}
-        
+
         if self.step_num >= self.episode_length:
             done_dict = {key: True for key in done_dict.keys()}
 
@@ -141,45 +156,32 @@ class BaseEnv(object):
         self.step_num = 0
         # TODO(eugenevinitsky) remove this once the PPO code doesn't have this restriction
         # track dead agents for PPO.
-        self.simulation = Simulation(os.path.join(self.cfg.scenario_path, self.files[np.random.randint(len(self.files))]),
-                                    use_non_vehicles=False)
+        self.file = self.files[np.random.randint(len(self.files))]
+        self.simulation = Simulation(os.path.join(self.cfg.scenario_path,
+                                                  self.file),
+                                     use_non_vehicles=False)
         self.scenario = self.simulation.getScenario()
         self.vehicles = self.scenario.getVehicles()
         self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
-        # initialize the vehicle speeds
-        # TODO(eugenevinitsky) make this work with Waymo scenes
-        # for veh_obj in self.simulation.getScenario().getVehicles():
-        #     veh_id = veh_obj.getID()
-        #     veh_obj.setSpeed(self.cfg.initial_speed)
-        #     if self.cfg.randomize_goals:
-        #         invalid_goal = True
-        #         obj_pos = veh_obj.getPosition()
-        #         obj_pos = np.array([obj_pos.x, obj_pos.y])
-        #         new_goal = None
-        #         while invalid_goal:
-        #             new_goal = 800 * (np.random.uniform(size=(2,)) - 0.5)
-        #             on_road = self.scenario.isPointOnRoad(new_goal[0], new_goal[1]) 
-        #             far_away = np.linalg.norm(obj_pos - new_goal) > 200
-        #             # TODO(eugenevinitsky) make this more general
-        #             in_intersection = (np.abs(new_goal[0]) < 40) and (np.abs(new_goal[1]) < 40)
-        #             if on_road and far_away and not in_intersection:
-        #                 max_index = np.argmax(np.abs(new_goal))
-        #                 # move it to near the end of the road
-        #                 new_goal[max_index] = 380 * np.sign(new_goal[max_index])
-        #                 invalid_goal = False
-
-        #         veh_obj.setGoalPosition(new_goal[0], new_goal[1])
 
         obs_dict = {}
         for veh_obj in self.simulation.getScenario().getVehicles():
             veh_id = veh_obj.getID()
-            obs_dict[veh_id] = np.array(self.scenario.getVisibleObjectsState(veh_obj, self.cfg.subscriber.view_angle, self.cfg.subscriber.view_dist), copy=False)
+            obs_dict[veh_id] = np.array(self.scenario.observation(
+                veh_obj,
+                self.cfg.subscriber.view_dist,
+                self.cfg.subscriber.view_angle,
+            ),
+                                        copy=False)
 
         return obs_dict
 
     def render(self, mode=None):
         # TODO(eugenevinitsky) this should eventually return a global image instead of this hack
-        return np.array(self.simulation.getScenario().getImage(None, render_goals=True), copy=False)
+        return np.array(self.simulation.getScenario().getImage(
+            None, render_goals=True),
+                        copy=False)
+
     def seed(self, seed=None):
         if seed is None:
             np.random.seed(1)
