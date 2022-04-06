@@ -1,6 +1,7 @@
 #include "geometry/circular_sector.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 
 namespace nocturne {
@@ -28,19 +29,19 @@ AABB CircularSector::GetAABB() const {
 
   // TODO: Optimize this.
   const Vector2D q0 = center_ + Vector2D(radius_, 0.0f);
-  if (Contains(q0)) {
+  if (CenterAngleContains(q0)) {
     CheckMinMaxCoordinates(q0, min_x, min_y, max_x, max_y);
   }
   const Vector2D q1 = center_ + Vector2D(0.0f, radius_);
-  if (Contains(q1)) {
+  if (CenterAngleContains(q1)) {
     CheckMinMaxCoordinates(q1, min_x, min_y, max_x, max_y);
   }
   const Vector2D q2 = center_ - Vector2D(radius_, 0.0f);
-  if (Contains(q2)) {
+  if (CenterAngleContains(q2)) {
     CheckMinMaxCoordinates(q2, min_x, min_y, max_x, max_y);
   }
   const Vector2D q3 = center_ - Vector2D(0.0f, radius_);
-  if (Contains(q3)) {
+  if (CenterAngleContains(q3)) {
     CheckMinMaxCoordinates(q3, min_x, min_y, max_x, max_y);
   }
 
@@ -48,15 +49,57 @@ AABB CircularSector::GetAABB() const {
 }
 
 bool CircularSector::Contains(const Vector2D& p) const {
-  if (Distance(p, center_) > radius_) {
-    return false;
-  }
+  return Distance(p, center_) <= radius_ && CenterAngleContains(p);
+}
+
+bool CircularSector::CenterAngleContains(const Vector2D& p) const {
   const Vector2D d = p - center_;
   const Vector2D r0 = Radius0();
   const Vector2D r1 = Radius1();
   return theta_ < 0.0f
              ? (CrossProduct(d, r0) <= 0.0f || CrossProduct(d, r1) >= 0.0f)
              : (CrossProduct(d, r0) <= 0.0f && CrossProduct(d, r1) >= 0.0f);
+}
+
+std::pair<std::optional<Vector2D>, std::optional<Vector2D>>
+CircularSector::Intersection(const LineSegment& segment) const {
+  std::array<Vector2D, 2> ret;
+  int64_t cnt = 0;
+
+  const Vector2D& o = center();
+  const LineSegment edge0(o, o + Radius0());
+  const LineSegment edge1(o, o + Radius1());
+  const auto u = edge0.Intersection(segment);
+  if (u.has_value()) {
+    ret[cnt++] = *u;
+  }
+  const auto v = edge1.Intersection(segment);
+  if (v.has_value()) {
+    ret[cnt++] = *v;
+  }
+  if (cnt == 2) {
+    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
+        std::make_optional(ret[0]), std::make_optional(ret[1]));
+  }
+
+  auto [p, q] = CircleLike::Intersection(segment);
+  if (p.has_value() && CenterAngleContains(*p)) {
+    ret[cnt++] = *p;
+  }
+  if (q.has_value() && CenterAngleContains(*q)) {
+    ret[cnt++] = *q;
+  }
+
+  if (cnt == 0) {
+    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
+        std::nullopt, std::nullopt);
+  } else if (cnt == 1) {
+    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
+        std::make_optional(ret[0]), std::nullopt);
+  } else {
+    return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
+        std::make_optional(ret[0]), std::make_optional(ret[1]));
+  }
 }
 
 }  // namespace geometry

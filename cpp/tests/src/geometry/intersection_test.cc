@@ -5,6 +5,7 @@
 
 #include <cmath>
 
+#include "geometry/circle.h"
 #include "geometry/circular_sector.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
@@ -68,6 +69,38 @@ TEST(IntersectsTest, ConvexPolygonLineSegmentTest) {
   const LineSegment seg6(Vector2D(-3.0f, 0.5f), Vector2D(-2.0f, 1.0f));
   EXPECT_FALSE(Intersects(polygon, seg6));
   EXPECT_FALSE(Intersects(seg6, polygon));
+}
+
+TEST(IntersectionTest, CircleLineSegmentTest) {
+  const Circle circle(Vector2D(1.0, 1.0f), 2.0f);
+  const LineSegment line1(Vector2D(-1.0f - kTestEps, -1.0f),
+                          Vector2D(-1.0f - kTestEps, 1.0f));
+  const auto [p1, q1] = Intersection(circle, line1);
+  ASSERT_FALSE(p1.has_value());
+  ASSERT_FALSE(q1.has_value());
+
+  const LineSegment line2(Vector2D(0.0f, 3.0f), Vector2D(4.0f, 3.0f));
+  const auto [p2, q2] = Intersection(circle, line2);
+  ASSERT_TRUE(p2.has_value());
+  ASSERT_FALSE(q2.has_value());
+  EXPECT_FLOAT_EQ(p2->x(), 1.0f);
+  EXPECT_FLOAT_EQ(p2->y(), 3.0f);
+
+  const LineSegment line3(Vector2D(0.0f, 0.0f), Vector2D(4.0f, 4.0f));
+  const auto [p3, q3] = Intersection(circle, line3);
+  ASSERT_TRUE(p3.has_value());
+  ASSERT_FALSE(q3.has_value());
+  EXPECT_FLOAT_EQ(p3->x(), 1.0f + M_SQRT2);
+  EXPECT_FLOAT_EQ(p3->y(), 1.0f + M_SQRT2);
+
+  const LineSegment line4(Vector2D(0.0f, 4.0f), Vector2D(0.0f, -4.0f));
+  const auto [p4, q4] = Intersection(circle, line4);
+  ASSERT_TRUE(p4.has_value());
+  ASSERT_TRUE(q4.has_value());
+  EXPECT_FLOAT_EQ(p4->x(), 0.0f);
+  EXPECT_FLOAT_EQ(p4->y(), 1.0f + std::sqrt(3.0f));
+  EXPECT_FLOAT_EQ(q4->x(), 0.0f);
+  EXPECT_FLOAT_EQ(q4->y(), 1.0f - std::sqrt(3.0f));
 }
 
 TEST(IntersectionTest, CircularSectorLineSegmentTest) {

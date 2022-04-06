@@ -17,6 +17,7 @@ using geometry::ConvexPolygon;
 using geometry::Vector2D;
 using geometry::utils::kHalfPi;
 using geometry::utils::kPi;
+using geometry::utils::kTwoPi;
 using testing::ElementsAre;
 
 class MockObject : public Object {
@@ -87,6 +88,22 @@ TEST(ViewFieldTest, FilterVisibleObjectsTest) {
   objects = std::vector<const Object*>{&obj6};
   vf.FilterVisibleObjects(objects);
   EXPECT_THAT(objects, ElementsAre(&obj6));
+}
+
+TEST(ViewFieldTest, PanoramicViewVisibleObjectsTest) {
+  const ViewField vf(Vector2D(1.0f, 1.0f), 10.0f, kHalfPi, kTwoPi);
+
+  const MockObject obj1(1, 2.0f, 1.0f, Vector2D(1.0f, 3.0f), true);
+  const MockObject obj2(2, 2.0f, 1.0f, Vector2D(1.0f, -1.0f), true);
+  const MockObject obj3(3, 2.0f, 1.0f, Vector2D(1.0f, 4.0f), true);
+  const MockObject obj4(4, 1.5f, 1.0f, Vector2D(1.0f, 2.0f), false);
+  const MockObject obj5(5, 2.0f, 1.0f, Vector2D(4.5f, 4.0f), true);
+  auto ret = vf.VisibleObjects({&obj1, &obj2, &obj3, &obj4, &obj5});
+  EXPECT_THAT(ret, ElementsAre(&obj1, &obj2, &obj4, &obj5));
+
+  const MockObject obj6(6, 10.0f, 1.0f, Vector2D(1.0f, 10.4f), true);
+  ret = vf.VisibleObjects({&obj6});
+  EXPECT_THAT(ret, ElementsAre(&obj6));
 }
 
 }  // namespace

@@ -15,6 +15,7 @@ add_library(
   nocturne_geometry
   STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/bvh.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/circle.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/circular_sector.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/intersection.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/line_segment.cc
@@ -77,6 +78,6 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 add_subdirectory(
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests
-    ${CMAKE_CURRENT_BINARY_DIR}/tests
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests
+  ${CMAKE_CURRENT_BINARY_DIR}/tests
 )
