@@ -144,6 +144,9 @@ class Scenario : public sf::Drawable {
   int64_t getEgoFeatureSize() const { return kEgoFeatureSize; }
 
  protected:
+  // update the collision status of all objects
+  void updateCollision();
+
   void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 
   std::vector<float> egoObservationImpl(const KineticObject& src) const;
