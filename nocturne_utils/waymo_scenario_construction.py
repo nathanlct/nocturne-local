@@ -147,17 +147,7 @@ def waymo_to_scenario(scenario_path: str,
     # construct the road geometries
     # place the initial position of the vehicles
 
-    objects = []
-    for track in protobuf.tracks:
-        obj = _init_object(track)
-        if obj is not None:
-            objects.append(obj)
-    roads = []
-    for map_feature in protobuf.map_features:
-        road = _init_road(map_feature)
-        if road is not None:
-            roads.append(road)
-
+    # Construct the traffic light states
     tl_dict = defaultdict(lambda: {
         'state': [],
         'x': [],
@@ -168,11 +158,28 @@ def waymo_to_scenario(scenario_path: str,
     i = 0
     for dynamic_map_state in protobuf.dynamic_map_states:
         traffic_light_dict = _init_tl_object(dynamic_map_state)
+        # there is a traffic light but we don't want traffic light scenes so just return
+        if (no_tl and len(traffic_light_dict) > 0):
+            return
         for id, value in traffic_light_dict.items():
             for state_key in all_keys:
                 tl_dict[id][state_key].append(value[state_key])
             tl_dict[id]['time_index'].append(i)
         i += 1
+
+    # Construct the object states
+    objects = []
+    for track in protobuf.tracks:
+        obj = _init_object(track)
+        if obj is not None:
+            objects.append(obj)
+
+    # Construct the map states
+    roads = []
+    for map_feature in protobuf.map_features:
+        road = _init_road(map_feature)
+        if road is not None:
+            roads.append(road)
 
     scenario = {
         "name": scenario_path.split('/')[-1],
@@ -180,8 +187,5 @@ def waymo_to_scenario(scenario_path: str,
         "roads": roads,
         "tl_states": tl_dict
     }
-    # there is a traffic light but we don't want traffic light scenes so just return
-    if (no_tl and len(tl_dict) > 0):
-        return
     with open(scenario_path, "w") as f:
         json.dump(scenario, f)
