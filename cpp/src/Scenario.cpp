@@ -374,6 +374,8 @@ void Scenario::loadScenario(std::string path) {
         dynamic_cast<const geometry::AABBInterface*>(obj.get()));
   }
   static_bvh_.InitHierarchy(static_objects);
+  // update collision to check for collisions of any vehicles at initialization
+  updateCollision();
 }
 
 void Scenario::step(float dt) {
@@ -395,29 +397,32 @@ void Scenario::step(float dt) {
           dynamic_cast<const geometry::AABBInterface*>(obj.get()));
     }
     vehicle_bvh_.InitHierarchy(objects);
-    // check vehicle-vehicle collisions
-    for (auto& obj1 : roadObjects) {
-      std::vector<const geometry::AABBInterface*> candidates =
-          vehicle_bvh_.IntersectionCandidates(*obj1);
-      for (const auto* ptr : candidates) {
-        const KineticObject* obj2 = dynamic_cast<const KineticObject*>(ptr);
-        if (obj1->id() == obj2->id()) {
-          continue;
-        }
-        if (!obj1->can_be_collided() || !obj2->can_be_collided()) {
-          continue;
-        }
-        if (!obj1->check_collision() && !obj2->check_collision()) {
-          continue;
-        }
-        if (checkForCollision(*obj1, *obj2)) {
-          obj1->set_collided(true);
-          const_cast<KineticObject*>(obj2)->set_collided(true);
-        }
+  }
+  updateCollision();
+}
+
+void Scenario::updateCollision() {
+  // check vehicle-vehicle collisions
+  for (auto& obj1 : roadObjects) {
+    std::vector<const geometry::AABBInterface*> candidates =
+        vehicle_bvh_.IntersectionCandidates(*obj1);
+    for (const auto* ptr : candidates) {
+      const KineticObject* obj2 = dynamic_cast<const KineticObject*>(ptr);
+      if (obj1->id() == obj2->id()) {
+        continue;
+      }
+      if (!obj1->can_be_collided() || !obj2->can_be_collided()) {
+        continue;
+      }
+      if (!obj1->check_collision() && !obj2->check_collision()) {
+        continue;
+      }
+      if (checkForCollision(*obj1, *obj2)) {
+        obj1->set_collided(true);
+        const_cast<KineticObject*>(obj2)->set_collided(true);
       }
     }
   }
-
   // check vehicle-lane segment collisions
   for (auto& obj1 : roadObjects) {
     std::vector<const geometry::AABBInterface*> candidates =

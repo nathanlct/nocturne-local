@@ -3,9 +3,8 @@ from pathlib import Path
 import os
 import multiprocessing
 
+from cfgs.config import DATA_PATH
 import waymo_scenario_construction as waymo
-
-PATH = '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/training/'
 
 
 def convert_files(args, files, output_dir, rank):
@@ -35,7 +34,7 @@ def main():
     parser.add_argument("--file",
                         type=str,
                         default=os.path.join(
-                            PATH, 'training.tfrecord-00995-of-01000'))
+                            DATA_PATH, 'training.tfrecord-00995-of-01000'))
     parser.add_argument("--num", type=int, default=1)
     parser.add_argument("--output_txt",
                         action='store_true',
@@ -57,12 +56,12 @@ def main():
     args = parser.parse_args()
 
     if args.num > 1 or args.all_files:
-        files = list(Path(PATH).glob('*tfrecord*'))
+        files = list(Path(DATA_PATH).glob('*tfrecord*'))
         if args.no_tl:
-            output_dir = os.path.join('/'.join(PATH.split('/')[0:-2]),
+            output_dir = os.path.join('/'.join(DATA_PATH.split('/')[0:-2]),
                                       'formatted_json_v2_no_tl')
         else:
-            output_dir = os.path.join('/'.join(PATH.split('/')[0:-2]),
+            output_dir = os.path.join('/'.join(DATA_PATH.split('/')[0:-2]),
                                       'formatted_json_v2')
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
