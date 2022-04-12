@@ -45,7 +45,9 @@ void init_object(py::module& m) {
                                   &nocturne::KineticObject::set_destination))
       .def("set_velocity", py::overload_cast<float, float>(
                                &nocturne::KineticObject::set_velocity))
-
+      .def("set_expert_controlled",
+           py::overload_cast<bool>(
+               &nocturne::KineticObject::set_expert_controlled))
       // TODO: Deprecate the legacy interfaces below.
       .def("getWidth", &nocturne::KineticObject::width)
       .def("getLength", &nocturne::KineticObject::length)

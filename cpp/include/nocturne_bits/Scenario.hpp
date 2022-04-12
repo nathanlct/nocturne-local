@@ -74,8 +74,6 @@ class Scenario : public sf::Drawable {
   void loadScenario(std::string path);
 
   void step(float dt);
-  void waymo_step();  // step forwards and place vehicles at their next position
-                      // in the expert dict
 
   void removeVehicle(Vehicle* object);
 
