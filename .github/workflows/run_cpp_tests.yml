@@ -17,28 +17,13 @@ jobs:
                   git submodule update --init --recursive
             - name: Build C++ nocturne library.
               run: |
-                  export LIB_INSTALL_DIR=${{ github.workspace }}/build_usr_local
                   cd ${{ github.workspace }}/cpp
                   mkdir build
                   cd build
-                  cmake .. -DCMAKE_INSTALL_PREFIX=${LIB_INSTALL_DIR}
-                  make
-                  make install
-            - name: Build C++ tests.
-              run: |
-                  export LIB_INSTALL_DIR=${{ github.workspace }}/build_usr_local
-                  cd ${{ github.workspace }}/cpp/tests
-                  mkdir build
-                  cd build
-                  cmake .. -DCMAKE_LIBRARY_PATH=${LIB_INSTALL_DIR}/lib/ -DADDITIONAL_INCLUDE_DIR=${LIB_INSTALL_DIR}/include/
+                  cmake ..
                   make
             - name: Run C++ tests.
               run: |
-                  cd ${{ github.workspace }}/cpp/tests/bin
-                  for file in ./*
-                  do 
-                    echo ""
-                    echo "Running test $file"
-                    ./$file
-                  done
+                  cd ${{ github.workspace }}/cpp/build/tests
+                  ./nocturne_test
             - run: echo "Job finished with status ${{ job.status }}."
