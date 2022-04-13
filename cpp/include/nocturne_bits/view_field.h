@@ -1,41 +1,44 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
+#include "geometry/circle.h"
 #include "geometry/circular_sector.h"
 #include "geometry/vector_2d.h"
 #include "object.h"
 
 namespace nocturne {
 
-class ViewField : public geometry::CircularSector {
+class ViewField : public geometry::AABBInterface {
  public:
   ViewField() = default;
   ViewField(const geometry::Vector2D& center, float radius, float heading,
-            float theta)
-      : geometry::CircularSector(center, radius, heading, theta) {}
+            float theta);
+
+  geometry::AABB GetAABB() const override { return vision_->GetAABB(); }
 
   std::vector<const Object*> VisibleObjects(
-      const std::vector<const Object*>& objects, int64_t limit = -1) const;
+      const std::vector<const Object*>& objects) const;
+  void FilterVisibleObjects(std::vector<const Object*>& objects) const;
 
-  std::vector<const Object*> VisibleUnblockingObjects(
-      const std::vector<const Object*>& objects, int64_t limit = -1) const;
+  std::vector<const Object*> VisibleNonblockingObjects(
+      const std::vector<const Object*>& objects) const;
+  void FilterVisibleNonblockingObjects(
+      std::vector<const Object*>& objects) const;
+
+  std::vector<const Object*> VisiblePoints(
+      const std::vector<const Object*>& objects) const;
+  void FilterVisiblePoints(std::vector<const Object*>& objects) const;
 
  protected:
-  geometry::Vector2D MakeSightEndpoint(const geometry::Vector2D& p) const {
-    const geometry::Vector2D& o = center();
-    const float r = radius();
-    const geometry::Vector2D d = p - o;
-    return o + d / d.Norm() * r;
-  }
-
   std::vector<geometry::Vector2D> ComputeSightEndpoints(
       const std::vector<const Object*>& objects) const;
 
-  std::vector<const Object*> NearestK(const std::vector<const Object*>& objects,
-                                      int64_t k) const;
+  std::unique_ptr<geometry::CircleLike> vision_ = nullptr;
+  const bool panoramic_view_ = false;
 };
 
 }  // namespace nocturne

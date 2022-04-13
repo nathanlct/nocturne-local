@@ -11,17 +11,11 @@ set(
 
 project(nocturne)
 
-# nocturne files
-# include_directories(/usr/local/include)
-# AUX_SOURCE_DIRECTORY(src SRC_FILES)
-# set(PROJECT_SOURCE_DIR "src")
-# set(PROJECT_INCLUDE_DIR "include/nocturne_bits")
-# file (GLOB SOURCE_FILES "${PROJECT_INCLUDE_DIR}/*.hpp" "${PROJECT_SOURCE_DIR}/*.cpp")
-
 add_library(
   nocturne_geometry
   STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/bvh.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/circle.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/circular_sector.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/intersection.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/line_segment.cc
@@ -41,20 +35,20 @@ add_library(
   STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Scenario.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Simulation.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/kinetic_object.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/object.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/road.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/stop_sign.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/traffic_light.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/sf_utils.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/vehicle.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/view_field.cc
 )
 # set_property(TARGET nocturne_lib PROPERTY POSITION_INDEPENDENT_CODE 1)
 target_include_directories(
   nocturne_core
   PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/nocturne_bits
   ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/json/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/nocturne_bits
 )
 
 # Link SFML
@@ -84,6 +78,6 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 add_subdirectory(
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests
-    ${CMAKE_CURRENT_BINARY_DIR}/tests
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests
+  ${CMAKE_CURRENT_BINARY_DIR}/tests
 )

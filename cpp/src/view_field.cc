@@ -1,8 +1,10 @@
 #include "view_field.h"
 
 #include <algorithm>
+#include <iterator>
 #include <limits>
 #include <optional>
+#include <type_traits>
 #include <utility>
 
 #include "geometry/intersection.h"
@@ -13,10 +15,21 @@ namespace nocturne {
 
 namespace {
 
+using geometry::Circle;
+using geometry::CircleLike;
 using geometry::CircularSector;
 using geometry::ConvexPolygon;
 using geometry::LineSegment;
 using geometry::Vector2D;
+using geometry::utils::kTwoPi;
+
+Vector2D MakeSightEndpoint(const CircleLike& vision,
+                           const geometry::Vector2D& p) {
+  const geometry::Vector2D& o = vision.center();
+  const float r = vision.radius();
+  const geometry::Vector2D d = p - o;
+  return o + d / d.Norm() * r;
+}
 
 void VisibleObjectsImpl(const LineSegment& sight,
                         const std::vector<const Object*>& objects,
@@ -74,14 +87,41 @@ void VisibleObjectsImpl(const LineSegment& sight,
   }
 }
 
+bool IsVisibleNonblockingObject(const CircleLike& vision, const Object* obj) {
+  const auto edges = obj->BoundingPolygon().Edges();
+  for (const LineSegment& edge : edges) {
+    // Check one endpoint should be enough, the othe one will be checked in
+    // the next edge.
+    const Vector2D& x = edge.Endpoint0();
+    if (vision.Contains(x)) {
+      return true;
+    }
+    const auto [p, q] = vision.Intersection(edge);
+    if (p.has_value() || q.has_value()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace
+
+ViewField::ViewField(const geometry::Vector2D& center, float radius,
+                     float heading, float theta)
+    : panoramic_view_(theta >= kTwoPi) {
+  if (panoramic_view_) {
+    vision_ = std::make_unique<Circle>(center, radius);
+  } else {
+    vision_ = std::make_unique<CircularSector>(center, radius, heading, theta);
+  }
+}
 
 // O(N^2) algorithm.
 // TODO: Implment O(NlogN) algorithm when there are too many objects.
 std::vector<const Object*> ViewField::VisibleObjects(
-    const std::vector<const Object*>& objects, int64_t limit) const {
+    const std::vector<const Object*>& objects) const {
   const int64_t n = objects.size();
-  const Vector2D& o = center();
+  const Vector2D& o = vision_->center();
   const std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
   std::vector<bool> mask(n, false);
   for (const Vector2D& p : sight_endpoints) {
@@ -93,55 +133,91 @@ std::vector<const Object*> ViewField::VisibleObjects(
       ret.push_back(objects[i]);
     }
   }
-  const int64_t m = ret.size();
-  return (limit < 0 || m <= limit) ? ret : NearestK(ret, limit);
+  return ret;
 }
 
-std::vector<const Object*> ViewField::VisibleUnblockingObjects(
-    const std::vector<const Object*>& objects, int64_t limit) const {
-  std::vector<const Object*> ret;
-  for (const Object* obj : objects) {
-    const auto edges = obj->BoundingPolygon().Edges();
-    for (const LineSegment& edge : edges) {
-      // Check one endpoint should be enough, the othe one will be checked in
-      // the next edge.
-      const Vector2D& x = edge.Endpoint0();
-      if (Contains(x)) {
-        ret.push_back(obj);
-        break;
-      }
-      const auto [p, q] = Intersection(*this, edge);
-      if (p.has_value() || q.has_value()) {
-        ret.push_back(obj);
-        break;
-      }
+void ViewField::FilterVisibleObjects(
+    std::vector<const Object*>& objects) const {
+  const int64_t n = objects.size();
+  const Vector2D& o = vision_->center();
+  const std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
+  std::vector<bool> mask(n, false);
+  for (const Vector2D& p : sight_endpoints) {
+    VisibleObjectsImpl(LineSegment(o, p), objects, mask);
+  }
+  int64_t pivot = 0;
+  for (; pivot < n && mask[pivot]; ++pivot)
+    ;
+  for (int64_t i = pivot + 1; i < n; ++i) {
+    if (mask[i]) {
+      std::swap(objects[pivot], objects[i]);
+      ++pivot;
     }
   }
-  const int64_t m = ret.size();
-  return (limit < 0 || m <= limit) ? ret : NearestK(ret, limit);
+  objects.resize(pivot);
+}
+
+std::vector<const Object*> ViewField::VisibleNonblockingObjects(
+    const std::vector<const Object*>& objects) const {
+  std::vector<const Object*> ret;
+  const CircleLike* vptr = vision_.get();
+  std::copy_if(
+      objects.cbegin(), objects.cend(), std::back_inserter(ret),
+      [vptr](const Object* o) { return IsVisibleNonblockingObject(*vptr, o); });
+  return ret;
+}
+
+void ViewField::FilterVisibleNonblockingObjects(
+    std::vector<const Object*>& objects) const {
+  const CircleLike* vptr = vision_.get();
+  auto pivot = std::partition(
+      objects.begin(), objects.end(),
+      [vptr](const Object* o) { return IsVisibleNonblockingObject(*vptr, o); });
+  objects.resize(std::distance(objects.begin(), pivot));
+}
+
+std::vector<const Object*> ViewField::VisiblePoints(
+    const std::vector<const Object*>& objects) const {
+  std::vector<const Object*> ret;
+  const CircleLike* vptr = vision_.get();
+  std::copy_if(
+      objects.cbegin(), objects.cend(), std::back_inserter(ret),
+      [vptr](const Object* obj) { return vptr->Contains(obj->position()); });
+  return ret;
+}
+
+void ViewField::FilterVisiblePoints(std::vector<const Object*>& objects) const {
+  const CircleLike* vptr = vision_.get();
+  auto pivot = std::partition(
+      objects.begin(), objects.end(),
+      [vptr](const Object* obj) { return vptr->Contains(obj->position()); });
+  objects.resize(std::distance(objects.begin(), pivot));
 }
 
 std::vector<Vector2D> ViewField::ComputeSightEndpoints(
     const std::vector<const Object*>& objects) const {
   std::vector<Vector2D> ret;
-  const Vector2D& o = center();
-  ret.push_back(o + Radius0());
-  ret.push_back(o + Radius1());
+  const Vector2D& o = vision_->center();
+  if (!panoramic_view_) {
+    const CircularSector* vptr = dynamic_cast<CircularSector*>(vision_.get());
+    ret.push_back(o + vptr->Radius0());
+    ret.push_back(o + vptr->Radius1());
+  }
   for (const Object* obj : objects) {
     const auto edges = obj->BoundingPolygon().Edges();
     for (const LineSegment& edge : edges) {
       // Check one endpoint should be enough, the othe one will be checked in
       // the next edge.
       const Vector2D& x = edge.Endpoint0();
-      if (Contains(x)) {
-        ret.push_back(MakeSightEndpoint(x));
+      if (vision_->Contains(x)) {
+        ret.push_back(MakeSightEndpoint(*vision_, x));
       }
-      const auto [p, q] = Intersection(*this, edge);
+      const auto [p, q] = vision_->Intersection(edge);
       if (p.has_value()) {
-        ret.push_back(MakeSightEndpoint(*p));
+        ret.push_back(MakeSightEndpoint(*vision_, *p));
       }
       if (q.has_value()) {
-        ret.push_back(MakeSightEndpoint(*q));
+        ret.push_back(MakeSightEndpoint(*vision_, *q));
       }
     }
   }
@@ -149,27 +225,6 @@ std::vector<Vector2D> ViewField::ComputeSightEndpoints(
   std::sort(ret.begin(), ret.end());
   auto it = std::unique(ret.begin(), ret.end());
   ret.resize(std::distance(ret.begin(), it));
-  return ret;
-}
-
-std::vector<const Object*> ViewField::NearestK(
-    const std::vector<const Object*>& objects, int64_t k) const {
-  const int64_t n = objects.size();
-  if (n <= k) {
-    return objects;
-  }
-  const Vector2D& o = center();
-  std::vector<std::pair<float, const Object*>> dis;
-  dis.reserve(n);
-  for (const Object* obj : objects) {
-    dis.emplace_back(Distance(o, obj->position()), obj);
-  }
-  std::partial_sort(dis.begin(), dis.begin() + k, dis.end());
-  std::vector<const Object*> ret;
-  ret.reserve(k);
-  for (int64_t i = 0; i < k; ++i) {
-    ret.push_back(dis[i].second);
-  }
   return ret;
 }
 

@@ -10,24 +10,21 @@
 namespace nocturne {
 
 constexpr float kStopSignRadius = 2.0f;
+constexpr int kStopSignNumEdges = 6;
 
 class StopSign : public Object {
  public:
   StopSign() = default;
   StopSign(int64_t id, const geometry::Vector2D& position)
-      : Object(id, /*length=*/kStopSignRadius * 2.0f,
-               /*width=*/kStopSignRadius * 2.0f, position,
-               /*heading=*/0.0f, /*can_block_sight=*/false,
+      : Object(id, position,
+               /*can_block_sight=*/false,
                /*can_be_collided=*/false, /*check_collision=*/false) {}
 
-  std::string Type() const override { return "StopSign"; }
+  ObjectType Type() const override { return ObjectType::kStopSign; }
+
+  float Radius() const { return kStopSignRadius; }
 
   geometry::ConvexPolygon BoundingPolygon() const override;
-
-  geometry::AABB GetAABB() const override {
-    return geometry::AABB(position_ - kStopSignRadius,
-                          position_ + kStopSignRadius);
-  }
 
   sf::Color Color() const { return sf::Color::Red; }
 

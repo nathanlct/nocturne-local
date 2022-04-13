@@ -1,20 +1,19 @@
 from collections import OrderedDict
-import time
 import sys
 
-import cv2
+from gym.spaces import Box, Discrete
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.lib import index_tricks
 import seaborn as sns
 import wandb
 
-# from algos.gcsl.env_utils import ImageandProprio, normalize_image
-from gym.spaces import Box, Discrete
+from cfgs.config import PROJECT_PATH
 from envs import BaseEnv, WaypointEnv
 from nocturne_utils.density_estimators import RawKernelDensity
 
+
 class PPOWrapper(object):
+
     def __init__(self, env, use_images=False):
         """Wrapper that adds the appropriate observation spaces
 
@@ -36,19 +35,25 @@ class PPOWrapper(object):
         self.agent_ids = []
         self.feature_shape = obs_dict[0].shape
         # TODO(eugenevinitsky) this is a hack that assumes that we have a fixed number of agents
-        self.share_observation_space = [Box(
-            low=-np.inf, high=+np.inf, shape=self.feature_shape, dtype=np.float32) for _ in range(self.n)]
+        self.share_observation_space = [
+            Box(low=-np.inf,
+                high=+np.inf,
+                shape=self.feature_shape,
+                dtype=np.float32) for _ in range(self.n)
+        ]
 
     @property
     def observation_space(self):
-        return [Box(low=-np.inf,
-                       high=np.inf,
-                       shape=self.feature_shape) for _ in range(self.n)]
+        return [
+            Box(low=-np.inf, high=np.inf, shape=self.feature_shape)
+            for _ in range(self.n)
+        ]
+
     @property
     # TODO(eugenevinitsky) put back the box once we figure out how to make it compatible with the code
     def action_space(self):
         # return [Box(low=np.array([-1, -0.4]), high=np.array([1, 0.4]))]
-        return [Discrete(self.action_discretization ** 2) for _ in range(self.n)]
+        return [Discrete(self.action_discretization**2) for _ in range(self.n)]
 
     def step(self, actions):
         agent_actions = {}
@@ -58,9 +63,14 @@ class PPOWrapper(object):
                 action = np.argmax(action_vec)
             else:
                 action = action_vec[0]
-            accel_action = self.accel_grid[int(action // self.action_discretization)]
-            steering_action = self.steering_grid[action % self.action_discretization]
-            agent_actions[agent_id] = {'accel': accel_action, 'turn': steering_action}
+            accel_action = self.accel_grid[int(action //
+                                               self.action_discretization)]
+            steering_action = self.steering_grid[action %
+                                                 self.action_discretization]
+            agent_actions[agent_id] = {
+                'accel': accel_action,
+                'turn': steering_action
+            }
         next_obses, rew, done, info = self._env.step(agent_actions)
         obs_n = []
         rew_n = []
@@ -107,6 +117,7 @@ class PPOWrapper(object):
 
 class ActionWrapper(object):
     '''Used to make sure actions conform to the expected format'''
+
     def __init__(self, env):
         self._env = env
 
@@ -123,7 +134,7 @@ class ActionWrapper(object):
 
     def render(self, mode=None):
         return self._env.render()
-    
+
     def seed(self, seed=None):
         self._env.seed(seed)
 
@@ -132,6 +143,7 @@ class ActionWrapper(object):
 
 
 class DictToVecWrapper(object):
+
     def __init__(self, env, use_images=False, normalize_value=400):
         """Takes a dictionary state space and returns a flattened vector in the 'state' key of the dict
 
@@ -161,21 +173,26 @@ class DictToVecWrapper(object):
         for agent_id, next_obs in obs_dict.items():
             if self.use_images:
                 agent_dict = obs_dict[agent_id]
-                agent_dict['features'] = np.concatenate((agent_dict['ego_img'], agent_dict['goal_img']), axis=-1)
-                agent_dict['features'] = np.transpose(agent_dict['features'], (2, 0, 1))
+                agent_dict['features'] = np.concatenate(
+                    (agent_dict['ego_img'], agent_dict['goal_img']), axis=-1)
+                agent_dict['features'] = np.transpose(agent_dict['features'],
+                                                      (2, 0, 1))
             else:
                 if isinstance(next_obs, dict):
                     features = []
                     for key, val in next_obs.items():
-                        if len(val.shape) > 2 or key == 'goal_pos' or key == 'ego_pos':
+                        if len(val.shape
+                               ) > 2 or key == 'goal_pos' or key == 'ego_pos':
                             continue
                         else:
                             features.append(val.ravel())
                     # we want to make sure that the goal is at the end
                     # and that the "achieved_goal" is between -4 and -2 from the end
                     # TODO(eugenevinitsky) local coordinates break the goal wrappers
-                    if 'ego_pos' in next_obs.keys() and 'goal_pos' in next_obs.keys():
-                        features.extend([next_obs['ego_pos'], next_obs['goal_pos']])
+                    if 'ego_pos' in next_obs.keys(
+                    ) and 'goal_pos' in next_obs.keys():
+                        features.extend(
+                            [next_obs['ego_pos'], next_obs['goal_pos']])
                 agent_dict = obs_dict[agent_id]
                 agent_dict['features'] = np.concatenate(
                     features, axis=0).astype(np.float32) / self.normalize_value
@@ -188,7 +205,7 @@ class DictToVecWrapper(object):
 
     def render(self, mode=None):
         return self._env.render()
-    
+
     def seed(self, seed=None):
         self._env.seed(seed)
 
@@ -216,6 +233,7 @@ class GoalEnvWrapper(BaseEnv):
         GoalEnv.extract_goal(state)
             Returns the goal representation for a given state
     """
+
     def __init__(self, env):
         self._env = env
         self.goal_metric = 'euclidean'
@@ -237,18 +255,25 @@ class GoalEnvWrapper(BaseEnv):
             #                                     example_obs['features'].shape)
         else:
             self.state_space = Box(low=-np.inf,
-                                    high=np.inf,
-                                    shape=example_obs['features'].shape)
-        
+                                   high=np.inf,
+                                   shape=example_obs['features'].shape)
+
         # TODO(eugenevinitsky) remove this once we actually vary the set of possible goals and sample instead of returning reset state
         # TODO(eugenevinitsky) this is handled bespoke in every env, make this more general or a wrapper
         if self.use_images:
-            self.curr_goal = {key: self.state_space.to_flat(obs[self.features_key], obs['features']) for key, obs in obs_dict.items()}
+            self.curr_goal = {
+                key: self.state_space.to_flat(obs[self.features_key],
+                                              obs['features'])
+                for key, obs in obs_dict.items()
+            }
         else:
-            self.curr_goal = {key: obs[self.features_key] for key, obs in obs_dict.items()}
+            self.curr_goal = {
+                key: obs[self.features_key]
+                for key, obs in obs_dict.items()
+            }
         self.goal_space = Box(low=-np.inf,
-                        high=np.inf,
-                        shape=example_obs['goal_pos'].shape)
+                              high=np.inf,
+                              shape=example_obs['goal_pos'].shape)
 
     @property
     def action_space(self):
@@ -284,10 +309,16 @@ class GoalEnvWrapper(BaseEnv):
 
     def get_obs(self, obs_dict):
         if self.use_images:
-            return {key: self.state_space.to_flat(obs[self.features_key], obs['features']) for key, obs in obs_dict.items()}
+            return {
+                key: self.state_space.to_flat(obs[self.features_key],
+                                              obs['features'])
+                for key, obs in obs_dict.items()
+            }
         else:
-            return {key: obs[self.features_key] for key, obs in obs_dict.items()}
-
+            return {
+                key: obs[self.features_key]
+                for key, obs in obs_dict.items()
+            }
 
     def observation(self, states):
         """
@@ -329,7 +360,10 @@ class GoalEnvWrapper(BaseEnv):
         (TODO) no hardcoding
         """
         if isinstance(state, dict):
-            return {key: state_val[..., -2:] for key, state_val in state.items()}
+            return {
+                key: state_val[..., -2:]
+                for key, state_val in state.items()
+            }
         else:
             return state[..., -2:]
 
@@ -353,7 +387,9 @@ class GoalEnvWrapper(BaseEnv):
                     achieved_goal = state[-4:-2]
                 desired_goal = self.extract_goal(goal_state)
                 diff = achieved_goal - desired_goal
-                average_goal_dist += np.linalg.norm(diff * self.normalize_value, axis=-1)
+                average_goal_dist += np.linalg.norm(diff *
+                                                    self.normalize_value,
+                                                    axis=-1)
             else:
                 raise ValueError('Unknown goal metric %s' % self.goal_metric)
         return average_goal_dist / len(state_dict)
@@ -390,10 +426,19 @@ class GoalEnvWrapper(BaseEnv):
     def __getattr__(self, name):
         return getattr(self._env, name)
 
+
 class CurriculumGoalEnvWrapper(GoalEnvWrapper):
     '''Test a curriculum for a single agent to go to a goal that evolves to minimize log entropy of the goal distribution'''
-    def __init__(self, env, density_optim_samples, num_goal_samples, log_figure, kernel, 
-                quartile_cutoff, wandb=False, share_goal_buffer=False):
+
+    def __init__(self,
+                 env,
+                 density_optim_samples,
+                 num_goal_samples,
+                 log_figure,
+                 kernel,
+                 quartile_cutoff,
+                 wandb=False,
+                 share_goal_buffer=False):
         """[summary]
 
         Args:
@@ -421,16 +466,30 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         self.sampled_goals = [[] for _ in range(len(vehicle_ids))]
         self.achieved_during_episode = {key: False for key in vehicle_ids}
         if self.share_goal_buffer:
-            self.density_estimators = RawKernelDensity(num_optim_samples=density_optim_samples, 
-                                    log_figure=log_figure, kernel=kernel, quartile_cutoff=quartile_cutoff,
-                                    wandb=self.cfg.wandb, wandb_id='1', optimize_every=50,
-                                    buffer_size=self.cfg.algo.density_buffer_size, bandwidth=self.cfg.algo.bandwidth)
+            self.density_estimators = RawKernelDensity(
+                num_optim_samples=density_optim_samples,
+                log_figure=log_figure,
+                kernel=kernel,
+                quartile_cutoff=quartile_cutoff,
+                wandb=self.cfg.wandb,
+                wandb_id='1',
+                optimize_every=50,
+                buffer_size=self.cfg.algo.density_buffer_size,
+                bandwidth=self.cfg.algo.bandwidth)
         else:
-            self.density_estimators = {key: RawKernelDensity(num_optim_samples=density_optim_samples, 
-                                    log_figure=log_figure, kernel=kernel, quartile_cutoff=quartile_cutoff,
-                                    wandb=self.cfg.wandb, wandb_id=key, optimize_every=50,
-                                    buffer_size=self.cfg.algo.density_buffer_size, 
-                                    bandwidth=self.cfg.algo.bandwidth) for key in vehicle_ids}
+            self.density_estimators = {
+                key:
+                RawKernelDensity(num_optim_samples=density_optim_samples,
+                                 log_figure=log_figure,
+                                 kernel=kernel,
+                                 quartile_cutoff=quartile_cutoff,
+                                 wandb=self.cfg.wandb,
+                                 wandb_id=key,
+                                 optimize_every=50,
+                                 buffer_size=self.cfg.algo.density_buffer_size,
+                                 bandwidth=self.cfg.algo.bandwidth)
+                for key in vehicle_ids
+            }
 
     @property
     def action_space(self):
@@ -467,7 +526,7 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
         return obs, rew, done, info
 
     def reset(self):
-        '''We sample a new goal position at each reset''' 
+        '''We sample a new goal position at each reset'''
         # this is just some temp logging for debugging
         for i, vehicle in enumerate(self._env.vehicles):
             achieved_goal = vehicle.getPosition()
@@ -483,10 +542,10 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
             plt.vlines(-42, -400, 400)
             plt.xlim([-400, 400])
             plt.ylim([-400, 400])
-            if self.wandb and self.rank==0:
+            if self.wandb and self.rank == 0:
                 wandb.log({"final_goals": wandb.Image(fig)})
             else:
-                plt.savefig('/private/home/eugenevinitsky/Code/nocturne/final_goals.png')
+                plt.savefig(PROJECT_PATH / 'final_goals.png')
             plt.close(fig)
 
             if self.rkd_is_ready:
@@ -500,35 +559,40 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
                 plt.vlines(-42, -400, 400)
                 plt.xlim([-400, 400])
                 plt.ylim([-400, 400])
-                if self.wandb and self.rank==0:
+                if self.wandb and self.rank == 0:
                     wandb.log({"desired_goals": wandb.Image(fig)})
                 else:
-                    plt.savefig('/private/home/eugenevinitsky/Code/nocturne/desired_goals.png')
+                    plt.savefig(PROJECT_PATH / 'desired_goals.png')
                 plt.close(fig)
 
                 fig, ax = plt.subplots()
                 if self.share_goal_buffer:
                     rkd = self.density_estimators
                     color = next(ax._get_lines.prop_cycler)['color']
-                    rkd.plot_density_info(self.num_goal_samples, color, self.normalize_value)
+                    rkd.plot_density_info(self.num_goal_samples, color,
+                                          self.normalize_value)
                 else:
                     for rkd in self.density_estimators.values():
                         color = next(ax._get_lines.prop_cycler)['color']
-                        rkd.plot_density_info(self.num_goal_samples, color, self.normalize_value)
+                        rkd.plot_density_info(self.num_goal_samples, color,
+                                              self.normalize_value)
                 plt.hlines(42, -400, 400)
                 plt.hlines(-42, -400, 400)
                 plt.vlines(42, -400, 400)
                 plt.vlines(-42, -400, 400)
                 plt.xlim([-400, 400])
                 plt.ylim([-400, 400])
-                if self.wandb and self.rank==0:
+                if self.wandb and self.rank == 0:
                     wandb.log({"density_sample": wandb.Image(fig)})
                 else:
-                    plt.savefig('/private/home/eugenevinitsky/Code/nocturne/sampled_density.png')
+                    plt.savefig(PROJECT_PATH / 'sampled_density.png')
                 plt.close(fig)
 
         obs = super().reset()
-        self.achieved_during_episode = {key: False for key in self.achieved_during_episode.keys()}
+        self.achieved_during_episode = {
+            key: False
+            for key in self.achieved_during_episode.keys()
+        }
         # TODO(eugenevinitsky) this will not work for many agents
         # self.achieved_during_episode = False
         vehicle_objs = self._env.vehicles
@@ -538,7 +602,7 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
 
         # sample either our current goal or the most recently achieved goal
         # self.sampled_goal_index = self.current_goal_counter
-        # self.sampled_goal_index = max(np.random.choice([self.current_goal_counter, self.current_goal_counter - 1, 
+        # self.sampled_goal_index = max(np.random.choice([self.current_goal_counter, self.current_goal_counter - 1,
         #                                                 self.current_goal_counter - 2]), 0)
         # new_goal = self.valid_goals[self.sampled_goal_index]
         # t = time.time()
@@ -551,7 +615,8 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
             # TODO(eugenevinitsky) remove hardcoding
             if rkd.ready:
                 self.rkd_is_ready = True
-                new_goal = rkd.draw_min_sample(self.num_goal_samples) * self.normalize_value
+                new_goal = rkd.draw_min_sample(
+                    self.num_goal_samples) * self.normalize_value
                 self.sampled_goals[i].append([new_goal[0], new_goal[1]])
                 vehicle_obj.setGoalPosition(new_goal[0], new_goal[1])
                 # print(f'new goal is {new_goal}')
@@ -562,24 +627,33 @@ class CurriculumGoalEnvWrapper(GoalEnvWrapper):
 
         # print(f'time to draw new goals {time.time() - t}')
         # TODO(eugenevinitsky) this is a hack since dict to vec wrapper expects a dict
-        new_obs = {vehicle_obj.getID(): self.subscriber.get_obs(vehicle_obj) for vehicle_obj in vehicle_objs}
+        new_obs = {
+            vehicle_obj.getID(): self.subscriber.get_obs(vehicle_obj)
+            for vehicle_obj in vehicle_objs
+        }
         features = self.transform_obs(new_obs)
         self.curr_goal = features
-        
+
         self.num_episodes += 1
         return features
 
     def transform_obs(self, obs_dict):
-         # TODO(eugenevinitsky) this is a hack since dict to vec wrapper expects a dict
+        # TODO(eugenevinitsky) this is a hack since dict to vec wrapper expects a dict
         return self.get_obs(self._env.transform_obs(obs_dict))
 
     def seed(self, seed=None):
         self._env.seed(seed)
-    
+
 
 def create_env(cfg):
     env = BaseEnv(cfg)
+    return env
+
+
+def create_wrapped_env(cfg):
+    env = BaseEnv(cfg)
     return ActionWrapper(DictToVecWrapper(env))
+
 
 def create_ppo_env(cfg, rank=0):
     if cfg.rew_cfg.dense_waypoints:
@@ -599,10 +673,13 @@ def create_ppo_env(cfg, rank=0):
 def create_goal_env(cfg):
     env = BaseEnv(cfg, should_terminate=True)
     # return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False))
-    return CurriculumGoalEnvWrapper(DictToVecWrapper(ActionWrapper(env), use_images=False, normalize_value=cfg.algo.normalize_value),
-                                    density_optim_samples=cfg.algo.density_optim_samples,
-                                    num_goal_samples=cfg.algo.num_goal_samples,
-                                    log_figure=cfg.algo.log_figure,
-                                    kernel=cfg.algo.kernel,
-                                    quartile_cutoff=cfg.algo.quartile_cutoff,
-                                    wandb=cfg.wandb)
+    return CurriculumGoalEnvWrapper(
+        DictToVecWrapper(ActionWrapper(env),
+                         use_images=False,
+                         normalize_value=cfg.algo.normalize_value),
+        density_optim_samples=cfg.algo.density_optim_samples,
+        num_goal_samples=cfg.algo.num_goal_samples,
+        log_figure=cfg.algo.log_figure,
+        kernel=cfg.algo.kernel,
+        quartile_cutoff=cfg.algo.quartile_cutoff,
+        wandb=cfg.wandb)

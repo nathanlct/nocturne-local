@@ -5,21 +5,67 @@
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "ImageMatrix.hpp"
+#include "cyclist.h"
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
+#include "kinetic_object.h"
 #include "object.h"
+#include "pedestrian.h"
 #include "road.h"
 #include "stop_sign.h"
 #include "traffic_light.h"
 #include "vehicle.h"
 
+namespace pybind11 {
+
+template <typename T, int ExtraFlags>
+class array_t;
+
+}  // namespace pybind11
+
 namespace nocturne {
 
 using json = nlohmann::json;
+
+// TODO(ev) hardcoding, this is the maximum number of vehicles that can be
+// returned in the state
+constexpr int64_t kMaxVisibleKineticObjects = 20;
+constexpr int64_t kMaxVisibleRoadPoints = 80;
+constexpr int64_t kMaxVisibleTrafficLights = 20;
+constexpr int64_t kMaxVisibleStopSigns = 4;
+
+// KineticObject features are:
+// [ valid, distance, azimuth, length, witdh, relative_heading,
+//   relative_velocity_speed, relative_velocity_direction,
+//   object_type (one_hot of 8) ]
+constexpr int64_t kKineticObjectFeatureSize = 16;
+
+// RoadPoint features are:
+// [ valid, distance, azimuth, road_type (one_hot of 7) ]
+constexpr int64_t kRoadPointFeatureSize = 10;
+
+// TrafficLight features are:
+// [ valid, distance, azimuth, current_state (one_hot of 9) ]
+constexpr int64_t kTrafficLightFeatureSize = 12;
+
+// StopSign features are:
+// [ valid, distance, azimuth ]
+constexpr int64_t kStopSignsFeatureSize = 3;
+
+// Ego features are:
+// [ ego speed, distance to goal position, relative angle to goal position,
+// length, width ]
+constexpr int64_t kEgoFeatureSize = 5;
+
+// For py::array_t forward declaration.
+// https://github.com/pybind/pybind11/blob/master/include/pybind11/numpy.h#L986
+// https://github.com/pybind/pybind11/blob/master/include/pybind11/numpy.h#L143
+constexpr int kNumpyArrayForcecast = 0x0010;
 
 class Scenario : public sf::Drawable {
  public:
@@ -30,13 +76,6 @@ class Scenario : public sf::Drawable {
   void step(float dt);
   void waymo_step();  // step forwards and place vehicles at their next position
                       // in the expert dict
-
-  // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
-  // returned in the state
-  int maxNumVisibleKineticObjects = 20;
-  int maxNumVisibleRoadPoints = 80;
-  int maxNumVisibleStopSigns = 4;
-  int maxNumVisibleTLSigns = 20;
 
   void removeVehicle(Vehicle* object);
 
@@ -57,48 +96,70 @@ class Scenario : public sf::Drawable {
   /*********************** State Accessors *******************/
   std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
       KineticObject* sourceObject);
+
   sf::FloatRect getRoadNetworkBoundaries() const;
-  ImageMatrix getCone(
-      KineticObject* object,
-      float viewAngle = static_cast<float>(geometry::utils::kPi) / 2.0f,
-      float viewDist = 60.0f, float headTilt = 0.0f, bool obscuredView = true);
+
+  ImageMatrix getCone(KineticObject* object, float viewDist = 60.0f,
+                      float viewAngle = geometry::utils::kHalfPi,
+                      float headTilt = 0.0f, bool obscuredView = true);
+
   ImageMatrix getImage(KineticObject* object = nullptr,
                        bool renderGoals = false);
+
   bool checkForCollision(const Object& object1, const Object& object2) const;
   bool checkForCollision(const Object& object,
                          const geometry::LineSegment& segment) const;
+
   std::vector<std::shared_ptr<Vehicle>> getVehicles();
   std::vector<std::shared_ptr<Pedestrian>> getPedestrians();
   std::vector<std::shared_ptr<Cyclist>> getCyclists();
   std::vector<std::shared_ptr<KineticObject>> getRoadObjects();
   std::vector<std::shared_ptr<RoadLine>> getRoadLines();
 
-  std::vector<float> getEgoState(KineticObject* obj);
-  std::vector<const Object*> getVisibleObjects(KineticObject* sourceObj,
-                                               float viewAngle, float viewDist,
-                                               int64_t maxNumVisibleObjects,
-                                               const geometry::BVH& bvh);
-  std::vector<const KineticObject*> getVisibleKineticObjects(
-      KineticObject* sourceObj, float viewAngle, float viewDist = 60.0f);
-  std::vector<const RoadPoint*> getVisibleRoadPoints(KineticObject* sourceObj,
-                                                     float viewAngle,
-                                                     float viewDist = 60.0f);
-  std::vector<const StopSign*> getVisibleStopSigns(KineticObject* sourceObj,
-                                                   float viewAngle,
-                                                   float viewDist = 60.0f);
-  std::vector<const TrafficLight*> getVisibleTrafficLights(
-      KineticObject* sourceObj, float viewAngle, float viewDist = 60.0f);
-  std::vector<float> getVisibleState(
-      KineticObject* sourceObj,
-      float viewAngle /* the total angle subtended by the view cone*/,
-      float viewDist = 60.0f /* how many meters forwards the object can see */);
+  pybind11::array_t<float, kNumpyArrayForcecast> egoStateObservation(
+      const KineticObject& src) const;
+  pybind11::array_t<float, kNumpyArrayForcecast> Observation(
+      const KineticObject& src, float view_dist, float view_angle) const;
+
   // get a list of vehicles that actually moved
   std::vector<std::shared_ptr<KineticObject>> getObjectsThatMoved() {
     return objectsThatMoved;
   }
+  int64_t getMaxNumVisibleKineticObjects() const {
+    return kMaxVisibleKineticObjects;
+  }
+  int64_t getMaxNumVisibleRoadPoints() const { return kMaxVisibleRoadPoints; }
+  int64_t getMaxNumVisibleTrafficLights() const {
+    return kMaxVisibleTrafficLights;
+  }
+  int64_t getMaxNumVisibleStopSigns() const { return kMaxVisibleStopSigns; }
+  int64_t getKineticObjectFeatureSize() const {
+    return kKineticObjectFeatureSize;
+  }
+  int64_t getRoadPointFeatureSize() const { return kRoadPointFeatureSize; }
+  int64_t getTrafficLightFeatureSize() const {
+    return kTrafficLightFeatureSize;
+  }
+  int64_t getStopSignsFeatureSize() const { return kStopSignsFeatureSize; }
+  int64_t getEgoFeatureSize() const { return kEgoFeatureSize; }
 
- private:
-  virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
+ protected:
+  // update the collision status of all objects
+  void updateCollision();
+
+  void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
+
+  std::vector<float> egoObservationImpl(const KineticObject& src) const;
+  std::vector<float> ObservationImpl(const KineticObject& src, float view_dist,
+                                     float view_angle) const;
+
+  std::tuple<std::vector<const Object*>, std::vector<const Object*>,
+             std::vector<const Object*>, std::vector<const Object*>>
+  VisibleObjects(const KineticObject& src, float view_dist,
+                 float view_angle) const;
+
+  std::vector<const TrafficLight*> VisibleTrafficLights(
+      const KineticObject& src, float view_dist, float view_angle) const;
 
   int currTime;
   int IDCounter = 0;
@@ -120,15 +181,11 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<StopSign>> stopSigns;
   std::vector<std::shared_ptr<TrafficLight>> trafficLights;
 
-  sf::RenderTexture* imageTexture;
+  sf::RenderTexture* imageTexture = nullptr;
   sf::FloatRect roadNetworkBounds;
   geometry::BVH vehicle_bvh_;       // track vehicles for collisions
   geometry::BVH line_segment_bvh_;  // track line segments for collisions
-  geometry::BVH
-      tl_bvh_;  // track traffic light states to find visible traffic lights
-  geometry::BVH
-      road_point_bvh;           // track road points to find visible road points
-  geometry::BVH stop_sign_bvh;  // track stop signs to find visible stop signs
+  geometry::BVH static_bvh_;        // static objects
 
   // expert data
   std::vector<std::vector<geometry::Vector2D>> expertTrajectories;
