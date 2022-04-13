@@ -346,17 +346,7 @@ void Scenario::loadScenario(std::string path) {
     trafficLights.push_back(traffic_light);
   }
 
-  // initialize the road objects bvh
-  const int64_t nRoadObjects = roadObjects.size();
-  if (nRoadObjects > 0) {
-    std::vector<const geometry::AABBInterface*> storeObjects;
-    storeObjects.reserve(nRoadObjects);
-    for (const auto& obj : roadObjects) {
-      storeObjects.push_back(
-          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-    }
-    vehicle_bvh_.InitHierarchy(storeObjects);
-  }
+  initializeVehicleBVH();
 
   std::vector<const geometry::AABBInterface*> static_objects;
   for (const auto& roadLine : roadLines) {
@@ -376,6 +366,20 @@ void Scenario::loadScenario(std::string path) {
   static_bvh_.InitHierarchy(static_objects);
   // update collision to check for collisions of any vehicles at initialization
   updateCollision();
+}
+
+void Scenario::initializeVehicleBVH() {
+  // initialize the road objects bvh
+  const int64_t nRoadObjects = roadObjects.size();
+  if (nRoadObjects > 0) {
+    std::vector<const geometry::AABBInterface*> storeObjects;
+    storeObjects.reserve(nRoadObjects);
+    for (const auto& obj : roadObjects) {
+      storeObjects.push_back(
+          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
+    }
+    vehicle_bvh_.InitHierarchy(storeObjects);
+  }
 }
 
 void Scenario::step(float dt) {
@@ -780,6 +784,7 @@ void Scenario::removeVehicle(Vehicle* object) {
       it++;
     }
   }
+  initializeVehicleBVH();
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
