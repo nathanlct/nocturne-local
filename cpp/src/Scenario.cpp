@@ -385,6 +385,9 @@ void Scenario::initializeVehicleBVH() {
 void Scenario::step(float dt) {
   currTime += int(dt / 0.1);  // TODO(ev) hardcoding
   for (auto& object : roadObjects) {
+    // reset the collision flags for the objects before stepping
+    // we do not want to label a vehicle as persistently having collided
+    object->set_collided(false);
     object->Step(dt);
   }
   for (auto& object : trafficLights) {
