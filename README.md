@@ -14,24 +14,9 @@ Nocturne uses [SFML](https://github.com/SFML/SFML) for visualization, it can be 
 -   Linux: `sudo apt-get install libsfml-dev`
 -   MacOS: `brew install sfml`
 
-Once done, if using Conda, first activate the environment where the Python library should be installed (eg. `conda activate nocturne`), then run the following to build and install the library:
-
-```bash
-# path to Python's libraries folder (site-packages)
-# eg. /path/to/anaconda3/envs/nocturne/lib/python3.8/site-packages
-DPYTHON_LIBRARY_DIR=$(python -c "import site; print(site.getsitepackages()[0])")
-# path to Python executable
-# eg. /path/to/anaconda3/envs/nocturne/bin/python3
-DPYTHON_EXECUTABLE=$(which python)
-
-mkdir build  # create build folder
-cd build
-# create Makefiles and download pybind11
-cmake .. -DPYTHON_LIBRARY_DIR="${DPYTHON_LIBRARY_DIR}" \
-    -DPYTHON_EXECUTABLE="${DPYTHON_EXECUTABLE}"
-make  # build library
-make install  # install library in Python's path
-```
+If you are using Conda to build the environments, you can instantiate the nocturne environment by running `conda env create -f environment.yml`.
+Once done, if using Conda, first activate the environment where the Python library should be installed (eg. `conda activate nocturne`), then run the following to build and install the library: `python setup.py develop`. This will run the C++ build and install Nocturne
+into your simulation environment.
 
 Note: if you are getting errors with pybind11, install it directly in your conda environment (eg. `conda install -c conda-forge pybind11` or `pip install pybind11`, cf. https://pybind11.readthedocs.io/en/latest/installing.html for more info).
 
@@ -47,6 +32,9 @@ Resetting simulation.
 ```
 
 Python tests can also be ran from `nocturne/tests`.
+
+## Constructing the dataset
+At the moment for FAIR researchers the dataset is available on the cluster so no need to do anything.
 
 ## C++ build instructions
 
