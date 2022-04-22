@@ -144,6 +144,7 @@ class Scenario : public sf::Drawable {
   int64_t getEgoFeatureSize() const { return kEgoFeatureSize; }
 
  protected:
+  void initializeVehicleBVH();
   // update the collision status of all objects
   void updateCollision();
 
