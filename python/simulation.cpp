@@ -14,9 +14,6 @@ void init_simulation(py::module& m) {
            py::arg("scenario_path") = "", py::arg("start_time") = 0,
            py::arg("use_non_vehicles") = true)
       .def("step", &nocturne::Simulation::step)
-      .def("waymo_step",
-           &nocturne::Simulation::waymo_step)  // place vehicles at their next
-                                               // position in the waymo data
       .def("render", &nocturne::Simulation::render)
       .def("reset", &nocturne::Simulation::reset)
       .def("saveScreenshot", &nocturne::Simulation::saveScreenshot)

@@ -388,7 +388,14 @@ void Scenario::step(float dt) {
     // reset the collision flags for the objects before stepping
     // we do not want to label a vehicle as persistently having collided
     object->set_collided(false);
-    object->Step(dt);
+    if (not object->expert_controlled()) {
+      object->Step(dt);
+    } else {
+      geometry::Vector2D expertPosition =
+          expertTrajectories[object->id()][currTime];
+      object->set_position(expertPosition);
+      object->set_heading(expertHeadings[object->id()][currTime]);
+    }
   }
   for (auto& object : trafficLights) {
     object->set_current_time(currTime);
@@ -439,66 +446,6 @@ void Scenario::updateCollision() {
           dynamic_cast<const geometry::LineSegment*>(ptr);
       if (checkForCollision(*obj1, *obj2)) {
         obj1->set_collided(true);
-      }
-    }
-  }
-}
-
-void Scenario::waymo_step() {
-  if (currTime < 91) {
-    currTime += 1;  // TODO(ev) hardcoding
-    for (auto& object : roadObjects) {
-      geometry::Vector2D expertPosition =
-          expertTrajectories[object->id()][currTime];
-      object->set_position(expertPosition);
-      object->set_heading(expertHeadings[object->id()][currTime]);
-    }
-    for (auto& object : trafficLights) {
-      object->set_current_time(currTime);
-    }
-
-    // initalize the vehicle bvh
-    const int64_t n = roadObjects.size();
-    if (n > 0) {
-      std::vector<const geometry::AABBInterface*> objects;
-      objects.reserve(n);
-      for (const auto& obj : roadObjects) {
-        objects.push_back(
-            dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-      }
-      vehicle_bvh_.InitHierarchy(objects);
-      // check vehicle-vehicle collisions
-      for (auto& obj1 : roadObjects) {
-        std::vector<const geometry::AABBInterface*> candidates =
-            vehicle_bvh_.IntersectionCandidates(*obj1);
-        for (const auto* ptr : candidates) {
-          const KineticObject* obj2 = dynamic_cast<const KineticObject*>(ptr);
-          if (obj1->id() == obj2->id()) {
-            continue;
-          }
-          if (!obj1->can_be_collided() || !obj2->can_be_collided()) {
-            continue;
-          }
-          if (!obj1->check_collision() && !obj2->check_collision()) {
-            continue;
-          }
-          if (checkForCollision(*obj1, *obj2)) {
-            obj1->set_collided(true);
-            const_cast<KineticObject*>(obj2)->set_collided(true);
-          }
-        }
-      }
-    }
-    // check vehicle-lane segment collisions
-    for (auto& obj1 : roadObjects) {
-      std::vector<const geometry::AABBInterface*> candidates =
-          line_segment_bvh_.IntersectionCandidates(*obj1);
-      for (const auto* ptr : candidates) {
-        const geometry::LineSegment* obj2 =
-            dynamic_cast<const geometry::LineSegment*>(ptr);
-        if (checkForCollision(*obj1, *obj2)) {
-          obj1->set_collided(true);
-        }
       }
     }
   }
