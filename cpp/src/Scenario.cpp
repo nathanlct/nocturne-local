@@ -346,17 +346,7 @@ void Scenario::loadScenario(std::string path) {
     trafficLights.push_back(traffic_light);
   }
 
-  // initialize the road objects bvh
-  const int64_t nRoadObjects = roadObjects.size();
-  if (nRoadObjects > 0) {
-    std::vector<const geometry::AABBInterface*> storeObjects;
-    storeObjects.reserve(nRoadObjects);
-    for (const auto& obj : roadObjects) {
-      storeObjects.push_back(
-          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-    }
-    vehicle_bvh_.InitHierarchy(storeObjects);
-  }
+  initializeVehicleBVH();
 
   std::vector<const geometry::AABBInterface*> static_objects;
   for (const auto& roadLine : roadLines) {
@@ -378,9 +368,26 @@ void Scenario::loadScenario(std::string path) {
   updateCollision();
 }
 
+void Scenario::initializeVehicleBVH() {
+  // initialize the road objects bvh
+  const int64_t nRoadObjects = roadObjects.size();
+  if (nRoadObjects > 0) {
+    std::vector<const geometry::AABBInterface*> storeObjects;
+    storeObjects.reserve(nRoadObjects);
+    for (const auto& obj : roadObjects) {
+      storeObjects.push_back(
+          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
+    }
+    vehicle_bvh_.InitHierarchy(storeObjects);
+  }
+}
+
 void Scenario::step(float dt) {
   currTime += int(dt / 0.1);  // TODO(ev) hardcoding
   for (auto& object : roadObjects) {
+    // reset the collision flags for the objects before stepping
+    // we do not want to label a vehicle as persistently having collided
+    object->set_collided(false);
     if (not object->expert_controlled()) {
       object->Step(dt);
     } else {
@@ -727,6 +734,7 @@ void Scenario::removeVehicle(Vehicle* object) {
       it++;
     }
   }
+  initializeVehicleBVH();
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
