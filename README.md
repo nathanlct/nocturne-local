@@ -1,24 +1,45 @@
 Nocturne is a 2D driving simulator, built in C++ for speed and exported as a Python library.
 
-## Installation
+It is currently designed to handle traffic scenarios from the [Waymo Open Dataset](https://github.com/waymo-research/waymo-open-dataset), and with some work could be extended to support different driving tasks. Using the Python library `nocturne`, one is able to train controllers for AVs to solve various tasks from the Waymo dataset, which we provide as a benchmark, then use the tools we offer to evaluate the designed controllers.
 
-Start by downloading the repo:
+**Citation**: [Todo] 
+
+# Installation
+
+## Dependencies
+
+[CMake](https://cmake.org/) is required to compile the C++ library. 
+
+Run `cmake --version` to see whether CMake is already installed in your environment. If not, refer to the CMake website instructions for installation, or you can use:
+
+- `sudo apt-get -y install cmake` (Linux)
+- `brew install cmake` (MacOS)
+
+Nocturne uses [SFML](https://github.com/SFML/SFML) for drawing and visualization, as well as on [pybind11](https://pybind11.readthedocs.io/en/latest/) for compiling the C++ code as a Python library. Both of these libraries should be automatically installed by CMake when building for the first time.
+
+## Nocturne
+
+Start by cloning the repo:
 
 ```bash
 git clone https://github.com/nathanlct/nocturne.git
 cd nocturne
 ```
 
-Nocturne uses [SFML](https://github.com/SFML/SFML) for visualization, it can be installed with:
+If you are using [Conda](https://docs.conda.io/en/latest/) (recommended), you can instantiate an environment and install Nocturne into it with the following:
 
--   Linux: `sudo apt-get install libsfml-dev`
--   MacOS: `brew install sfml`
+```bash
+# create the environment and install the dependencies
+conda env create -f environment.yml
 
-If you are using Conda to build the environments, you can instantiate the nocturne environment by running `conda env create -f environment.yml`.
-Once done, if using Conda, first activate the environment where the Python library should be installed (eg. `conda activate nocturne`), then run the following to build and install the library: `python setup.py develop`. This will run the C++ build and install Nocturne
-into your simulation environment.
+# activate the environment where the Python library should be installed
+conda activate nocturne
 
-Note: if you are getting errors with pybind11, install it directly in your conda environment (eg. `conda install -c conda-forge pybind11` or `pip install pybind11`, cf. https://pybind11.readthedocs.io/en/latest/installing.html for more info).
+# run the C++ build and install Nocturne into the simulation environment
+python setup.py develop
+```
+
+If you are not using Conda, simply run the last command to build and install Nocturne at your default Python path.
 
 You should then be all set to use that library from your Python executable:
 
@@ -31,14 +52,15 @@ Python 3.8.11
 Resetting simulation.
 ```
 
-Python tests can also be ran from `nocturne/tests`.
+Python tests can be ran with `pytest`.
 
 ## Constructing the dataset
+
 At the moment for FAIR researchers the dataset is available on the cluster so no need to do anything.
 
 ## C++ build instructions
 
-To build the C++ library independently of the Python one, run the following:
+If you want to build the C++ library independently of the Python one, run the following:
 
 ```bash
 cd nocturne/cpp
@@ -49,22 +71,27 @@ make
 make install
 ```
 
-Subsequently, the tests can be built using:
+Subsequently, the C++ tests can be ran with `./tests/nocturne_test` from within the `nocturne/cpp/build` directory.
 
-```bash
-cd nocturne/cpp/tests
-mkdir build
-cd build
-cmake ..
-make
-```
+## Common installation errors
 
-after which the executables can be found in `nocturne/cpp/tests/bin`.
+### CMake hasn't installed SFML or pybind11
 
-## Common errors:
-### CMAKE can't find SFML library.
+Try to manually install SFML using
+
+- `sudo apt-get install libsfml-dev` (Linux)
+- `brew install sfml` (MacOS)
+
+If you are getting errors with pybind11, install it directly in your conda environment (eg. `conda install -c conda-forge pybind11` or `pip install pybind11`, cf. https://pybind11.readthedocs.io/en/latest/installing.html for more info).
+
+### CMake can't find SFML library.
+
 Make sure the path to SFML is included in CMAKE_PREFIX_PATH.
+
 ### ImportError: libsfml-graphics.so.2.5: cannot open shared object file: No such file or directory
+
 Make sure SFML/lib is included in LD_LIBRARY_PATH if you're on a linux machine 
+
 ### ImportError: libudev.so.0: cannot open shared object file
+
 Do this really dumb thing. Make a folder, run ```ln -s /usr/lib/x86_64-linux-gnu/libudev.so.1 libudev.so.0``` then add that folder to the LD_LIBRARY_PATH
