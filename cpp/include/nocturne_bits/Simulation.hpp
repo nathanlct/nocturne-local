@@ -18,6 +18,8 @@ class Simulation {
  public:
   Simulation(std::string scenarioFilePath = "", int startTime = 0,
              bool useNonVehicles = true);
+  ~Simulation();
+
   void reset();
   void step(float dt);
   void render();

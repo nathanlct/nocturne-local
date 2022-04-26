@@ -17,6 +17,11 @@ Simulation::Simulation(std::string scenarioFilePath, int startTime,
   renderTransform.scale(1, -1);  // horizontal flip
 }
 
+Simulation::~Simulation() {
+  if (renderWindow != nullptr) delete renderWindow;
+  delete scenario;
+}
+
 void Simulation::step(float dt) { scenario->step(dt); }
 
 void Simulation::render() {
@@ -102,6 +107,7 @@ void Simulation::updateView(float padding) const {
 }
 
 void Simulation::reset() {
+  delete scenario;
   scenario = new Scenario(scenarioPath, startTime, useNonVehicles);
 }
 
