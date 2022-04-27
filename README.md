@@ -15,7 +15,14 @@ Run `cmake --version` to see whether CMake is already installed in your environm
 - `sudo apt-get -y install cmake` (Linux)
 - `brew install cmake` (MacOS)
 
-Nocturne uses [SFML](https://github.com/SFML/SFML) for drawing and visualization, as well as on [pybind11](https://pybind11.readthedocs.io/en/latest/) for compiling the C++ code as a Python library. Both of these libraries should be automatically installed by CMake when building for the first time.
+Nocturne uses [SFML](https://github.com/SFML/SFML) for drawing and visualization, as well as on [pybind11](https://pybind11.readthedocs.io/en/latest/) for compiling the C++ code as a Python library.
+
+To install SFML:
+
+- `sudo apt-get install libsfml-dev` (Linux)
+- `brew install sfml` (MacOS)
+
+pybind11 is included as a submodule and will be installed in the next step.
 
 ## Nocturne
 
@@ -24,6 +31,13 @@ Start by cloning the repo:
 ```bash
 git clone https://github.com/nathanlct/nocturne.git
 cd nocturne
+```
+
+Then run the following to install git submodules:
+
+```bash
+git submodule sync
+git submodule update --init
 ```
 
 If you are using [Conda](https://docs.conda.io/en/latest/) (recommended), you can instantiate an environment and install Nocturne into it with the following:
@@ -75,12 +89,7 @@ Subsequently, the C++ tests can be ran with `./tests/nocturne_test` from within 
 
 ## Common installation errors
 
-### CMake hasn't installed SFML or pybind11
-
-Try to manually install SFML using
-
-- `sudo apt-get install libsfml-dev` (Linux)
-- `brew install sfml` (MacOS)
+### pybind11 installation errors
 
 If you are getting errors with pybind11, install it directly in your conda environment (eg. `conda install -c conda-forge pybind11` or `pip install pybind11`, cf. https://pybind11.readthedocs.io/en/latest/installing.html for more info).
 
