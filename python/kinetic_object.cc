@@ -31,9 +31,10 @@ void DefineKineticObject(py::module& m) {
                     py::overload_cast<const geometry::Vector2D&>(
                         &KineticObject::set_velocity))
       .def_property("speed", &KineticObject::Speed, &KineticObject::SetSpeed)
-      .def_property("keyboard_controllable",
-                    &KineticObject::keyboard_controllable,
-                    &KineticObject::set_keyboard_controllable)
+      .def_property("manual_control", &KineticObject::manual_control,
+                    &KineticObject::set_manual_control)
+      .def_property("expert_control", &KineticObject::expert_control,
+                    &KineticObject::set_expert_control)
       .def_property_readonly("collided", &KineticObject::collided)
       .def("set_position",
            py::overload_cast<float, float>(&KineticObject::set_position))
@@ -41,8 +42,6 @@ void DefineKineticObject(py::module& m) {
            py::overload_cast<float, float>(&KineticObject::set_destination))
       .def("set_velocity",
            py::overload_cast<float, float>(&KineticObject::set_velocity))
-      .def("set_expert_controlled",
-           py::overload_cast<bool>(&KineticObject::set_expert_controlled))
 
       // TODO: Deprecate the legacy interfaces below.
       .def("getWidth", &KineticObject::width)

@@ -388,7 +388,7 @@ void Scenario::step(float dt) {
     // reset the collision flags for the objects before stepping
     // we do not want to label a vehicle as persistently having collided
     object->set_collided(false);
-    if (not object->expert_controlled()) {
+    if (!object->expert_control()) {
       object->Step(dt);
     } else {
       geometry::Vector2D expertPosition =
