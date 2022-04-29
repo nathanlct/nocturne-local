@@ -20,7 +20,10 @@ class Vector2D {
   }
 
   float x() const { return x_; }
+  void set_x(float x) { x_ = x; }
+
   float y() const { return y_; }
+  void set_y(float y) { y_ = y; }
 
   bool operator==(const Vector2D& v) const { return x_ == v.x_ && y_ == v.y_; }
   bool operator!=(const Vector2D& v) const { return x_ != v.x_ || y_ != v.y_; }

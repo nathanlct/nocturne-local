@@ -8,11 +8,11 @@
 #include <tuple>
 #include <vector>
 
-#include "ImageMatrix.hpp"
 #include "cyclist.h"
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
+#include "image.h"
 #include "kinetic_object.h"
 #include "object.h"
 #include "pedestrian.h"
@@ -97,12 +97,11 @@ class Scenario : public sf::Drawable {
 
   sf::FloatRect getRoadNetworkBoundaries() const;
 
-  ImageMatrix getCone(KineticObject* object, float viewDist = 60.0f,
-                      float viewAngle = geometry::utils::kHalfPi,
-                      float headTilt = 0.0f, bool obscuredView = true);
+  Image getCone(KineticObject* object, float viewDist = 60.0f,
+                float viewAngle = geometry::utils::kHalfPi,
+                float headTilt = 0.0f, bool obscuredView = true);
 
-  ImageMatrix getImage(KineticObject* object = nullptr,
-                       bool renderGoals = false);
+  Image getImage(KineticObject* object = nullptr, bool renderGoals = false);
 
   bool checkForCollision(const Object& object1, const Object& object2) const;
   bool checkForCollision(const Object& object,
