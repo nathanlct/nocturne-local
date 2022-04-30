@@ -24,16 +24,19 @@ add_subdirectory(
 
 pybind11_add_module(
   nocturne
-  ${CMAKE_CURRENT_SOURCE_DIR}/python/maths.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/python/nocturne.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/python/object.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/python/road.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/python/scenario.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/python/simulation.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/image.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/kinetic_object.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/nocturne.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/road.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/scenario.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/simulation.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/vector_2d.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/vehicle.cc
 )
 target_include_directories(
   nocturne
   PUBLIC
   ${CMAKE_SOURCE_DIR}/cpp/include/nocturne_bits
+  ${CMAKE_SOURCE_DIR}/python
 )
 target_link_libraries(nocturne PUBLIC nocturne_core)

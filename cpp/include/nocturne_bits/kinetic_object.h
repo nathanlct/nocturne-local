@@ -90,14 +90,14 @@ class KineticObject : public Object {
     destination_ = geometry::Vector2D(x, y);
   }
 
-  float expert_controlled() const { return expert_controlled_; }
-  void set_expert_controlled(bool expert_controlled) {
-    expert_controlled_ = expert_controlled;
+  bool manual_control() const { return manual_control_; }
+  void set_manual_control(bool manual_control) {
+    manual_control_ = manual_control;
   }
 
-  float keyboard_controllable() const { return keyboard_controllable_; }
-  void set_keyboard_controllable(bool keyboard_controllable) {
-    keyboard_controllable_ = keyboard_controllable;
+  bool expert_control() const { return expert_control_; }
+  void set_expert_control(bool expert_control) {
+    expert_control_ = expert_control;
   }
 
   float acceleration() const { return acceleration_; }
@@ -116,7 +116,7 @@ class KineticObject : public Object {
   void SetActionFromKeyboard();
 
   virtual void Step(float dt) {
-    if (keyboard_controllable_) {
+    if (manual_control_) {
       SetActionFromKeyboard();
     }
     KinematicBicycleStep(dt);
@@ -139,9 +139,10 @@ class KineticObject : public Object {
   float acceleration_ = 0.0f;
   float steering_ = 0.0f;
 
-  // if true this object is placed along positions in its recorded trajectory
-  bool expert_controlled_ = false;
-  bool keyboard_controllable_ = false;
+  // If true the object is controlled by keyboard input.
+  bool manual_control_ = false;
+  // If true the object is placed along positions in its recorded trajectory.
+  bool expert_control_ = false;
 
   sf::Color color_;
   sf::RenderTexture* cone_texture_ = nullptr;

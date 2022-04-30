@@ -388,7 +388,7 @@ void Scenario::step(float dt) {
     // reset the collision flags for the objects before stepping
     // we do not want to label a vehicle as persistently having collided
     object->set_collided(false);
-    if (not object->expert_controlled()) {
+    if (!object->expert_control()) {
       object->Step(dt);
     } else {
       geometry::Vector2D expertPosition =
@@ -741,9 +741,9 @@ sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
   return roadNetworkBounds;
 }
 
-ImageMatrix Scenario::getCone(KineticObject* object, float viewDist,
-                              float viewAngle, float headTilt,
-                              bool obscuredView) {  // args in radians
+Image Scenario::getCone(KineticObject* object, float viewDist, float viewAngle,
+                        float headTilt,
+                        bool obscuredView) {  // args in radians
   float circleRadius = viewDist;
   float renderedCircleRadius = 300.0f;
 
@@ -911,11 +911,11 @@ ImageMatrix Scenario::getCone(KineticObject* object, float viewDist,
   sf::Image img = texture->getTexture().copyToImage();
   unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-  return ImageMatrix(pixelsArr, renderedCircleRadius * 2,
-                     renderedCircleRadius * 2, 4);
+  return Image(pixelsArr, renderedCircleRadius * 2, renderedCircleRadius * 2,
+               4);
 }
 
-ImageMatrix Scenario::getImage(KineticObject* object, bool renderGoals) {
+Image Scenario::getImage(KineticObject* object, bool renderGoals) {
   int squareSide = 600;
 
   if (imageTexture == nullptr) {
@@ -996,7 +996,7 @@ ImageMatrix Scenario::getImage(KineticObject* object, bool renderGoals) {
   sf::Image img = texture->getTexture().copyToImage();
   unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-  return ImageMatrix(pixelsArr, squareSide, squareSide, 4);
+  return Image(pixelsArr, squareSide, squareSide, /*channels=*/4);
 }
 
 }  // namespace nocturne
