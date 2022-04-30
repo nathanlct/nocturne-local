@@ -235,7 +235,7 @@ class BaseEnv(MultiAgentEnv):
             # tag all vehicles except for the one you control as controlled by the expert
             for veh in self.simulation.getScenario().getVehicles():
                 if veh.getID() != self.single_agent_id:
-                    veh.set_expert_controlled(True)
+                    veh.expert_control = True
         for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
             veh_id = veh_obj.getID()
             if self.single_agent_mode and veh_id != self.single_agent_id:
