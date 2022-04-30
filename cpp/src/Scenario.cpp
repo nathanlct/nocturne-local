@@ -110,8 +110,11 @@ void ExtractRoadPointFeature(const KineticObject& src, const RoadPoint& obj,
   feature[0] = 1.0f;  // Valid
   feature[1] = dis;
   feature[2] = azimuth;
+  geometry::Vector2D neighborVector = obj.neighbor_coords() - obj.position();
+  feature[3] = neighborVector.x();
+  feature[4] = neighborVector.y();
   // One-hot vector for road_type, assume feature is initially 0.
-  feature[3 + road_type] = 1.0f;
+  feature[5 + road_type] = 1.0f;
 }
 
 void ExtractTrafficLightFeature(const KineticObject& src,
@@ -167,8 +170,8 @@ void Scenario::loadScenario(std::string path) {
     // TODO(ev) currTime should be passed in rather than defined here
     geometry::Vector2D pos(obj["position"]["x"][currTime],
                            obj["position"]["y"][currTime]);
-    float width = obj["width"];
-    float length = obj["length"];
+    float width = float(obj["width"]) * scaleFactor;
+    float length = float(obj["length"]) * scaleFactor;
     float heading = geometry::utils::NormalizeAngle(
         geometry::utils::Radians(static_cast<float>(obj["heading"][currTime])));
 
@@ -346,6 +349,7 @@ void Scenario::loadScenario(std::string path) {
     trafficLights.push_back(traffic_light);
   }
 
+  // initialize the road objects bvh
   initializeVehicleBVH();
 
   std::vector<const geometry::AABBInterface*> static_objects;
@@ -402,16 +406,7 @@ void Scenario::step(float dt) {
   }
 
   // update the vehicle bvh
-  const int64_t n = roadObjects.size();
-  if (n > 0) {
-    std::vector<const geometry::AABBInterface*> objects;
-    objects.reserve(n);
-    for (const auto& obj : roadObjects) {
-      objects.push_back(
-          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-    }
-    vehicle_bvh_.InitHierarchy(objects);
-  }
+  initializeVehicleBVH();
   updateCollision();
 }
 
@@ -734,6 +729,7 @@ void Scenario::removeVehicle(Vehicle* object) {
       it++;
     }
   }
+  // Update the BVH to account for the fact that some vehicles are now gone
   initializeVehicleBVH();
 }
 

@@ -55,11 +55,14 @@ void RoadLine::InitRoadPoints() {
   const int64_t n = geometry_points_.size();
   const int64_t step = n / num_road_points_;
   for (int64_t i = 0; i < num_possible_points - 1; ++i) {
-    road_points_.emplace_back(i, geometry_points_[i * step], road_type_);
+    road_points_.emplace_back(i, geometry_points_[i * step],
+                              geometry_points_[(i + 1) * step], road_type_);
   }
   // we want to ensure that the last and the first points are always placed
+  // for the neighbor coordinates for the last point we just return
+  // it own coordinates
   road_points_.emplace_back(num_road_points_ - 1, geometry_points_.back(),
-                            road_type_);
+                            geometry_points_.back(), road_type_);
 }
 
 void RoadLine::InitRoadLineGraphics() {

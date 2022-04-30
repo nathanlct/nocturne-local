@@ -52,6 +52,8 @@ void init_scenario(py::module& m) {
       // .def("createVehicle", &nocturne::Scenario::createVehicle)
       .def("hasExpertAction", &nocturne::Scenario::hasExpertAction)
       .def("getExpertAction", &nocturne::Scenario::getExpertAction)
+      .def("getExpertSpeeds", &nocturne::Scenario::getExpertSpeeds,
+           py::arg("timeIndex"), py::arg("vehIndex"))
       .def("getValidExpertStates", &nocturne::Scenario::getValidExpertStates)
       .def("getMaxNumVisibleKineticObjects",
            &nocturne::Scenario::getMaxNumVisibleKineticObjects)
