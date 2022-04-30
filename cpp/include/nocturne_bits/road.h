@@ -8,7 +8,7 @@
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
 #include "geometry/vector_2d.h"
-#include "object.h"
+#include "static_object.h"
 
 namespace nocturne {
 
@@ -26,16 +26,18 @@ enum class RoadType {
   kSpeedBump = 6,
 };
 
-class RoadPoint : public Object {
+class RoadPoint : public StaticObject {
  public:
   RoadPoint() = default;
-  RoadPoint(int64_t id, const geometry::Vector2D& position, RoadType road_type)
-      : Object(id, position,
-               /*can_block_sight=*/false,
-               /*can_be_collided=*/false, /*check_collision=*/false),
+  RoadPoint(const geometry::Vector2D& position, RoadType road_type)
+      : StaticObject(position,
+                     /*can_block_sight=*/false,
+                     /*can_be_collided=*/false, /*check_collision=*/false),
         road_type_(road_type) {}
 
-  ObjectType Type() const override { return ObjectType::kRoadPoint; }
+  StaticObjectType Type() const override {
+    return StaticObjectType::kRoadPoint;
+  }
   RoadType road_type() const { return road_type_; }
 
   float Radius() const { return kRoadPointRadius; }
@@ -122,6 +124,22 @@ class RoadLine : public sf::Drawable {
   std::vector<sf::Vertex> graphic_points_;
 };
 
-RoadType ParseRoadType(const std::string& s);
+inline RoadType ParseRoadType(const std::string& s) {
+  if (s == "lane") {
+    return RoadType::kLane;
+  } else if (s == "road_line") {
+    return RoadType::kRoadLine;
+  } else if (s == "road_edge") {
+    return RoadType::kRoadEdge;
+  } else if (s == "stop_sign") {
+    return RoadType::kStopSign;
+  } else if (s == "crosswalk") {
+    return RoadType::kCrosswalk;
+  } else if (s == "speed_bump") {
+    return RoadType::kSpeedBump;
+  } else {
+    return RoadType::kNone;
+  }
+}
 
 }  // namespace nocturne
