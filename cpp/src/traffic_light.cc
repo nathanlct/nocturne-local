@@ -79,26 +79,4 @@ void TrafficLight::draw(sf::RenderTarget& target,
   target.draw(pentagon, states);
 }
 
-TrafficLightState ParseTrafficLightState(const std::string& s) {
-  if (s == "stop") {
-    return TrafficLightState::kStop;
-  } else if (s == "caution") {
-    return TrafficLightState::kCaution;
-  } else if (s == "go") {
-    return TrafficLightState::kGo;
-  } else if (s == "arrow_stop") {
-    return TrafficLightState::kArrowStop;
-  } else if (s == "arrow_caution") {
-    return TrafficLightState::kArrowCaution;
-  } else if (s == "arrow_go") {
-    return TrafficLightState::kArrowGo;
-  } else if (s == "flashing_stop") {
-    return TrafficLightState::kFlashingStop;
-  } else if (s == "flashing_caution") {
-    return TrafficLightState::kFlashingCaution;
-  } else {
-    return TrafficLightState::kUnknown;
-  }
-}
-
 }  // namespace nocturne

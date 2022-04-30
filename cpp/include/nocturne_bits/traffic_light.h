@@ -7,7 +7,7 @@
 
 #include "geometry/aabb.h"
 #include "geometry/polygon.h"
-#include "object.h"
+#include "static_object.h"
 
 namespace nocturne {
 
@@ -26,23 +26,25 @@ enum class TrafficLightState {
   kFlashingCaution = 8,
 };
 
-class TrafficLight : public Object {
+class TrafficLight : public StaticObject {
  public:
   TrafficLight() = default;
-  TrafficLight(int64_t id, const geometry::Vector2D& position,
+  TrafficLight(const geometry::Vector2D& position,
                const std::vector<int64_t> timestamps,
                const std::vector<TrafficLightState>& light_states,
                int64_t current_time)
-      : Object(id, position,
-               /*can_block_sight=*/false,
-               /*can_be_collided=*/false, /*check_collision=*/false),
+      : StaticObject(position,
+                     /*can_block_sight=*/false,
+                     /*can_be_collided=*/false, /*check_collision=*/false),
         timestamps_(timestamps),
         light_states_(light_states),
         current_time_(current_time) {
     assert(timestamps_.size() == light_states_.size());
   }
 
-  ObjectType Type() const override { return ObjectType::kTrafficLight; }
+  StaticObjectType Type() const override {
+    return StaticObjectType::kTrafficLight;
+  }
 
   float Radius() const { return kTrafficLightRadius; }
 
@@ -66,6 +68,26 @@ class TrafficLight : public Object {
   int64_t current_time_;
 };
 
-TrafficLightState ParseTrafficLightState(const std::string& s);
+inline TrafficLightState ParseTrafficLightState(const std::string& s) {
+  if (s == "stop") {
+    return TrafficLightState::kStop;
+  } else if (s == "caution") {
+    return TrafficLightState::kCaution;
+  } else if (s == "go") {
+    return TrafficLightState::kGo;
+  } else if (s == "arrow_stop") {
+    return TrafficLightState::kArrowStop;
+  } else if (s == "arrow_caution") {
+    return TrafficLightState::kArrowCaution;
+  } else if (s == "arrow_go") {
+    return TrafficLightState::kArrowGo;
+  } else if (s == "flashing_stop") {
+    return TrafficLightState::kFlashingStop;
+  } else if (s == "flashing_caution") {
+    return TrafficLightState::kFlashingCaution;
+  } else {
+    return TrafficLightState::kUnknown;
+  }
+}
 
 }  // namespace nocturne

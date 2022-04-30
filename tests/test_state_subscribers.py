@@ -17,7 +17,7 @@ def test_state_subscribers():
     vehs = scenario.getVehicles()
 
     # Test ego state getter
-    state = scenario.egoStateObservation(vehs[0])
+    state = scenario.ego_state(vehs[0])
     # speed, goal dist, goal angle, length, width
     np.testing.assert_allclose(
         state,
@@ -26,15 +26,15 @@ def test_state_subscribers():
     np.testing.assert_allclose(vehs[0].getHeading(), np.pi / 2)
 
     # Test general state getter when we see every object
-    max_num_visible_objects = scenario.getMaxNumVisibleKineticObjects()
-    num_object_states = scenario.getKineticObjectFeatureSize()
+    max_num_visible_objects = scenario.getMaxNumVisibleObjects()
+    num_object_states = scenario.getObjectFeatureSize()
     max_num_visible_road_points = scenario.getMaxNumVisibleRoadPoints()
     num_road_point_states = scenario.getRoadPointFeatureSize()
     max_num_visible_stop_signs = scenario.getMaxNumVisibleStopSigns()
     num_stop_sign_states = scenario.getStopSignsFeatureSize()
     max_num_visible_tl_signs = scenario.getMaxNumVisibleTrafficLights()
     num_tl_states = scenario.getTrafficLightFeatureSize()
-    new_state = scenario.observation(vehs[0], 120.0, 1.99 * np.pi)
+    new_state = scenario.flattened_visible_state(vehs[0], 120.0, 1.99 * np.pi)
 
     # check that the observed vehicle has the right state
     # the vehicle is 10 meters away northwards, pointed east, we are pointed
@@ -46,7 +46,7 @@ def test_state_subscribers():
     # the object is a vehicle so it gets one-hot to [0, 1, 0, 0, 0, 0, 0, 0]
     np.testing.assert_allclose(new_state[0:num_object_states], [
         1, 10.0, 0.0, vehs[1].length, vehs[1].width, -np.pi / 2,
-        5.0 * np.sqrt(2), -3 * np.pi / 4, 0, 1, 0, 0, 0, 0, 0, 0
+        5.0 * np.sqrt(2), -3 * np.pi / 4, 0, 1, 0, 0, 0
     ],
                                rtol=1e-5,
                                atol=1e-5)
@@ -78,11 +78,11 @@ def test_state_subscribers():
 
     # now do the sames but with a partially obscured view, we should only see
     # the vehicle and nothing else
-    new_state = scenario.observation(vehs[0], 120, 0.1)
+    new_state = scenario.flattened_visible_state(vehs[0], 120, 0.1)
     # vehicle
     np.testing.assert_allclose(new_state[0:num_object_states], [
         1, 10.0, 0.0, vehs[1].length, vehs[1].width, -np.pi / 2,
-        5.0 * np.sqrt(2), -3 * np.pi / 4, 0, 1, 0, 0, 0, 0, 0, 0
+        5.0 * np.sqrt(2), -3 * np.pi / 4, 0, 1, 0, 0, 0
     ],
                                rtol=1e-5,
                                atol=1e-5)
@@ -97,7 +97,7 @@ def test_state_subscribers():
 
     # now rotate the vehicle so it sees the road points but not the vehicle
     vehs[0].setHeading(np.pi / 4)
-    new_state = scenario.observation(vehs[0], 120, 0.1)
+    new_state = scenario.flattened_visible_state(vehs[0], 120, 0.1)
     # vehicle
     np.testing.assert_allclose(new_state[0:num_object_states],
                                [0] * num_object_states,
