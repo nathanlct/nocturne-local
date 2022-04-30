@@ -8,7 +8,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from cfgs.config import PROCESSED_DATA_PATH_NO_TL, PROJECT_PATH
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH
 from nocturne import Simulation
 
 os.environ["DISPLAY"] = ":0.0"
@@ -17,10 +17,10 @@ if __name__ == '__main__':
     output_folder = 'corner_case_vis'
     output_path = Path(PROJECT_PATH) / f'nocturne_utils/{output_folder}'
     output_path.mkdir(exist_ok=True)
-    files = list(os.listdir(PROCESSED_DATA_PATH_NO_TL))
+    files = list(os.listdir(PROCESSED_TRAIN_NO_TL))
     for file in files:
         print('about to load scenario')
-        sim = Simulation(os.path.join(PROCESSED_DATA_PATH_NO_TL, file))
+        sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file))
         print('loaded the scenario')
         vehs = sim.getScenario().getVehicles()
         print('grabbed the vehicles')
