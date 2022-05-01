@@ -77,6 +77,8 @@ class NdArray {
   const std::vector<T>& data() const { return data_; }
   std::vector<T>& data() { return data_; }
 
+  size_t Ndim() const { return shape_.size(); }
+
   const T* DataPtr() const { return data_.data(); }
   T* DataPtr() { return data_.data(); }
 
