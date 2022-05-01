@@ -178,9 +178,7 @@ class BaseEnv(object):
 
     def render(self, mode=None):
         # TODO(eugenevinitsky) this should eventually return a global image instead of this hack
-        return np.array(self.simulation.getScenario().getImage(
-            None, render_goals=True),
-                        copy=False)
+        return self.simulation.getScenario().getImage(None, render_goals=True)
 
     def seed(self, seed=None):
         if seed is None:

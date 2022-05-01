@@ -23,7 +23,7 @@ def test_state_subscribers():
         state,
         [5.0, 100 * np.sqrt(2), 3 * np.pi / 4, vehs[0].length, vehs[0].width],
         rtol=1e-5)
-    np.testing.assert_allclose(vehs[0].getHeading(), np.pi / 2)
+    np.testing.assert_allclose(vehs[0].heading, np.pi / 2)
 
     # Test general state getter when we see every object
     max_num_visible_objects = scenario.getMaxNumVisibleObjects()

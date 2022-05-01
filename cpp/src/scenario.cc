@@ -511,7 +511,7 @@ std::vector<const TrafficLight*> Scenario::VisibleTrafficLights(
   return ret;
 }
 
-std::vector<float> Scenario::EgoState(const Object& src) const {
+NdArray<float> Scenario::EgoState(const Object& src) const {
   std::vector<float> state(kEgoFeatureSize);
 
   const float src_heading = src.heading();
@@ -527,10 +527,10 @@ std::vector<float> Scenario::EgoState(const Object& src) const {
   state[3] = src.length();
   state[4] = src.width();
 
-  return state;
+  return NdArray<float>(std::move(state));
 }
 
-std::unordered_map<std::string, std::vector<float>> Scenario::VisibleState(
+std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
     const Object& src, float view_dist, float view_angle) const {
   const auto [objects, road_points, traffic_lights, stop_signs] =
       VisibleObjects(src, view_dist, view_angle);
@@ -580,15 +580,22 @@ std::unordered_map<std::string, std::vector<float>> Scenario::VisibleState(
     s_feature_ptr += kStopSignsFeatureSize;
   }
 
-  return {{"objects", std::move(o_feature)},
-          {"road_points", std::move(r_feature)},
-          {"traffic_lights", std::move(t_feature)},
-          {"stop_signs", std::move(s_feature)}};
+  return {{"objects", NdArray<float>({kMaxVisibleObjects, kObjectFeatureSize},
+                                     std::move(o_feature))},
+          {"road_points",
+           NdArray<float>({kMaxVisibleRoadPoints, kRoadPointFeatureSize},
+                          std::move(r_feature))},
+          {"traffic_lights",
+           NdArray<float>({kMaxVisibleTrafficLights, kTrafficLightFeatureSize},
+                          std::move(t_feature))},
+          {"stop_signs",
+           NdArray<float>({kMaxVisibleStopSigns, kStopSignsFeatureSize},
+                          std::move(s_feature))}};
 }
 
-std::vector<float> Scenario::FlattenedVisibleState(const Object& src,
-                                                   float view_dist,
-                                                   float view_angle) const {
+NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
+                                               float view_dist,
+                                               float view_angle) const {
   constexpr int64_t kObjectFeatureStride = 0;
   constexpr int64_t kRoadPointFeatureStride =
       kObjectFeatureStride + kMaxVisibleObjects * kObjectFeatureSize;
@@ -643,7 +650,7 @@ std::vector<float> Scenario::FlattenedVisibleState(const Object& src,
     s_feature_ptr += kStopSignsFeatureSize;
   }
 
-  return state;
+  return NdArray<float>(std::move(state));
 }
 
 bool Scenario::checkForCollision(const Object& object1,
@@ -732,21 +739,21 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   }
 }
 
-std::vector<std::shared_ptr<Vehicle>> Scenario::getVehicles() {
-  return vehicles;
-}
-std::vector<std::shared_ptr<Pedestrian>> Scenario::getPedestrians() {
-  return pedestrians;
-}
-std::vector<std::shared_ptr<Cyclist>> Scenario::getCyclists() {
-  return cyclists;
-}
-std::vector<std::shared_ptr<Object>> Scenario::getRoadObjects() {
-  return roadObjects;
-}
-std::vector<std::shared_ptr<RoadLine>> Scenario::getRoadLines() {
-  return roadLines;
-}
+// std::vector<std::shared_ptr<Vehicle>> Scenario::getVehicles() {
+//   return vehicles;
+// }
+// std::vector<std::shared_ptr<Pedestrian>> Scenario::getPedestrians() {
+//   return pedestrians;
+// }
+// std::vector<std::shared_ptr<Cyclist>> Scenario::getCyclists() {
+//   return cyclists;
+// }
+// std::vector<std::shared_ptr<Object>> Scenario::getRoadObjects() {
+//   return roadObjects;
+// }
+// std::vector<std::shared_ptr<RoadLine>> Scenario::getRoadLines() {
+//   return roadLines;
+// }
 
 void Scenario::removeVehicle(Vehicle* object) {
   for (auto it = vehicles.begin(); it != vehicles.end();) {
@@ -778,9 +785,9 @@ sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
   return roadNetworkBounds;
 }
 
-Image Scenario::getCone(Object* object, float viewDist, float viewAngle,
-                        float headTilt,
-                        bool obscuredView) {  // args in radians
+NdArray<unsigned char> Scenario::getCone(
+    Object* object, float viewDist, float viewAngle, float headTilt,
+    bool obscuredView) {  // args in radians
   float circleRadius = viewDist;
   float renderedCircleRadius = 300.0f;
 
@@ -948,11 +955,14 @@ Image Scenario::getCone(Object* object, float viewDist, float viewAngle,
   sf::Image img = texture->getTexture().copyToImage();
   unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-  return Image(pixelsArr, renderedCircleRadius * 2, renderedCircleRadius * 2,
-               4);
+  const size_t rows = static_cast<size_t>(renderedCircleRadius) * 2;
+  const size_t cols = static_cast<size_t>(renderedCircleRadius) * 2;
+
+  return NdArray<unsigned char>({rows, cols, /*channels=*/size_t(4)},
+                                pixelsArr);
 }
 
-Image Scenario::getImage(Object* object, bool renderGoals) {
+NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
   int squareSide = 600;
 
   if (imageTexture == nullptr) {
@@ -1033,7 +1043,10 @@ Image Scenario::getImage(Object* object, bool renderGoals) {
   sf::Image img = texture->getTexture().copyToImage();
   unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-  return Image(pixelsArr, squareSide, squareSide, /*channels=*/4);
+  return NdArray<unsigned char>(
+      {static_cast<size_t>(squareSide), static_cast<size_t>(squareSide),
+       /*channels=*/size_t(4)},
+      pixelsArr);
 }
 
 }  // namespace nocturne

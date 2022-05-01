@@ -7,6 +7,8 @@
 #include <memory>
 #include <vector>
 
+#include "ndarray.h"
+
 namespace py = pybind11;
 
 namespace nocturne {
@@ -32,6 +34,22 @@ py::array_t<T> AsNumpyArray(std::vector<T>&& vec) {
   });
   vec_ptr.release();
   return py::array(size, data, capsule);
+}
+
+template <typename T>
+py::array_t<T> AsNumpyArray(const NdArray<T>& arr) {
+  py::array_t<T> ret = AsNumpyArray<T>(arr.data());
+  ret.resize(arr.shape());
+  return ret;
+}
+
+// Move a NdArray to numpy array without copy.
+template <typename T>
+py::array_t<T> AsNumpyArray(NdArray<T>&& arr) {
+  py::array_t<T> ret = AsNumpyArray(std::move(arr.data()));
+  ret.resize(arr.shape());
+  arr.Clear();
+  return ret;
 }
 
 }  // namespace utils
