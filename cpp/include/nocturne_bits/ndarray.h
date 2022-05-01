@@ -20,6 +20,17 @@ class NdArray {
   explicit NdArray(std::vector<T>&& data)
       : size_(data.size()), shape_{data.size()}, data_(std::move(data)) {}
 
+  NdArray(const std::initializer_list<size_t>& shape, T val)
+      : size_(std::accumulate(shape.begin(), shape.end(), size_t(1),
+                              std::multiplies<size_t>())),
+        shape_(shape),
+        data_(size_, val) {}
+  NdArray(const std::vector<size_t>& shape, T val)
+      : size_(std::accumulate(shape.cbegin(), shape.cend(), size_t(1),
+                              std::multiplies<size_t>())),
+        shape_(shape),
+        data_(size_, val) {}
+
   NdArray(const std::initializer_list<size_t>& shape, const T* data)
       : size_(std::accumulate(shape.begin(), shape.end(), size_t(1),
                               std::multiplies<size_t>())),

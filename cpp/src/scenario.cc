@@ -512,7 +512,7 @@ std::vector<const TrafficLight*> Scenario::VisibleTrafficLights(
 }
 
 NdArray<float> Scenario::EgoState(const Object& src) const {
-  std::vector<float> state(kEgoFeatureSize);
+  NdArray<float> state({kEgoFeatureSize}, 0.0f);
 
   const float src_heading = src.heading();
   const geometry::Vector2D d = src.destination() - src.position();
@@ -521,13 +521,14 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
   const float heading_diff =
       geometry::utils::AngleSub(dst_heading, src_heading);
 
-  state[0] = src.Speed();
-  state[1] = dist;
-  state[2] = heading_diff;
-  state[3] = src.length();
-  state[4] = src.width();
+  float* state_data = state.DataPtr();
+  state_data[0] = src.Speed();
+  state_data[1] = dist;
+  state_data[2] = heading_diff;
+  state_data[3] = src.length();
+  state_data[4] = src.width();
 
-  return NdArray<float>(std::move(state));
+  return state;
 }
 
 std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
@@ -540,16 +541,15 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
       NearestK(src, traffic_lights, kMaxVisibleTrafficLights);
   const auto s_targets = NearestK(src, stop_signs, kMaxVisibleStopSigns);
 
-  std::vector<float> o_feature(kMaxVisibleObjects * kObjectFeatureSize, 0.0f);
-  std::vector<float> r_feature(kMaxVisibleRoadPoints * kRoadPointFeatureSize,
-                               0.0f);
-  std::vector<float> t_feature(
-      kMaxVisibleTrafficLights * kTrafficLightFeatureSize, 0.0f);
-  std::vector<float> s_feature(kMaxVisibleStopSigns * kStopSignsFeatureSize,
-                               0.0f);
+  NdArray<float> o_feature({kMaxVisibleObjects, kObjectFeatureSize}, 0.0f);
+  NdArray<float> r_feature({kMaxVisibleRoadPoints, kRoadPointFeatureSize},
+                           0.0f);
+  NdArray<float> t_feature({kMaxVisibleTrafficLights, kTrafficLightFeatureSize},
+                           0.0f);
+  NdArray<float> s_feature({kMaxVisibleStopSigns, kStopSignsFeatureSize}, 0.0f);
 
   // Object feature.
-  float* o_feature_ptr = o_feature.data();
+  float* o_feature_ptr = o_feature.DataPtr();
   for (const auto [obj, dis] : o_targets) {
     ExtractObjectFeature(src, *(dynamic_cast<const Object*>(obj)), dis,
                          o_feature_ptr);
@@ -557,7 +557,7 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
   }
 
   // RoadPoint feature.
-  float* r_feature_ptr = r_feature.data();
+  float* r_feature_ptr = r_feature.DataPtr();
   for (const auto [obj, dis] : r_targets) {
     ExtractRoadPointFeature(src, *(dynamic_cast<const RoadPoint*>(obj)), dis,
                             r_feature_ptr);
@@ -565,7 +565,7 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
   }
 
   // TrafficLight feature.
-  float* t_feature_ptr = t_feature.data();
+  float* t_feature_ptr = t_feature.DataPtr();
   for (const auto [obj, dis] : t_targets) {
     ExtractTrafficLightFeature(src, *(dynamic_cast<const TrafficLight*>(obj)),
                                dis, t_feature_ptr);
@@ -573,24 +573,17 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
   }
 
   // StopSign feature.
-  float* s_feature_ptr = s_feature.data();
+  float* s_feature_ptr = s_feature.DataPtr();
   for (const auto [obj, dis] : s_targets) {
     ExtractStopSignFeature(src, *(dynamic_cast<const StopSign*>(obj)), dis,
                            s_feature_ptr);
     s_feature_ptr += kStopSignsFeatureSize;
   }
 
-  return {{"objects", NdArray<float>({kMaxVisibleObjects, kObjectFeatureSize},
-                                     std::move(o_feature))},
-          {"road_points",
-           NdArray<float>({kMaxVisibleRoadPoints, kRoadPointFeatureSize},
-                          std::move(r_feature))},
-          {"traffic_lights",
-           NdArray<float>({kMaxVisibleTrafficLights, kTrafficLightFeatureSize},
-                          std::move(t_feature))},
-          {"stop_signs",
-           NdArray<float>({kMaxVisibleStopSigns, kStopSignsFeatureSize},
-                          std::move(s_feature))}};
+  return {{"objects", o_feature},
+          {"road_points", r_feature},
+          {"traffic_lights", t_feature},
+          {"stop_signs", s_feature}};
 }
 
 NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
@@ -616,10 +609,10 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
       NearestK(src, traffic_lights, kMaxVisibleTrafficLights);
   const auto s_targets = NearestK(src, stop_signs, kMaxVisibleStopSigns);
 
-  std::vector<float> state(kFeatureSize, 0.0f);
+  NdArray<float> state({kFeatureSize}, 0.0f);
 
   // Object feature.
-  float* o_feature_ptr = state.data() + kObjectFeatureStride;
+  float* o_feature_ptr = state.DataPtr() + kObjectFeatureStride;
   for (const auto [obj, dis] : o_targets) {
     ExtractObjectFeature(src, *(dynamic_cast<const Object*>(obj)), dis,
                          o_feature_ptr);
@@ -627,7 +620,7 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
   }
 
   // RoadPoint feature.
-  float* r_feature_ptr = state.data() + kRoadPointFeatureStride;
+  float* r_feature_ptr = state.DataPtr() + kRoadPointFeatureStride;
   for (const auto [obj, dis] : r_targets) {
     ExtractRoadPointFeature(src, *(dynamic_cast<const RoadPoint*>(obj)), dis,
                             r_feature_ptr);
@@ -635,7 +628,7 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
   }
 
   // TrafficLight feature.
-  float* t_feature_ptr = state.data() + kTrafficLightFeatureStride;
+  float* t_feature_ptr = state.DataPtr() + kTrafficLightFeatureStride;
   for (const auto [obj, dis] : t_targets) {
     ExtractTrafficLightFeature(src, *(dynamic_cast<const TrafficLight*>(obj)),
                                dis, t_feature_ptr);
@@ -643,14 +636,14 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
   }
 
   // StopSign feature.
-  float* s_feature_ptr = state.data() + kStopSignFeatureStride;
+  float* s_feature_ptr = state.DataPtr() + kStopSignFeatureStride;
   for (const auto [obj, dis] : s_targets) {
     ExtractStopSignFeature(src, *(dynamic_cast<const StopSign*>(obj)), dis,
                            s_feature_ptr);
     s_feature_ptr += kStopSignsFeatureSize;
   }
 
-  return NdArray<float>(std::move(state));
+  return state;
 }
 
 bool Scenario::checkForCollision(const Object& object1,
