@@ -739,22 +739,6 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   }
 }
 
-// std::vector<std::shared_ptr<Vehicle>> Scenario::getVehicles() {
-//   return vehicles;
-// }
-// std::vector<std::shared_ptr<Pedestrian>> Scenario::getPedestrians() {
-//   return pedestrians;
-// }
-// std::vector<std::shared_ptr<Cyclist>> Scenario::getCyclists() {
-//   return cyclists;
-// }
-// std::vector<std::shared_ptr<Object>> Scenario::getRoadObjects() {
-//   return roadObjects;
-// }
-// std::vector<std::shared_ptr<RoadLine>> Scenario::getRoadLines() {
-//   return roadLines;
-// }
-
 void Scenario::removeVehicle(Vehicle* object) {
   for (auto it = vehicles.begin(); it != vehicles.end();) {
     if ((*it).get() == object) {
