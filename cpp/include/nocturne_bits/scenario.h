@@ -13,7 +13,7 @@
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
-#include "image.h"
+#include "ndarray.h"
 #include "object.h"
 #include "object_base.h"
 #include "pedestrian.h"
@@ -87,27 +87,43 @@ class Scenario : public sf::Drawable {
 
   sf::FloatRect getRoadNetworkBoundaries() const;
 
-  Image getCone(Object* object, float viewDist = 60.0f,
-                float viewAngle = geometry::utils::kHalfPi,
-                float headTilt = 0.0f, bool obscuredView = true);
+  NdArray<unsigned char> getCone(Object* object, float viewDist = 60.0f,
+                                 float viewAngle = geometry::utils::kHalfPi,
+                                 float headTilt = 0.0f,
+                                 bool obscuredView = true);
 
-  Image getImage(Object* object = nullptr, bool renderGoals = false);
+  NdArray<unsigned char> getImage(Object* object = nullptr,
+                                  bool renderGoals = false);
 
   bool checkForCollision(const Object& object1, const Object& object2) const;
   bool checkForCollision(const Object& object,
                          const geometry::LineSegment& segment) const;
 
-  std::vector<std::shared_ptr<Vehicle>> getVehicles();
-  std::vector<std::shared_ptr<Pedestrian>> getPedestrians();
-  std::vector<std::shared_ptr<Cyclist>> getCyclists();
-  std::vector<std::shared_ptr<Object>> getRoadObjects();
-  std::vector<std::shared_ptr<RoadLine>> getRoadLines();
+  const std::vector<std::shared_ptr<Vehicle>>& getVehicles() const {
+    return vehicles;
+  }
 
-  std::vector<float> EgoState(const Object& src) const;
-  std::unordered_map<std::string, std::vector<float>> VisibleState(
+  const std::vector<std::shared_ptr<Pedestrian>>& getPedestrians() const {
+    return pedestrians;
+  }
+
+  const std::vector<std::shared_ptr<Cyclist>>& getCyclists() const {
+    return cyclists;
+  }
+
+  const std::vector<std::shared_ptr<Object>>& getRoadObjects() const {
+    return roadObjects;
+  }
+
+  const std::vector<std::shared_ptr<RoadLine>>& getRoadLines() const {
+    return roadLines;
+  }
+
+  NdArray<float> EgoState(const Object& src) const;
+  std::unordered_map<std::string, NdArray<float>> VisibleState(
       const Object& src, float view_dist, float view_angle) const;
-  std::vector<float> FlattenedVisibleState(const Object& src, float view_dist,
-                                           float view_angle) const;
+  NdArray<float> FlattenedVisibleState(const Object& src, float view_dist,
+                                       float view_angle) const;
 
   // get a list of vehicles that actually moved
   std::vector<std::shared_ptr<Object>> getObjectsThatMoved() {

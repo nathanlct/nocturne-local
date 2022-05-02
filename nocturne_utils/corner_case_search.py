@@ -31,9 +31,6 @@ if __name__ == '__main__':
             if collided:
                 print('making an image')
                 plt.figure()
-                plt.imshow(
-                    np.array(sim.getScenario().getImage(None,
-                                                        render_goals=True),
-                             copy=False))
+                plt.imshow(sim.getScenario().getImage(None, render_goals=True))
                 plt.title(f'{file}_{i}')
                 plt.savefig(f'{output_folder}/{file}_{i}.png')
