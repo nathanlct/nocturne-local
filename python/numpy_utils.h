@@ -46,7 +46,7 @@ py::array_t<T> AsNumpyArray(const NdArray<T>& arr) {
 // Move a NdArray to numpy array without copy.
 template <typename T>
 py::array_t<T> AsNumpyArray(NdArray<T>&& arr) {
-  py::array_t<T> ret = AsNumpyArray(std::move(arr.data()));
+  py::array_t<T> ret = AsNumpyArray<T>(std::move(arr.data()));
   ret.resize(arr.shape());
   arr.Clear();
   return ret;
