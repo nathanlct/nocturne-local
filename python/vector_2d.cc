@@ -1,5 +1,6 @@
 #include "geometry/vector_2d.h"
 
+#include <pybind11/numpy.h>
 #include <pybind11/operators.h>
 #include <pybind11/pybind11.h>
 
@@ -41,7 +42,14 @@ void DefineVector2D(py::module& m) {
       // Methods
       .def("norm", &geometry::Vector2D::Norm, py::arg("p") = 2)
       .def("angle", &geometry::Vector2D::Angle)
-      .def("rotate", &geometry::Vector2D::Rotate);
+      .def("rotate", &geometry::Vector2D::Rotate)
+      .def("numpy", [](const geometry::Vector2D& vec) {
+        py::array_t<float> arr(2);
+        float* arr_data = arr.mutable_data();
+        arr_data[0] = vec.x();
+        arr_data[1] = vec.y();
+        return arr;
+      });
 }
 
 }  // namespace nocturne
