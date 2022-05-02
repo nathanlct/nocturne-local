@@ -25,6 +25,7 @@ void DefineVector2D(py::module& m) {
       .def_property("x", &geometry::Vector2D::x, &geometry::Vector2D::set_x)
       .def_property("y", &geometry::Vector2D::y, &geometry::Vector2D::set_y)
       // Operators
+      .def(-py::self)
       .def(py::self + py::self)
       .def(py::self += py::self)
       .def(py::self + float())
