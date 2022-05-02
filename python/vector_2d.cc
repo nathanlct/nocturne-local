@@ -19,10 +19,8 @@ void DefineVector2D(py::module& m) {
              return "(" + std::to_string(vec.x()) + ", " +
                     std::to_string(vec.y()) + ")";
            })
-      .def_property("x", &nocturne::geometry::Vector2D::x,
-                    &nocturne::geometry::Vector2D::set_x)
-      .def_property("y", &nocturne::geometry::Vector2D::y,
-                    &nocturne::geometry::Vector2D::set_y);
+      .def_property("x", &geometry::Vector2D::x, &geometry::Vector2D::set_x)
+      .def_property("y", &geometry::Vector2D::y, &geometry::Vector2D::set_y);
 }
 
 }  // namespace nocturne
