@@ -120,8 +120,11 @@ class Scenario : public sf::Drawable {
   }
 
   NdArray<float> EgoState(const Object& src) const;
+
   std::unordered_map<std::string, NdArray<float>> VisibleState(
-      const Object& src, float view_dist, float view_angle) const;
+      const Object& src, float view_dist, float view_angle,
+      bool padding = false) const;
+
   NdArray<float> FlattenedVisibleState(const Object& src, float view_dist,
                                        float view_angle) const;
 

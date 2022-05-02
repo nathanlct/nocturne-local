@@ -532,7 +532,7 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
 }
 
 std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
-    const Object& src, float view_dist, float view_angle) const {
+    const Object& src, float view_dist, float view_angle, bool padding) const {
   const auto [objects, road_points, traffic_lights, stop_signs] =
       VisibleObjects(src, view_dist, view_angle);
   const auto o_targets = NearestK(src, objects, kMaxVisibleObjects);
@@ -541,12 +541,21 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
       NearestK(src, traffic_lights, kMaxVisibleTrafficLights);
   const auto s_targets = NearestK(src, stop_signs, kMaxVisibleStopSigns);
 
-  NdArray<float> o_feature({kMaxVisibleObjects, kObjectFeatureSize}, 0.0f);
-  NdArray<float> r_feature({kMaxVisibleRoadPoints, kRoadPointFeatureSize},
+  const int64_t num_objects =
+      padding ? kMaxVisibleObjects : static_cast<int64_t>(o_targets.size());
+  const int64_t num_road_points =
+      padding ? kMaxVisibleRoadPoints : static_cast<int64_t>(r_targets.size());
+  const int64_t num_traffic_lights =
+      padding ? kMaxVisibleTrafficLights
+              : static_cast<int64_t>(t_targets.size());
+  const int64_t num_stop_signs =
+      padding ? kMaxVisibleStopSigns : static_cast<int64_t>(s_targets.size());
+
+  NdArray<float> o_feature({num_objects, kObjectFeatureSize}, 0.0f);
+  NdArray<float> r_feature({num_road_points, kRoadPointFeatureSize}, 0.0f);
+  NdArray<float> t_feature({num_traffic_lights, kTrafficLightFeatureSize},
                            0.0f);
-  NdArray<float> t_feature({kMaxVisibleTrafficLights, kTrafficLightFeatureSize},
-                           0.0f);
-  NdArray<float> s_feature({kMaxVisibleStopSigns, kStopSignsFeatureSize}, 0.0f);
+  NdArray<float> s_feature({num_stop_signs, kStopSignsFeatureSize}, 0.0f);
 
   // Object feature.
   float* o_feature_ptr = o_feature.DataPtr();
