@@ -932,15 +932,15 @@ NdArray<unsigned char> Scenario::getCone(
   sf::Image img = texture->getTexture().copyToImage();
   unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-  const size_t rows = static_cast<size_t>(renderedCircleRadius) * 2;
-  const size_t cols = static_cast<size_t>(renderedCircleRadius) * 2;
+  const int64_t rows = static_cast<int64_t>(renderedCircleRadius) * 2;
+  const int64_t cols = static_cast<int64_t>(renderedCircleRadius) * 2;
 
-  return NdArray<unsigned char>({rows, cols, /*channels=*/size_t(4)},
+  return NdArray<unsigned char>({rows, cols, /*channels=*/int64_t(4)},
                                 pixelsArr);
 }
 
 NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
-  int squareSide = 600;
+  const int64_t squareSide = 600;
 
   if (imageTexture == nullptr) {
     sf::ContextSettings settings;
@@ -1020,10 +1020,9 @@ NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
   sf::Image img = texture->getTexture().copyToImage();
   unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-  return NdArray<unsigned char>(
-      {static_cast<size_t>(squareSide), static_cast<size_t>(squareSide),
-       /*channels=*/size_t(4)},
-      pixelsArr);
+  return NdArray<unsigned char>({squareSide, squareSide,
+                                 /*channels=*/int64_t(4)},
+                                pixelsArr);
 }
 
 }  // namespace nocturne

@@ -20,43 +20,43 @@ class NdArray {
   explicit NdArray(std::vector<T>&& data)
       : size_(data.size()), shape_{data.size()}, data_(std::move(data)) {}
 
-  NdArray(const std::initializer_list<size_t>& shape, T val)
-      : size_(std::accumulate(shape.begin(), shape.end(), size_t(1),
-                              std::multiplies<size_t>())),
+  NdArray(const std::initializer_list<int64_t>& shape, T val)
+      : size_(std::accumulate(shape.begin(), shape.end(), int64_t(1),
+                              std::multiplies<int64_t>())),
         shape_(shape),
         data_(size_, val) {}
-  NdArray(const std::vector<size_t>& shape, T val)
-      : size_(std::accumulate(shape.cbegin(), shape.cend(), size_t(1),
-                              std::multiplies<size_t>())),
+  NdArray(const std::vector<int64_t>& shape, T val)
+      : size_(std::accumulate(shape.cbegin(), shape.cend(), int64_t(1),
+                              std::multiplies<int64_t>())),
         shape_(shape),
         data_(size_, val) {}
 
-  NdArray(const std::initializer_list<size_t>& shape, const T* data)
-      : size_(std::accumulate(shape.begin(), shape.end(), size_t(1),
-                              std::multiplies<size_t>())),
+  NdArray(const std::initializer_list<int64_t>& shape, const T* data)
+      : size_(std::accumulate(shape.begin(), shape.end(), int64_t(1),
+                              std::multiplies<int64_t>())),
         shape_(shape),
         data_(data, data + size_) {}
-  NdArray(const std::vector<size_t>& shape, const T* data)
-      : size_(std::accumulate(shape.cbegin(), shape.cend(), size_t(1),
-                              std::multiplies<size_t>())),
+  NdArray(const std::vector<int64_t>& shape, const T* data)
+      : size_(std::accumulate(shape.cbegin(), shape.cend(), int64_t(1),
+                              std::multiplies<int64_t>())),
         shape_(shape),
         data_(data, data + size_) {}
 
-  NdArray(const std::initializer_list<size_t>& shape,
+  NdArray(const std::initializer_list<int64_t>& shape,
           const std::vector<T>& data)
-      : size_(std::accumulate(shape.begin(), shape.end(), size_t(1),
-                              std::multiplies<size_t>())),
+      : size_(std::accumulate(shape.begin(), shape.end(), int64_t(1),
+                              std::multiplies<int64_t>())),
         shape_(shape),
         data_(data) {}
-  NdArray(const std::vector<size_t>& shape, const std::vector<T>& data)
-      : size_(std::accumulate(shape.cbegin(), shape.cend(), size_t(1),
-                              std::multiplies<size_t>())),
+  NdArray(const std::vector<int64_t>& shape, const std::vector<T>& data)
+      : size_(std::accumulate(shape.cbegin(), shape.cend(), int64_t(1),
+                              std::multiplies<int64_t>())),
         shape_(shape),
         data_(data) {}
 
-  NdArray(const std::initializer_list<size_t>& shape, std::vector<T>&& data)
-      : size_(std::accumulate(shape.begin(), shape.end(), size_t(1),
-                              std::multiplies<size_t>())),
+  NdArray(const std::initializer_list<int64_t>& shape, std::vector<T>&& data)
+      : size_(std::accumulate(shape.begin(), shape.end(), int64_t(1),
+                              std::multiplies<int64_t>())),
         shape_(shape),
         data_(std::move(data)) {}
 
@@ -83,12 +83,14 @@ class NdArray {
     return *this;
   }
 
-  size_t size() const { return size_; }
-  const std::vector<size_t>& shape() const { return shape_; }
+  int64_t size() const { return size_; }
+
+  const std::vector<int64_t>& shape() const { return shape_; }
+
   const std::vector<T>& data() const { return data_; }
   std::vector<T>& data() { return data_; }
 
-  size_t Ndim() const { return shape_.size(); }
+  int64_t Ndim() const { return shape_.size(); }
 
   const T* DataPtr() const { return data_.data(); }
   T* DataPtr() { return data_.data(); }
@@ -99,23 +101,23 @@ class NdArray {
     data_.clear();
   }
 
-  void Resize(const std::initializer_list<size_t>& shape) {
-    const size_t size = std::accumulate(shape.begin(), shape.end(), size_t(1),
-                                        std::multiplies<size_t>());
+  void Resize(const std::initializer_list<int64_t>& shape) {
+    const int64_t size = std::accumulate(shape.begin(), shape.end(), int64_t(1),
+                                         std::multiplies<int64_t>());
     assert(size == size_);
     shape_ = shape;
   }
 
-  void Resize(const std::vector<size_t>& shape) {
-    const size_t size = std::accumulate(shape.cbegin(), shape.cend(), size_t(1),
-                                        std::multiplies<size_t>());
+  void Resize(const std::vector<int64_t>& shape) {
+    const int64_t size = std::accumulate(
+        shape.cbegin(), shape.cend(), int64_t(1), std::multiplies<int64_t>());
     assert(size == size_);
     shape_ = shape;
   }
 
  protected:
-  size_t size_ = 0;
-  std::vector<size_t> shape_;
+  int64_t size_ = 0;
+  std::vector<int64_t> shape_;
   std::vector<T> data_;
 };
 
