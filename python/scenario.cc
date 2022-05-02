@@ -15,21 +15,6 @@ namespace nocturne {
 
 using geometry::utils::kHalfPi;
 
-namespace {
-
-py::dict PyVisibleState(const Scenario& scenario, const Object& src,
-                        float view_dist, float view_angle,
-                        bool padding = false) {
-  auto state = scenario.VisibleState(src, view_dist, view_angle, padding);
-  py::dict py_state;
-  for (auto& [k, v] : state) {
-    py_state[py::str(k)] = utils::AsNumpyArray(std::move(v));
-  }
-  return py_state;
-}
-
-}  // namespace
-
 void DefineScenario(py::module& m) {
   m.doc() = "nocturne documentation for class Scenario";
 
@@ -88,9 +73,15 @@ void DefineScenario(py::module& m) {
            [](const Scenario& scenario, const Object& src) {
              return utils::AsNumpyArray(scenario.EgoState(src));
            })
-      .def("visible_state", &PyVisibleState, py::arg("object"),
-           py::arg("view_dist") = 60, py::arg("view_angle") = kHalfPi,
-           py::arg("padding") = false)
+      .def(
+          "visible_state",
+          [](const Scenario& scenario, const Object& src, float view_dist,
+             float view_angle, bool padding) {
+            return utils::AsNumpyArrayDict(
+                scenario.VisibleState(src, view_dist, view_angle, padding));
+          },
+          py::arg("object"), py::arg("view_dist") = 60,
+          py::arg("view_angle") = kHalfPi, py::arg("padding") = false)
       .def(
           "flattened_visible_state",
           [](const Scenario& scenario, const Object& src, float view_dist,
