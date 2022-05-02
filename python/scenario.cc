@@ -17,9 +17,9 @@ using geometry::utils::kHalfPi;
 
 namespace {
 
-py::dict PythonVisibleState(const Scenario& scenario, const Object& src,
-                            float view_dist, float view_angle,
-                            bool padding = false) {
+py::dict PyVisibleState(const Scenario& scenario, const Object& src,
+                        float view_dist, float view_angle,
+                        bool padding = false) {
   auto state = scenario.VisibleState(src, view_dist, view_angle, padding);
   py::dict py_state;
   for (auto& [k, v] : state) {
@@ -88,7 +88,7 @@ void DefineScenario(py::module& m) {
            [](const Scenario& scenario, const Object& src) {
              return utils::AsNumpyArray(scenario.EgoState(src));
            })
-      .def("visible_state", &PythonVisibleState, py::arg("object"),
+      .def("visible_state", &PyVisibleState, py::arg("object"),
            py::arg("view_dist") = 60, py::arg("view_angle") = kHalfPi,
            py::arg("padding") = false)
       .def(
