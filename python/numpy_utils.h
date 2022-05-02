@@ -5,6 +5,7 @@
 
 #include <cstring>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 #include "ndarray.h"
@@ -50,6 +51,25 @@ py::array_t<T> AsNumpyArray(NdArray<T>&& arr) {
   ret.resize(arr.shape());
   arr.Clear();
   return ret;
+}
+
+template <typename T>
+py::dict AsNumpyArrayDict(
+    const std::unordered_map<std::string, NdArray<T>>& src) {
+  py::dict dst;
+  for (const auto& [k, v] : src) {
+    dst[py::str(k)] = AsNumpyArray<T>(v);
+  }
+  return dst;
+}
+
+template <typename T>
+py::dict AsNumpyArrayDict(std::unordered_map<std::string, NdArray<T>>&& src) {
+  py::dict dst;
+  for (auto& [k, v] : src) {
+    dst[py::str(k)] = AsNumpyArray<T>(std::move(v));
+  }
+  return dst;
 }
 
 }  // namespace utils
