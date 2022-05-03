@@ -139,6 +139,8 @@ class BVH {
   std::vector<BVH::Node*> CombineNodes(const std::vector<BVH::Node*>& nodes,
                                        int64_t num);
 
+  // Implement AAC algorithm in
+  // http://graphics.cs.cmu.edu/projects/aac/aac_build.pdf
   template <class ObjectType, class AABBFunc, class PtrFunc>
   void InitHierarchyInternal(const std::vector<ObjectType>& objects,
                              AABBFunc aabb_func, PtrFunc ptr_func) {
