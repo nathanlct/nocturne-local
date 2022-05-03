@@ -82,8 +82,6 @@ class BVH {
     nodes_.clear();
   }
 
-  // Implement AAC algorithm in
-  // http://graphics.cs.cmu.edu/projects/aac/aac_build.pdf
   template <class ObjectType>
   void InitHierarchy(const std::vector<ObjectType>& objects) {
     InitHierarchyInternal(
