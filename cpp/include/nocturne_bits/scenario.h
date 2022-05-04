@@ -6,27 +6,22 @@
 #include <stdexcept>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <vector>
 
-#include "ImageMatrix.hpp"
 #include "cyclist.h"
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
-#include "kinetic_object.h"
+#include "ndarray.h"
 #include "object.h"
+#include "object_base.h"
 #include "pedestrian.h"
 #include "road.h"
+#include "static_object.h"
 #include "stop_sign.h"
 #include "traffic_light.h"
 #include "vehicle.h"
-
-namespace pybind11 {
-
-template <typename T, int ExtraFlags>
-class array_t;
-
-}  // namespace pybind11
 
 namespace nocturne {
 
@@ -34,16 +29,16 @@ using json = nlohmann::json;
 
 // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
 // returned in the state
-constexpr int64_t kMaxVisibleKineticObjects = 20;
+constexpr int64_t kMaxVisibleObjects = 20;
 constexpr int64_t kMaxVisibleRoadPoints = 80;
 constexpr int64_t kMaxVisibleTrafficLights = 20;
 constexpr int64_t kMaxVisibleStopSigns = 4;
 
-// KineticObject features are:
+// Object features are:
 // [ valid, distance, azimuth, length, witdh, relative_heading,
 //   relative_velocity_speed, relative_velocity_direction,
-//   object_type (one_hot of 8) ]
-constexpr int64_t kKineticObjectFeatureSize = 16;
+//   object_type (one_hot of 5) ]
+constexpr int64_t kObjectFeatureSize = 13;
 
 // RoadPoint features are:
 // [ valid, distance, azimuth, road_type (one_hot of 7) ]
@@ -62,11 +57,6 @@ constexpr int64_t kStopSignsFeatureSize = 3;
 // length, width ]
 constexpr int64_t kEgoFeatureSize = 5;
 
-// For py::array_t forward declaration.
-// https://github.com/pybind/pybind11/blob/master/include/pybind11/numpy.h#L986
-// https://github.com/pybind/pybind11/blob/master/include/pybind11/numpy.h#L143
-constexpr int kNumpyArrayForcecast = 0x0010;
-
 class Scenario : public sf::Drawable {
  public:
   Scenario(std::string path, int startTime, bool useNonVehicles);
@@ -78,7 +68,7 @@ class Scenario : public sf::Drawable {
   void removeVehicle(Vehicle* object);
 
   int getMaxEnvTime() { return maxEnvTime; }
-  float getSignedAngle(float sourceAngle, float targetAngle) const;
+  // float getSignedAngle(float sourceAngle, float targetAngle) const;
 
   // query expert data
   std::vector<float> getExpertAction(
@@ -93,47 +83,62 @@ class Scenario : public sf::Drawable {
 
   /*********************** State Accessors *******************/
   std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
-      KineticObject* sourceObject);
+      Object* sourceObject);
 
   sf::FloatRect getRoadNetworkBoundaries() const;
 
-  ImageMatrix getCone(KineticObject* object, float viewDist = 60.0f,
-                      float viewAngle = geometry::utils::kHalfPi,
-                      float headTilt = 0.0f, bool obscuredView = true);
+  NdArray<unsigned char> getCone(Object* object, float viewDist = 60.0f,
+                                 float viewAngle = geometry::utils::kHalfPi,
+                                 float headTilt = 0.0f,
+                                 bool obscuredView = true);
 
-  ImageMatrix getImage(KineticObject* object = nullptr,
-                       bool renderGoals = false);
+  NdArray<unsigned char> getImage(Object* object = nullptr,
+                                  bool renderGoals = false);
 
   bool checkForCollision(const Object& object1, const Object& object2) const;
   bool checkForCollision(const Object& object,
                          const geometry::LineSegment& segment) const;
 
-  std::vector<std::shared_ptr<Vehicle>> getVehicles();
-  std::vector<std::shared_ptr<Pedestrian>> getPedestrians();
-  std::vector<std::shared_ptr<Cyclist>> getCyclists();
-  std::vector<std::shared_ptr<KineticObject>> getRoadObjects();
-  std::vector<std::shared_ptr<RoadLine>> getRoadLines();
+  const std::vector<std::shared_ptr<Vehicle>>& getVehicles() const {
+    return vehicles;
+  }
 
-  pybind11::array_t<float, kNumpyArrayForcecast> egoStateObservation(
-      const KineticObject& src) const;
-  pybind11::array_t<float, kNumpyArrayForcecast> Observation(
-      const KineticObject& src, float view_dist, float view_angle) const;
+  const std::vector<std::shared_ptr<Pedestrian>>& getPedestrians() const {
+    return pedestrians;
+  }
+
+  const std::vector<std::shared_ptr<Cyclist>>& getCyclists() const {
+    return cyclists;
+  }
+
+  const std::vector<std::shared_ptr<Object>>& getRoadObjects() const {
+    return roadObjects;
+  }
+
+  const std::vector<std::shared_ptr<RoadLine>>& getRoadLines() const {
+    return roadLines;
+  }
+
+  NdArray<float> EgoState(const Object& src) const;
+
+  std::unordered_map<std::string, NdArray<float>> VisibleState(
+      const Object& src, float view_dist, float view_angle,
+      bool padding = false) const;
+
+  NdArray<float> FlattenedVisibleState(const Object& src, float view_dist,
+                                       float view_angle) const;
 
   // get a list of vehicles that actually moved
-  std::vector<std::shared_ptr<KineticObject>> getObjectsThatMoved() {
+  std::vector<std::shared_ptr<Object>> getObjectsThatMoved() {
     return objectsThatMoved;
   }
-  int64_t getMaxNumVisibleKineticObjects() const {
-    return kMaxVisibleKineticObjects;
-  }
+  int64_t getMaxNumVisibleObjects() const { return kMaxVisibleObjects; }
   int64_t getMaxNumVisibleRoadPoints() const { return kMaxVisibleRoadPoints; }
   int64_t getMaxNumVisibleTrafficLights() const {
     return kMaxVisibleTrafficLights;
   }
   int64_t getMaxNumVisibleStopSigns() const { return kMaxVisibleStopSigns; }
-  int64_t getKineticObjectFeatureSize() const {
-    return kKineticObjectFeatureSize;
-  }
+  int64_t getObjectFeatureSize() const { return kObjectFeatureSize; }
   int64_t getRoadPointFeatureSize() const { return kRoadPointFeatureSize; }
   int64_t getTrafficLightFeatureSize() const {
     return kTrafficLightFeatureSize;
@@ -148,17 +153,13 @@ class Scenario : public sf::Drawable {
 
   void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 
-  std::vector<float> egoObservationImpl(const KineticObject& src) const;
-  std::vector<float> ObservationImpl(const KineticObject& src, float view_dist,
-                                     float view_angle) const;
+  std::tuple<std::vector<const ObjectBase*>, std::vector<const ObjectBase*>,
+             std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
+  VisibleObjects(const Object& src, float view_dist, float view_angle) const;
 
-  std::tuple<std::vector<const Object*>, std::vector<const Object*>,
-             std::vector<const Object*>, std::vector<const Object*>>
-  VisibleObjects(const KineticObject& src, float view_dist,
-                 float view_angle) const;
-
-  std::vector<const TrafficLight*> VisibleTrafficLights(
-      const KineticObject& src, float view_dist, float view_angle) const;
+  std::vector<const TrafficLight*> VisibleTrafficLights(const Object& src,
+                                                        float view_dist,
+                                                        float view_angle) const;
 
   int currTime;
   int IDCounter = 0;
@@ -176,7 +177,7 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<Vehicle>> vehicles;
   std::vector<std::shared_ptr<Pedestrian>> pedestrians;
   std::vector<std::shared_ptr<Cyclist>> cyclists;
-  std::vector<std::shared_ptr<KineticObject>> roadObjects;
+  std::vector<std::shared_ptr<Object>> roadObjects;
   std::vector<std::shared_ptr<StopSign>> stopSigns;
   std::vector<std::shared_ptr<TrafficLight>> trafficLights;
 
@@ -195,7 +196,7 @@ class Scenario : public sf::Drawable {
 
   // track the object that moved, useful for figuring out which agents should
   // actually be controlled
-  std::vector<std::shared_ptr<KineticObject>> objectsThatMoved;
+  std::vector<std::shared_ptr<Object>> objectsThatMoved;
 };
 
 }  // namespace nocturne
