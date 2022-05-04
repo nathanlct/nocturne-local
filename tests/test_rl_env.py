@@ -12,8 +12,11 @@ os.environ["DISPLAY"] = ":0.0"
 def test_rl_env():
     initialize(config_path="../cfgs/")
     cfg = compose(config_name="config")
+    # move the scenario path to this folder
+    cfg.scenario_path = os.path.join(PROJECT_PATH, 'tests')
+    cfg.max_num_vehicles = 50
     env = create_env(cfg)
-    env.file = str(PROJECT_PATH / "tests/large_file.json")
+    env.files = [str(PROJECT_PATH / "tests/large_file.json")]
     obs = env.reset()
     # quick check that rendering works
     img = env.scenario.getCone(env.scenario.getVehicles()[0], 120.0,
