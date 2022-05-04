@@ -46,13 +46,13 @@ class BaseEnv(MultiAgentEnv):
         self.t = 0
         self.step_num = 0
         self.rank = rank
-        ego_obs = self.scenario.egoStateObservation(self.vehicles[0])
+        ego_obs = self.scenario.ego_state(self.vehicles[0])
         if self.cfg['subscriber']['use_ego_state'] and self.cfg['subscriber'][
                 'use_observations']:
             obs_shape = -np.ones_like(
                 np.concatenate(
                     (ego_obs,
-                     self.scenario.observation(
+                     self.scenario.flattened_visible_state(
                          self.vehicles[0], self.cfg['subscriber']['view_dist'],
                          self.cfg['subscriber']['view_angle']))))
         elif self.cfg['subscriber']['use_ego_state'] and not self.cfg[
@@ -60,7 +60,7 @@ class BaseEnv(MultiAgentEnv):
             obs_shape = -np.ones_like(ego_obs)
         else:
             obs_shape = -np.ones_like(
-                self.scenario.observation(
+                self.scenario.flattened_visible_state(
                     self.vehicles[0], self.cfg['subscriber']['view_dist'],
                     self.cfg['subscriber']['view_angle']))
         self.observation_space = Box(low=-np.infty,
@@ -123,15 +123,15 @@ class BaseEnv(MultiAgentEnv):
             if self.cfg['subscriber']['use_ego_state'] and self.cfg[
                     'subscriber']['use_observations']:
                 obs_dict[veh_id] = np.concatenate(
-                    (self.scenario.egoStateObservation(veh_obj),
-                     self.scenario.observation(
+                    (self.scenario.ego_state(veh_obj),
+                     self.scenario.flattened_visible_state(
                          veh_obj, self.cfg['subscriber']['view_dist'],
                          self.cfg['subscriber']['view_angle'])))
             elif self.cfg['subscriber']['use_ego_state'] and not self.cfg[
                     'subscriber']['use_observations']:
-                obs_dict[veh_id] = self.scenario.egoStateObservation(veh_obj)
+                obs_dict[veh_id] = self.scenario.ego_state(veh_obj)
             else:
-                obs_dict[veh_id] = self.scenario.observation(
+                obs_dict[veh_id] = self.scenario.flattened_visible_state(
                     veh_obj, self.cfg['subscriber']['view_dist'],
                     self.cfg['subscriber']['view_angle'])
             rew_dict[veh_id] = 0
@@ -250,19 +250,19 @@ class BaseEnv(MultiAgentEnv):
                 dist = np.linalg.norm(obj_pos - goal_pos)
                 self.goal_dist_normalizers[veh_id] = dist
             # compute the obs
-            ego_obs = self.scenario.egoStateObservation(veh_obj)
+            ego_obs = self.scenario.ego_state(veh_obj)
             if self.cfg['subscriber']['use_ego_state'] and self.cfg[
                     'subscriber']['use_observations']:
                 obs_dict[veh_id] = np.concatenate(
                     (ego_obs,
-                     self.scenario.observation(
+                     self.scenario.flattened_visible_state(
                          veh_obj, self.cfg['subscriber']['view_dist'],
                          self.cfg['subscriber']['view_angle'])))
             elif self.cfg['subscriber']['use_ego_state'] and not self.cfg[
                     'subscriber']['use_observations']:
                 obs_dict[veh_id] = ego_obs
             else:
-                obs_dict[veh_id] = self.scenario.observation(
+                obs_dict[veh_id] = self.scenario.flattened_visible_state(
                     veh_obj, self.cfg['subscriber']['view_dist'],
                     self.cfg['subscriber']['view_angle'])
         return obs_dict
