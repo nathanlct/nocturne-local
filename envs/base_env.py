@@ -31,7 +31,8 @@ class BaseEnv(MultiAgentEnv):
         """
         super().__init__()
         self._skip_env_checking = True  # temporary fix for rllib env checking issue
-        self.files = os.listdir(cfg['scenario_path'])
+        possible_files = os.listdir(cfg['scenario_path'])
+        self.files = [file for file in possible_files if '.json' in file]
         if cfg['num_files'] != -1:
             self.files = self.files[0:cfg['num_files']]
         self.file = self.files[np.random.randint(len(self.files))]
@@ -74,20 +75,20 @@ class BaseEnv(MultiAgentEnv):
                 action = action_dict[veh_id]
                 if isinstance(action, dict):
                     if 'accel' in action.keys():
-                        veh_obj.setAccel(action['accel'])
+                        veh_obj.acceleration = action['accel']
                     if 'turn' in action.keys():
-                        veh_obj.setSteeringAngle(action['turn'])
+                        veh_obj.steering = action['turn']
                 elif isinstance(action, list) or isinstance(
                         action, np.ndarray):
-                    veh_obj.setAccel(action[0])
-                    veh_obj.setSteeringAngle(action[1])
+                    veh_obj.acceleration = action[0]
+                    veh_obj.steering = action[1]
                 else:
                     accel_action = self.accel_grid[int(
                         action // self.steering_discretization)]
                     steering_action = self.steering_grid[
                         action % self.accel_discretization]
-                    veh_obj.setAccel(accel_action)
-                    veh_obj.setSteeringAngle(steering_action)
+                    veh_obj.acceleration = accel_action
+                    veh_obj.steering = steering_action
 
     def step(self, action_dict):
         obs_dict = {}
