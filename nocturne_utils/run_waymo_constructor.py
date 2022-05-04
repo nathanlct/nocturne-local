@@ -3,7 +3,8 @@ from pathlib import Path
 import os
 import multiprocessing
 
-from cfgs.config import DATA_PATH
+from cfgs.config import PROCESSED_TRAIN, TRAIN_DATA_PATH, VALID_DATA_PATH, TEST_DATA_PATH, PROCESSED_TRAIN_NO_TL, \
+    PROCESSED_VALID_NO_TL, PROCESSED_TEST_NO_TL, PROCESSED_TRAIN, PROCESSED_TEST, PROCESSED_VALID
 import waymo_scenario_construction as waymo
 
 
@@ -34,7 +35,8 @@ def main():
     parser.add_argument("--file",
                         type=str,
                         default=os.path.join(
-                            DATA_PATH, 'training.tfrecord-00995-of-01000'))
+                            TRAIN_DATA_PATH,
+                            'training.tfrecord-00995-of-01000'))
     parser.add_argument("--num", type=int, default=1)
     parser.add_argument("--output_txt",
                         action='store_true',
@@ -52,45 +54,59 @@ def main():
         "--parallel",
         action='store_true',
         help="If true, split the conversion up over multiple processes")
+    parser.add_argument("--datatype",
+                        default='train',
+                        type=str,
+                        choices=['train', 'valid', 'test'],
+                        nargs='+',
+                        help="Whether to convert, train, valid, or test data")
 
     args = parser.parse_args()
+    folders_to_convert = []
+    if 'train' in args.datatype:
+        folders_to_convert.append(
+            (TRAIN_DATA_PATH,
+             PROCESSED_TRAIN_NO_TL if args.no_tl else PROCESSED_TRAIN))
+    if 'valid' in args.datatype:
+        folders_to_convert.append(
+            (VALID_DATA_PATH,
+             PROCESSED_VALID_NO_TL if args.no_tl else PROCESSED_VALID))
+    if 'test' in args.datatype:
+        folders_to_convert.append(
+            (TEST_DATA_PATH,
+             PROCESSED_TEST_NO_TL if args.no_tl else PROCESSED_TEST))
 
-    if args.num > 1 or args.all_files:
-        files = list(Path(DATA_PATH).glob('*tfrecord*'))
-        if args.no_tl:
-            output_dir = os.path.join('/'.join(DATA_PATH.split('/')[0:-2]),
-                                      'formatted_json_v2_no_tl')
+    for folder_path, output_dir in folders_to_convert:
+        if args.num > 1 or args.all_files:
+            files = list(Path(folder_path).glob('*tfrecord*'))
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+            if not args.all_files:
+                files = files[0:args.num]
+
         else:
-            output_dir = os.path.join('/'.join(DATA_PATH.split('/')[0:-2]),
-                                      'formatted_json_v2')
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        if not args.all_files:
-            files = files[0:args.num]
+            output_dir = os.getcwd()
+            files = [args.file]
 
-    else:
-        output_dir = os.getcwd()
-        files = [args.file]
+        if args.parallel:
+            # leave some cpus free but have at least one and don't use more than 40
+            num_cpus = min(max(multiprocessing.cpu_count() - 2, 1), 40)
+            num_files = len(files)
+            process_list = []
+            for i in range(num_cpus):
+                p = multiprocessing.Process(
+                    target=convert_files,
+                    args=[
+                        args, files[i * num_files // num_cpus:(i + 1) *
+                                    num_files // num_cpus], output_dir, i
+                    ])
+                p.start()
+                process_list.append(p)
 
-    if args.parallel:
-        # leave some cpus free but have at least one and don't use more than 40
-        num_cpus = min(max(multiprocessing.cpu_count() - 2, 1), 40)
-        num_files = len(files)
-        process_list = []
-        for i in range(num_cpus):
-            p = multiprocessing.Process(
-                target=convert_files,
-                args=[
-                    args, files[i * num_files // num_cpus:(i + 1) *
-                                num_files // num_cpus], output_dir, i
-                ])
-            p.start()
-            process_list.append(p)
-
-        for process in process_list:
-            process.join()
-    else:
-        convert_files(args, files, output_dir, rank=0)
+            for process in process_list:
+                process.join()
+        else:
+            convert_files(args, files, output_dir, rank=0)
 
 
 if __name__ == "__main__":

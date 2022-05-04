@@ -8,29 +8,74 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from cfgs.config import PROCESSED_DATA_PATH_NO_TL, PROJECT_PATH
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH
 from nocturne import Simulation
 
 os.environ["DISPLAY"] = ":0.0"
 
 if __name__ == '__main__':
+    SAVE_IMAGES = False
     output_folder = 'corner_case_vis'
     output_path = Path(PROJECT_PATH) / f'nocturne_utils/{output_folder}'
     output_path.mkdir(exist_ok=True)
-    files = list(os.listdir(PROCESSED_DATA_PATH_NO_TL))
-    for file in files:
-        print('about to load scenario')
-        sim = Simulation(os.path.join(PROCESSED_DATA_PATH_NO_TL, file))
-        print('loaded the scenario')
-        vehs = sim.getScenario().getVehicles()
-        print('grabbed the vehicles')
-        for i, veh in enumerate(vehs):
-            print('in vehicle loop')
-            collided = veh.getCollided()
-            print('called get collided')
-            if collided:
-                print('making an image')
-                plt.figure()
-                plt.imshow(sim.getScenario().getImage(None, render_goals=True))
-                plt.title(f'{file}_{i}')
-                plt.savefig(f'{output_folder}/{file}_{i}.png')
+    files = list(os.listdir(PROCESSED_TRAIN_NO_TL))
+    # track the number of collisions at each time-step
+    collide_counter = np.zeros(90)
+    file_has_collision_counter = 0
+    for file_idx, file in enumerate(files):
+        found_collision = False
+        sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file), 0, False)
+        vehs = sim.getScenario().getObjectsThatMoved()
+        # this checks if the vehicles has actually moved any distance at all
+        valid_vehs = []
+        for veh in vehs:
+            veh.set_expert_controlled(True)
+            obj_pos = veh.getPosition()
+            obj_pos = np.array([obj_pos.x, obj_pos.y])
+            goal_pos = veh.getGoalPosition()
+            goal_pos = np.array([goal_pos.x, goal_pos.y])
+            if np.linalg.norm(obj_pos - goal_pos) > 0.5:
+                valid_vehs.append(veh)
+        for time_index in range(89):
+            for veh_index, veh in enumerate(valid_vehs):
+                collided = veh.getCollided()
+                if collided and not np.isclose(veh.getPosition().x, -10000.0):
+                    collide_counter[time_index] += 1
+                if np.isclose(veh.getPosition().x, -10000.0):
+                    collided = False
+                if time_index == 0 and not found_collision and collided and SAVE_IMAGES:
+                    img = sim.getScenario().getImage(None, render_goals=True)
+                    fig = plt.figure()
+                    plt.imshow(img)
+                    plt.savefig(f'{output_folder}/{file}.png')
+                    plt.close(fig)
+                if not found_collision and collided:
+                    found_collision = True
+                    file_has_collision_counter += 1
+            sim.step(0.1)
+        print(
+            f'at file {file_idx} we have {collide_counter} collisions for a ratio of {collide_counter / (file_idx + 1)}'
+        )
+        print(
+            f'the number of files that have a collision at all is {file_has_collision_counter / (file_idx + 1)}'
+        )
+        # if found_collision:
+        #     import sys
+        #     from celluloid import Camera
+        #     fig = plt.figure()
+        #     cam = Camera(fig)
+        #     sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file), 0,
+        #                      False)
+        #     vehs = sim.getScenario().getObjectsThatMoved()
+        #     for veh in vehs:
+        #         veh.set_expert_controlled(True)
+        #     for time_index in range(89):
+        #         img = sim.getScenario().getImage(None, render_goals=True)
+        #         plt.imshow(img)
+        #         cam.snap()
+        #         sim.step(0.1)
+        #     animation = cam.animate(interval=50)
+        #     animation.save(f'{output_path}/{os.path.basename(file)}.mp4')
+        #     if file_has_collision_counter > 5:
+        #         sys.exit()
+
