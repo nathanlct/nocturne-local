@@ -197,7 +197,6 @@ class BaseEnv(MultiAgentEnv):
         self.t = 0
         self.step_num = 0
         too_many_vehicles = True
-        # TODO(eugenevinitsky) hardcoding
         # we don't want to initialize scenes with more than N actors
         while too_many_vehicles:
             self.file = self.files[np.random.randint(len(self.files))]
@@ -205,24 +204,26 @@ class BaseEnv(MultiAgentEnv):
                 self.cfg['scenario_path'], self.file),
                                          use_non_vehicles=False)
             self.scenario = self.simulation.getScenario()
+
+            # remove all the objects that are in collision or are already in goal dist
+            for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
+                obj_pos = veh_obj.getPosition()
+                obj_pos = np.array([obj_pos.x, obj_pos.y])
+                goal_pos = veh_obj.getGoalPosition()
+                goal_pos = np.array([goal_pos.x, goal_pos.y])
+                ######################## Compute rewards #######################
+                if np.linalg.norm(goal_pos - obj_pos
+                                  ) < self.cfg['rew_cfg']['goal_tolerance']:
+                    self.scenario.removeVehicle(veh_obj)
+                if veh_obj.getCollided():
+                    self.scenario.removeVehicle(veh_obj)
             self.vehicles = self.scenario.getObjectsThatMoved()
             self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
-            # TODO(eugenevinitsky) hardcoding
-            if len(self.all_vehicle_ids) <= self.cfg['max_num_vehicles']:
+            # check if we have less than the desired number of vehicles and have
+            # at least one vehicle
+            if len(self.all_vehicle_ids) <= self.cfg['max_num_vehicles'] \
+                and len(self.all_vehicle_ids) > 0:
                 too_many_vehicles = False
-
-        # remove all the objects that are in collision or are already in goal dist
-        for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
-            obj_pos = veh_obj.getPosition()
-            obj_pos = np.array([obj_pos.x, obj_pos.y])
-            goal_pos = veh_obj.getGoalPosition()
-            goal_pos = np.array([goal_pos.x, goal_pos.y])
-            ######################## Compute rewards #######################
-            if np.linalg.norm(goal_pos -
-                              obj_pos) < self.cfg['rew_cfg']['goal_tolerance']:
-                self.scenario.removeVehicle(veh_obj)
-            if veh_obj.getCollided():
-                self.scenario.removeVehicle(veh_obj)
 
         obs_dict = {}
         self.goal_dist_normalizers = {}
@@ -267,9 +268,7 @@ class BaseEnv(MultiAgentEnv):
         return obs_dict
 
     def render(self, mode=None):
-        return np.array(self.simulation.getScenario().getImage(
-            None, render_goals=True),
-                        copy=False)
+        return self.simulation.getScenario().getImage(None, render_goals=True)
 
     def seed(self, seed=None):
         if seed is None:

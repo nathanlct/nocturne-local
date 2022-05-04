@@ -5,7 +5,10 @@
 
 #include <cstring>
 #include <memory>
+#include <unordered_map>
 #include <vector>
+
+#include "ndarray.h"
 
 namespace py = pybind11;
 
@@ -32,6 +35,41 @@ py::array_t<T> AsNumpyArray(std::vector<T>&& vec) {
   });
   vec_ptr.release();
   return py::array(size, data, capsule);
+}
+
+template <typename T>
+py::array_t<T> AsNumpyArray(const NdArray<T>& arr) {
+  py::array_t<T> ret = AsNumpyArray<T>(arr.data());
+  ret.resize(arr.shape());
+  return ret;
+}
+
+// Move a NdArray to numpy array without copy.
+template <typename T>
+py::array_t<T> AsNumpyArray(NdArray<T>&& arr) {
+  py::array_t<T> ret = AsNumpyArray<T>(std::move(arr.data()));
+  ret.resize(arr.shape());
+  arr.Clear();
+  return ret;
+}
+
+template <typename T>
+py::dict AsNumpyArrayDict(
+    const std::unordered_map<std::string, NdArray<T>>& src) {
+  py::dict dst;
+  for (const auto& [k, v] : src) {
+    dst[py::str(k)] = AsNumpyArray<T>(v);
+  }
+  return dst;
+}
+
+template <typename T>
+py::dict AsNumpyArrayDict(std::unordered_map<std::string, NdArray<T>>&& src) {
+  py::dict dst;
+  for (auto& [k, v] : src) {
+    dst[py::str(k)] = AsNumpyArray<T>(std::move(v));
+  }
+  return dst;
 }
 
 }  // namespace utils

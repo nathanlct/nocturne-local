@@ -12,7 +12,7 @@ disp = Display()
 disp.start()
 fig = plt.figure()
 cam = Camera(fig)
-path = '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json'
+path = "/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json"
 files = os.listdir(path)
 file = os.path.join(path, files[np.random.randint(len(files))])
 sim = Simulation(file, start_time=0)
@@ -20,7 +20,7 @@ scenario = sim.getScenario()
 for veh in scenario.getVehicles():
     veh.expert_control = True
 for i in range(90):
-    img = np.array(scenario.getImage(None, render_goals=True), copy=False)
+    img = scenario.getImage(None, render_goals=True)
     plt.imshow(img)
     cam.snap()
     sim.step(0.1)

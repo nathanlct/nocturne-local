@@ -1,4 +1,4 @@
-#include "kinetic_object.h"
+#include "object.h"
 
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>
@@ -27,7 +27,7 @@ std::pair<geometry::Vector2D, float> KinematicBicycleModel(
                         geometry::utils::NormalizeAngle(heading + dtheta * dt));
 }
 
-TEST(KineticObjectTest, UniformLinearMotionTest) {
+TEST(ObjectTest, UniformLinearMotionTest) {
   const float t = 10.0f;
   const float length = 2.0f;
   const float width = 1.0f;
@@ -37,10 +37,9 @@ TEST(KineticObjectTest, UniformLinearMotionTest) {
   const geometry::Vector2D position(1.0f, 1.0f);
   const geometry::Vector2D destination = position + velocity * t;
 
-  KineticObject obj(/*id=*/0, length, width, position, destination, heading,
-                    speed,
-                    /*can_block_sigh=*/true, /*can_be_collided=*/true,
-                    /*check_collision=*/true);
+  Object obj(/*id=*/0, length, width, position, destination, heading, speed,
+             /*can_block_sigh=*/true, /*can_be_collided=*/true,
+             /*check_collision=*/true);
   const int num_steps = 100;
   const float dt = t / static_cast<float>(num_steps);
   for (int i = 0; i < num_steps; ++i) {
@@ -53,7 +52,7 @@ TEST(KineticObjectTest, UniformLinearMotionTest) {
   EXPECT_NEAR(obj.position().y(), destination.y(), kTol);
 }
 
-TEST(KineticObjectTest, ConstantAccelerationMotionTest) {
+TEST(ObjectTest, ConstantAccelerationMotionTest) {
   const float t = 10.0f;
   const float length = 2.0f;
   const float width = 1.0f;
@@ -67,10 +66,9 @@ TEST(KineticObjectTest, ConstantAccelerationMotionTest) {
       geometry::PolarToVector2D(acceleration, heading) * (t * t * 0.5f);
 
   // Forward test.
-  KineticObject obj(/*id=*/0, length, width, position, destination, heading,
-                    speed,
-                    /*can_block_sigh=*/true, /*can_be_collided=*/true,
-                    /*check_collision=*/true);
+  Object obj(/*id=*/0, length, width, position, destination, heading, speed,
+             /*can_block_sigh=*/true, /*can_be_collided=*/true,
+             /*check_collision=*/true);
   obj.set_acceleration(acceleration);
   const int num_steps = 100;
   const float dt = t / static_cast<float>(num_steps);
@@ -103,7 +101,7 @@ TEST(KineticObjectTest, ConstantAccelerationMotionTest) {
   EXPECT_NEAR(obj.position().y(), destination.y(), kTol);
 }
 
-TEST(KineticObjectTest, SteeringMotionTest) {
+TEST(ObjectTest, SteeringMotionTest) {
   const float length = 2.0f;
   const float width = 1.0f;
   const float heading = kQuarterPi;
@@ -114,10 +112,9 @@ TEST(KineticObjectTest, SteeringMotionTest) {
   const auto [destination, theta] =
       KinematicBicycleModel(position, length, heading, speed, steering, dt);
 
-  KineticObject obj(/*id=*/0, length, width, position, destination, heading,
-                    speed,
-                    /*can_block_sigh=*/true, /*can_be_collided=*/true,
-                    /*check_collision=*/true);
+  Object obj(/*id=*/0, length, width, position, destination, heading, speed,
+             /*can_block_sigh=*/true, /*can_be_collided=*/true,
+             /*check_collision=*/true);
   obj.set_steering(steering);
   obj.Step(dt);
 

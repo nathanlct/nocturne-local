@@ -32,7 +32,7 @@ Vector2D MakeSightEndpoint(const CircleLike& vision,
 }
 
 void VisibleObjectsImpl(const LineSegment& sight,
-                        const std::vector<const Object*>& objects,
+                        const std::vector<const ObjectBase*>& objects,
                         std::vector<bool>& mask) {
   const int64_t n = objects.size();
 
@@ -41,7 +41,7 @@ void VisibleObjectsImpl(const LineSegment& sight,
   float min_dis = std::numeric_limits<float>::max();
   int64_t min_idx = -1;
   for (int64_t i = 0; i < n; ++i) {
-    const Object* obj = objects[i];
+    const ObjectBase* obj = objects[i];
     const auto edges = obj->BoundingPolygon().Edges();
     for (const LineSegment& edge : edges) {
       const auto t = sight.ParametricIntersection(edge);
@@ -69,7 +69,7 @@ void VisibleObjectsImpl(const LineSegment& sight,
     if (mask[i]) {
       continue;
     }
-    const Object* obj = objects[i];
+    const ObjectBase* obj = objects[i];
     // Non blocking nearby objects are visible.
     if (!obj->can_block_sight() && dis[i] < min_dis) {
       mask[i] = true;
@@ -87,7 +87,8 @@ void VisibleObjectsImpl(const LineSegment& sight,
   }
 }
 
-bool IsVisibleNonblockingObject(const CircleLike& vision, const Object* obj) {
+bool IsVisibleNonblockingObject(const CircleLike& vision,
+                                const ObjectBase* obj) {
   const auto edges = obj->BoundingPolygon().Edges();
   for (const LineSegment& edge : edges) {
     // Check one endpoint should be enough, the othe one will be checked in
@@ -118,8 +119,8 @@ ViewField::ViewField(const geometry::Vector2D& center, float radius,
 
 // O(N^2) algorithm.
 // TODO: Implment O(NlogN) algorithm when there are too many objects.
-std::vector<const Object*> ViewField::VisibleObjects(
-    const std::vector<const Object*>& objects) const {
+std::vector<const ObjectBase*> ViewField::VisibleObjects(
+    const std::vector<const ObjectBase*>& objects) const {
   const int64_t n = objects.size();
   const Vector2D& o = vision_->center();
   const std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
@@ -127,7 +128,7 @@ std::vector<const Object*> ViewField::VisibleObjects(
   for (const Vector2D& p : sight_endpoints) {
     VisibleObjectsImpl(LineSegment(o, p), objects, mask);
   }
-  std::vector<const Object*> ret;
+  std::vector<const ObjectBase*> ret;
   for (int64_t i = 0; i < n; ++i) {
     if (mask[i]) {
       ret.push_back(objects[i]);
@@ -137,7 +138,7 @@ std::vector<const Object*> ViewField::VisibleObjects(
 }
 
 void ViewField::FilterVisibleObjects(
-    std::vector<const Object*>& objects) const {
+    std::vector<const ObjectBase*>& objects) const {
   const int64_t n = objects.size();
   const Vector2D& o = vision_->center();
   const std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
@@ -157,45 +158,50 @@ void ViewField::FilterVisibleObjects(
   objects.resize(pivot);
 }
 
-std::vector<const Object*> ViewField::VisibleNonblockingObjects(
-    const std::vector<const Object*>& objects) const {
-  std::vector<const Object*> ret;
+std::vector<const ObjectBase*> ViewField::VisibleNonblockingObjects(
+    const std::vector<const ObjectBase*>& objects) const {
+  std::vector<const ObjectBase*> ret;
   const CircleLike* vptr = vision_.get();
-  std::copy_if(
-      objects.cbegin(), objects.cend(), std::back_inserter(ret),
-      [vptr](const Object* o) { return IsVisibleNonblockingObject(*vptr, o); });
+  std::copy_if(objects.cbegin(), objects.cend(), std::back_inserter(ret),
+               [vptr](const ObjectBase* o) {
+                 return IsVisibleNonblockingObject(*vptr, o);
+               });
   return ret;
 }
 
 void ViewField::FilterVisibleNonblockingObjects(
-    std::vector<const Object*>& objects) const {
+    std::vector<const ObjectBase*>& objects) const {
   const CircleLike* vptr = vision_.get();
-  auto pivot = std::partition(
-      objects.begin(), objects.end(),
-      [vptr](const Object* o) { return IsVisibleNonblockingObject(*vptr, o); });
+  auto pivot = std::partition(objects.begin(), objects.end(),
+                              [vptr](const ObjectBase* o) {
+                                return IsVisibleNonblockingObject(*vptr, o);
+                              });
   objects.resize(std::distance(objects.begin(), pivot));
 }
 
-std::vector<const Object*> ViewField::VisiblePoints(
-    const std::vector<const Object*>& objects) const {
-  std::vector<const Object*> ret;
+std::vector<const ObjectBase*> ViewField::VisiblePoints(
+    const std::vector<const ObjectBase*>& objects) const {
+  std::vector<const ObjectBase*> ret;
   const CircleLike* vptr = vision_.get();
-  std::copy_if(
-      objects.cbegin(), objects.cend(), std::back_inserter(ret),
-      [vptr](const Object* obj) { return vptr->Contains(obj->position()); });
+  std::copy_if(objects.cbegin(), objects.cend(), std::back_inserter(ret),
+               [vptr](const ObjectBase* obj) {
+                 return vptr->Contains(obj->position());
+               });
   return ret;
 }
 
-void ViewField::FilterVisiblePoints(std::vector<const Object*>& objects) const {
+void ViewField::FilterVisiblePoints(
+    std::vector<const ObjectBase*>& objects) const {
   const CircleLike* vptr = vision_.get();
-  auto pivot = std::partition(
-      objects.begin(), objects.end(),
-      [vptr](const Object* obj) { return vptr->Contains(obj->position()); });
+  auto pivot = std::partition(objects.begin(), objects.end(),
+                              [vptr](const ObjectBase* obj) {
+                                return vptr->Contains(obj->position());
+                              });
   objects.resize(std::distance(objects.begin(), pivot));
 }
 
 std::vector<Vector2D> ViewField::ComputeSightEndpoints(
-    const std::vector<const Object*>& objects) const {
+    const std::vector<const ObjectBase*>& objects) const {
   std::vector<Vector2D> ret;
   const Vector2D& o = vision_->center();
   if (!panoramic_view_) {
@@ -203,7 +209,7 @@ std::vector<Vector2D> ViewField::ComputeSightEndpoints(
     ret.push_back(o + vptr->Radius0());
     ret.push_back(o + vptr->Radius1());
   }
-  for (const Object* obj : objects) {
+  for (const ObjectBase* obj : objects) {
     const auto edges = obj->BoundingPolygon().Edges();
     for (const LineSegment& edge : edges) {
       // Check one endpoint should be enough, the othe one will be checked in
