@@ -30,6 +30,9 @@ void DefineObject(py::module& m) {
       .def_property(
           "velocity", &Object::velocity,
           py::overload_cast<const geometry::Vector2D&>(&Object::set_velocity))
+      .def_property("acceleration", &Object::acceleration,
+                    &Object::set_acceleration)
+      .def_property("steering", &Object::steering, &Object::set_steering)
       .def_property("speed", &Object::Speed, &Object::SetSpeed)
       .def_property("manual_control", &Object::manual_control,
                     &Object::set_manual_control)
