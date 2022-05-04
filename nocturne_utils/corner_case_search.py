@@ -78,4 +78,3 @@ if __name__ == '__main__':
         #     animation.save(f'{output_path}/{os.path.basename(file)}.mp4')
         #     if file_has_collision_counter > 5:
         #         sys.exit()
-
