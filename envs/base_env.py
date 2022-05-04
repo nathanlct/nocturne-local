@@ -46,26 +46,11 @@ class BaseEnv(MultiAgentEnv):
         self.t = 0
         self.step_num = 0
         self.rank = rank
-        ego_obs = self.scenario.ego_state(self.vehicles[0])
-        if self.cfg['subscriber']['use_ego_state'] and self.cfg['subscriber'][
-                'use_observations']:
-            obs_shape = -np.ones_like(
-                np.concatenate(
-                    (ego_obs,
-                     self.scenario.flattened_visible_state(
-                         self.vehicles[0], self.cfg['subscriber']['view_dist'],
-                         self.cfg['subscriber']['view_angle']))))
-        elif self.cfg['subscriber']['use_ego_state'] and not self.cfg[
-                'subscriber']['use_observations']:
-            obs_shape = -np.ones_like(ego_obs)
-        else:
-            obs_shape = -np.ones_like(
-                self.scenario.flattened_visible_state(
-                    self.vehicles[0], self.cfg['subscriber']['view_dist'],
-                    self.cfg['subscriber']['view_angle']))
+        obs_dict = self.reset()
         self.observation_space = Box(low=-np.infty,
                                      high=np.infty,
-                                     shape=(obs_shape.shape[0], ))
+                                     shape=(obs_dict[list(
+                                         obs_dict.keys())[0]].shape[0], ))
         if self.cfg['discretize_actions']:
             self.accel_discretization = self.cfg['accel_discretization']
             self.steering_discretization = self.cfg['steering_discretization']
@@ -215,6 +200,8 @@ class BaseEnv(MultiAgentEnv):
                 if np.linalg.norm(goal_pos - obj_pos
                                   ) < self.cfg['rew_cfg']['goal_tolerance']:
                     self.scenario.removeVehicle(veh_obj)
+                # TODO(eugenevinitsky) remove this once we remove all files that have an
+                # init at collision
                 if veh_obj.getCollided():
                     self.scenario.removeVehicle(veh_obj)
             self.vehicles = self.scenario.getObjectsThatMoved()
