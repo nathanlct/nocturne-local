@@ -137,7 +137,7 @@ void ExtractStopSignFeature(const Object& src, const StopSign& obj, float dis,
 
 using geometry::utils::kPi;
 
-Scenario::Scenario(std::string path, int startTime, bool useNonVehicles)
+Scenario::Scenario(const std::string& path, int startTime, bool useNonVehicles)
     : currTime(startTime), useNonVehicles(useNonVehicles) {
   if (path.size() > 0) {
     loadScenario(path);
@@ -750,18 +750,16 @@ NdArray<unsigned char> Scenario::getCone(
     Object* object, float viewDist, float viewAngle, float headTilt,
     bool obscuredView) {  // args in radians
   float circleRadius = viewDist;
-  float renderedCircleRadius = 300.0f;
+  constexpr int64_t kRenderedCircleRadius = 300;
+  constexpr int64_t kWidth = kRenderedCircleRadius * 2;
+  constexpr int64_t kHeight = kRenderedCircleRadius * 2;
 
-  if (object->cone_texture() == nullptr) {
+  if (object->ConeTexture() == nullptr) {
     sf::ContextSettings settings;
     settings.antialiasingLevel = 1;
-
-    // Potential memory leak?
-    object->set_cone_texture(new sf::RenderTexture());
-    object->cone_texture()->create(2.0f * renderedCircleRadius,
-                                   2.0f * renderedCircleRadius, settings);
+    object->InitConeTexture(kHeight, kWidth, settings);
   }
-  sf::RenderTexture* texture = object->cone_texture();
+  sf::RenderTexture* texture = object->ConeTexture();
 
   sf::Transform renderTransform;
   renderTransform.scale(1, -1);  // horizontal flip
@@ -782,8 +780,8 @@ NdArray<unsigned char> Scenario::getCone(
       sf::View(sf::Vector2f(0.0f, 0.0f), sf::Vector2f(texture->getSize())));
 
   // draw circle
-  float r = renderedCircleRadius;
-  float diag = std::sqrt(2 * r * r);
+  const float r = kRenderedCircleRadius;
+  const float diag = std::sqrt(2 * r * r);
 
   for (int quadrant = 0; quadrant < 4; ++quadrant) {
     std::vector<sf::Vertex> outerCircle;  // todo precompute just once
@@ -852,7 +850,8 @@ NdArray<unsigned char> Scenario::getCone(
             int nPoints = 80;  // todo function of angle
             hiddenArea.setPointCount(nPoints + 2);
 
-            float ratio = renderedCircleRadius / circleRadius;
+            float ratio =
+                static_cast<float>(kRenderedCircleRadius) / circleRadius;
             hiddenArea.setPoint(0, utils::ToVector2f((pt1 - center) * ratio));
             for (int i = 0; i < nPoints; ++i) {
               float angle = angle1 + i * (angle2 - angle1) / (nPoints - 1);
@@ -916,23 +915,20 @@ NdArray<unsigned char> Scenario::getCone(
   sf::Image img = texture->getTexture().copyToImage();
   unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-  const int64_t rows = static_cast<int64_t>(renderedCircleRadius) * 2;
-  const int64_t cols = static_cast<int64_t>(renderedCircleRadius) * 2;
-
-  return NdArray<unsigned char>({rows, cols, /*channels=*/int64_t(4)},
+  return NdArray<unsigned char>({kHeight, kWidth, /*channels=*/int64_t(4)},
                                 pixelsArr);
 }
 
 NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
-  const int64_t squareSide = 600;
+  const int64_t kSquareSide = 600;
 
-  if (imageTexture == nullptr) {
+  if (image_texture_ == nullptr) {
     sf::ContextSettings settings;
     settings.antialiasingLevel = 4;
-    imageTexture = new sf::RenderTexture();
-    imageTexture->create(squareSide, squareSide, settings);
+    image_texture_ = std::make_unique<sf::RenderTexture>();
+    image_texture_->create(kSquareSide, kSquareSide, settings);
   }
-  sf::RenderTexture* texture = imageTexture;
+  sf::RenderTexture* texture = image_texture_.get();
 
   sf::Transform renderTransform;
   renderTransform.scale(1, -1);  // horizontal flip
@@ -950,9 +946,10 @@ NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
   sf::Vector2f center =
       sf::Vector2f(scenarioBounds.left + scenarioBounds.width / 2.0f,
                    scenarioBounds.top + scenarioBounds.height / 2.0f);
-  sf::Vector2f size = sf::Vector2f(squareSide, squareSide) *
-                      std::max(scenarioBounds.width / squareSide,
-                               scenarioBounds.height / squareSide);
+  sf::Vector2f size =
+      sf::Vector2f(kSquareSide, kSquareSide) *
+      std::max(scenarioBounds.width / static_cast<float>(kSquareSide),
+               scenarioBounds.height / static_cast<float>(kSquareSide));
   sf::View view(center, size);
   if (object != nullptr) {
     view.rotate(-geometry::utils::Degrees(object->heading()) + 90.0f);
@@ -1004,7 +1001,7 @@ NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
   sf::Image img = texture->getTexture().copyToImage();
   unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-  return NdArray<unsigned char>({squareSide, squareSide,
+  return NdArray<unsigned char>({kSquareSide, kSquareSide,
                                  /*channels=*/int64_t(4)},
                                 pixelsArr);
 }

@@ -2,6 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <fstream>
+#include <memory>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
@@ -59,7 +60,7 @@ constexpr int64_t kEgoFeatureSize = 5;
 
 class Scenario : public sf::Drawable {
  public:
-  Scenario(std::string path, int startTime, bool useNonVehicles);
+  Scenario(const std::string& path, int startTime, bool useNonVehicles);
 
   void loadScenario(std::string path);
 
@@ -180,8 +181,6 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<StopSign>> stopSigns;
   std::vector<std::shared_ptr<TrafficLight>> trafficLights;
 
-  sf::RenderTexture* imageTexture = nullptr;
-  sf::FloatRect roadNetworkBounds;
   geometry::BVH vehicle_bvh_;       // track vehicles for collisions
   geometry::BVH line_segment_bvh_;  // track line segments for collisions
   geometry::BVH static_bvh_;        // static objects
@@ -196,6 +195,9 @@ class Scenario : public sf::Drawable {
   // track the object that moved, useful for figuring out which agents should
   // actually be controlled
   std::vector<std::shared_ptr<Object>> objectsThatMoved;
+
+  std::unique_ptr<sf::RenderTexture> image_texture_ = nullptr;
+  sf::FloatRect roadNetworkBounds;
 };
 
 }  // namespace nocturne
