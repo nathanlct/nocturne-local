@@ -13,6 +13,10 @@
 namespace nocturne {
 namespace geometry {
 
+inline bool Intersects(const AABB& lhs, const AABB& rhs) {
+  return lhs.Intersects(rhs);
+}
+
 bool Intersects(const AABB& aabb, const LineSegment& segment);
 bool Intersects(const LineSegment& segment, const AABB& aabb);
 

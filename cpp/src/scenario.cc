@@ -21,15 +21,13 @@ namespace {
 std::vector<const ObjectBase*> VisibleCandidates(const geometry::BVH& bvh,
                                                  const Object& src,
                                                  const ViewField& vf) {
-  std::vector<const ObjectBase*> objects;
-  if (!bvh.Empty()) {
-    const std::vector<const geometry::AABBInterface*> candidates =
-        bvh.IntersectionCandidates(vf);
-    for (const auto* obj : candidates) {
-      if (obj != &src) {
-        objects.push_back(dynamic_cast<const ObjectBase*>(obj));
-      }
-    }
+  std::vector<const ObjectBase*> objects =
+      bvh.IntersectionCandidates<ObjectBase>(vf);
+  auto it = std::find(objects.begin(), objects.end(),
+                      dynamic_cast<const ObjectBase*>(&src));
+  if (it != objects.end()) {
+    std::swap(*it, objects.back());
+    objects.pop_back();
   }
   return objects;
 }
@@ -308,13 +306,7 @@ void Scenario::loadScenario(std::string path) {
 
   // Now create the BVH for the line segments
   // Since the line segments never move we only need to define this once
-  const int64_t n = lineSegments.size();
-  std::vector<const geometry::AABBInterface*> objects;
-  objects.reserve(n);
-  for (const auto& obj : lineSegments) {
-    objects.push_back(dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-  }
-  line_segment_bvh_.InitHierarchy(objects);
+  line_segment_bvh_.InitHierarchy(lineSegments);
 
   // Now handle the traffic light states
   for (const auto& tl : j["tl_states"]) {
@@ -339,7 +331,7 @@ void Scenario::loadScenario(std::string path) {
     trafficLights.push_back(traffic_light);
   }
 
-  initializeVehicleBVH();
+  vehicle_bvh_.InitHierarchy(roadObjects);
 
   std::vector<const geometry::AABBInterface*> static_objects;
   for (const auto& roadLine : roadLines) {
@@ -359,20 +351,6 @@ void Scenario::loadScenario(std::string path) {
   static_bvh_.InitHierarchy(static_objects);
   // update collision to check for collisions of any vehicles at initialization
   updateCollision();
-}
-
-void Scenario::initializeVehicleBVH() {
-  // initialize the road objects bvh
-  const int64_t nRoadObjects = roadObjects.size();
-  if (nRoadObjects > 0) {
-    std::vector<const geometry::AABBInterface*> storeObjects;
-    storeObjects.reserve(nRoadObjects);
-    for (const auto& obj : roadObjects) {
-      storeObjects.push_back(
-          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-    }
-    vehicle_bvh_.InitHierarchy(storeObjects);
-  }
 }
 
 void Scenario::step(float dt) {
@@ -411,10 +389,9 @@ void Scenario::step(float dt) {
 void Scenario::updateCollision() {
   // check vehicle-vehicle collisions
   for (auto& obj1 : roadObjects) {
-    std::vector<const geometry::AABBInterface*> candidates =
-        vehicle_bvh_.IntersectionCandidates(*obj1);
-    for (const auto* ptr : candidates) {
-      const Object* obj2 = dynamic_cast<const Object*>(ptr);
+    std::vector<const Object*> candidates =
+        vehicle_bvh_.IntersectionCandidates<Object>(*obj1);
+    for (const auto* obj2 : candidates) {
       if (obj1->id() == obj2->id()) {
         continue;
       }
@@ -431,14 +408,12 @@ void Scenario::updateCollision() {
     }
   }
   // check vehicle-lane segment collisions
-  for (auto& obj1 : roadObjects) {
-    std::vector<const geometry::AABBInterface*> candidates =
-        line_segment_bvh_.IntersectionCandidates(*obj1);
-    for (const auto* ptr : candidates) {
-      const geometry::LineSegment* obj2 =
-          dynamic_cast<const geometry::LineSegment*>(ptr);
-      if (checkForCollision(*obj1, *obj2)) {
-        obj1->set_collided(true);
+  for (auto& obj : roadObjects) {
+    std::vector<const geometry::LineSegment*> candidates =
+        line_segment_bvh_.IntersectionCandidates<geometry::LineSegment>(*obj);
+    for (const auto* seg : candidates) {
+      if (checkForCollision(*obj, *seg)) {
+        obj->set_collided(true);
       }
     }
   }
@@ -764,7 +739,7 @@ void Scenario::removeVehicle(Vehicle* object) {
       it++;
     }
   }
-  initializeVehicleBVH();
+  vehicle_bvh_.InitHierarchy(roadObjects);
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
