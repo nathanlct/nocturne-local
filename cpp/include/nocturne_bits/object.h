@@ -2,6 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <cstdint>
+#include <memory>
 #include <random>
 #include <string>
 
@@ -102,9 +103,16 @@ class Object : public ObjectBase {
 
   const sf::Color& color() const { return color_; }
 
-  sf::RenderTexture* cone_texture() const { return cone_texture_; }
-  void set_cone_texture(sf::RenderTexture* cone_texture) {
-    cone_texture_ = cone_texture;
+  sf::RenderTexture* ConeTexture() const { return cone_texture_.get(); }
+
+  bool InitConeTexture(int64_t h, int64_t w,
+                       const sf::ContextSettings& settings) {
+    if (cone_texture_ == nullptr) {
+      cone_texture_ = std::make_unique<sf::RenderTexture>();
+      cone_texture_->create(w, h, settings);
+      return true;
+    }
+    return false;
   }
 
   float Radius() const override {
@@ -162,7 +170,7 @@ class Object : public ObjectBase {
   bool expert_control_ = false;
 
   sf::Color color_;
-  sf::RenderTexture* cone_texture_ = nullptr;
+  std::unique_ptr<sf::RenderTexture> cone_texture_ = nullptr;
 
   std::mt19937 random_gen_;
 };
