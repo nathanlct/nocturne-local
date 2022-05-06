@@ -189,7 +189,6 @@ class Scenario : public sf::Drawable {
   geometry::BVH vehicle_bvh_;       // track vehicles for collisions
   geometry::BVH line_segment_bvh_;  // track line segments for collisions
   geometry::BVH static_bvh_;        // static objects
-  void updateVehicleBVH();          // update the vehicle BVH
 
   // expert data
   std::vector<std::vector<geometry::Vector2D>> expertTrajectories;
