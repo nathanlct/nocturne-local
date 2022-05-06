@@ -108,7 +108,8 @@ void ExtractRoadPointFeature(const Object& src, const RoadPoint& obj, float dis,
   feature[0] = 1.0f;  // Valid
   feature[1] = dis;
   feature[2] = azimuth;
-  geometry::Vector2D neighborVector = obj.neighbor_coords() - obj.position();
+  // TODO: test relative coordinates here
+  geometry::Vector2D neighborVector = obj.neighbor_position() - obj.position();
   feature[3] = neighborVector.x();
   feature[4] = neighborVector.y();
   // One-hot vector for road_type, assume feature is initially 0.
@@ -167,8 +168,8 @@ void Scenario::loadScenario(std::string path) {
     // TODO(ev) currTime should be passed in rather than defined here
     geometry::Vector2D pos(obj["position"]["x"][currTime],
                            obj["position"]["y"][currTime]);
-    float width = float(obj["width"]) * scaleFactor;
-    float length = float(obj["length"]) * scaleFactor;
+    float width = float(obj["width"]);
+    float length = float(obj["length"]);
     float heading = geometry::utils::NormalizeAngle(
         geometry::utils::Radians(static_cast<float>(obj["heading"][currTime])));
 
@@ -335,7 +336,7 @@ void Scenario::loadScenario(std::string path) {
   }
 
   // initialize the road objects bvh
-  updateVehicleBVH();
+  vehicle_bvh_.InitHierarchy(roadObjects);
 
   std::vector<const geometry::AABBInterface*> static_objects;
   for (const auto& roadLine : roadLines) {
@@ -377,11 +378,6 @@ void Scenario::step(float dt) {
   }
 
   // update the vehicle bvh
-  updateVehicleBVH();
-  updateCollision();
-}
-
-void Scenario::updateVehicleBVH() {
   const int64_t n = roadObjects.size();
   if (n > 0) {
     std::vector<const geometry::AABBInterface*> objects;
@@ -392,6 +388,7 @@ void Scenario::updateVehicleBVH() {
     }
     vehicle_bvh_.InitHierarchy(objects);
   }
+  updateCollision();
 }
 
 void Scenario::updateCollision() {
@@ -748,7 +745,7 @@ void Scenario::removeVehicle(Vehicle* object) {
     }
   }
   // Update the BVH to account for the fact that some vehicles are now gone
-  updateVehicleBVH();
+  vehicle_bvh_.InitHierarchy(roadObjects);
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {

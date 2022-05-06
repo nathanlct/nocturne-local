@@ -30,18 +30,18 @@ class RoadPoint : public StaticObject {
  public:
   RoadPoint() = default;
   RoadPoint(const geometry::Vector2D& position,
-            const geometry::Vector2D& neighbor_coords, RoadType road_type)
+            const geometry::Vector2D& neighbor_position, RoadType road_type)
       : StaticObject(position,
                      /*can_block_sight=*/false,
                      /*can_be_collided=*/false, /*check_collision=*/false),
-        neighbor_coords_(neighbor_coords),
+        neighbor_position_(neighbor_position),
         road_type_(road_type) {}
 
   StaticObjectType Type() const override {
     return StaticObjectType::kRoadPoint;
   }
   RoadType road_type() const { return road_type_; }
-  geometry::Vector2D neighbor_coords() const { return neighbor_coords_; }
+  geometry::Vector2D neighbor_position() const { return neighbor_position_; }
 
   float Radius() const { return kRoadPointRadius; }
 
@@ -58,7 +58,7 @@ class RoadPoint : public StaticObject {
 
   const RoadType road_type_ = RoadType::kNone;
   // coordinates of the next point in the roadline
-  geometry::Vector2D neighbor_coords_;
+  geometry::Vector2D neighbor_position_;
 };
 
 // RoadLine is not an Object now.
