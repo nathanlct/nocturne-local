@@ -38,8 +38,12 @@ class MockObject : public AABBInterface {
 
 class TestBVH : public BVH {
  public:
-  TestBVH(const std::vector<const AABBInterface*>& objects) : BVH(objects) {}
-  TestBVH(const std::vector<const AABBInterface*>& objects, int64_t delta)
+  TestBVH(const std::vector<MockObject>& objects) : BVH(objects) {}
+  TestBVH(const std::vector<MockObject>& objects, int64_t delta)
+      : BVH(objects, delta) {}
+
+  TestBVH(const std::vector<const MockObject*>& objects) : BVH(objects) {}
+  TestBVH(const std::vector<const MockObject*>& objects, int64_t delta)
       : BVH(objects, delta) {}
 
   std::vector<const AABBInterface*> Leaves() const {
@@ -93,13 +97,8 @@ std::vector<MockObject> MakeRandomObjects(int64_t n) {
 TEST(BVHTest, InitHierarchyTest) {
   const int64_t n = 100;
   const std::vector<MockObject> objects = MakeRandomObjects(n);
-  std::vector<const AABBInterface*> objects_ptr;
-  objects_ptr.reserve(n);
-  for (const auto& obj : objects) {
-    objects_ptr.push_back(dynamic_cast<const AABBInterface*>(&obj));
-  }
 
-  TestBVH bvh(objects_ptr);
+  TestBVH bvh(objects);
   const std::vector<const AABBInterface*> leaves = bvh.Leaves();
   std::vector<int64_t> ids;
   ids.reserve(leaves.size());
@@ -115,13 +114,7 @@ TEST(BVHTest, InitHierarchyTest) {
 TEST(BVHTest, InitHierarchyPerfTest) {
   const int64_t n = 1000;
   const std::vector<MockObject> objects = MakeRandomObjects(n);
-  std::vector<const AABBInterface*> objects_ptr;
-  objects_ptr.reserve(n);
-  for (const auto& obj : objects) {
-    objects_ptr.push_back(dynamic_cast<const AABBInterface*>(&obj));
-  }
-
-  TestBVH bvh(objects_ptr);
+  TestBVH bvh(objects);
   EXPECT_LT(bvh.MaxDepth(), 30);
 }
 
@@ -132,22 +125,16 @@ TEST(BVHTest, AABBIntersectionCandidatesTest) {
   const MockObject obj4(4, Vector2D(10.0f, 1.5f), 1.0f);
   const MockObject obj5(5, Vector2D(-10.0f, -10.0f), 1.0f);
 
-  std::vector<const AABBInterface*> objects = {
-      dynamic_cast<const AABBInterface*>(&obj1),
-      dynamic_cast<const AABBInterface*>(&obj2),
-      dynamic_cast<const AABBInterface*>(&obj3),
-      dynamic_cast<const AABBInterface*>(&obj4),
-      dynamic_cast<const AABBInterface*>(&obj5)};
-
+  std::vector<const MockObject*> objects = {&obj1, &obj2, &obj3, &obj4, &obj5};
   TestBVH bvh(objects);
-  std::vector<const AABBInterface*> candidates =
-      bvh.IntersectionCandidates(obj1);
+  std::vector<const MockObject*> candidates =
+      bvh.IntersectionCandidates<MockObject>(obj1);
   EXPECT_THAT(candidates, UnorderedElementsAre(&obj1, &obj2));
-  candidates = bvh.IntersectionCandidates(obj2);
+  candidates = bvh.IntersectionCandidates<MockObject>(obj2);
   EXPECT_THAT(candidates, UnorderedElementsAre(&obj1, &obj2));
-  candidates = bvh.IntersectionCandidates(obj3);
+  candidates = bvh.IntersectionCandidates<MockObject>(obj3);
   EXPECT_THAT(candidates, UnorderedElementsAre(&obj3, &obj4));
-  candidates = bvh.IntersectionCandidates(obj4);
+  candidates = bvh.IntersectionCandidates<MockObject>(obj4);
   EXPECT_THAT(candidates, UnorderedElementsAre(&obj3, &obj4));
 }
 
@@ -158,18 +145,13 @@ TEST(BVHTest, LineSegmentIntersectionCandidatesTest) {
   const MockObject obj4(4, Vector2D(10.0f, 1.5f), 1.0f);
   const MockObject obj5(5, Vector2D(-10.0f, -10.0f), 1.0f);
 
-  std::vector<const AABBInterface*> objects = {
-      dynamic_cast<const AABBInterface*>(&obj1),
-      dynamic_cast<const AABBInterface*>(&obj2),
-      dynamic_cast<const AABBInterface*>(&obj3),
-      dynamic_cast<const AABBInterface*>(&obj4),
-      dynamic_cast<const AABBInterface*>(&obj5)};
-
+  std::vector<const MockObject*> objects = {&obj1, &obj2, &obj3, &obj4, &obj5};
   TestBVH bvh(objects);
-  std::vector<const AABBInterface*> candidates = bvh.IntersectionCandidates(
-      LineSegment(Vector2D(-2.0f, -1.0f), Vector2D(0.0f, -0.5f)));
+  std::vector<const MockObject*> candidates =
+      bvh.IntersectionCandidates<MockObject>(
+          LineSegment(Vector2D(-2.0f, -1.0f), Vector2D(0.0f, -0.5f)));
   EXPECT_THAT(candidates, UnorderedElementsAre(&obj1, &obj2));
-  candidates = bvh.IntersectionCandidates(
+  candidates = bvh.IntersectionCandidates<MockObject>(
       LineSegment(Vector2D(9.5f, 0.0f), Vector2D(10.5f, 0.0f)));
   EXPECT_THAT(candidates, UnorderedElementsAre(&obj3));
 }

@@ -20,7 +20,10 @@ class Vector2D {
   }
 
   float x() const { return x_; }
+  void set_x(float x) { x_ = x; }
+
   float y() const { return y_; }
+  void set_y(float y) { y_ = y; }
 
   bool operator==(const Vector2D& v) const { return x_ == v.x_ && y_ == v.y_; }
   bool operator!=(const Vector2D& v) const { return x_ != v.x_ || y_ != v.y_; }
@@ -31,10 +34,13 @@ class Vector2D {
 
   Vector2D operator-() const { return Vector2D(-x_, -y_); }
 
-  Vector2D operator+(float d) const { return Vector2D(x_ + d, y_ + d); }
-  Vector2D& operator+=(float d) {
-    x_ += d;
-    y_ += d;
+  Vector2D operator+(float f) const { return Vector2D(x_ + f, y_ + f); }
+  friend Vector2D operator+(float f, const Vector2D& v) {
+    return Vector2D(f + v.x_, f + v.y_);
+  }
+  Vector2D& operator+=(float f) {
+    x_ += f;
+    y_ += f;
     return *this;
   }
   Vector2D operator+(const Vector2D& v) const {
@@ -46,10 +52,10 @@ class Vector2D {
     return *this;
   }
 
-  Vector2D operator-(float d) const { return Vector2D(x_ - d, y_ - d); }
-  Vector2D& operator-=(float d) {
-    x_ -= d;
-    y_ -= d;
+  Vector2D operator-(float f) const { return Vector2D(x_ - f, y_ - f); }
+  Vector2D& operator-=(float f) {
+    x_ -= f;
+    y_ -= f;
     return *this;
   }
   Vector2D operator-(const Vector2D& v) const {
@@ -61,17 +67,20 @@ class Vector2D {
     return *this;
   }
 
-  Vector2D operator*(float c) const { return Vector2D(x_ * c, y_ * c); }
-  Vector2D& operator*=(float c) {
-    x_ *= c;
-    y_ *= c;
+  Vector2D operator*(float f) const { return Vector2D(x_ * f, y_ * f); }
+  friend Vector2D operator*(float f, const Vector2D& v) {
+    return Vector2D(f * v.x_, f * v.y_);
+  }
+  Vector2D& operator*=(float f) {
+    x_ *= f;
+    y_ *= f;
     return *this;
   }
 
-  Vector2D operator/(float c) const { return Vector2D(x_ / c, y_ / c); }
-  Vector2D& operator/=(float c) {
-    x_ /= c;
-    y_ /= c;
+  Vector2D operator/(float f) const { return Vector2D(x_ / f, y_ / f); }
+  Vector2D& operator/=(float f) {
+    x_ /= f;
+    y_ /= f;
     return *this;
   }
 

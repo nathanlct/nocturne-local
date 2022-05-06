@@ -91,7 +91,7 @@ def test_scenario_functions():
     scenario = sim.getScenario()
     veh0 = scenario.getVehicles()[0]
     veh0.setHeading(road_segment_angle)
-    veh_length = veh0.getLength()
+    veh_length = veh0.length
     new_center += veh_length / 2 * road_segment_dir
     veh0.setPosition(new_center[0], new_center[1])
     sim.step(1e-6)
