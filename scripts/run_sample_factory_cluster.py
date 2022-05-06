@@ -27,14 +27,13 @@ class Overrides(object):
         return cmd
 
 
-def make_code_snap(experiment, code_path, slurm_dir='exp'):
-    now = datetime.now()
+def make_code_snap(experiment, code_path, str_time):
     if len(code_path) > 0:
-        snap_dir = pathlib.Path(code_path) / slurm_dir
+        snap_dir = pathlib.Path(code_path)
     else:
-        snap_dir = pathlib.Path.cwd() / slurm_dir
-    snap_dir /= now.strftime('%Y.%m.%d')
-    snap_dir /= now.strftime('%H%M%S') + f'_{experiment}'
+        snap_dir = pathlib.Path.cwd()
+    snap_dir /= str_time
+    snap_dir /= f'{experiment}'
     snap_dir.mkdir(exist_ok=True, parents=True)
 
     def copy_dir(dir, pat):
@@ -44,12 +43,11 @@ def make_code_snap(experiment, code_path, slurm_dir='exp'):
             shutil.copy(f, dst_dir / f.name)
 
     dirs_to_copy = [
-        '.', './cfgs/', './cfgs/algo', './algos/', './algos/ppo/',
-        './algos/ppo/ppo_utils', './algos/ppo/r_mappo',
-        './algos/ppo/r_mappo/algorithm', './algos/ppo/utils', './algos/gcsl/',
-        './envs/', './nocturne_utils/', './python/', './scenarios/', './build'
+        '.', './cfgs/', './examples/', './examples/sample_factory_files',
+        './cfgs/algorithm', './envs/', './nocturne_utils/', './python/',
+        './scenarios/', './build'
     ]
-    src_dir = pathlib.Path(os.path.dirname(os.getcwd()))
+    src_dir = pathlib.Path(PROJECT_PATH)
     for dir in dirs_to_copy:
         copy_dir(dir, '*.py')
         copy_dir(dir, '*.yaml')
@@ -60,32 +58,48 @@ def make_code_snap(experiment, code_path, slurm_dir='exp'):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('experiment', type=str)
-    parser.add_argument('--code_path',
-                        default='/checkpoint/eugenevinitsky/nocturne')
+    parser.add_argument(
+        '--code_path',
+        default='/checkpoint/eugenevinitsky/nocturne/sample_factory_runs')
     parser.add_argument('--dry', action='store_true')
     args = parser.parse_args()
 
-    snap_dir = make_code_snap(args.experiment, args.code_path)
-    print(str(snap_dir))
+    now = datetime.now()
+    str_time = now.strftime('%Y.%m.%d_%H%M%S')
+    snap_dir = make_code_snap(args.experiment, args.code_path, str_time)
     overrides = Overrides()
     overrides.add('hydra/launcher', ['submitit_slurm'])
     overrides.add('hydra.launcher.partition', ['learnlab'])
     overrides.add('experiment', [args.experiment])
-    # experiment parameters
-    overrides.add('episode_length', [200])
-    # algo
-    overrides.add('algo', ['ppo'])
-    overrides.add('algo.entropy_coef', [-0.001, 0.0, 0.001])
-    overrides.add('algo.n_rollout_threads', [128])
-    # rewards
-    overrides.add('rew_cfg.goal_achieved_bonus', [10, 50])
-    # misc
-    overrides.add('scenario_path',
-                  [PROJECT_PATH / 'scenarios/twenty_car_intersection.json'])
+    # overrides.add('num_files', [10])
+    overrides.add('single_agent_mode', [False])
+    # overrides.add('algorithm.kl_loss_coeff', [0.0, 0.01])
+    # overrides.add('algorithm.max_grad_norm', [1.0, 4.0, 20.0])
+    # overrides.add('max_num_vehicles', [5])
+    # overrides.add('rew_cfg.goal_achieved_bonus', [0])
+    # overrides.add('rew_cfg.goal_distance_penalty', [True])
+    # overrides.add('rew_cfg.collision_penalty', [-90.0])
+    # overrides.add('discretize_actions', [True, False])
+    # overrides.add('algorithm.kl_loss_coeff', [0.0, 0.01, 0.1, 1.0, 10.0])
+    # overrides.add('algorithm.max_grad_norm', [4.0, 20.0])
+    # exp
+    # overrides.add('algorithm.ppo_clip_ratio', [0.02, 0.05, 0.1])
+    # overrides.add('algorithm.ppo_clip_value', [1.0, 10.0])
+
+    # overrides.add('algorithm.rollout', [10, 20, 30])
+    # overrides.add('algorithm.recurrence', [10, 20, 30])
+    # overrides.add('algorithm.learning_rate', [0.0001, 0.00005, 0.00001])
+    # overrides.add('num_files', [1, 10, 100, 1000, -1])
+
+    overrides.add('num_files', [100])
+    overrides.add('algorithm.exploration_loss_coeff', [0.0, 0.0001, 0.001])
+    overrides.add('algorithm.kl_loss_coeff', [0.0, 0.1, 1.0])
+    overrides.add('algorithm.learning_rate', [0.001, 0.0001, 0.00001])
 
     cmd = [
         'python',
-        str(snap_dir / 'code' / 'algos' / 'ppo' / 'nocturne_runner.py'), '-m'
+        str(snap_dir / 'code' / 'examples' / 'sample_factory_files' /
+            'run_sample_factory.py'), '-m', 'algorithm=APPO'
     ]
     print(cmd)
     cmd += overrides.cmd()

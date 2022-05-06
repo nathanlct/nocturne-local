@@ -52,7 +52,6 @@ class BaseEnv(MultiAgentEnv):
                                      high=np.infty,
                                      shape=(obs_dict[list(
                                          obs_dict.keys())[0]].shape[0], ))
-        self.dead_feat = -np.ones_like(obs_dict[list(obs_dict.keys())[0]])
         if self.cfg['discretize_actions']:
             self.accel_discretization = self.cfg['accel_discretization']
             self.steering_discretization = self.cfg['steering_discretization']
@@ -282,6 +281,7 @@ class BaseEnv(MultiAgentEnv):
                     veh_obj, self.cfg['subscriber']['view_dist'],
                     self.cfg['subscriber']['view_angle'])
 
+        self.dead_feat = -np.ones_like(obs_dict[list(obs_dict.keys())[0]])
         # we should return obs for the missing agents
         if self.cfg['subscriber']['keep_inactive_agents']:
             max_id = max([int(key) for key in obs_dict.keys()])

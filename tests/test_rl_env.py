@@ -15,6 +15,7 @@ def test_rl_env():
     disp.start()
     initialize(config_path="../cfgs/")
     cfg = compose(config_name="config")
+    cfg.max_num_vehicles = 50
     env = create_env(cfg)
     env.files = [str(PROJECT_PATH / "tests/large_file.json")]
     obs = env.reset()
