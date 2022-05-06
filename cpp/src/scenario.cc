@@ -108,7 +108,8 @@ void ExtractRoadPointFeature(const Object& src, const RoadPoint& obj, float dis,
   feature[0] = 1.0f;  // Valid
   feature[1] = dis;
   feature[2] = azimuth;
-  geometry::Vector2D neighborVector = obj.neighbor_coords() - obj.position();
+  // TODO: test relative coordinates here
+  geometry::Vector2D neighborVector = obj.neighbor_position() - obj.position();
   feature[3] = neighborVector.x();
   feature[4] = neighborVector.y();
   // One-hot vector for road_type, assume feature is initially 0.
