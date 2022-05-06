@@ -55,10 +55,13 @@ void RoadLine::InitRoadPoints() {
   const int64_t n = geometry_points_.size();
   const int64_t step = n / num_road_points_;
   for (int64_t i = 0; i < num_possible_points - 1; ++i) {
-    road_points_.emplace_back(i, geometry_points_[i * step], road_type_);
+    road_points_.emplace_back(geometry_points_[i * step],
+                              geometry_points_[(i + 1) * step], road_type_);
   }
   // we want to ensure that the last and the first points are always placed
-  road_points_.emplace_back(num_road_points_ - 1, geometry_points_.back(),
+  // for the neighbor coordinates for the last point we just return
+  // it own coordinates
+  road_points_.emplace_back(geometry_points_.back(), geometry_points_.back(),
                             road_type_);
 }
 
@@ -67,24 +70,6 @@ void RoadLine::InitRoadLineGraphics() {
   graphic_points_.reserve(n);
   for (const geometry::Vector2D& p : geometry_points_) {
     graphic_points_.emplace_back(sf::Vertex(utils::ToVector2f(p), Color()));
-  }
-}
-
-RoadType ParseRoadType(const std::string& s) {
-  if (s == "lane") {
-    return RoadType::kLane;
-  } else if (s == "road_line") {
-    return RoadType::kRoadLine;
-  } else if (s == "road_edge") {
-    return RoadType::kRoadEdge;
-  } else if (s == "stop_sign") {
-    return RoadType::kStopSign;
-  } else if (s == "crosswalk") {
-    return RoadType::kCrosswalk;
-  } else if (s == "speed_bump") {
-    return RoadType::kSpeedBump;
-  } else {
-    return RoadType::kNone;
   }
 }
 

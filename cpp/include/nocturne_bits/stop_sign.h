@@ -5,22 +5,23 @@
 
 #include "geometry/aabb.h"
 #include "geometry/polygon.h"
-#include "object.h"
+#include "geometry/vector_2d.h"
+#include "static_object.h"
 
 namespace nocturne {
 
 constexpr float kStopSignRadius = 2.0f;
 constexpr int kStopSignNumEdges = 6;
 
-class StopSign : public Object {
+class StopSign : public StaticObject {
  public:
   StopSign() = default;
-  StopSign(int64_t id, const geometry::Vector2D& position)
-      : Object(id, position,
-               /*can_block_sight=*/false,
-               /*can_be_collided=*/false, /*check_collision=*/false) {}
+  explicit StopSign(const geometry::Vector2D& position)
+      : StaticObject(position,
+                     /*can_block_sight=*/false,
+                     /*can_be_collided=*/false, /*check_collision=*/false) {}
 
-  ObjectType Type() const override { return ObjectType::kStopSign; }
+  StaticObjectType Type() const override { return StaticObjectType::kStopSign; }
 
   float Radius() const { return kStopSignRadius; }
 

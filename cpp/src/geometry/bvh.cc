@@ -6,8 +6,6 @@
 #include <limits>
 #include <tuple>
 
-#include "geometry/intersection.h"
-#include "geometry/morton.h"
 #include "geometry/vector_2d.h"
 
 namespace nocturne {
@@ -65,27 +63,6 @@ void RemoveNode(int64_t num, BVH::Node* p,
 }
 
 }  // namespace
-
-// Implement AAC algorithm in
-// http://graphics.cs.cmu.edu/projects/aac/aac_build.pdf
-void BVH::InitHierarchy(const std::vector<const AABBInterface*>& objects) {
-  Clear();
-  const int64_t n = objects.size();
-  nodes_.reserve(2 * n - 1);
-
-  std::vector<std::pair<uint64_t, const AABBInterface*>> encoded_objects;
-  encoded_objects.reserve(n);
-  for (const auto* obj : objects) {
-    const AABB aabb = obj->GetAABB();
-    const uint64_t morton_code = morton::Morton2D(aabb.Center());
-    encoded_objects.emplace_back(morton_code, obj);
-  }
-  std::sort(encoded_objects.begin(), encoded_objects.end());
-  const std::vector<Node*> nodes =
-      InitHierarchyImpl(encoded_objects, /*l=*/0, /*r=*/n);
-  const std::vector<Node*> root = CombineNodes(nodes, 1);
-  root_ = root[0];
-}
 
 std::vector<BVH::Node*> BVH::CombineNodes(const std::vector<BVH::Node*>& nodes,
                                           int64_t num) {
@@ -169,34 +146,6 @@ std::vector<BVH::Node*> BVH::InitHierarchyImpl(
   }
   const int64_t num = (nodes.size() + 1) / 2;
   return CombineNodes(nodes, num);
-}
-
-void BVH::IntersectionCandidatesImpl(
-    const AABB& aabb, const Node* cur,
-    std::vector<const AABBInterface*>& candidates) const {
-  if (!aabb.Intersects(cur->aabb())) {
-    return;
-  }
-  if (cur->IsLeaf()) {
-    candidates.push_back(cur->object());
-    return;
-  }
-  IntersectionCandidatesImpl(aabb, cur->LChild(), candidates);
-  IntersectionCandidatesImpl(aabb, cur->RChild(), candidates);
-}
-
-void BVH::IntersectionCandidatesImpl(
-    const LineSegment& segment, const Node* cur,
-    std::vector<const AABBInterface*>& candidates) const {
-  if (!Intersects(segment, cur->aabb())) {
-    return;
-  }
-  if (cur->IsLeaf()) {
-    candidates.push_back(cur->object());
-    return;
-  }
-  IntersectionCandidatesImpl(segment, cur->LChild(), candidates);
-  IntersectionCandidatesImpl(segment, cur->RChild(), candidates);
 }
 
 }  // namespace geometry

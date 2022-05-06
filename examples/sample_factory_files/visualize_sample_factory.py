@@ -206,7 +206,8 @@ def main():
     disp = Display()
     disp.start()
     register_custom_components()
-    file_path = '/private/home/eugenevinitsky/Code/nocturne/examples/train_dir/ma_fbias3/cfg.json'
+    # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.04/s_kl_control/06.47.53/9/s_kl_control/cfg.json'
+    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.05/test_invalid/12.09.28/0/test_invalid/cfg.json'
     with open(file_path, 'r') as file:
         cfg_dict = json.load(file)
 

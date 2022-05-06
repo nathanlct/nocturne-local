@@ -31,7 +31,8 @@ class BaseEnv(MultiAgentEnv):
         """
         super().__init__()
         self._skip_env_checking = True  # temporary fix for rllib env checking issue
-        self.files = os.listdir(cfg['scenario_path'])
+        possible_files = os.listdir(cfg['scenario_path'])
+        self.files = [file for file in possible_files if '.json' in file]
         if cfg['num_files'] != -1:
             self.files = self.files[0:cfg['num_files']]
         self.file = self.files[np.random.randint(len(self.files))]
@@ -46,27 +47,12 @@ class BaseEnv(MultiAgentEnv):
         self.t = 0
         self.step_num = 0
         self.rank = rank
-        ego_obs = self.scenario.egoStateObservation(self.vehicles[0])
-        if self.cfg['subscriber']['use_ego_state'] and self.cfg['subscriber'][
-                'use_observations']:
-            obs_shape = -np.ones_like(
-                np.concatenate(
-                    (ego_obs,
-                     self.scenario.observation(
-                         self.vehicles[0], self.cfg['subscriber']['view_dist'],
-                         self.cfg['subscriber']['view_angle']))))
-        elif self.cfg['subscriber']['use_ego_state'] and not self.cfg[
-                'subscriber']['use_observations']:
-            obs_shape = -np.ones_like(ego_obs)
-        else:
-            obs_shape = -np.ones_like(
-                self.scenario.observation(
-                    self.vehicles[0], self.cfg['subscriber']['view_dist'],
-                    self.cfg['subscriber']['view_angle']))
+        obs_dict = self.reset()
         self.observation_space = Box(low=-np.infty,
                                      high=np.infty,
-                                     shape=(obs_shape.shape[0], ))
-        self.dead_feat = -np.ones_like(obs_shape)
+                                     shape=(obs_dict[list(
+                                         obs_dict.keys())[0]].shape[0], ))
+        self.dead_feat = -np.ones_like(obs_dict[list(obs_dict.keys())[0]])
         if self.cfg['discretize_actions']:
             self.accel_discretization = self.cfg['accel_discretization']
             self.steering_discretization = self.cfg['steering_discretization']
@@ -90,20 +76,20 @@ class BaseEnv(MultiAgentEnv):
                 action = action_dict[veh_id]
                 if isinstance(action, dict):
                     if 'accel' in action.keys():
-                        veh_obj.setAccel(action['accel'])
+                        veh_obj.acceleration = action['accel']
                     if 'turn' in action.keys():
-                        veh_obj.setSteeringAngle(action['turn'])
+                        veh_obj.steering = action['turn']
                 elif isinstance(action, list) or isinstance(
                         action, np.ndarray):
-                    veh_obj.setAccel(action[0])
-                    veh_obj.setSteeringAngle(action[1])
+                    veh_obj.acceleration = action[0]
+                    veh_obj.steering = action[1]
                 else:
                     accel_action = self.accel_grid[int(
                         action // self.steering_discretization)]
                     steering_action = self.steering_grid[
                         action % self.accel_discretization]
-                    veh_obj.setAccel(accel_action)
-                    veh_obj.setSteeringAngle(steering_action)
+                    veh_obj.acceleration = accel_action
+                    veh_obj.steering = steering_action
 
     def step(self, action_dict):
         obs_dict = {}
@@ -124,15 +110,15 @@ class BaseEnv(MultiAgentEnv):
             if self.cfg['subscriber']['use_ego_state'] and self.cfg[
                     'subscriber']['use_observations']:
                 obs_dict[veh_id] = np.concatenate(
-                    (self.scenario.egoStateObservation(veh_obj),
-                     self.scenario.observation(
+                    (self.scenario.ego_state(veh_obj),
+                     self.scenario.flattened_visible_state(
                          veh_obj, self.cfg['subscriber']['view_dist'],
                          self.cfg['subscriber']['view_angle'])))
             elif self.cfg['subscriber']['use_ego_state'] and not self.cfg[
                     'subscriber']['use_observations']:
-                obs_dict[veh_id] = self.scenario.egoStateObservation(veh_obj)
+                obs_dict[veh_id] = self.scenario.ego_state(veh_obj)
             else:
-                obs_dict[veh_id] = self.scenario.observation(
+                obs_dict[veh_id] = self.scenario.flattened_visible_state(
                     veh_obj, self.cfg['subscriber']['view_dist'],
                     self.cfg['subscriber']['view_angle'])
             rew_dict[veh_id] = 0
@@ -221,7 +207,6 @@ class BaseEnv(MultiAgentEnv):
         self.t = 0
         self.step_num = 0
         too_many_vehicles = True
-        # TODO(eugenevinitsky) hardcoding
         # we don't want to initialize scenes with more than N actors
         while too_many_vehicles:
             self.file = self.files[np.random.randint(len(self.files))]
@@ -240,11 +225,14 @@ class BaseEnv(MultiAgentEnv):
                 if np.linalg.norm(goal_pos - obj_pos
                                   ) < self.cfg['rew_cfg']['goal_tolerance']:
                     self.scenario.removeVehicle(veh_obj)
+                # TODO(eugenevinitsky) remove this once we remove all files that have an
+                # init at collision
                 if veh_obj.getCollided():
                     self.scenario.removeVehicle(veh_obj)
             self.vehicles = self.scenario.getObjectsThatMoved()
             self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
-            # TODO(eugenevinitsky) hardcoding
+            # check if we have less than the desired number of vehicles and have
+            # at least one vehicle
             if len(self.all_vehicle_ids) <= self.cfg['max_num_vehicles'] \
                 and len(self.all_vehicle_ids) > 0:
                 too_many_vehicles = False
@@ -260,11 +248,11 @@ class BaseEnv(MultiAgentEnv):
             # tag all vehicles except for the one you control as controlled by the expert
             for veh in self.simulation.getScenario().getVehicles():
                 if veh.getID() != self.single_agent_id:
-                    veh.set_expert_controlled(True)
+                    veh.expert_control = True
         else:
             for veh in self.scenario.getVehicles():
                 if veh not in self.scenario.getObjectsThatMoved():
-                    veh.set_expert_controlled(True)
+                    veh.expert_control = True
         for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
             veh_id = veh_obj.getID()
             if self.single_agent_mode and veh_id != self.single_agent_id:
@@ -278,19 +266,19 @@ class BaseEnv(MultiAgentEnv):
                 dist = np.linalg.norm(obj_pos - goal_pos)
                 self.goal_dist_normalizers[veh_id] = dist
             # compute the obs
-            ego_obs = self.scenario.egoStateObservation(veh_obj)
+            ego_obs = self.scenario.ego_state(veh_obj)
             if self.cfg['subscriber']['use_ego_state'] and self.cfg[
                     'subscriber']['use_observations']:
                 obs_dict[veh_id] = np.concatenate(
                     (ego_obs,
-                     self.scenario.observation(
+                     self.scenario.flattened_visible_state(
                          veh_obj, self.cfg['subscriber']['view_dist'],
                          self.cfg['subscriber']['view_angle'])))
             elif self.cfg['subscriber']['use_ego_state'] and not self.cfg[
                     'subscriber']['use_observations']:
                 obs_dict[veh_id] = ego_obs
             else:
-                obs_dict[veh_id] = self.scenario.observation(
+                obs_dict[veh_id] = self.scenario.flattened_visible_state(
                     veh_obj, self.cfg['subscriber']['view_dist'],
                     self.cfg['subscriber']['view_angle'])
 
@@ -301,7 +289,9 @@ class BaseEnv(MultiAgentEnv):
                 0, self.cfg['max_num_vehicles'] - len(obs_dict))
             for i in range(num_missing_agents):
                 obs_dict[max_id + i + 1] = self.dead_feat
-            self.dead_agent_ids = [max_id + i + 1 for i in range(num_missing_agents)]
+            self.dead_agent_ids = [
+                max_id + i + 1 for i in range(num_missing_agents)
+            ]
             self.all_vehicle_ids = list(obs_dict.keys())
         else:
             self.dead_agent_ids = []
