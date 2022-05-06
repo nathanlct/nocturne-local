@@ -1,13 +1,9 @@
 algo: APPO
-experiment: test # make sure to override in the experiment
-                 # Unique experiment name. This will also be the name for the experiment folder in the train dir.If the experiment folder with this name aleady exists the
-                 # experiment will be RESUMED!Any parameters passed from command line that do not match the parameters stored in the experiment cfg.json file will be
-                 # overridden. (default: default_experiment)
 experiments_root: null 
                  # If not None, store experiment data in the specified subfolder of train_dir. Useful for groups of experiments (e.g. gridsearch) (default: None)
-# TODO(ev) make this set by an environment variable
-train_dir: '/private/home/eugenevinitsky/Code/nocturne/examples/train_dir'
+train_dir: null
                         # Root for all experiments (default: /private/home/eugenevinitsky/Code/nocturne/examples/train_dir)
+                        # if null use the hydra default position
 device: gpu  # CPU training is only recommended for smaller e.g. MLP policies (default: gpu)
 seed: null # Set a fixed seed value (default: None)
 save_every_sec: 120 # Checkpointing rate (default: 120)
@@ -77,7 +73,7 @@ num_minibatches_to_accumulate: -1
 # experience collection will be halted during training.This is the regime with potentially lowest policy-lag.When this parameter is 0 and num_workers *
 # num_envs_per_worker * rollout == num_batches_per_iteration * batch_size, the algorithm is similar toregular synchronous PPO. (default: -1)
 max_grad_norm: 4.0 # Max L2 norm of the gradient vector (default: 4.0)
-exploration_loss_coeff: 0.003 # Coefficient for the exploration component of the loss function. (default: 0.0)
+exploration_loss_coeff: 0.001 # Coefficient for the exploration component of the loss function. (default: 0.0)
 value_loss_coeff: 0.5 # Coefficient for the critic loss (default: 0.5)
 kl_loss_coeff: 0.0 #Coefficient for fixed KL loss (as used by Schulman et al. in https://arxiv.org/pdf/1707.06347.pdf). Highly recommended for environments with continuous
                    #     action spaces. (default: 0.0)
@@ -180,13 +176,13 @@ cpc_time_subsample: 6
                         # Number of timesteps to sample from each batch. This should be less than recurrence to decorrelate experience. (default: 6)
 cpc_forward_subsample: 2
                         # Number of forward steps to sample for loss computation. This should be less than cpc_forward_steps to decorrelate gradients. (default: 2)
-with_wandb: False
+with_wandb: ${wandb}
                         # Enables Weights and Biases integration (default: False)
 wandb_user: null
                         # WandB username (entity). Must be specified from command line! Also see https://docs.wandb.ai/quickstart#1.-set-up-wandb (default: None)
-wandb_project: sample_factory
+wandb_project: ${wandb_project}
                         # WandB "Project" (default: sample_factory)
-wandb_group: null
+wandb_group: ${wandb_group}
                         # WandB "Group" (to group your experiments). By default this is the name of the env. (default: None)
 wandb_job_type: SF
                         # WandB job type (default: SF)
