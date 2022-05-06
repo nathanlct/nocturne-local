@@ -248,10 +248,6 @@ class BaseEnv(MultiAgentEnv):
             for veh in self.simulation.getScenario().getVehicles():
                 if veh.getID() != self.single_agent_id:
                     veh.expert_control = True
-        else:
-            for veh in self.scenario.getVehicles():
-                if veh not in self.scenario.getObjectsThatMoved():
-                    veh.expert_control = True
         for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
             veh_id = veh_obj.getID()
             if self.single_agent_mode and veh_id != self.single_agent_id:
