@@ -166,9 +166,6 @@ class Scenario : public sf::Drawable {
                                                         float view_dist,
                                                         float view_angle) const;
 
-  float scaleFactor = 1.0;  // we scale width and length by this value to avoid
-                            // initializing vehicles in a colliding state
-                            // with road edges or other vehicles
   int currTime;
   int IDCounter = 0;
   int maxEnvTime =

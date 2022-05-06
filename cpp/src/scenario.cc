@@ -167,8 +167,8 @@ void Scenario::loadScenario(std::string path) {
     // TODO(ev) currTime should be passed in rather than defined here
     geometry::Vector2D pos(obj["position"]["x"][currTime],
                            obj["position"]["y"][currTime]);
-    float width = float(obj["width"]) * scaleFactor;
-    float length = float(obj["length"]) * scaleFactor;
+    float width = float(obj["width"]);
+    float length = float(obj["length"]);
     float heading = geometry::utils::NormalizeAngle(
         geometry::utils::Radians(static_cast<float>(obj["heading"][currTime])));
 
