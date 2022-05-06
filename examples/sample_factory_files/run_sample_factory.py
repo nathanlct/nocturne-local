@@ -6,8 +6,6 @@ To run in single agent mode on one file for testing
 
 python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME ++single_agent_mode=True ++num_files=1 
 
-APPEARS TO WORK: python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=False ++algorithm.experiment=lotta_printing15 ++single_agent_mode=True ++num_files=1 ++algorithm.num_workers=1 ++algorithm.num_envs_per_worker=1 ++algorithm.worker_num_splits=1 ++algorithm.force_envs_single_thread=False
-
 For debugging
 python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=False ++algorithm.num_workers=1 ++force_envs_single_thread=False
 After training for a desired period of time, evaluate the policy by running:
@@ -42,7 +40,6 @@ class SampleFactoryEnv():
         self.agent_ids = [i for i in range(self.num_agents)]
         self.is_multiagent = True
         obs = self.env.reset()
-        self.dead_feat = -np.ones_like(obs[list(obs.keys())[0]])
         # used to track which agents are done
         self.already_done = [False for _ in self.agent_ids]
         self.episode_rewards = np.zeros(self.num_agents)
@@ -164,7 +161,11 @@ class SampleFactoryEnv():
             if agent_id not in self.agent_id_to_env_id_map.keys():
                 self.already_done[agent_id] = True
             else:
-                self.valid_indices.append(agent_id)
+                # check that this isn't actually a fake padding agent used
+                # when keep_inactive_agents is True
+                if agent_id in self.agent_id_to_env_id_map.keys() and \
+                    self.agent_id_to_env_id_map[agent_id] not in self.env.dead_agent_ids:
+                    self.valid_indices.append(agent_id)
         obs_n = self.obs_dict_to_list(next_obses)
         return obs_n
 
@@ -226,7 +227,20 @@ def main(cfg):
     # copy algo keys into the main keys
     for key, value in cfg_dict['algorithm'].items():
         cfg_dict[key] = value
-    # put it into a namespace
+    # we didn't set a train directory so use the hydra one
+    if cfg_dict['train_dir'] is None:
+        cfg_dict['train_dir'] = os.getcwd()
+        print(f'storing the results in {os.getcwd()}')
+    else:
+        output_dir = cfg_dict['train_dir']
+        print(f'storing results in {output_dir}')
+
+    # recommendation from Aleksei to keep horizon length fixed
+    # and number of agents fixed and just pad missing / exited
+    # agents with a vector of -1s
+    cfg_dict['subscriber']['keep_inactive_agents'] = True
+
+    # put it into a namespace so sample factory code runs correctly
     class Bunch(object):
 
         def __init__(self, adict):

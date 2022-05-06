@@ -1,67 +1,67 @@
 defaults:
-  - algo: ppo
+  - algorithm: ppo
   - override hydra/launcher: submitit_local
 
 seed: 0
 device: 'cuda:0'
+debug: False
 experiment: intersection
+env: my_custom_multi_env_v1 # name of the env, harcoded for now
 
 # WANDB things
 wandb: True
-wandb_name: nocturne2
+wandb_project: nocturne4
 wandb_id: null
-wandb_group: waypoints
-debug: False
+wandb_group: ${experiment}
 
-# TODO(eugenevinitsky) don't hardcode this
-episode_length: 200
-scenario_path: '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json'
-dt: 1.0
-# TODO(eugenevinitsky) actually implement this
+# one of the agents will be randomly tagged as the 
+# agent that we control, the rest of the agents will
+# replay trajectories
+single_agent_mode: False
+# all goals are achievable within 90 steps
+episode_length: 90
+# how many files of the total dataset to use. -1 indicates to use all of them
+num_files: -1
+scenario_path: '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json_v2_no_tl_train'
+dt: 0.1
 sims_per_step: 10
-initial_speed: 5.0
 img_as_state: False
+discretize_actions: True
+accel_discretization: 9
+accel_lower_bound: -3
+accel_upper_bound: 2
+steering_lower_bound: -0.7 # corresponds to about 40 degrees of max steering angle
+steering_upper_bound: 0.7 # corresponds to about 40 degrees of max steering angle
+steering_discretization: 9
+max_num_vehicles: 15 # we want to upper bound how many agents there can be in the scene
+# TODO(eugenevinitsky) actually implement this
 randomize_goals: True
 rew_cfg:
   shared_reward: False # agents get the collective reward instead of individual rewards
-  goal_tolerance: 30.0
-  collision_penalty: 0.0
+  goal_tolerance: 0.5
+  reward_scaling: 10.0 # rescale all the rewards by this value. This can help w/ some learning algorithms
+  collision_penalty: 0
   shaped_goal_distance: True
-  goal_achieved_bonus: 50.0
-  speed_rew: False
-  speed_rew_coef: 0.01
-  # find a dense set of waypoints and reward for getting closer to them
-  dense_waypoints: false
-  dense_waypoint_spacing: 10.0
-  num_visible_waypoints: 5
+  goal_distance_penalty: False # if shaped_goal_distance is true, then when this is True the goal distance is a penalty for being far from 
+                               # goal instead of a reward for being close
+  goal_achieved_bonus: ${episode_length}
 subscriber:
   view_angle: 3.14
   # the distance which the cone extends before agents are not visible
+  # TODO(eugenevinitsky) pick the right number
   view_dist: 120
-  use_local_coordinates: True
-  include_ego_state: True
-  # TODO(eugenevinitsky) this should be true
-  include_visible_object_state: True
-  include_road_edges: True
-  object_subscriber:
-    include_speed: True
-    include_pos: True
-    include_heading: True
-  ego_subscriber:
-    img_view: ${img_as_state}
-    view_angle: ${subscriber.view_angle}
-    include_speed: True
-    include_heading: True
-    include_pos: True
-    include_goal_pos: True
-    include_goal_img: ${img_as_state}
-    # include_lane_pos: True
+  use_ego_state: True
+  use_observations: True
+  # if true, we return an observation for agents that have exited the system
+  # as well as returning an observation for the extra agents if the number of
+  # agents in the system is less than max_num_vehicles
+  keep_inactive_agents: False
 
 hydra:
   run:
-    dir: /checkpoint/eugenevinitsky/nocturne/test/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
+    dir: /checkpoint/eugenevinitsky/nocturne/test/${now:%Y.%m.%d}/${experiment}/${now:%H.%M.%S}/${hydra.job.override_dirname}
   sweep:
-    dir: /checkpoint/eugenevinitsky/nocturne/sweep/${now:%Y.%m.%d}/${now:%H%M}_${experiment}
+    dir: /checkpoint/eugenevinitsky/nocturne/sweep/${now:%Y.%m.%d}/${experiment}/${now:%H.%M.%S}
     subdir: ${hydra.job.num}
   launcher:
     timeout_min: 4300
