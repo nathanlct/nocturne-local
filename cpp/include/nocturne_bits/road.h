@@ -29,16 +29,19 @@ enum class RoadType {
 class RoadPoint : public StaticObject {
  public:
   RoadPoint() = default;
-  RoadPoint(const geometry::Vector2D& position, RoadType road_type)
+  RoadPoint(const geometry::Vector2D& position,
+            const geometry::Vector2D& neighbor_position, RoadType road_type)
       : StaticObject(position,
                      /*can_block_sight=*/false,
                      /*can_be_collided=*/false, /*check_collision=*/false),
+        neighbor_position_(neighbor_position),
         road_type_(road_type) {}
 
   StaticObjectType Type() const override {
     return StaticObjectType::kRoadPoint;
   }
   RoadType road_type() const { return road_type_; }
+  geometry::Vector2D neighbor_position() const { return neighbor_position_; }
 
   float Radius() const { return kRoadPointRadius; }
 
@@ -54,6 +57,8 @@ class RoadPoint : public StaticObject {
             sf::RenderStates /*states*/) const override {}
 
   const RoadType road_type_ = RoadType::kNone;
+  // coordinates of the next point in the roadline
+  geometry::Vector2D neighbor_position_;
 };
 
 // RoadLine is not an Object now.
