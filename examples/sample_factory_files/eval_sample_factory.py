@@ -23,7 +23,7 @@ from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
 from run_sample_factory import register_custom_components
 
-from cfgs.config import PROCESSED_TEST_NO_TL
+from cfgs.config import PROCESSED_VALID_NO_TL
 
 
 def enjoy(cfg, max_num_frames=1e9):
@@ -190,7 +190,7 @@ def main():
     cfg_dict['continuous_actions_sample'] = True
     cfg_dict['discrete_actions_sample'] = True
     # switch the files to the test files
-    cfg_dict['scenario_path'] = PROCESSED_TEST_NO_TL
+    cfg_dict['scenario_path'] = PROCESSED_VALID_NO_TL
 
     class Bunch(object):
 

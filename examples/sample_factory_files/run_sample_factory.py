@@ -238,7 +238,8 @@ def main(cfg):
     # recommendation from Aleksei to keep horizon length fixed
     # and number of agents fixed and just pad missing / exited
     # agents with a vector of -1s
-    cfg_dict['subscriber']['keep_inactive_agents'] = True
+    if not cfg_dict['single_agent_mode']:
+        cfg_dict['subscriber']['keep_inactive_agents'] = True
 
     # put it into a namespace so sample factory code runs correctly
     class Bunch(object):
