@@ -26,43 +26,47 @@ from run_sample_factory import register_custom_components
 from cfgs.config import PROCESSED_TEST_NO_TL
 
 
-def enjoy(cfg, max_num_frames=1e9):
-    cfg = load_from_checkpoint(cfg)
+def enjoy(cfgs, max_num_frames=1e9):
+    actor_critics = []
+    for cfg in cfgs:
+        cfg = load_from_checkpoint(cfg)
 
-    render_action_repeat = cfg.render_action_repeat if cfg.render_action_repeat is not None else cfg.env_frameskip
-    if render_action_repeat is None:
-        log.warning('Not using action repeat!')
-        render_action_repeat = 1
-    log.debug('Using action repeat %d during evaluation', render_action_repeat)
+        render_action_repeat = cfg.render_action_repeat if cfg.render_action_repeat is not None else cfg.env_frameskip
+        if render_action_repeat is None:
+            log.warning('Not using action repeat!')
+            render_action_repeat = 1
+        log.debug('Using action repeat %d during evaluation',
+                  render_action_repeat)
 
-    cfg.env_frameskip = 1  # for evaluation
-    cfg.num_envs = 1
+        cfg.env_frameskip = 1  # for evaluation
+        cfg.num_envs = 1
 
-    def make_env_func(env_config):
-        return create_env(cfg.env, cfg=cfg, env_config=env_config)
+        def make_env_func(env_config):
+            return create_env(cfg.env, cfg=cfg, env_config=env_config)
 
-    env = make_env_func(AttrDict({'worker_index': 0, 'vector_index': 0}))
-    # env.seed(0)
+        env = make_env_func(AttrDict({'worker_index': 0, 'vector_index': 0}))
+        # env.seed(0)
 
-    is_multiagent = is_multiagent_env(env)
-    if not is_multiagent:
-        env = MultiAgentWrapper(env)
+        is_multiagent = is_multiagent_env(env)
+        if not is_multiagent:
+            env = MultiAgentWrapper(env)
 
-    if hasattr(env.unwrapped, 'reset_on_init'):
-        # reset call ruins the demo recording for VizDoom
-        env.unwrapped.reset_on_init = False
+        if hasattr(env.unwrapped, 'reset_on_init'):
+            # reset call ruins the demo recording for VizDoom
+            env.unwrapped.reset_on_init = False
 
-    actor_critic = create_actor_critic(cfg, env.observation_space,
-                                       env.action_space)
+        actor_critic = create_actor_critic(cfg, env.observation_space,
+                                           env.action_space)
 
-    device = torch.device('cpu' if cfg.device == 'cpu' else 'cuda')
-    actor_critic.model_to_device(device)
+        device = torch.device('cpu' if cfg.device == 'cpu' else 'cuda')
+        actor_critic.model_to_device(device)
 
-    policy_id = cfg.policy_index
-    checkpoints = LearnerWorker.get_checkpoints(
-        LearnerWorker.checkpoint_dir(cfg, policy_id))
-    checkpoint_dict = LearnerWorker.load_checkpoint(checkpoints, device)
-    actor_critic.load_state_dict(checkpoint_dict['model'])
+        policy_id = cfg.policy_index
+        checkpoints = LearnerWorker.get_checkpoints(
+            LearnerWorker.checkpoint_dir(cfg, policy_id))
+        checkpoint_dict = LearnerWorker.load_checkpoint(checkpoints, device)
+        actor_critic.load_state_dict(checkpoint_dict['model'])
+        actor_critics.append(actor_critic)
 
     episode_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
     true_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
@@ -177,26 +181,34 @@ def main():
     disp = Display()
     disp.start()
     register_custom_components()
-    file_path = '/private/home/eugenevinitsky/Code/nocturne/examples/train_dir/ma_fbias3/cfg.json'
-    with open(file_path, 'r') as file:
-        cfg_dict = json.load(file)
+    file_paths = [
+        '/private/home/eugenevinitsky/Code/nocturne/examples/train_dir/ma_fbias3/cfg.json'
+    ]
+    cfg_dicts = []
+    for file in file_paths:
+        with open(file_path, 'r') as file:
+            cfg_dict = json.load(file)
 
-    cfg_dict['cli_args'] = {}
-    cfg_dict['fps'] = 0
-    cfg_dict['render_action_repeat'] = None
-    cfg_dict['no_render'] = None
-    cfg_dict['policy_index'] = 0
-    cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
-    cfg_dict['continuous_actions_sample'] = True
-    cfg_dict['discrete_actions_sample'] = True
+        cfg_dict['cli_args'] = {}
+        cfg_dict['fps'] = 0
+        cfg_dict['render_action_repeat'] = None
+        cfg_dict['no_render'] = None
+        cfg_dict['policy_index'] = 0
+        cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
+        cfg_dict['continuous_actions_sample'] = True
+        cfg_dict['discrete_actions_sample'] = True
+        cfg_dicts.append(cfg_dict)
 
     class Bunch(object):
 
         def __init__(self, adict):
             self.__dict__.update(adict)
 
-    cfg = Bunch(cfg_dict)
-    status, avg_reward = enjoy(cfg)
+    cfgs = []
+    for cfg in cfg_dicts:
+        cfg = Bunch(cfg_dict)
+        cfgs.append(cfg)
+    status, avg_reward = enjoy(cfgs)
     return status
 
 
