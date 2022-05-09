@@ -189,6 +189,8 @@ def main():
     cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
     cfg_dict['continuous_actions_sample'] = True
     cfg_dict['discrete_actions_sample'] = True
+    # switch the files to the test files
+    cfg_dict['scenario_path'] = PROCESSED_TEST_NO_TL
 
     class Bunch(object):
 
