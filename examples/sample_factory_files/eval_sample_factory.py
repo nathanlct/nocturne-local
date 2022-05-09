@@ -23,7 +23,7 @@ from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
 from run_sample_factory import register_custom_components
 
-from cfgs.config import PROCESSED_VALID_NO_TL
+from cfgs.config import PROCESSED_TEST_NO_TL
 
 
 def enjoy(cfg, max_num_frames=1e9):
@@ -66,8 +66,10 @@ def enjoy(cfg, max_num_frames=1e9):
 
     episode_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
     true_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
+    collision_rate = 0
+    goal_rate = 0
 
-    for file in os.listdir(PROCESSED_TEST_NO_TL):
+    for i, file in enumerate(os.listdir(PROCESSED_TEST_NO_TL)):
         num_frames = 0
         env.files = [os.path.join(PROCESSED_TEST_NO_TL, file)]
         obs = env.reset()
@@ -150,10 +152,13 @@ def enjoy(cfg, max_num_frames=1e9):
                                 avg_true_reward_str += f'#{agent_i}: {avg_true_rew:.3f}'
                         goal_achieved = infos[0]['episode_extra_stats'][
                             'goal_achieved']
+                        goal_rate += goal_achieved
                         num_collisions = infos[0]['episode_extra_stats'][
                             'collided']
-                        log.info(f'Avg goal achieved, {goal_achieved}')
-                        log.info(f'Avg num collisions, {num_collisions}')
+                        collision_rate += num_collisions
+                        log.info(f'Avg goal achieved, {goal_rate / (i + 1)}')
+                        log.info(
+                            f'Avg num collisions, {collision_rate / (i + 1)}')
                         log.info('Avg episode rewards: %s, true rewards: %s',
                                  avg_episode_rewards_str, avg_true_reward_str)
                         log.info(
@@ -189,8 +194,6 @@ def main():
     cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
     cfg_dict['continuous_actions_sample'] = True
     cfg_dict['discrete_actions_sample'] = True
-    # switch the files to the test files
-    cfg_dict['scenario_path'] = PROCESSED_VALID_NO_TL
 
     class Bunch(object):
 
