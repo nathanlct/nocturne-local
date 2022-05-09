@@ -131,18 +131,29 @@ class BaseEnv(MultiAgentEnv):
             ######################## Compute rewards #######################
             if np.linalg.norm(goal_pos - obj_pos) < rew_cfg['goal_tolerance']:
                 info_dict[veh_id]['goal_achieved'] = True
-                rew_dict[veh_id] += rew_cfg['goal_achieved_bonus']
+                rew_dict[veh_id] += rew_cfg['goal_achieved_bonus'] / rew_cfg[
+                    'reward_scaling']
             if rew_cfg['shaped_goal_distance']:
-                # the minus one is to ensure that it's not beneficial to collide
-                # we divide by goal_achieved_bonus / episode_length to ensure that
-                # acquiring the maximum "get-close-to-goal" reward at every time-step is
-                # always less than just acquiring the goal reward once
-                # we also assume that vehicles are never more than 400 meters from their goal
-                # which makes sense as the episodes are 9 seconds long i.e. we'd have to go more than
-                # 40 m/s to get there
-                rew_dict[veh_id] += (1 - np.linalg.norm(
-                    (goal_pos - obj_pos), ord=2) /
-                                     self.goal_dist_normalizers[veh_id])
+                # penalize the agent for its distance from goal
+                # we scale by goal_dist_normalizers to ensure that this value is always less than the penalty for
+                # collision
+                if rew_cfg['goal_distance_penalty']:
+                    rew_dict[veh_id] -= (np.linalg.norm(
+                        (goal_pos - obj_pos), ord=2) /
+                                         self.goal_dist_normalizers[veh_id]
+                                         ) / rew_cfg['reward_scaling']
+                else:
+                    # the minus one is to ensure that it's not beneficial to collide
+                    # we divide by goal_achieved_bonus / episode_length to ensure that
+                    # acquiring the maximum "get-close-to-goal" reward at every time-step is
+                    # always less than just acquiring the goal reward once
+                    # we also assume that vehicles are never more than 400 meters from their goal
+                    # which makes sense as the episodes are 9 seconds long i.e. we'd have to go more than
+                    # 40 m/s to get there
+                    rew_dict[veh_id] += (1 - np.linalg.norm(
+                        (goal_pos - obj_pos), ord=2) /
+                                         self.goal_dist_normalizers[veh_id]
+                                         ) / rew_cfg['reward_scaling']
 
             ######################## Handle potential done conditions #######################
             # achieved our goal
@@ -150,7 +161,8 @@ class BaseEnv(MultiAgentEnv):
                 done_dict[veh_id] = True
             if veh_obj.getCollided():
                 info_dict[veh_id]['collided'] = True
-                rew_dict[veh_id] -= np.abs(rew_cfg['collision_penalty'])
+                rew_dict[veh_id] -= np.abs(
+                    rew_cfg['collision_penalty']) / rew_cfg['reward_scaling']
                 done_dict[veh_id] = True
             # remove the vehicle so that its trajectory doesn't continue. This is important
             # in the multi-agent setting.
@@ -163,6 +175,17 @@ class BaseEnv(MultiAgentEnv):
         if self.cfg['rew_cfg']['shared_reward']:
             total_reward = np.sum([rew_dict[key] for key in rew_dict.keys()])
             rew_dict = {key: total_reward for key in rew_dict.keys()}
+
+        # fill in the missing observations if we should be doing so
+        if self.cfg['subscriber']['keep_inactive_agents']:
+            # force all vehicles done to be false since they should persist through the episode
+            done_dict = {key: False for key in self.all_vehicle_ids}
+            for key in self.all_vehicle_ids:
+                if key not in obs_dict.keys():
+                    obs_dict[key] = self.dead_feat
+                    rew_dict[key] = 0.0
+                    info_dict[key]['goal_achieved'] = False
+                    info_dict[key]['collided'] = False
 
         if self.step_num >= self.episode_length:
             done_dict = {key: True for key in done_dict.keys()}
@@ -253,10 +276,27 @@ class BaseEnv(MultiAgentEnv):
                 obs_dict[veh_id] = self.scenario.flattened_visible_state(
                     veh_obj, self.cfg['subscriber']['view_dist'],
                     self.cfg['subscriber']['view_angle'])
+
+        self.dead_feat = -np.ones_like(obs_dict[list(obs_dict.keys())[0]])
+        # we should return obs for the missing agents
+        if self.cfg['subscriber']['keep_inactive_agents']:
+            max_id = max([int(key) for key in obs_dict.keys()])
+            num_missing_agents = max(
+                0, self.cfg['max_num_vehicles'] - len(obs_dict))
+            for i in range(num_missing_agents):
+                obs_dict[max_id + i + 1] = self.dead_feat
+            self.dead_agent_ids = [
+                max_id + i + 1 for i in range(num_missing_agents)
+            ]
+            self.all_vehicle_ids = list(obs_dict.keys())
+        else:
+            self.dead_agent_ids = []
         return obs_dict
 
     def render(self, mode=None):
-        return self.simulation.getScenario().getImage(None, render_goals=True)
+        return np.array(self.simulation.getScenario().getImage(
+            None, render_goals=True),
+                        copy=False)
 
     def seed(self, seed=None):
         if seed is None:

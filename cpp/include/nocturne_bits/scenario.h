@@ -31,7 +31,7 @@ using json = nlohmann::json;
 // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
 // returned in the state
 constexpr int64_t kMaxVisibleObjects = 20;
-constexpr int64_t kMaxVisibleRoadPoints = 80;
+constexpr int64_t kMaxVisibleRoadPoints = 300;
 constexpr int64_t kMaxVisibleTrafficLights = 20;
 constexpr int64_t kMaxVisibleStopSigns = 4;
 
@@ -42,8 +42,10 @@ constexpr int64_t kMaxVisibleStopSigns = 4;
 constexpr int64_t kObjectFeatureSize = 13;
 
 // RoadPoint features are:
-// [ valid, distance, azimuth, road_type (one_hot of 7) ]
-constexpr int64_t kRoadPointFeatureSize = 10;
+// [ valid, distance, azimuth, x of vector pointing to next connected point in
+// the road line, x of vector pointing to next connected point in the road line,
+// road_type (one_hot of 7) ]
+constexpr int64_t kRoadPointFeatureSize = 12;
 
 // TrafficLight features are:
 // [ valid, distance, azimuth, current_state (one_hot of 9) ]
@@ -72,6 +74,9 @@ class Scenario : public sf::Drawable {
   // float getSignedAngle(float sourceAngle, float targetAngle) const;
 
   // query expert data
+  geometry::Vector2D getExpertSpeeds(int timeIndex, int vehIndex) {
+    return expertSpeeds[vehIndex][timeIndex];
+  };
   std::vector<float> getExpertAction(
       int objID,
       int timeIdx);  // return the expert action of object at time timeIDX
