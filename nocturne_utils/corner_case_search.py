@@ -29,14 +29,14 @@ if __name__ == '__main__':
         # this checks if the vehicles has actually moved any distance at all
         valid_vehs = []
         for veh in vehs:
-            veh.set_expert_controlled(True)
+            veh.expert_control = True
             obj_pos = veh.getPosition()
             obj_pos = np.array([obj_pos.x, obj_pos.y])
             goal_pos = veh.getGoalPosition()
             goal_pos = np.array([goal_pos.x, goal_pos.y])
             if np.linalg.norm(obj_pos - goal_pos) > 0.5:
                 valid_vehs.append(veh)
-        for time_index in range(89):
+        for time_index in range(90):
             for veh_index, veh in enumerate(valid_vehs):
                 collided = veh.getCollided()
                 if collided and not np.isclose(veh.getPosition().x, -10000.0):

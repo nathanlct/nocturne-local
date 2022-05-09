@@ -71,6 +71,10 @@ Python tests can be ran with `pytest`.
 ## Constructing the dataset
 
 At the moment for FAIR researchers the dataset is available on the cluster so no need to do anything.
+If you do want to rebuild the dataset:
+- Open ```nocturne_utils/config.py``` and change ```DATA_FOLDER``` to be the path to your Waymo motion files
+- Run ```python nocturne_utils/run_waymo_constructor.py --parallel --no_tl --all_files --datatype train valid test ```. This will construct, in parallel, a dataset of all the train, valid, and test files in the waymo motion data. It should take on the order of 5 minutes with 20 cpus.
+- To ensure that only files that have a guaranteed solution are included (for example, that there are no files where the agent goal is across an apparently uncrossable road edge), run ```python nocturne_utils/make_solvable_files.py```.
 
 ## C++ build instructions
 
