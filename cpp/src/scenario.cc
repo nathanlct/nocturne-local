@@ -745,7 +745,9 @@ void Scenario::removeVehicle(Vehicle* object) {
     }
   }
   // Update the BVH to account for the fact that some vehicles are now gone
-  vehicle_bvh_.InitHierarchy(roadObjects);
+  if (roadObjects.size() > 0) {
+    vehicle_bvh_.InitHierarchy(roadObjects);
+  }
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
