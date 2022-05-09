@@ -1,10 +1,11 @@
 """
-From the root of Sample Factory repo this can be run as:
-python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True ++algorithm.num_workers=10 ++algorithm.experiment=test2 ++algorithm.reward_scale=0.2 ++force_envs_single_thread=False
-
 To run in single agent mode on one file for testing
-
 python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME ++single_agent_mode=True ++num_files=1 
+
+To run in multiagent mode on one file for testing
+python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME ++single_agent_mode=False ++num_files=1 
+
+To run on all files set num_files=-1
 
 For debugging
 python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=False ++algorithm.num_workers=1 ++force_envs_single_thread=False

@@ -23,7 +23,7 @@ from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
 from run_sample_factory import register_custom_components
 
-from cfgs.config import PROCESSED_TEST_NO_TL
+from cfgs.config import PROCESSED_VALID_NO_TL
 
 
 def enjoy(cfg, max_num_frames=1e9):
@@ -68,10 +68,13 @@ def enjoy(cfg, max_num_frames=1e9):
     true_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
     collision_rate = 0
     goal_rate = 0
+    total_episode_reward = 0
 
-    for i, file in enumerate(os.listdir(PROCESSED_TEST_NO_TL)):
+    with open(os.path.join(PROCESSED_VALID_NO_TL, 'valid_files.txt')) as file:
+        files = [line.strip() for line in file]
+    for i, file in enumerate(files):
         num_frames = 0
-        env.files = [os.path.join(PROCESSED_TEST_NO_TL, file)]
+        env.files = [file]
         obs = env.reset()
         rnn_states = torch.zeros(
             [env.num_agents, get_hidden_size(cfg)],
@@ -182,7 +185,7 @@ def main():
     disp = Display()
     disp.start()
     register_custom_components()
-    file_path = '/private/home/eugenevinitsky/Code/nocturne/examples/train_dir/ma_fbias3/cfg.json'
+    file_path = '/checkpoint/eugenevinitsky/nocturne/test/2022.05.09/intersection/10.28.16/++algorithm.experiment=test,++algorithm.num_workers=10,++algorithm.train_in_background_thread=True,++num_files=100,++single_agent_mode=False,algorithm=APPO/test/cfg.json'
     with open(file_path, 'r') as file:
         cfg_dict = json.load(file)
 
@@ -194,6 +197,7 @@ def main():
     cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
     cfg_dict['continuous_actions_sample'] = True
     cfg_dict['discrete_actions_sample'] = True
+    cfg_dict['single_agent_mode'] = False
 
     class Bunch(object):
 

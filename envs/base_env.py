@@ -48,6 +48,7 @@ class BaseEnv(MultiAgentEnv):
         self.t = 0
         self.step_num = 0
         self.rank = rank
+        self.seed(cfg['seed'])
         obs_dict = self.reset()
         self.observation_space = Box(low=-np.infty,
                                      high=np.infty,
