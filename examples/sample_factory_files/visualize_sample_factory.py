@@ -176,7 +176,11 @@ def enjoy(cfg, max_num_frames=1e9):
                             if avg_true_reward_str:
                                 avg_true_reward_str += ', '
                             avg_true_reward_str += f'#{agent_i}: {avg_true_rew:.3f}'
-
+                    avg_goal = infos[0]['episode_extra_stats']['goal_achieved']
+                    avg_collisions = infos[0]['episode_extra_stats'][
+                        'collided']
+                    log.info(f'Avg goal achieved, {avg_goal}')
+                    log.info(f'Avg num collisions, {avg_collisions}')
                     log.info('Avg episode rewards: %s, true rewards: %s',
                              avg_episode_rewards_str, avg_true_reward_str)
                     log.info(

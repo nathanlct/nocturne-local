@@ -71,30 +71,8 @@ def main():
     overrides.add('hydra/launcher', ['submitit_slurm'])
     overrides.add('hydra.launcher.partition', ['learnlab'])
     overrides.add('experiment', [args.experiment])
-    # overrides.add('num_files', [10])
-    overrides.add('single_agent_mode', [False])
-    # overrides.add('algorithm.kl_loss_coeff', [0.0, 0.01])
-    # overrides.add('algorithm.max_grad_norm', [1.0, 4.0, 20.0])
-    # overrides.add('max_num_vehicles', [5])
-    # overrides.add('rew_cfg.goal_achieved_bonus', [0])
-    # overrides.add('rew_cfg.goal_distance_penalty', [True])
-    # overrides.add('rew_cfg.collision_penalty', [-90.0])
-    # overrides.add('discretize_actions', [True, False])
-    # overrides.add('algorithm.kl_loss_coeff', [0.0, 0.01, 0.1, 1.0, 10.0])
-    # overrides.add('algorithm.max_grad_norm', [4.0, 20.0])
-    # exp
-    # overrides.add('algorithm.ppo_clip_ratio', [0.02, 0.05, 0.1])
-    # overrides.add('algorithm.ppo_clip_value', [1.0, 10.0])
-
-    # overrides.add('algorithm.rollout', [10, 20, 30])
-    # overrides.add('algorithm.recurrence', [10, 20, 30])
-    # overrides.add('algorithm.learning_rate', [0.0001, 0.00005, 0.00001])
-    # overrides.add('num_files', [1, 10, 100, 1000, -1])
-
     overrides.add('num_files', [100])
-    overrides.add('algorithm.exploration_loss_coeff', [0.0, 0.0001, 0.001])
-    overrides.add('algorithm.kl_loss_coeff', [0.0, 0.1, 1.0])
-    overrides.add('algorithm.learning_rate', [0.001, 0.0001, 0.00001])
+    overrides.add('seed', [0, 1, 2, 3, 4])
 
     cmd = [
         'python',

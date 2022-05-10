@@ -24,12 +24,7 @@ from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
 from run_sample_factory import register_custom_components
 
-<<<<<<< HEAD
-from cfgs.config import PROCESSED_TEST_NO_TL
-from run_sample_factory import SampleFactoryEnv
-=======
-from cfgs.config import PROCESSED_VALID_NO_TL
->>>>>>> c678bb6a8adf41179da017411dd1bd16e46bad16
+from cfgs.config import PROCESSED_TRAIN_NO_TL
 
 
 def enjoy(cfgs, max_num_frames=1e9):
@@ -83,10 +78,10 @@ def enjoy(cfgs, max_num_frames=1e9):
             actor_critics, actor_critics):
         goal_frac = 0
         collision_frac = 0
-        for i, file in enumerate(os.listdir(PROCESSED_TEST_NO_TL)[0:100]):
+        for i, file in enumerate(os.listdir(PROCESSED_TRAIN_NO_TL)[0:100]):
 
             num_frames = 0
-            env.files = [os.path.join(PROCESSED_TEST_NO_TL, file)]
+            env.files = [os.path.join(PROCESSED_TRAIN_NO_TL, file)]
             obs = env.reset()
             valid_indices = env.valid_indices
             indices_1 = []
@@ -99,6 +94,10 @@ def enjoy(cfgs, max_num_frames=1e9):
                 else:
                     indices_2.append(index)
             rnn_states = torch.zeros(
+                [env.num_agents, get_hidden_size(cfg)],
+                dtype=torch.float32,
+                device=device)
+            rnn_states_2 = torch.zeros(
                 [env.num_agents, get_hidden_size(cfg)],
                 dtype=torch.float32,
                 device=device)
@@ -116,7 +115,7 @@ def enjoy(cfgs, max_num_frames=1e9):
                                              rnn_states,
                                              with_action_distribution=True)
                     policy_outputs_2 = actor_2(obs_torch,
-                                               rnn_states,
+                                               rnn_states_2,
                                                with_action_distribution=True)
 
                     # sample actions from the distribution by default
@@ -144,6 +143,7 @@ def enjoy(cfgs, max_num_frames=1e9):
                     actions = actions.cpu().numpy()
 
                     rnn_states = policy_outputs.rnn_states
+                    rnn_states_2 = policy_outputs_2.rnn_states
 
                     for _ in range(render_action_repeat):
 
@@ -233,9 +233,9 @@ def main():
     disp.start()
     register_custom_components()
     file_paths = [
-        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/0/seed_sweepv2/cfg.json',
+        # '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/0/seed_sweepv2/cfg.json',
         '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/1/seed_sweepv2/cfg.json',
-        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/2/seed_sweepv2/cfg.json',
+        # '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/2/seed_sweepv2/cfg.json',
     ]
     cfg_dicts = []
     for file in file_paths:
