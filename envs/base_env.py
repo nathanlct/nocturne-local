@@ -31,8 +31,9 @@ class BaseEnv(MultiAgentEnv):
         """
         super().__init__()
         self._skip_env_checking = True  # temporary fix for rllib env checking issue
-        possible_files = os.listdir(cfg['scenario_path'])
-        self.files = [file for file in possible_files if '.json' in file]
+        with open(os.path.join(cfg['scenario_path'],
+                               'valid_files.txt')) as file:
+            self.files = [line.strip() for line in file]
         if cfg['num_files'] != -1:
             self.files = self.files[0:cfg['num_files']]
         self.file = self.files[np.random.randint(len(self.files))]
@@ -47,6 +48,7 @@ class BaseEnv(MultiAgentEnv):
         self.t = 0
         self.step_num = 0
         self.rank = rank
+        self.seed(cfg['seed'])
         obs_dict = self.reset()
         self.observation_space = Box(low=-np.infty,
                                      high=np.infty,
