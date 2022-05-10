@@ -42,9 +42,8 @@ constexpr int64_t kMaxVisibleStopSigns = 4;
 constexpr int64_t kObjectFeatureSize = 13;
 
 // RoadPoint features are:
-// [ valid, distance, azimuth, x of vector pointing to next connected point in
-// the road line, x of vector pointing to next connected point in the road line,
-// road_type (one_hot of 7) ]
+// [ valid, distance, azimuth, distance to the next point, relative azimuth to
+//   the next point, road_type (one_hot of 7) ]
 constexpr int64_t kRoadPointFeatureSize = 12;
 
 // TrafficLight features are:
