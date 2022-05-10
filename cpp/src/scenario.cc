@@ -378,16 +378,7 @@ void Scenario::step(float dt) {
   }
 
   // update the vehicle bvh
-  if (!roadObjects.empty()) {
-    const int64_t n = roadObjects.size();
-    std::vector<const geometry::AABBInterface*> objects;
-    objects.reserve(n);
-    for (const auto& obj : roadObjects) {
-      objects.push_back(
-          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-    }
-    vehicle_bvh_.InitHierarchy(objects);
-  }
+  vehicle_bvh_.InitHierarchy(roadObjects);
   updateCollision();
 }
 
@@ -745,9 +736,7 @@ void Scenario::removeVehicle(Vehicle* object) {
     }
   }
   // Update the BVH to account for the fact that some vehicles are now gone
-  if (!roadObjects.empty()) {
-    vehicle_bvh_.InitHierarchy(roadObjects);
-  }
+  vehicle_bvh_.InitHierarchy(roadObjects);
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {

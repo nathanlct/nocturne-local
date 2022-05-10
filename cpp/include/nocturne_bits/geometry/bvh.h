@@ -143,9 +143,12 @@ class BVH {
   void InitHierarchyInternal(const std::vector<ObjectType>& objects,
                              AABBFunc aabb_func, PtrFunc ptr_func) {
     Clear();
+    if (objects.empty()) {
+      return;
+    }
+
     const int64_t n = objects.size();
     nodes_.reserve(2 * n - 1);
-
     std::vector<std::pair<uint64_t, const AABBInterface*>> encoded_objects;
     encoded_objects.reserve(n);
     for (const ObjectType& obj : objects) {
