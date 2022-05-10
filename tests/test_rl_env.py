@@ -22,15 +22,25 @@ def test_rl_env():
     # quick check that rendering works
     img = env.scenario.getCone(env.scenario.getVehicles()[0], 120.0,
                                1.99 * 3.14, 0.0, False)
-    veh = env.scenario.getVehicles()[1]
-    veh_id = veh.getID()
-    for _ in range(10):
-        prev_position = [veh.position.x, veh.position.y]
-        obs, rew, done, info = env.step({veh_id: {'accel': 2.0, 'turn': 1.0}})
-        if veh not in env.scenario.getVehicles():
-            break
-        new_position = [veh.position.x, veh.position.y]
-        assert prev_position != new_position, f'veh was in position {prev_position} which is the same as {new_position} but should have moved'
+    for _ in range(90):
+        vehs = env.scenario.getObjectsThatMoved()
+        prev_position = {
+            veh.getID(): [veh.position.x, veh.position.y]
+            for veh in vehs
+        }
+        obs, rew, done, info = env.step(
+            {veh.getID(): {
+                'accel': 2.0,
+                'turn': 1.0
+            }
+             for veh in vehs})
+        for veh in vehs:
+            if veh in env.scenario.getObjectsThatMoved():
+                new_position = [veh.position.x, veh.position.y]
+                assert prev_position[veh.getID(
+                )] != new_position, f'veh {veh.getID()} was in position \
+                    {prev_position[veh.getID()]} which is the \
+                        same as {new_position} but should have moved'
 
 
 if __name__ == '__main__':
