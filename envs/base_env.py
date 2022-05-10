@@ -103,10 +103,11 @@ class BaseEnv(MultiAgentEnv):
         self.t += self.cfg['dt']
         self.step_num += 1
         objs_to_remove = []
-        t = time.time()
-        for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
+        for veh_obj in self.vehicles:
             veh_id = veh_obj.getID()
             if self.single_agent_mode and veh_id != self.single_agent_id:
+                continue
+            if veh_id in self.done_ids:
                 continue
             if self.cfg['subscriber']['use_ego_state'] and self.cfg[
                     'subscriber']['use_observations']:
@@ -169,6 +170,7 @@ class BaseEnv(MultiAgentEnv):
             # remove the vehicle so that its trajectory doesn't continue. This is important
             # in the multi-agent setting.
             if done_dict[veh_id]:
+                self.done_ids.append(veh_id)
                 objs_to_remove.append(veh_obj)
 
         for veh_obj in objs_to_remove:
@@ -207,9 +209,9 @@ class BaseEnv(MultiAgentEnv):
     def reset(self):
         self.t = 0
         self.step_num = 0
-        too_many_vehicles = True
+        enough_vehicles = False
         # we don't want to initialize scenes with more than N actors
-        while too_many_vehicles:
+        while not enough_vehicles:
             self.file = self.files[np.random.randint(len(self.files))]
             self.simulation = Simulation(os.path.join(
                 self.cfg['scenario_path'], self.file),
@@ -222,21 +224,21 @@ class BaseEnv(MultiAgentEnv):
                 obj_pos = np.array([obj_pos.x, obj_pos.y])
                 goal_pos = veh_obj.getGoalPosition()
                 goal_pos = np.array([goal_pos.x, goal_pos.y])
-                ######################## Compute rewards #######################
+                ######################## Remove vehicles at goal #######################
                 if np.linalg.norm(goal_pos - obj_pos
-                                  ) < self.cfg['rew_cfg']['goal_tolerance']:
+                                  ) < self.cfg['rew_cfg']['goal_tolerance'] or \
+                                  veh_obj.getCollided():
                     self.scenario.removeVehicle(veh_obj)
-                # TODO(eugenevinitsky) remove this once we remove all files that have an
-                # init at collision
-                if veh_obj.getCollided():
-                    self.scenario.removeVehicle(veh_obj)
-            self.vehicles = self.scenario.getObjectsThatMoved()
+            self.vehicles = self.scenario.getObjectsThatMoved(
+            )[:self.cfg['max_num_vehicles']]
             self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
-            # check if we have less than the desired number of vehicles and have
-            # at least one vehicle
-            if len(self.all_vehicle_ids) <= self.cfg['max_num_vehicles'] \
-                and len(self.all_vehicle_ids) > 0:
-                too_many_vehicles = False
+            # make all the vehicles that are in excess of max_num_vehicles controlled by an expert
+            for veh in self.scenario.getObjectsThatMoved(
+            )[self.cfg['max_num_vehicles']:]:
+                veh.expert_control = True
+            # check that we have at least one vehicle
+            if len(self.all_vehicle_ids) > 0:
+                enough_vehicles = True
 
         obs_dict = {}
         self.goal_dist_normalizers = {}
@@ -250,7 +252,7 @@ class BaseEnv(MultiAgentEnv):
             for veh in self.simulation.getScenario().getVehicles():
                 if veh.getID() != self.single_agent_id:
                     veh.expert_control = True
-        for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
+        for veh_obj in self.vehicles:
             veh_id = veh_obj.getID()
             if self.single_agent_mode and veh_id != self.single_agent_id:
                 continue
@@ -279,6 +281,7 @@ class BaseEnv(MultiAgentEnv):
                     veh_obj, self.cfg['subscriber']['view_dist'],
                     self.cfg['subscriber']['view_angle'])
 
+        self.done_ids = []
         self.dead_feat = -np.ones_like(obs_dict[list(obs_dict.keys())[0]])
         # we should return obs for the missing agents
         if self.cfg['subscriber']['keep_inactive_agents']:
