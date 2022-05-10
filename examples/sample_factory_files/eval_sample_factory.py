@@ -24,8 +24,12 @@ from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
 from run_sample_factory import register_custom_components
 
+<<<<<<< HEAD
 from cfgs.config import PROCESSED_TEST_NO_TL
 from run_sample_factory import SampleFactoryEnv
+=======
+from cfgs.config import PROCESSED_VALID_NO_TL
+>>>>>>> c678bb6a8adf41179da017411dd1bd16e46bad16
 
 
 def enjoy(cfgs, max_num_frames=1e9):
