@@ -104,7 +104,8 @@ class BaseEnv(MultiAgentEnv):
         t = time.time()
         for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
             veh_id = veh_obj.getID()
-            if self.single_agent_mode and veh != self.single_agent_obj:
+            if self.single_agent_mode and veh_id != self.single_agent_obj.getID(
+            ):
                 continue
             obs_dict[veh_id] = self.get_observation(veh_obj)
             rew_dict[veh_id] = 0
@@ -182,11 +183,6 @@ class BaseEnv(MultiAgentEnv):
             all_done *= value
         done_dict['__all__'] = all_done
 
-        # for val in obs_dict.values():
-        #     if np.any(np.isnan(val)):
-        #         import ipdb
-        #         ipdb.set_trace()
-
         return obs_dict, rew_dict, done_dict, info_dict
 
     def reset(self):
@@ -225,15 +221,14 @@ class BaseEnv(MultiAgentEnv):
 
         obs_dict = {}
         self.goal_dist_normalizers = {}
-        # in single agent mode, we always declare the same agent in each scene
-        # the controlled agent to make the learning process simpler
         if self.single_agent_mode:
             objs_that_moved = self.simulation.getScenario(
             ).getObjectsThatMoved()
-            self.single_agent_obj = objs_that_moved[-1]
+            self.single_agent_obj = objs_that_moved[np.random.randint(
+                len(objs_that_moved))]
             # tag all vehicles except for the one you control as controlled by the expert
             for veh in self.scenario.getObjectsThatMoved():
-                if veh != self.single_agent_obj:
+                if veh.getID() != self.single_agent_obj.getID():
                     veh.expert_control = True
 
         # step all the vehicles forward by one second and record their observations as context
@@ -265,7 +260,8 @@ class BaseEnv(MultiAgentEnv):
 
         for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
             veh_id = veh_obj.getID()
-            if self.single_agent_mode and veh_obj != self.single_agent_obj:
+            if self.single_agent_mode and veh_obj.getID(
+            ) != self.single_agent_obj.getID():
                 continue
             # store normalizers for each vehicle
             if self.cfg['rew_cfg']['shaped_goal_distance']:
