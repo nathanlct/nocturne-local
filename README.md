@@ -71,6 +71,10 @@ Python tests can be ran with `pytest`.
 ## Constructing the dataset
 
 At the moment for FAIR researchers the dataset is available on the cluster so no need to do anything.
+If you do want to rebuild the dataset:
+- Open ```nocturne_utils/config.py``` and change ```DATA_FOLDER``` to be the path to your Waymo motion files
+- Run ```python nocturne_utils/run_waymo_constructor.py --parallel --no_tl --all_files --datatype train valid```. This will construct, in parallel, a dataset of all the train, valid, and test files in the waymo motion data. It should take on the order of 5 minutes with 20 cpus.
+- To ensure that only files that have a guaranteed solution are included (for example, that there are no files where the agent goal is across an apparently uncrossable road edge), run ```python nocturne_utils/make_solvable_files.py --datatype train valid```.
 
 ## C++ build instructions
 
@@ -86,6 +90,38 @@ make install
 ```
 
 Subsequently, the C++ tests can be ran with `./tests/nocturne_test` from within the `nocturne/cpp/build` directory.
+
+## Running the RL Algorithms
+Nocturne by default comes with support for three versions of Proximal Policy Optimization:
+1. Sample Factory, a high throughput asynchronous PPO implementation (https://github.com/alex-petrenko/sample-factory)
+2. RLlib's PPO (https://github.com/ray-project/ray/tree/master/rllib)
+3. A slightly modified version of PPO from (https://github.com/marlbenchmark/on-policy)
+Each algorithm is in its corresponding folder in examples and has a corresponding config file in cfgs/
+*Warning:* only the sample factory code has been extensively swept and tested. The default hyperparameters in there
+should work for training a basic agent, if not a perfectly performant one. The other versions are provided for convenience
+but are not guaranteed to train a basic agent with the current hyperparameter settings.
+
+### Important hyperparameters to be aware of
+There are a few key hyperparameters that we expect users to care quite a bit about. Each of these can be toggled by adding
+```++<hyperparam_name>=<hyperparam_value>``` to the run command.
+- ```num_files```: this controls how many training scenarios are used. Set to -1 to use all of them.
+- ```max_num_vehicles```: this controls the maximum number of controllable agents in a scenario. We continue randomly samplgin
+scenarios until we find one with <= ```max_num_vehicles```.
+
+### Running sample factory
+Files from sample factory can be run from examples/sample_factory_files and should work by default by running
+```python examples/sample_factory_files/run_sample_factory.py algorithm=APPO```
+Additional config options for hyperparameters can be found in the config file.
+
+*Warning*: because of how the algorithm is configured, sample-factory works best with a fixed number of agents
+operating on a fixed horizon. To enable this, we use the config parameter ```max_num_vehicles``` which initializes the
+environment with only scenes that have fewer controllable agents than ```max_num_vehicles```. Additionally, if there
+are fewer than ```max_num_vehicles``` in the scene we add dummy agents that receive a vector of -1 at all timesteps.
+When a vehicle exits the scene we continue providing it a vector of -1 as an observation and a reward of 0.
+
+### Running RLlib
+
+### Running on-policy PPO
 
 ## Common installation errors
 

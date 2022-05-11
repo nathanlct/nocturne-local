@@ -1,12 +1,15 @@
 #pragma once
 
 #include <array>
+#include <memory>
 #include <utility>
 #include <vector>
 
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
+#include "geometry/intersection.h"
 #include "geometry/line_segment.h"
+#include "geometry/morton.h"
 
 namespace nocturne {
 namespace geometry {
@@ -48,10 +51,25 @@ class BVH {
   };
 
   BVH() = default;
-  explicit BVH(const std::vector<const AABBInterface*>& objects) {
+  explicit BVH(int64_t delta) : delta_(delta) {}
+
+  template <class ObjectType>
+  explicit BVH(const std::vector<ObjectType>& objects) {
     InitHierarchy(objects);
   }
-  BVH(const std::vector<const AABBInterface*>& objects, int64_t delta)
+
+  template <class ObjectType>
+  BVH(const std::vector<ObjectType>& objects, int64_t delta) : delta_(delta) {
+    InitHierarchy(objects);
+  }
+
+  template <class ObjectType>
+  explicit BVH(const std::vector<const ObjectType*>& objects) {
+    InitHierarchy(objects);
+  }
+
+  template <class ObjectType>
+  BVH(const std::vector<const ObjectType*>& objects, int64_t delta)
       : delta_(delta) {
     InitHierarchy(objects);
   }
@@ -64,19 +82,43 @@ class BVH {
     nodes_.clear();
   }
 
-  void InitHierarchy(const std::vector<const AABBInterface*>& objects);
+  template <class ObjectType>
+  void InitHierarchy(const std::vector<ObjectType>& objects) {
+    InitHierarchyInternal(
+        objects, [](const ObjectType& obj) { return obj.GetAABB(); },
+        [](const ObjectType& obj) { return &obj; });
+  }
 
-  std::vector<const AABBInterface*> IntersectionCandidates(
+  template <class ObjectType>
+  void InitHierarchy(const std::vector<const ObjectType*>& objects) {
+    InitHierarchyInternal(
+        objects, [](const ObjectType* obj) { return obj->GetAABB(); },
+        [](const ObjectType* obj) { return obj; });
+  }
+
+  template <class ObjectType>
+  void InitHierarchy(const std::vector<std::shared_ptr<ObjectType>>& objects) {
+    InitHierarchyInternal(
+        objects,
+        [](const std::shared_ptr<ObjectType>& obj) { return obj->GetAABB(); },
+        [](const std::shared_ptr<ObjectType>& obj) { return obj.get(); });
+  }
+
+  template <class ObjectType>
+  std::vector<const ObjectType*> IntersectionCandidates(
       const AABBInterface& object) const {
-    std::vector<const AABBInterface*> candidates;
-    IntersectionCandidatesImpl(object.GetAABB(), root_, candidates);
+    std::vector<const ObjectType*> candidates;
+    IntersectionCandidatesImpl<AABB, ObjectType>(object.GetAABB(), root_,
+                                                 candidates);
     return candidates;
   }
 
-  std::vector<const AABBInterface*> IntersectionCandidates(
+  template <class ObjectType>
+  std::vector<const ObjectType*> IntersectionCandidates(
       const LineSegment& segment) const {
-    std::vector<const AABBInterface*> candidates;
-    IntersectionCandidatesImpl(segment, root_, candidates);
+    std::vector<const ObjectType*> candidates;
+    IntersectionCandidatesImpl<LineSegment, ObjectType>(segment, root_,
+                                                        candidates);
     return candidates;
   }
 
@@ -95,18 +137,52 @@ class BVH {
   std::vector<BVH::Node*> CombineNodes(const std::vector<BVH::Node*>& nodes,
                                        int64_t num);
 
+  // Implement AAC algorithm in
+  // http://graphics.cs.cmu.edu/projects/aac/aac_build.pdf
+  template <class ObjectType, class AABBFunc, class PtrFunc>
+  void InitHierarchyInternal(const std::vector<ObjectType>& objects,
+                             AABBFunc aabb_func, PtrFunc ptr_func) {
+    Clear();
+    if (objects.empty()) {
+      return;
+    }
+
+    const int64_t n = objects.size();
+    nodes_.reserve(2 * n - 1);
+    std::vector<std::pair<uint64_t, const AABBInterface*>> encoded_objects;
+    encoded_objects.reserve(n);
+    for (const ObjectType& obj : objects) {
+      const AABB aabb = aabb_func(obj);
+      const uint64_t morton_code = morton::Morton2D(aabb.Center());
+      encoded_objects.emplace_back(
+          morton_code, dynamic_cast<const AABBInterface*>(ptr_func(obj)));
+    }
+    std::sort(encoded_objects.begin(), encoded_objects.end());
+    const std::vector<Node*> nodes =
+        InitHierarchyImpl(encoded_objects, /*l=*/0, /*r=*/n);
+    const std::vector<Node*> root = CombineNodes(nodes, 1);
+    root_ = root[0];
+  }
+
   // Init hierarchy in range [l, r).
   std::vector<Node*> InitHierarchyImpl(
       const std::vector<std::pair<uint64_t, const AABBInterface*>>& objects,
       int64_t l, int64_t r);
 
+  template <class AABBType, class ObjectType>
   void IntersectionCandidatesImpl(
-      const AABB& aabb, const Node* cur,
-      std::vector<const AABBInterface*>& candidates) const;
-
-  void IntersectionCandidatesImpl(
-      const LineSegment& segment, const Node* cur,
-      std::vector<const AABBInterface*>& candidates) const;
+      const AABBType& obj, const Node* cur,
+      std::vector<const ObjectType*>& candidates) const {
+    if (!Intersects(obj, cur->aabb())) {
+      return;
+    }
+    if (cur->IsLeaf()) {
+      candidates.push_back(dynamic_cast<const ObjectType*>(cur->object()));
+      return;
+    }
+    IntersectionCandidatesImpl(obj, cur->LChild(), candidates);
+    IntersectionCandidatesImpl(obj, cur->RChild(), candidates);
+  }
 
   std::vector<Node> nodes_;
   Node* root_ = nullptr;

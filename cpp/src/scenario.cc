@@ -21,15 +21,13 @@ namespace {
 std::vector<const ObjectBase*> VisibleCandidates(const geometry::BVH& bvh,
                                                  const Object& src,
                                                  const ViewField& vf) {
-  std::vector<const ObjectBase*> objects;
-  if (!bvh.Empty()) {
-    const std::vector<const geometry::AABBInterface*> candidates =
-        bvh.IntersectionCandidates(vf);
-    for (const auto* obj : candidates) {
-      if (obj != &src) {
-        objects.push_back(dynamic_cast<const ObjectBase*>(obj));
-      }
-    }
+  std::vector<const ObjectBase*> objects =
+      bvh.IntersectionCandidates<ObjectBase>(vf);
+  auto it = std::find(objects.begin(), objects.end(),
+                      dynamic_cast<const ObjectBase*>(&src));
+  if (it != objects.end()) {
+    std::swap(*it, objects.back());
+    objects.pop_back();
   }
   return objects;
 }
@@ -110,8 +108,12 @@ void ExtractRoadPointFeature(const Object& src, const RoadPoint& obj, float dis,
   feature[0] = 1.0f;  // Valid
   feature[1] = dis;
   feature[2] = azimuth;
+  // TODO: test relative coordinates here
+  geometry::Vector2D neighborVector = obj.neighbor_position() - obj.position();
+  feature[3] = neighborVector.x();
+  feature[4] = neighborVector.y();
   // One-hot vector for road_type, assume feature is initially 0.
-  feature[3 + road_type] = 1.0f;
+  feature[5 + road_type] = 1.0f;
 }
 
 void ExtractTrafficLightFeature(const Object& src, const TrafficLight& obj,
@@ -139,7 +141,7 @@ void ExtractStopSignFeature(const Object& src, const StopSign& obj, float dis,
 
 using geometry::utils::kPi;
 
-Scenario::Scenario(std::string path, int startTime, bool useNonVehicles)
+Scenario::Scenario(const std::string& path, int startTime, bool useNonVehicles)
     : currTime(startTime), useNonVehicles(useNonVehicles) {
   if (path.size() > 0) {
     loadScenario(path);
@@ -166,8 +168,8 @@ void Scenario::loadScenario(std::string path) {
     // TODO(ev) currTime should be passed in rather than defined here
     geometry::Vector2D pos(obj["position"]["x"][currTime],
                            obj["position"]["y"][currTime]);
-    float width = obj["width"];
-    float length = obj["length"];
+    float width = float(obj["width"]);
+    float length = float(obj["length"]);
     float heading = geometry::utils::NormalizeAngle(
         geometry::utils::Radians(static_cast<float>(obj["heading"][currTime])));
 
@@ -308,13 +310,7 @@ void Scenario::loadScenario(std::string path) {
 
   // Now create the BVH for the line segments
   // Since the line segments never move we only need to define this once
-  const int64_t n = lineSegments.size();
-  std::vector<const geometry::AABBInterface*> objects;
-  objects.reserve(n);
-  for (const auto& obj : lineSegments) {
-    objects.push_back(dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-  }
-  line_segment_bvh_.InitHierarchy(objects);
+  line_segment_bvh_.InitHierarchy(lineSegments);
 
   // Now handle the traffic light states
   for (const auto& tl : j["tl_states"]) {
@@ -339,7 +335,8 @@ void Scenario::loadScenario(std::string path) {
     trafficLights.push_back(traffic_light);
   }
 
-  initializeVehicleBVH();
+  // initialize the road objects bvh
+  vehicle_bvh_.InitHierarchy(roadObjects);
 
   std::vector<const geometry::AABBInterface*> static_objects;
   for (const auto& roadLine : roadLines) {
@@ -359,20 +356,6 @@ void Scenario::loadScenario(std::string path) {
   static_bvh_.InitHierarchy(static_objects);
   // update collision to check for collisions of any vehicles at initialization
   updateCollision();
-}
-
-void Scenario::initializeVehicleBVH() {
-  // initialize the road objects bvh
-  const int64_t nRoadObjects = roadObjects.size();
-  if (nRoadObjects > 0) {
-    std::vector<const geometry::AABBInterface*> storeObjects;
-    storeObjects.reserve(nRoadObjects);
-    for (const auto& obj : roadObjects) {
-      storeObjects.push_back(
-          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-    }
-    vehicle_bvh_.InitHierarchy(storeObjects);
-  }
 }
 
 void Scenario::step(float dt) {
@@ -395,26 +378,16 @@ void Scenario::step(float dt) {
   }
 
   // update the vehicle bvh
-  const int64_t n = roadObjects.size();
-  if (n > 0) {
-    std::vector<const geometry::AABBInterface*> objects;
-    objects.reserve(n);
-    for (const auto& obj : roadObjects) {
-      objects.push_back(
-          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-    }
-    vehicle_bvh_.InitHierarchy(objects);
-  }
+  vehicle_bvh_.InitHierarchy(roadObjects);
   updateCollision();
 }
 
 void Scenario::updateCollision() {
   // check vehicle-vehicle collisions
   for (auto& obj1 : roadObjects) {
-    std::vector<const geometry::AABBInterface*> candidates =
-        vehicle_bvh_.IntersectionCandidates(*obj1);
-    for (const auto* ptr : candidates) {
-      const Object* obj2 = dynamic_cast<const Object*>(ptr);
+    std::vector<const Object*> candidates =
+        vehicle_bvh_.IntersectionCandidates<Object>(*obj1);
+    for (const auto* obj2 : candidates) {
       if (obj1->id() == obj2->id()) {
         continue;
       }
@@ -431,14 +404,12 @@ void Scenario::updateCollision() {
     }
   }
   // check vehicle-lane segment collisions
-  for (auto& obj1 : roadObjects) {
-    std::vector<const geometry::AABBInterface*> candidates =
-        line_segment_bvh_.IntersectionCandidates(*obj1);
-    for (const auto* ptr : candidates) {
-      const geometry::LineSegment* obj2 =
-          dynamic_cast<const geometry::LineSegment*>(ptr);
-      if (checkForCollision(*obj1, *obj2)) {
-        obj1->set_collided(true);
+  for (auto& obj : roadObjects) {
+    std::vector<const geometry::LineSegment*> candidates =
+        line_segment_bvh_.IntersectionCandidates<geometry::LineSegment>(*obj);
+    for (const auto* seg : candidates) {
+      if (checkForCollision(*obj, *seg)) {
+        obj->set_collided(true);
       }
     }
   }
@@ -764,7 +735,8 @@ void Scenario::removeVehicle(Vehicle* object) {
       it++;
     }
   }
-  initializeVehicleBVH();
+  // Update the BVH to account for the fact that some vehicles are now gone
+  vehicle_bvh_.InitHierarchy(roadObjects);
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
@@ -775,18 +747,16 @@ NdArray<unsigned char> Scenario::getCone(
     Object* object, float viewDist, float viewAngle, float headTilt,
     bool obscuredView) {  // args in radians
   float circleRadius = viewDist;
-  float renderedCircleRadius = 300.0f;
+  constexpr int64_t kRenderedCircleRadius = 300;
+  constexpr int64_t kWidth = kRenderedCircleRadius * 2;
+  constexpr int64_t kHeight = kRenderedCircleRadius * 2;
 
-  if (object->cone_texture() == nullptr) {
+  if (object->ConeTexture() == nullptr) {
     sf::ContextSettings settings;
     settings.antialiasingLevel = 1;
-
-    // Potential memory leak?
-    object->set_cone_texture(new sf::RenderTexture());
-    object->cone_texture()->create(2.0f * renderedCircleRadius,
-                                   2.0f * renderedCircleRadius, settings);
+    object->InitConeTexture(kHeight, kWidth, settings);
   }
-  sf::RenderTexture* texture = object->cone_texture();
+  sf::RenderTexture* texture = object->ConeTexture();
 
   sf::Transform renderTransform;
   renderTransform.scale(1, -1);  // horizontal flip
@@ -807,8 +777,8 @@ NdArray<unsigned char> Scenario::getCone(
       sf::View(sf::Vector2f(0.0f, 0.0f), sf::Vector2f(texture->getSize())));
 
   // draw circle
-  float r = renderedCircleRadius;
-  float diag = std::sqrt(2 * r * r);
+  const float r = kRenderedCircleRadius;
+  const float diag = std::sqrt(2 * r * r);
 
   for (int quadrant = 0; quadrant < 4; ++quadrant) {
     std::vector<sf::Vertex> outerCircle;  // todo precompute just once
@@ -877,7 +847,8 @@ NdArray<unsigned char> Scenario::getCone(
             int nPoints = 80;  // todo function of angle
             hiddenArea.setPointCount(nPoints + 2);
 
-            float ratio = renderedCircleRadius / circleRadius;
+            float ratio =
+                static_cast<float>(kRenderedCircleRadius) / circleRadius;
             hiddenArea.setPoint(0, utils::ToVector2f((pt1 - center) * ratio));
             for (int i = 0; i < nPoints; ++i) {
               float angle = angle1 + i * (angle2 - angle1) / (nPoints - 1);
@@ -941,23 +912,20 @@ NdArray<unsigned char> Scenario::getCone(
   sf::Image img = texture->getTexture().copyToImage();
   unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-  const int64_t rows = static_cast<int64_t>(renderedCircleRadius) * 2;
-  const int64_t cols = static_cast<int64_t>(renderedCircleRadius) * 2;
-
-  return NdArray<unsigned char>({rows, cols, /*channels=*/int64_t(4)},
+  return NdArray<unsigned char>({kHeight, kWidth, /*channels=*/int64_t(4)},
                                 pixelsArr);
 }
 
 NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
-  const int64_t squareSide = 600;
+  const int64_t kSquareSide = 600;
 
-  if (imageTexture == nullptr) {
+  if (image_texture_ == nullptr) {
     sf::ContextSettings settings;
     settings.antialiasingLevel = 4;
-    imageTexture = new sf::RenderTexture();
-    imageTexture->create(squareSide, squareSide, settings);
+    image_texture_ = std::make_unique<sf::RenderTexture>();
+    image_texture_->create(kSquareSide, kSquareSide, settings);
   }
-  sf::RenderTexture* texture = imageTexture;
+  sf::RenderTexture* texture = image_texture_.get();
 
   sf::Transform renderTransform;
   renderTransform.scale(1, -1);  // horizontal flip
@@ -975,9 +943,10 @@ NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
   sf::Vector2f center =
       sf::Vector2f(scenarioBounds.left + scenarioBounds.width / 2.0f,
                    scenarioBounds.top + scenarioBounds.height / 2.0f);
-  sf::Vector2f size = sf::Vector2f(squareSide, squareSide) *
-                      std::max(scenarioBounds.width / squareSide,
-                               scenarioBounds.height / squareSide);
+  sf::Vector2f size =
+      sf::Vector2f(kSquareSide, kSquareSide) *
+      std::max(scenarioBounds.width / static_cast<float>(kSquareSide),
+               scenarioBounds.height / static_cast<float>(kSquareSide));
   sf::View view(center, size);
   if (object != nullptr) {
     view.rotate(-geometry::utils::Degrees(object->heading()) + 90.0f);
@@ -1029,7 +998,7 @@ NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
   sf::Image img = texture->getTexture().copyToImage();
   unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
 
-  return NdArray<unsigned char>({squareSide, squareSide,
+  return NdArray<unsigned char>({kSquareSide, kSquareSide,
                                  /*channels=*/int64_t(4)},
                                 pixelsArr);
 }
