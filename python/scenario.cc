@@ -30,6 +30,8 @@ void DefineScenario(py::module& m) {
            py::return_value_policy::reference)
       .def("getObjectsThatMoved", &Scenario::getObjectsThatMoved,
            py::return_value_policy::reference)
+      .def("getRoadObjects", &Scenario::getRoadObjects,
+           py::return_value_policy::reference)
       .def("getMaxEnvTime", &Scenario::getMaxEnvTime)
       .def("getRoadLines", &Scenario::getRoadLines)
       .def(
