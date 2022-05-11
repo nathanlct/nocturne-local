@@ -1,6 +1,7 @@
 # TODO(ev) refactor, this is wildly similar to visualize_sample_factory
 # run a policy over the entire train set
 
+from copy import deepcopy
 from collections import deque
 import itertools
 import json
@@ -111,13 +112,13 @@ def enjoy(cfgs, max_num_frames=1e9):
                     for key, x in obs_torch.items():
                         obs_torch[key] = torch.from_numpy(x).to(device).float()
 
+                    obs_torch_2 = deepcopy(obs_torch)
                     policy_outputs = actor_1(obs_torch,
                                              rnn_states,
                                              with_action_distribution=True)
-                    policy_outputs_2 = actor_2(obs_torch,
+                    policy_outputs_2 = actor_2(obs_torch_2,
                                                rnn_states_2,
                                                with_action_distribution=True)
-
                     # sample actions from the distribution by default
                     # also update the indices that should be drawn from the second policy
                     # with its outputs
