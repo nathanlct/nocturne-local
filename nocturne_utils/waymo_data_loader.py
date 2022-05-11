@@ -22,12 +22,11 @@ import argparse
 def precompute_dataset(from_path, to_path, samples_per_file=5000):
     # get dataset files
     dataset_path = Path(from_path)
-    scenario_paths = list(dataset_path.iterdir())  # [:10]
+    scenario_paths = list(dataset_path.iterdir())[:10]
 
     # min and max timesteps (max included) that should be used in dataset trajectories
     tmin = 1
-    tmax = 89
-    n_times = tmax - tmin + 1
+    tmax = 90
 
     # create folder for precomputed dataset
     precomputed_dataset_path = Path(to_path)
@@ -48,6 +47,7 @@ def precompute_dataset(from_path, to_path, samples_per_file=5000):
     sample_count = 0
     total_sample_count = 0
     for path in tqdm(scenario_paths, unit='file'):
+        print(path)
         # create file
         f = open(precomputed_dataset_path / f'{i}.dataset.txt', 'w')
 
@@ -64,16 +64,17 @@ def precompute_dataset(from_path, to_path, samples_per_file=5000):
                     sa_nan = False
 
                     # get action
-                    expert_action = np.array(scenario.getExpertAction(veh.getID(), time))
+                    expert_action = np.array(scenario.getExpertAction(veh.getID(), time), copy=False)
                     if np.isnan(expert_action).any():
                         a_nan_count += 1
                         sa_nan = True
-                    
+
                     # get state
                     veh_state = np.concatenate((
-                        scenario.ego_state(veh),
-                        scenario.flattened_visible_state(veh, view_dist=120, view_angle=3.14)
+                        np.array(scenario.ego_state(veh), copy=False),
+                        np.array(scenario.flattened_visible_state(veh, view_dist=120, view_angle=3.14), copy=False)
                     ))
+
                     if np.isnan(veh_state).any():
                         s_nan_count += 1
                         sa_nan = True
@@ -205,7 +206,7 @@ if __name__== '__main__':
     data_path = './dataset/json_files'
     data_precomputed_path = './dataset/json_files_precomputed'
     lr = 3e-4
-    batch_size = 32768
+    batch_size = 4096
     n_epochs = 200
     n_workers_dataloader = 8
     device = "cpu"  # "cuda" if torch.cuda.is_available() else "cpu"
@@ -261,9 +262,9 @@ if __name__== '__main__':
         avg_losses.append(np.mean(losses))
         print(f'avg training loss this epoch: {np.mean(losses):.3f}')
 
-    model_path = 'model.pth'
-    torch.save(model, model_path)
-    print(f'\nSaved model at {model_path}')
+        model_path = 'model.pth'
+        torch.save(model, model_path)
+        print(f'\nSaved model at {model_path}')
 
     print('Average losses', avg_losses)
 
