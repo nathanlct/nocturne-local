@@ -172,6 +172,8 @@ class ImitationAgent(nn.Module):
         self.n_states = n_states
         self.n_actions = n_actions
 
+        self.deterministic = False
+
         self.nn = nn.Sequential(
             nn.Linear(in_features=n_states, out_features=n_hidden, bias=True),
             nn.Tanh(),
@@ -189,7 +191,10 @@ class ImitationAgent(nn.Module):
 
     def forward(self, x):
         m = self.dist(x)
-        return m.sample()
+        if self.deterministic:
+            return m.mean
+        else:
+            return m.sample()
 
 
 if __name__== '__main__':
