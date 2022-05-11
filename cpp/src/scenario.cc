@@ -676,28 +676,28 @@ bool Scenario::checkForCollision(const Object& object,
   return geometry::Intersects(segment, object.BoundingPolygon());
 }
 
-// TODO(ev) make smoother, also maybe return something named so that
-// it's clear what's accel and what's steeringAngle
 std::vector<float> Scenario::getExpertAction(int objID, int timeIdx) {
-  // we want to return accel, steering angle
-  // so first we get the accel
   geometry::Vector2D accel_vec =
       (expertSpeeds[objID][timeIdx + 1] - expertSpeeds[objID][timeIdx - 1]) /
       0.2;
-  float accel = accel_vec.Norm();
-  float speed = expertSpeeds[objID][timeIdx].Norm();
-  float dHeading = (expertHeadings[objID][timeIdx + 1] -
-                    expertHeadings[objID][timeIdx - 1]) /
-                   0.2;
+  const float accel = accel_vec.Norm();
+  const float speed = expertSpeeds[objID][timeIdx].Norm();
+  const float dHeading =
+      geometry::utils::AngleSub<float>(expertHeadings[objID][timeIdx + 1],
+                                       expertHeadings[objID][timeIdx - 1]) /
+      0.2;
   float steeringAngle;
-  if (speed > 0.0) {
-    steeringAngle = asin(dHeading / speed * lengths[objID]);
+  if (speed > 0) {
+    const float dt = 0.1;
+    const float c = lengths[objID] * dHeading / (speed + accel * dt) / dt;
+    steeringAngle = atan(2 * c / sqrt(4 - c * c));
   } else {
-    steeringAngle = 0.0;
+    steeringAngle = 0;
   }
-  std::vector<float> expertAction = {accel, steeringAngle};
+
+  const std::vector<float> expertAction = {accel, steeringAngle};
   return expertAction;
-};
+}
 
 bool Scenario::hasExpertAction(int objID, unsigned int timeIdx) {
   // The user requested too large a point or a point that
