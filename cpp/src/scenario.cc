@@ -808,10 +808,7 @@ NdArray<unsigned char> Scenario::getCone(
   // TODO(ev) do this for road objects too
   // draw obstructions
   if (obscuredView == true) {
-    std::vector<std::shared_ptr<Vehicle>> roadObjects =
-        getVehicles();  // todo optimize with objects in range only (quadtree?)
-
-    for (const auto& obj : roadObjects) {
+    for (const auto& obj : getVehicles()) {
       if (obj.get() != object && obj->can_block_sight()) {
         const auto lines = obj->BoundingPolygon().Edges();
         // auto lines = obj->getLines();
