@@ -39,6 +39,7 @@ void DefineObject(py::module& m) {
       .def_property("expert_control", &Object::expert_control,
                     &Object::set_expert_control)
       .def_property_readonly("collided", &Object::collided)
+      .def_property_readonly("collision_type", &Object::collision_type)
       .def("set_position",
            py::overload_cast<float, float>(&Object::set_position))
       .def("set_destination",

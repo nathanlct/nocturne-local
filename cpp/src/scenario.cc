@@ -363,7 +363,7 @@ void Scenario::step(float dt) {
   for (auto& object : roadObjects) {
     // reset the collision flags for the objects before stepping
     // we do not want to label a vehicle as persistently having collided
-    object->set_collided(false);
+    object->reset_collision();
     if (!object->expert_control()) {
       object->Step(dt);
     } else {
@@ -399,6 +399,7 @@ void Scenario::updateCollision() {
       }
       if (checkForCollision(*obj1, *obj2)) {
         obj1->set_collided(true);
+        obj1->set_collision_type("vehicle_collision");
         const_cast<Object*>(obj2)->set_collided(true);
       }
     }
@@ -409,6 +410,7 @@ void Scenario::updateCollision() {
         line_segment_bvh_.IntersectionCandidates<geometry::LineSegment>(*obj);
     for (const auto* seg : candidates) {
       if (checkForCollision(*obj, *seg)) {
+        obj->set_collision_type("road_collision");
         obj->set_collided(true);
       }
     }
