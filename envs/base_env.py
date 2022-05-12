@@ -44,6 +44,7 @@ class BaseEnv(MultiAgentEnv):
         self.vehicles = self.scenario.getObjectsThatMoved()
         self.single_agent_mode = cfg['single_agent_mode']
         self.cfg = cfg
+        self.seed(cfg['seed'])
         self.episode_length = cfg['episode_length']
         self.t = 0
         self.step_num = 0
