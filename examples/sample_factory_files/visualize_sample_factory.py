@@ -25,6 +25,8 @@ from sample_factory.utils.utils import log, AttrDict
 
 from run_sample_factory import register_custom_components
 
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL
+
 
 def enjoy(cfg, max_num_frames=1e9):
     cfg = load_from_checkpoint(cfg)
@@ -223,6 +225,7 @@ def main():
     cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
     cfg_dict['continuous_actions_sample'] = True
     cfg_dict['discrete_actions_sample'] = True
+    cfg_dict['scenario_path'] = PROCESSED_VALID_NO_TL
 
     class Bunch(object):
 

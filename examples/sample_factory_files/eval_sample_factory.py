@@ -25,7 +25,7 @@ from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
 from run_sample_factory import register_custom_components
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL
 
 
 def enjoy(cfgs, max_num_frames=1e9):
@@ -70,30 +70,50 @@ def enjoy(cfgs, max_num_frames=1e9):
         actor_critic.load_state_dict(checkpoint_dict['model'])
         actor_critics.append([i, actor_critic])
 
-    episode_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
-    true_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
-
     goal_array = np.zeros((len(actor_critics), len(actor_critics)))
     collision_array = np.zeros((len(actor_critics), len(actor_critics)))
+    success_rate_by_num_agents = np.zeros(
+        (len(actor_critics), len(actor_critics), cfg.max_num_vehicles, 3))
+    # we bin the success rate into bins of 10 meters between 0 and 400
+    # the second dimension is the counts
+    distance_bins = np.linspace(0, 400, 40)
+    success_rate_by_distance = np.zeros(
+        (len(actor_critics), len(actor_critics), distance_bins.shape[-1], 3))
+    f_path = PROCESSED_VALID_NO_TL
+    with open(os.path.join(f_path, 'valid_files.txt')) as file:
+        files = [line.strip() for line in file]
+    # with open(os.path.join(f_path,
+    #                        'invalid_files.txt')) as file:
+    #     files += [line.strip() for line in file]
+    # np.random.shuffle(files)
+
     for (index_1, actor_1), (index_2, actor_2) in itertools.product(
             actor_critics, actor_critics):
+        episode_rewards = [
+            deque([], maxlen=100) for _ in range(env.num_agents)
+        ]
+        true_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
         goal_frac = 0
         collision_frac = 0
-        for i, file in enumerate(os.listdir(PROCESSED_TRAIN_NO_TL)[0:100]):
+        for file_num, file in enumerate(files[0:200]):
+            # for i, file in enumerate(os.listdir(files)[0:100]):
 
             num_frames = 0
-            env.files = [os.path.join(PROCESSED_TRAIN_NO_TL, file)]
+            env.unwrapped.files = [os.path.join(f_path, file)]
             obs = env.reset()
+            # some key information for tracking statistics
+            goal_dist = env.goal_dist_normalizers
             valid_indices = env.valid_indices
-            indices_1 = []
-            indices_2 = []
+            agent_id_to_env_id_map = env.agent_id_to_env_id_map
             # pick which valid indices go to which policy
-            for index in valid_indices:
-                val = np.random.uniform()
-                if val < 0.5:
-                    indices_1.append(index)
-                else:
-                    indices_2.append(index)
+            val = np.random.uniform()
+            if val < 0.5:
+                num_choice = int(np.floor(len(valid_indices) / 2.0))
+            else:
+                num_choice = int(np.ceil(len(valid_indices) / 2.0))
+            indices_1 = list(
+                np.random.choice(valid_indices, num_choice, replace=False))
+            indices_2 = [val for val in valid_indices if val not in indices_1]
             rnn_states = torch.zeros(
                 [env.num_agents, get_hidden_size(cfg)],
                 dtype=torch.float32,
@@ -104,7 +124,8 @@ def enjoy(cfgs, max_num_frames=1e9):
                 device=device)
             episode_reward = np.zeros(env.num_agents)
             finished_episode = [False] * env.num_agents
-            goal_achieved = [False] * len(env.valid_indices)
+            goal_achieved = [False] * len(valid_indices)
+            collision_observed = [False] * len(valid_indices)
 
             while not all(finished_episode):
                 with torch.no_grad():
@@ -119,6 +140,7 @@ def enjoy(cfgs, max_num_frames=1e9):
                     policy_outputs_2 = actor_2(obs_torch_2,
                                                rnn_states_2,
                                                with_action_distribution=True)
+
                     # sample actions from the distribution by default
                     # also update the indices that should be drawn from the second policy
                     # with its outputs
@@ -149,9 +171,14 @@ def enjoy(cfgs, max_num_frames=1e9):
                     for _ in range(render_action_repeat):
 
                         obs, rew, done, infos = env.step(actions)
-
                         episode_reward += rew
                         num_frames += 1
+
+                        for i, index in enumerate(valid_indices):
+                            goal_achieved[i] = infos[index][
+                                'goal_achieved'] or goal_achieved[i]
+                            collision_observed[i] = infos[index][
+                                'collided'] or collision_observed[i]
 
                         for agent_i, done_flag in enumerate(done):
                             if done_flag:
@@ -173,10 +200,6 @@ def enjoy(cfgs, max_num_frames=1e9):
                                     device=device)
                                 episode_reward[agent_i] = 0
 
-                        # if episode terminated synchronously for all agents, pause a bit before starting a new one
-                        if all(done):
-                            time.sleep(0.05)
-
                         if all(finished_episode):
                             avg_episode_rewards_str, avg_true_reward_str = '', ''
                             for agent_i in range(env.num_agents):
@@ -194,13 +217,35 @@ def enjoy(cfgs, max_num_frames=1e9):
                                 'goal_achieved']
                             avg_collisions = infos[0]['episode_extra_stats'][
                                 'collided']
-                            goal_frac += avg_goal
-                            collision_frac += avg_collisions
-                            log.info(
-                                f'Avg goal achieved, {goal_frac / (i + 1)}')
-                            log.info(
-                                f'Avg num collisions, {collision_frac / (i + 1)}'
-                            )
+                            goal_frac = (file_num * goal_frac +
+                                         avg_goal) / (file_num + 1)
+                            collision_frac = (file_num * collision_frac +
+                                              avg_collisions) / (file_num + 1)
+                            success_rate_by_num_agents[index_1, index_2,
+                                                       len(valid_indices) - 1,
+                                                       0] += avg_goal
+                            success_rate_by_num_agents[index_1, index_2,
+                                                       len(valid_indices) - 1,
+                                                       1] += avg_collisions
+                            success_rate_by_num_agents[index_1, index_2,
+                                                       len(valid_indices) - 1,
+                                                       2] += 1
+                            # track how well we do as a function of distance
+                            for i, index in enumerate(valid_indices):
+                                env_id = agent_id_to_env_id_map[index]
+                                bin = np.searchsorted(distance_bins,
+                                                      goal_dist[env_id])
+                                success_rate_by_distance[index_1, index_2,
+                                                         bin - 1,
+                                                         0] += goal_achieved[i]
+                                success_rate_by_distance[
+                                    index_1, index_2, bin - 1,
+                                    1] += collision_observed[i]
+                                success_rate_by_distance[index_1, index_2,
+                                                         bin - 1, 2] += 1
+                            # do some logging
+                            log.info(f'Avg goal achieved, {goal_frac}')
+                            log.info(f'Avg num collisions, {collision_frac}')
                             log.info(
                                 'Avg episode rewards: %s, true rewards: %s',
                                 avg_episode_rewards_str, avg_true_reward_str)
@@ -218,11 +263,23 @@ def enjoy(cfgs, max_num_frames=1e9):
         #            index_2] = goal_frac / len(os.listdir(PROCESSED_TEST_NO_TL))
         # collision_array[index_1, index_2] = collision_frac / len(
         #     os.listdir(PROCESSED_TEST_NO_TL))
-        goal_array[index_1, index_2] = goal_frac / (i + 1)
-        collision_array[index_1, index_2] = collision_frac / (i + 1)
+        goal_array[index_1, index_2] = goal_frac
+        collision_array[index_1, index_2] = collision_frac
 
-    np.savetxt('zsc_goal.txt', goal_array, delimiter=',')
-    np.savetxt('zsc_collision.txt', collision_array, delimiter=',')
+    np.savetxt('results/zsc_goal.txt', goal_array, delimiter=',')
+    np.savetxt('results/zsc_collision.txt', collision_array, delimiter=',')
+    with open('results/success_by_veh_number.npy', 'wb') as f:
+        success_ratio = np.nan_to_num(
+            success_rate_by_num_agents[:, :, :, 0:2] /
+            success_rate_by_num_agents[:, :, :, [2]])
+        print(success_ratio)
+        np.save(f, success_ratio)
+    with open('results/success_by_dist.npy', 'wb') as f:
+        dist_ratio = np.nan_to_num(success_rate_by_distance[:, :, :, 0:2] /
+                                   success_rate_by_distance[:, :, :, [2]])
+        print(dist_ratio)
+        np.save(f, dist_ratio)
+
     env.close()
 
     return ExperimentStatus.SUCCESS, np.mean(episode_rewards)
@@ -235,7 +292,8 @@ def main():
     register_custom_components()
     file_paths = [
         # '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/0/seed_sweepv2/cfg.json',
-        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/1/seed_sweepv2/cfg.json',
+        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.10/new_features/15.10.09/2/new_features/cfg.json',
+        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.10/new_features/15.10.09/4/new_features/cfg.json',
         # '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/2/seed_sweepv2/cfg.json',
     ]
     cfg_dicts = []

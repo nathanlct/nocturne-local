@@ -31,9 +31,13 @@ class BaseEnv(MultiAgentEnv):
         """
         super().__init__()
         self._skip_env_checking = True  # temporary fix for rllib env checking issue
+        self.files = []
         with open(os.path.join(cfg['scenario_path'],
                                'valid_files.txt')) as file:
             self.files = [line.strip() for line in file]
+        # with open(os.path.join(cfg['scenario_path'],
+        #                        'invalid_files.txt')) as file:
+        #     self.files += [line.strip() for line in file]
         if cfg['num_files'] != -1:
             self.files = self.files[0:cfg['num_files']]
         self.file = self.files[np.random.randint(len(self.files))]
@@ -257,13 +261,12 @@ class BaseEnv(MultiAgentEnv):
             if self.single_agent_mode and veh_id != self.single_agent_id:
                 continue
             # store normalizers for each vehicle
-            if self.cfg['rew_cfg']['shaped_goal_distance']:
-                obj_pos = veh_obj.getPosition()
-                obj_pos = np.array([obj_pos.x, obj_pos.y])
-                goal_pos = veh_obj.getGoalPosition()
-                goal_pos = np.array([goal_pos.x, goal_pos.y])
-                dist = np.linalg.norm(obj_pos - goal_pos)
-                self.goal_dist_normalizers[veh_id] = dist
+            obj_pos = veh_obj.getPosition()
+            obj_pos = np.array([obj_pos.x, obj_pos.y])
+            goal_pos = veh_obj.getGoalPosition()
+            goal_pos = np.array([goal_pos.x, goal_pos.y])
+            dist = np.linalg.norm(obj_pos - goal_pos)
+            self.goal_dist_normalizers[veh_id] = dist
             # compute the obs
             ego_obs = self.scenario.ego_state(veh_obj)
             if self.cfg['subscriber']['use_ego_state'] and self.cfg[
