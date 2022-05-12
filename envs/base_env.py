@@ -240,9 +240,18 @@ class BaseEnv(MultiAgentEnv):
             for veh in self.scenario.getObjectsThatMoved(
             )[self.cfg['max_num_vehicles']:]:
                 veh.expert_control = True
-            # check that we have at least one vehicle
-            if len(self.all_vehicle_ids) > 0:
+            # check that we have at least one vehicle or if we have just one file, exit anyways
+            # or else we might be stuck in an infinite loop
+            if len(self.all_vehicle_ids) > 0 or len(self.files) == 1:
                 enough_vehicles = True
+
+        # for one reason or another (probably we had a file where all the agents achieved their goals)
+        # we have no controlled vehicles
+        if len(self.all_vehicle_ids) == 0:
+            # just grab a vehicle even if it hasn't moved so that we have something
+            # to return obs for even if it's not controlled
+            self.vehicles = [self.scenario.getVehicles()[0]]
+            self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
 
         obs_dict = {}
         self.goal_dist_normalizers = {}
