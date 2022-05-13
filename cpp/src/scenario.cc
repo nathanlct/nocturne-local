@@ -1006,4 +1006,48 @@ NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
                                 pixelsArr);
 }
 
+
+/*********************** Drawing Functions *****************/
+
+sf::View Scenario::View(geometry::Vector2D view_center, float rotation,
+                        float view_width, float view_height, float target_width,
+                        float target_height, float padding) const {
+  // create view (note that the y coordinates and the view rotation are flipped
+  // because the scenario is always drawn with a horizontally flip transform)
+  const sf::Vector2f center = utils::ToVector2f(view_center, /*flip_y=*/true);
+  const sf::Vector2f size(view_width, view_height);
+  sf::View view(center, size);
+  view.setRotation(-rotation);
+
+  // compute the placement (viewport) of the view within its render target of
+  // size (target_width, target_height), so that it is centered with adequate
+  // padding and that proportions are keeped (ie. scale-to-fit)
+  const float min_ratio = std::min((target_width - 2 * padding) / view_width,
+                                   (target_height - 2 * padding) / view_height);
+  const float real_view_width_ratio = min_ratio * view_width / target_width;
+  const float real_view_height_ratio = min_ratio * view_height / target_height;
+  const sf::FloatRect viewport(
+      /*left=*/(1.0f - real_view_width_ratio) / 2.0f,
+      /*top=*/(1.0f - real_view_height_ratio) / 2.0f,
+      /*width=*/real_view_width_ratio,
+      /*height=*/real_view_height_ratio);
+  view.setViewport(viewport);
+
+  return view;
+}
+
+sf::View Scenario::View(float target_width, float target_height,
+                        float padding) const {
+  // compute center and size of view based on known scenario bounds
+  const geometry::Vector2D view_center(
+      road_network_bounds_.left + road_network_bounds_.width / 2.0f,
+      road_network_bounds_.top + road_network_bounds_.height / 2.0f);
+  const float view_width = road_network_bounds_.width;
+  const float view_height = road_network_bounds_.height;
+
+  // build the view from overloaded function
+  return View(view_center, 0.0f, view_width, view_height, target_width,
+              target_height, padding);
+}
+
 }  // namespace nocturne

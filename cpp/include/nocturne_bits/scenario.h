@@ -14,6 +14,7 @@
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
+#include "geometry/vector_2d.h"
 #include "ndarray.h"
 #include "object.h"
 #include "object_base.h"
@@ -85,6 +86,27 @@ class Scenario : public sf::Drawable {
           timeIdx);  // given the currIndex, figure out if we actually can
                      // compute an expert action given the valid vector
   std::vector<bool> getValidExpertStates(int objID);
+
+  /*********************** Drawing Functions *****************/
+
+ private:
+  // Computes and returns an `sf::View` of size (`view_width`, `view_height`)
+  // (in scenario coordinates), centered around `view_center` (in scenario
+  // coordinates) and rotated by `rotation` radians. The view is mapped to a
+  // viewport of size (`target_width`, `target_height`) pixels, with a minimum
+  // padding of `padding` pixels between the scenario boundaries and the
+  // viewport border. A scale-to-fit transform is applied so that the scenario
+  // view is scaled to fit the viewport (minus padding) without changing the
+  // width:height ratio of the captured view.
+  sf::View View(geometry::Vector2D view_center, float rotation,
+                float view_width, float view_height, float target_width,
+                float target_height, float padding) const;
+
+  // Computes and returns an `sf::View``, mapping the whole scenario into a
+  // viewport of size (`target_width`, `target_height`) pixels with a minimum
+  // padding of `padding` pixels around the scenario. See the other definition
+  // of `sf::View View` for more information.
+  sf::View View(float target_width, float target_height, float padding) const;
 
   /*********************** State Accessors *******************/
   std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
