@@ -41,8 +41,8 @@ class ObjectBase : public sf::Drawable, public geometry::AABBInterface {
   bool can_be_collided() const { return can_be_collided_; }
   bool check_collision() const { return check_collision_; }
   bool collided() const { return collided_; }
-  enum CollisionType collision_type() const { return collision_type_; }
-  void set_collision_type(enum CollisionType collision_type) {
+  CollisionType collision_type() const { return collision_type_; }
+  void set_collision_type(CollisionType collision_type) {
     collision_type_ = collision_type;
   }
   void reset_collision() {
@@ -66,7 +66,7 @@ class ObjectBase : public sf::Drawable, public geometry::AABBInterface {
   const bool can_be_collided_ = false;
   const bool check_collision_ = false;
   bool collided_ = false;
-  enum CollisionType collision_type_ = CollisionType::kNotCollided;
+  CollisionType collision_type_ = CollisionType::kNotCollided;
 };
 
 }  // namespace nocturne
