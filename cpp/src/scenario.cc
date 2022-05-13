@@ -309,7 +309,7 @@ void Scenario::loadScenario(std::string path) {
       roadLines.push_back(roadLine);
     }
   }
-  roadNetworkBounds = sf::FloatRect(min_x, min_y, max_x - min_x, max_y - min_y);
+  road_network_bounds_ = sf::FloatRect(min_x, min_y, max_x - min_x, max_y - min_y);
 
   // Now create the BVH for the line segments
   // Since the line segments never move we only need to define this once
@@ -742,10 +742,6 @@ void Scenario::removeVehicle(Vehicle* object) {
   vehicle_bvh_.InitHierarchy(roadObjects);
 }
 
-sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
-  return roadNetworkBounds;
-}
-
 NdArray<unsigned char> Scenario::getCone(
     Object* object, float viewDist, float viewAngle, float headTilt,
     bool obscuredView) {  // args in radians
@@ -937,7 +933,7 @@ NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
 
   // same as in Simulation.cpp
   float padding = 0.0f;
-  sf::FloatRect scenarioBounds = getRoadNetworkBoundaries();
+  sf::FloatRect scenarioBounds = road_network_bounds_;
   scenarioBounds.top = -scenarioBounds.top - scenarioBounds.height;
   scenarioBounds.top -= padding;
   scenarioBounds.left -= padding;

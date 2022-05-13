@@ -89,7 +89,7 @@ class Scenario : public sf::Drawable {
 
   /*********************** Drawing Functions *****************/
 
- private:
+ public:
   // Computes and returns an `sf::View` of size (`view_width`, `view_height`)
   // (in scenario coordinates), centered around `view_center` (in scenario
   // coordinates) and rotated by `rotation` radians. The view is mapped to a
@@ -108,11 +108,13 @@ class Scenario : public sf::Drawable {
   // of `sf::View View` for more information.
   sf::View View(float target_width, float target_height, float padding) const;
 
+private:
+
   /*********************** State Accessors *******************/
+
+public:
   std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
       Object* sourceObject);
-
-  sf::FloatRect getRoadNetworkBoundaries() const;
 
   NdArray<unsigned char> getCone(Object* object, float viewDist = 60.0f,
                                  float viewAngle = geometry::utils::kHalfPi,
@@ -223,7 +225,7 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<Object>> objectsThatMoved;
 
   std::unique_ptr<sf::RenderTexture> image_texture_ = nullptr;
-  sf::FloatRect roadNetworkBounds;
+  sf::FloatRect road_network_bounds_;
 };
 
 }  // namespace nocturne
