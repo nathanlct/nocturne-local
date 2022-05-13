@@ -1,7 +1,4 @@
-import os
-
 import numpy as np
-import matplotlib.pyplot as plt
 from pyvirtualdisplay import Display
 
 from cfgs.config import PROJECT_PATH
@@ -9,8 +6,6 @@ from nocturne import Simulation
 
 
 def test_state_subscribers():
-
-    os.environ["DISPLAY"] = ":0.0"
     sim = Simulation(scenario_path=str(PROJECT_PATH /
                                        'tests/scenario_test.json'))
     scenario = sim.getScenario()
@@ -30,7 +25,6 @@ def test_state_subscribers():
     num_object_states = scenario.getObjectFeatureSize()
     max_num_visible_road_points = scenario.getMaxNumVisibleRoadPoints()
     num_road_point_states = scenario.getRoadPointFeatureSize()
-    max_num_visible_stop_signs = scenario.getMaxNumVisibleStopSigns()
     num_stop_sign_states = scenario.getStopSignsFeatureSize()
     max_num_visible_tl_signs = scenario.getMaxNumVisibleTrafficLights()
     num_tl_states = scenario.getTrafficLightFeatureSize()
@@ -117,4 +111,6 @@ def test_state_subscribers():
 
 
 if __name__ == '__main__':
+    disp = Display()
+    disp.start()
     test_state_subscribers()

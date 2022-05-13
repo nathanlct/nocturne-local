@@ -1,9 +1,7 @@
 """Each agent receives its observation, a goal position, and tries to get there without colliding."""
 
-from copy import copy
 from collections import defaultdict
 import os
-import time
 
 from gym.spaces import Box, Discrete
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
@@ -26,7 +24,7 @@ class BaseEnv(MultiAgentEnv):
             cfg ([type]): configuration file describing the experiment
             should_terminate (bool, optional): if true, agents continue to receive a -1 vector as their observations
                 even after their rollouts are terminated. This is used for algorithms (like some PPO implementations)
-                that insist that the number of agents throughout an episode are consistent. 
+                that insist that the number of agents throughout an episode are consistent.
             rank (int, optional): [description]. Defaults to 0.
         """
         super().__init__()
@@ -103,7 +101,6 @@ class BaseEnv(MultiAgentEnv):
         self.t += self.cfg['dt']
         self.step_num += 1
         objs_to_remove = []
-        t = time.time()
         for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
             veh_id = veh_obj.getID()
             if self.single_agent_mode and veh_id != self.single_agent_id:
@@ -130,7 +127,9 @@ class BaseEnv(MultiAgentEnv):
             obj_pos = np.array([obj_pos.x, obj_pos.y])
             goal_pos = veh_obj.getGoalPosition()
             goal_pos = np.array([goal_pos.x, goal_pos.y])
-            ######################## Compute rewards #######################
+            '''############################################
+                            Compute rewards
+               ############################################'''
             if np.linalg.norm(goal_pos - obj_pos) < rew_cfg['goal_tolerance']:
                 info_dict[veh_id]['goal_achieved'] = True
                 rew_dict[veh_id] += rew_cfg['goal_achieved_bonus'] / rew_cfg[
@@ -156,8 +155,9 @@ class BaseEnv(MultiAgentEnv):
                         (goal_pos - obj_pos), ord=2) /
                                          self.goal_dist_normalizers[veh_id]
                                          ) / rew_cfg['reward_scaling']
-
-            ######################## Handle potential done conditions #######################
+            '''############################################
+                    Handle potential done conditions
+            ############################################'''
             # achieved our goal
             if info_dict[veh_id]['goal_achieved']:
                 done_dict[veh_id] = True
@@ -222,7 +222,6 @@ class BaseEnv(MultiAgentEnv):
                 obj_pos = np.array([obj_pos.x, obj_pos.y])
                 goal_pos = veh_obj.getGoalPosition()
                 goal_pos = np.array([goal_pos.x, goal_pos.y])
-                ######################## Compute rewards #######################
                 if np.linalg.norm(goal_pos - obj_pos
                                   ) < self.cfg['rew_cfg']['goal_tolerance']:
                     self.scenario.removeVehicle(veh_obj)
@@ -234,8 +233,9 @@ class BaseEnv(MultiAgentEnv):
             self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
             # check if we have less than the desired number of vehicles and have
             # at least one vehicle
-            if len(self.all_vehicle_ids) <= self.cfg['max_num_vehicles'] \
-                and len(self.all_vehicle_ids) > 0:
+            if len(self.all_vehicle_ids
+                   ) <= self.cfg['max_num_vehicles'] and len(
+                       self.all_vehicle_ids) > 0:
                 too_many_vehicles = False
 
         obs_dict = {}

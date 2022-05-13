@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import multiprocessing
 
-from cfgs.config import PROCESSED_TRAIN, TRAIN_DATA_PATH, VALID_DATA_PATH, TEST_DATA_PATH, PROCESSED_TRAIN_NO_TL, \
+from cfgs.config import TRAIN_DATA_PATH, VALID_DATA_PATH, TEST_DATA_PATH, PROCESSED_TRAIN_NO_TL, \
     PROCESSED_VALID_NO_TL, PROCESSED_TEST_NO_TL, PROCESSED_TRAIN, PROCESSED_TEST, PROCESSED_VALID
 import waymo_scenario_construction as waymo
 
@@ -44,12 +44,10 @@ def main():
     parser.add_argument("--all_files",
                         action='store_true',
                         help='If true, iterate through the whole dataset')
-    parser.add_argument(
-        "--no_tl",
-        action='store_true',
-        help=
-        "If true, do not generate JSON files that have a traffic light in them"
-    )
+    parser.add_argument("--no_tl",
+                        action='store_true',
+                        help="If true, do not generate JSON files \
+            that have a traffic light in them")
     parser.add_argument(
         "--parallel",
         action='store_true',
