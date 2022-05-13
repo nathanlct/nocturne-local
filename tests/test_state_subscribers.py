@@ -53,8 +53,8 @@ def test_state_subscribers():
                                  num_object_states:max_num_visible_objects *
                                  num_object_states + num_road_point_states * 2]
     np.testing.assert_allclose(road_point_state, [
-        1, 10.0 * np.sqrt(2), -np.pi / 4, 0, 0, 0, 1, 0, 0, 0, 1,
-        11.0 * np.sqrt(2), -np.pi / 4, 0, 0, 0, 1, 0, 0, 0
+        1, 10.0 * np.sqrt(2), -np.pi / 4, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1,
+        11.0 * np.sqrt(2), -np.pi / 4, 0, 0, 0, 0, 0, 1, 0, 0, 0
     ],
                                rtol=1e-5,
                                atol=1e-5)
@@ -103,8 +103,8 @@ def test_state_subscribers():
                                  num_object_states:max_num_visible_objects *
                                  num_object_states + num_road_point_states * 2]
     np.testing.assert_allclose(road_point_state, [
-        1, 10.0 * np.sqrt(2), 0, 0, 0, 0, 1, 0, 0, 0, 1, 11.0 * np.sqrt(2), 0,
-        0, 0, 0, 1, 0, 0, 0
+        1, 10.0 * np.sqrt(2), 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1,
+        11.0 * np.sqrt(2), 0, 0, 0, 0, 0, 0, 1, 0, 0, 0
     ],
                                rtol=1e-5,
                                atol=1e-5)
