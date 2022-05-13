@@ -23,8 +23,6 @@ void DefineObject(py::module& m) {
 
   py::class_<Object, std::shared_ptr<Object>>(m, "Object")
       .def_property_readonly("type", &Object::Type)
-      // "type",
-      // [](const Object& obj) { return static_cast<int64_t>(obj.Type()); })
       .def_property_readonly("id", &Object::id)
       .def_property_readonly("length", &Object::length)
       .def_property_readonly("width", &Object::width)
