@@ -22,3 +22,4 @@ dependencies:
     - pytest==7.1.1
     - flake8==4.0.1
     - pydocstyle==6.1.1
+    - pyvirtualdisplay
