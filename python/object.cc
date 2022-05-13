@@ -18,7 +18,7 @@ void DefineObject(py::module& m) {
       .value("VEHICLE", ObjectType::kVehicle)
       .value("PEDESTRIAN", ObjectType::kPedestrian)
       .value("CYCLIST", ObjectType::kCyclist)
-      .value("Other", ObjectType::kOther)
+      .value("OTHER", ObjectType::kOther)
       .export_values();
 
   py::class_<Object, std::shared_ptr<Object>>(m, "Object")
