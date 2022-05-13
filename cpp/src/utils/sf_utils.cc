@@ -10,13 +10,19 @@ namespace utils {
 
 namespace {
 
-#if defined(_APPLE_) && defined(_MACH_)
+#if defined(__APPLE__)  // OSX
 
 std::vector<std::string> GetFontPaths() {
   return {"/System/Library/Fonts/Supplemental/", "~/Library/Fonts/"};
 }
 
-#else  // defined(_APPLE_) && defined(_MACH_)
+#elif defined(_WIN32)  // Windows 32 bit or 64 bit
+
+std::vector<std::string> GetFontPaths() {
+  return {"C:/Windows/Fonts/"};
+}
+
+#else  // Linux
 
 std::vector<std::string> GetFontPaths() {
   const std::string username = std::getenv("USER");
@@ -25,7 +31,7 @@ std::vector<std::string> GetFontPaths() {
           "/private/home/" + username + "/.fonts/"};
 }
 
-#endif  // defined(_APPLE_) && defined(_MACH_)
+#endif
 
 bool FindFontPath(const std::string& font_name, std::string& font_path) {
   const std::vector<std::string> font_paths = GetFontPaths();
@@ -42,7 +48,7 @@ bool FindFontPath(const std::string& font_name, std::string& font_path) {
 
 }  // namespace
 
-sf::Font GetFont(const std::string& font_name) {
+sf::Font LoadFont(const std::string& font_name) {
   std::string font_path;
   sf::Font font;
   if (!FindFontPath(font_name, font_path) || !font.loadFromFile(font_path)) {

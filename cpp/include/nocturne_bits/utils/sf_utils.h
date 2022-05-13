@@ -7,13 +7,9 @@
 namespace nocturne {
 namespace utils {
 
-// @brief Load a font file from the system.
-// Font files are currently searched in standard Linux and macOS paths.
-//
-// @param fontName name of the font file (eg "Arial.ttf")
-// @return sf::Font
-// @throw std::invalid_argument if font file is not found
-sf::Font GetFont(const std::string& font_name);
+// Loads a font file `font_name` from the system (eg Arial.ttf).
+// Font files are currently searched in standard Linux, macOS and Windows paths.
+sf::Font LoadFont(const std::string& font_name);
 
 inline sf::Vector2f ToVector2f(const geometry::Vector2D& vec,
                                bool flip_y = false) {

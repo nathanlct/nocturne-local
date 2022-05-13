@@ -14,7 +14,7 @@ void Simulation::Render() {
     render_window_ = std::make_unique<sf::RenderWindow>(
         sf::VideoMode(kWinWidth, kWinHeight), "Nocturne", sf::Style::Default,
         settings);
-    font_ = utils::GetFont("Arial.ttf");
+    font_ = utils::LoadFont("Arial.ttf");
   }
   if (render_window_->isOpen()) {
     sf::Time elapsed = clock_.restart();
