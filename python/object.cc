@@ -19,10 +19,16 @@ void DefineObject(py::module& m) {
       .value("VEHICLE_ROAD", CollisionType::kVehicleRoadEdgeCollision)
       .export_values();
 
+  py::enum_<ObjectType>(m, "ObjectType")
+      .value("UNSET", ObjectType::kUnset)
+      .value("VEHICLE", ObjectType::kVehicle)
+      .value("PEDESTRIAN", ObjectType::kPedestrian)
+      .value("CYCLIST", ObjectType::kCyclist)
+      .value("OTHER", ObjectType::kOther)
+      .export_values();
+
   py::class_<Object, std::shared_ptr<Object>>(m, "Object")
-      .def_property_readonly(
-          "type",
-          [](const Object& obj) { return static_cast<int64_t>(obj.Type()); })
+      .def_property_readonly("type", &Object::Type)
       .def_property_readonly("id", &Object::id)
       .def_property_readonly("length", &Object::length)
       .def_property_readonly("width", &Object::width)
