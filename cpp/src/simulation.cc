@@ -65,30 +65,9 @@ void Simulation::SaveScreenshot() {
 }
 
 void Simulation::UpdateView(float padding) const {
-  // TODO(nl) memoize this since its called at every render
-
-  // get rectangle boundaries of the road
-  sf::FloatRect scenarioBounds = scenario_->getRoadNetworkBoundaries();
-
-  // account for the horizontal flip transform ((x,y) becomes (x,-y))
-  scenarioBounds.top = -scenarioBounds.top - scenarioBounds.height;
-
-  // add padding all around
-  scenarioBounds.top -= padding;
-  scenarioBounds.left -= padding;
-  scenarioBounds.width += 2 * padding;
-  scenarioBounds.height += 2 * padding;
-
-  // create the view
-  sf::Vector2u winSize = render_window_->getSize();
-  sf::Vector2f center =
-      sf::Vector2f(scenarioBounds.left + scenarioBounds.width / 2.0f,
-                   scenarioBounds.top + scenarioBounds.height / 2.0f);
-  sf::Vector2f size = sf::Vector2f(winSize.x, winSize.y) *
-                      std::max(scenarioBounds.width / winSize.x,
-                               scenarioBounds.height / winSize.y);
-  sf::View view(center, size);
-  render_window_->setView(view);
+  const sf::Vector2u win_size = render_window_->getSize();
+  const sf::View scenario_view = scenario_->View(win_size.x, win_size.y, padding);
+  render_window_->setView(scenario_view);
 }
 
 }  // namespace nocturne
