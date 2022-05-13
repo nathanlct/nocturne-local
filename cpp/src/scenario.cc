@@ -691,31 +691,6 @@ std::vector<bool> Scenario::getValidExpertStates(int objID) {
   return expertValid[objID];
 }
 
-void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
-  // for (const auto& road : roads) {
-  //   target.draw(*road, states);
-  // }
-  for (const auto& object : roadLines) {
-    target.draw(*object, states);
-  }
-  for (const auto& object : trafficLights) {
-    target.draw(*object, states);
-  }
-  for (const auto& object : stopSigns) {
-    target.draw(*object, states);
-  }
-  for (const auto& object : roadObjects) {
-    target.draw(*object, states);
-    // draw goal destination
-    float radius = 2;
-    sf::CircleShape ptShape(radius);
-    ptShape.setOrigin(radius, radius);
-    ptShape.setFillColor(object->color());
-    ptShape.setPosition(utils::ToVector2f(object->destination()));
-    target.draw(ptShape, states);
-  }
-}
-
 void Scenario::removeVehicle(Vehicle* object) {
   for (auto it = vehicles.begin(); it != vehicles.end();) {
     if ((*it).get() == object) {
@@ -1061,6 +1036,28 @@ Scenario::VehiclesDestinationsDrawables(Object* source, float radius) const {
     destination_drawables.push_back(std::move(circle_shape));
   }
   return destination_drawables;
+}
+
+void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
+  sf::Transform horizontal_flip;
+  horizontal_flip.scale(1, -1);
+  sf::View view = View(target.getSize().x, target.getSize().y, 50.0f);
+  DrawOnTarget(target, roadLines, view, horizontal_flip);
+  DrawOnTarget(target, roadObjects, view, horizontal_flip);
+  DrawOnTarget(target, trafficLights, view, horizontal_flip);
+  DrawOnTarget(target, stopSigns, view, horizontal_flip);
+  DrawOnTarget(target, VehiclesDestinationsDrawables(), view, horizontal_flip);
+}
+
+template <typename P>
+void Scenario::DrawOnTarget(sf::RenderTarget& target,
+                            const std::vector<P>& drawables,
+                            const sf::View& view,
+                            const sf::Transform& transform) const {
+  target.setView(view);
+  for (const P& drawable : drawables) {
+    target.draw(*drawable, transform);
+  }
 }
 
 }  // namespace nocturne

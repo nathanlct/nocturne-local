@@ -116,6 +116,18 @@ class Scenario : public sf::Drawable {
   std::vector<std::unique_ptr<sf::CircleShape>> VehiclesDestinationsDrawables(
       Object* source = nullptr, float radius = 2.0f) const;
 
+  // Draws the scenario to a render target. This is used by SFML to know how
+  // to draw classes inheriting sf::Drawable.
+  void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
+
+  // Draws the objects contained in `drawables` on the render target `target`.
+  // The view `view` is applied to the target before drawing the objects, and
+  // the transform `transform` is applied when drawing each object. `drawables`
+  // should contain pointers to objects inheriting from sf::Drawable.
+  template <typename P>
+  void DrawOnTarget(sf::RenderTarget& target, const std::vector<P>& drawables,
+                    const sf::View& view, const sf::Transform& transform) const;
+
   /*********************** State Accessors *******************/
 
  public:
@@ -184,8 +196,6 @@ class Scenario : public sf::Drawable {
  protected:
   // update the collision status of all objects
   void updateCollision();
-
-  void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 
   std::tuple<std::vector<const ObjectBase*>, std::vector<const ObjectBase*>,
              std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
