@@ -115,7 +115,7 @@ class Scenario : public sf::Drawable {
   // scenario if `source == nullptr`. Each goal is represented as a circle of
   // radius `radius`.
   std::vector<std::unique_ptr<sf::CircleShape>> VehiclesDestinationsDrawables(
-      Object* source = nullptr, float radius = 2.0f) const;
+      const Object* source = nullptr, float radius = 2.0f) const;
 
   // Draws the scenario to a render target. This is used by SFML to know how
   // to draw classes inheriting sf::Drawable.
@@ -129,7 +129,7 @@ class Scenario : public sf::Drawable {
   void DrawOnTarget(sf::RenderTarget& target, const std::vector<P>& drawables,
                     const sf::View& view, const sf::Transform& transform) const;
 
-public:
+ public:
   NdArray<unsigned char> Image(uint64_t img_width = 500,
                                uint64_t img_height = 500,
                                bool draw_destinations = true,
@@ -137,6 +137,12 @@ public:
                                uint64_t view_width = 200,
                                uint64_t view_height = 200,
                                bool rotate_with_source = true) const;
+
+  NdArray<unsigned char> EgoVehicleFeaturesImage(
+      const Object& source, float view_dist = 120.0f,
+      float view_angle = geometry::utils::kPi * 0.8f, float head_tilt = 0.0f,
+      uint64_t img_width = 500, uint64_t img_height = 500, float padding = 0.0f,
+      bool draw_source = true, bool draw_destination = true) const;
 
   NdArray<unsigned char> getCone(Object* object, float viewDist = 60.0f,
                                  float viewAngle = geometry::utils::kHalfPi,
@@ -180,10 +186,11 @@ public:
 
   std::unordered_map<std::string, NdArray<float>> VisibleState(
       const Object& src, float view_dist, float view_angle,
-      bool padding = false) const;
+      float head_tilt = 0.0f, bool padding = false) const;
 
   NdArray<float> FlattenedVisibleState(const Object& src, float view_dist,
-                                       float view_angle) const;
+                                       float view_angle,
+                                       float head_tilt = 0.0f) const;
 
   // get a list of vehicles that actually moved
   std::vector<std::shared_ptr<Object>> getObjectsThatMoved() {
@@ -209,11 +216,12 @@ public:
 
   std::tuple<std::vector<const ObjectBase*>, std::vector<const ObjectBase*>,
              std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
-  VisibleObjects(const Object& src, float view_dist, float view_angle) const;
+  VisibleObjects(const Object& src, float view_dist, float view_angle,
+                 float head_tilt = 0.0f) const;
 
-  std::vector<const TrafficLight*> VisibleTrafficLights(const Object& src,
-                                                        float view_dist,
-                                                        float view_angle) const;
+  std::vector<const TrafficLight*> VisibleTrafficLights(
+      const Object& src, float view_dist, float view_angle,
+      float head_tilt = 0.0f) const;
 
   int currTime;
   int IDCounter = 0;

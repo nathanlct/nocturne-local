@@ -429,9 +429,9 @@ std::pair<float, geometry::Vector2D> Scenario::getObjectHeadingAndPos(
 
 std::tuple<std::vector<const ObjectBase*>, std::vector<const ObjectBase*>,
            std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
-Scenario::VisibleObjects(const Object& src, float view_dist,
-                         float view_angle) const {
-  const float heading = src.heading();
+Scenario::VisibleObjects(const Object& src, float view_dist, float view_angle,
+                         float head_tilt) const {
+  const float heading = geometry::utils::AngleAdd(src.heading(), head_tilt);
   const geometry::Vector2D& position = src.position();
   const ViewField vf(position, view_dist, heading, view_angle);
 
@@ -463,10 +463,11 @@ Scenario::VisibleObjects(const Object& src, float view_dist,
 }
 
 std::vector<const TrafficLight*> Scenario::VisibleTrafficLights(
-    const Object& src, float view_dist, float view_angle) const {
+    const Object& src, float view_dist, float view_angle,
+    float head_tilt) const {
   std::vector<const TrafficLight*> ret;
 
-  const float heading = src.heading();
+  const float heading = geometry::utils::AngleAdd(src.heading(), head_tilt);
   const geometry::Vector2D& position = src.position();
   const ViewField vf(position, view_dist, heading, view_angle);
 
@@ -507,9 +508,10 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
 }
 
 std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
-    const Object& src, float view_dist, float view_angle, bool padding) const {
+    const Object& src, float view_dist, float view_angle, float head_tilt,
+    bool padding) const {
   const auto [objects, road_points, traffic_lights, stop_signs] =
-      VisibleObjects(src, view_dist, view_angle);
+      VisibleObjects(src, view_dist, view_angle, head_tilt);
   const auto o_targets = NearestK(src, objects, kMaxVisibleObjects);
   const auto r_targets = NearestK(src, road_points, kMaxVisibleRoadPoints);
   const auto t_targets =
@@ -572,7 +574,8 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
 
 NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
                                                float view_dist,
-                                               float view_angle) const {
+                                               float view_angle,
+                                               float head_tilt) const {
   constexpr int64_t kObjectFeatureStride = 0;
   constexpr int64_t kRoadPointFeatureStride =
       kObjectFeatureStride + kMaxVisibleObjects * kObjectFeatureSize;
@@ -1022,17 +1025,18 @@ sf::View Scenario::View(float target_width, float target_height,
 }
 
 std::vector<std::unique_ptr<sf::CircleShape>>
-Scenario::VehiclesDestinationsDrawables(Object* source, float radius) const {
+Scenario::VehiclesDestinationsDrawables(const Object* source,
+                                        float radius) const {
   std::vector<std::unique_ptr<sf::CircleShape>> destination_drawables;
   if (source == nullptr) {
     for (const auto& obj : roadObjects) {
-      auto circle_shape =
-          utils::MakeCircleShape(obj->destination(), radius, obj->color());
+      auto circle_shape = utils::MakeCircleShape(obj->destination(), radius,
+                                                 obj->color(), false);
       destination_drawables.push_back(std::move(circle_shape));
     }
   } else {
-    auto circle_shape =
-        utils::MakeCircleShape(source->destination(), radius, source->color());
+    auto circle_shape = utils::MakeCircleShape(source->destination(), radius,
+                                               source->color(), false);
     destination_drawables.push_back(std::move(circle_shape));
   }
   return destination_drawables;
@@ -1094,6 +1098,49 @@ NdArray<unsigned char> Scenario::Image(uint64_t img_width, uint64_t img_height,
 
   if (draw_destinations) {
     DrawOnTarget(canvas, VehiclesDestinationsDrawables(source), view,
+                 horizontal_flip);
+  }
+
+  return canvas.AsNdArray();
+}
+
+
+NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
+    const Object& source, float view_dist, float view_angle, float head_tilt,
+    uint64_t img_width, uint64_t img_height, float padding, bool draw_source,
+    bool draw_destination) const {
+  sf::Transform horizontal_flip;
+  horizontal_flip.scale(1, -1);
+
+  const float rotation = geometry::utils::Degrees(source.heading()) - 90.0f;
+  sf::View view = View(source.position(), rotation, view_dist, view_dist,
+                       img_width, img_height, padding);
+
+  Canvas canvas(img_width, img_height);
+
+  // TODO(nl) remove code duplication and linear overhead
+  const auto [kinetic_objects, road_points, traffic_lights, stop_signs] =
+      VisibleObjects(source, view_dist, view_angle, head_tilt);
+  std::vector<const ObjectBase*> drawables;
+
+  for (const auto [objects, kMaxObjects] :
+       std::vector<std::pair<std::vector<const ObjectBase*>, int64_t>>{
+           {road_points, kMaxVisibleRoadPoints},
+           {kinetic_objects, kMaxVisibleObjects},
+           {traffic_lights, kMaxVisibleStopSigns},
+           {stop_signs, kMaxVisibleTrafficLights},
+       }) {
+    for (const auto [obj, dist] : NearestK(source, objects, kMaxObjects)) {
+      drawables.emplace_back(obj);
+    }
+  }
+
+  if (draw_source) {
+    drawables.emplace_back(&source);
+  }
+  DrawOnTarget(canvas, drawables, view, horizontal_flip);
+  if (draw_destination) {
+    DrawOnTarget(canvas, VehiclesDestinationsDrawables(&source), view,
                  horizontal_flip);
   }
 

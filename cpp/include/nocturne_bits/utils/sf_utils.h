@@ -14,7 +14,8 @@ sf::Font LoadFont(const std::string& font_name);
 // Creates and returns a pointer to an `sf::CircleShape` object. The circle is
 // centered at `position`, has radius `radius` and color `color`.
 std::unique_ptr<sf::CircleShape> MakeCircleShape(geometry::Vector2D position,
-                                                 float radius, sf::Color color);
+                                                 float radius, sf::Color color,
+                                                 bool filled = true);
 
 // Converts a `geometry::Vector2D` to a `sf::Vector2f`. If `flip_y` is true,
 // then the y coordinate is flipped (y becomes -y).

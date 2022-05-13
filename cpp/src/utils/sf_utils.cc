@@ -56,13 +56,17 @@ sf::Font LoadFont(const std::string& font_name) {
 }
 
 std::unique_ptr<sf::CircleShape> MakeCircleShape(geometry::Vector2D position,
-                                                 float radius,
-                                                 sf::Color color) {
+                                                 float radius, sf::Color color,
+                                                 bool filled) {
   auto circle_shape = std::make_unique<sf::CircleShape>(radius);
   circle_shape->setOrigin(radius, radius);
-  circle_shape->setFillColor(sf::Color::Transparent);
-  circle_shape->setOutlineColor(color);
-  circle_shape->setOutlineThickness(0.5);
+  if (filled) {
+    circle_shape->setFillColor(color);
+  } else {
+    circle_shape->setFillColor(sf::Color::Transparent);
+    circle_shape->setOutlineColor(color);
+    circle_shape->setOutlineThickness(0.5);
+  }
   circle_shape->setPosition(utils::ToVector2f(position));
   return circle_shape;
 }

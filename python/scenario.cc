@@ -59,6 +59,24 @@ void DefineScenario(py::module& m) {
           py::arg("draw_destinations") = true, py::arg("padding") = 50.0f,
           py::arg("source") = nullptr, py::arg("view_width") = 200,
           py::arg("view_height") = 200, py::arg("rotate_with_source") = true)
+      .def(
+          "getFeaturesImage",
+          [](Scenario& scenario, const Object& source, float view_dist,
+             float view_angle, float head_tilt, uint64_t img_width,
+             uint64_t img_height, float padding, bool draw_source,
+             bool draw_destination) {
+            return utils::AsNumpyArray<unsigned char>(
+                scenario.EgoVehicleFeaturesImage(
+                    source, view_dist, view_angle, head_tilt, img_width,
+                    img_height, padding, draw_source, draw_destination));
+          },
+          "Return a numpy array of dimension (img_height, img_width, 4) "
+          "representing an image of what is returned by getVisibleState(?).",
+          py::arg("source"), py::arg("view_dist") = 120.0f,
+          py::arg("view_angle") = geometry::utils::kPi * 0.8f,
+          py::arg("head_tilt") = 0.0f, py::arg("img_width") = 500,
+          py::arg("img_height") = 500, py::arg("padding") = 0.0f,
+          py::arg("draw_source") = true, py::arg("draw_destination") = true)
       .def("removeVehicle", &Scenario::removeVehicle)
       .def("hasExpertAction", &Scenario::hasExpertAction)
       .def("getExpertAction", &Scenario::getExpertAction)
