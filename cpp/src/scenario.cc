@@ -309,7 +309,8 @@ void Scenario::loadScenario(std::string path) {
       roadLines.push_back(roadLine);
     }
   }
-  road_network_bounds_ = sf::FloatRect(min_x, min_y, max_x - min_x, max_y - min_y);
+  road_network_bounds_ =
+      sf::FloatRect(min_x, min_y, max_x - min_x, max_y - min_y);
 
   // Now create the BVH for the line segments
   // Since the line segments never move we only need to define this once
@@ -1002,7 +1003,6 @@ NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
                                 pixelsArr);
 }
 
-
 /*********************** Drawing Functions *****************/
 
 sf::View Scenario::View(geometry::Vector2D view_center, float rotation,
@@ -1044,6 +1044,23 @@ sf::View Scenario::View(float target_width, float target_height,
   // build the view from overloaded function
   return View(view_center, 0.0f, view_width, view_height, target_width,
               target_height, padding);
+}
+
+std::vector<std::unique_ptr<sf::CircleShape>>
+Scenario::VehiclesDestinationsDrawables(Object* source, float radius) const {
+  std::vector<std::unique_ptr<sf::CircleShape>> destination_drawables;
+  if (source == nullptr) {
+    for (const auto& obj : roadObjects) {
+      auto circle_shape =
+          utils::MakeCircleShape(obj->destination(), radius, obj->color());
+      destination_drawables.push_back(std::move(circle_shape));
+    }
+  } else {
+    auto circle_shape =
+        utils::MakeCircleShape(source->destination(), radius, source->color());
+    destination_drawables.push_back(std::move(circle_shape));
+  }
+  return destination_drawables;
 }
 
 }  // namespace nocturne

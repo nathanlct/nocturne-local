@@ -108,11 +108,17 @@ class Scenario : public sf::Drawable {
   // of `sf::View View` for more information.
   sf::View View(float target_width, float target_height, float padding) const;
 
-private:
+ private:
+  // Computes and returns a list of `sf::Drawable` objects representing the
+  // goals/destinations of the `source` vehicle, or of all vehicles in the
+  // scenario if `source == nullptr`. Each goal is represented as a circle of
+  // radius `radius`.
+  std::vector<std::unique_ptr<sf::CircleShape>> VehiclesDestinationsDrawables(
+      Object* source = nullptr, float radius = 2.0f) const;
 
   /*********************** State Accessors *******************/
 
-public:
+ public:
   std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
       Object* sourceObject);
 
