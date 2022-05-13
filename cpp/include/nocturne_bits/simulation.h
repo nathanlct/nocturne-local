@@ -38,10 +38,6 @@ class Simulation {
 
   Scenario* GetScenario() const { return scenario_.get(); }
 
-  // void renderCone(const geometry::Vector2D& center, float heading,
-  //                 float viewAngle, const Object* self = nullptr);
-  // void renderCone(const Object* object, float viewAngle, float headTilt);
-
   void SaveScreenshot();
 
  protected:
