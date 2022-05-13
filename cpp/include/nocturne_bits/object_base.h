@@ -9,6 +9,12 @@
 #include "geometry/polygon.h"
 #include "geometry/vector_2d.h"
 
+enum class CollisionType {
+  kNotCollided = 0,
+  kVehicleVehicleCollision = 1,
+  kVehicleRoadEdgeCollision = 2,
+};
+
 namespace nocturne {
 
 class ObjectBase : public sf::Drawable, public geometry::AABBInterface {
@@ -35,13 +41,13 @@ class ObjectBase : public sf::Drawable, public geometry::AABBInterface {
   bool can_be_collided() const { return can_be_collided_; }
   bool check_collision() const { return check_collision_; }
   bool collided() const { return collided_; }
-  std::string collision_type() const { return collision_type_; }
-  void set_collision_type(std::string collision_type) {
+  enum CollisionType CollisionType() const { return collision_type_; }
+  void set_collision_type(enum CollisionType collision_type) {
     collision_type_ = collision_type;
   }
   void reset_collision() {
     collided_ = false;
-    collision_type_ = "not_collided";
+    collision_type_ = CollisionType::kNotCollided;
   }
   void set_collided(bool collided) { collided_ = collided; }
 
@@ -60,7 +66,7 @@ class ObjectBase : public sf::Drawable, public geometry::AABBInterface {
   const bool can_be_collided_ = false;
   const bool check_collision_ = false;
   bool collided_ = false;
-  std::string collision_type_ = "not_collided";
+  enum CollisionType collision_type_ = CollisionType::kNotCollided;
 };
 
 }  // namespace nocturne

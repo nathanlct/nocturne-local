@@ -399,7 +399,7 @@ void Scenario::updateCollision() {
       }
       if (checkForCollision(*obj1, *obj2)) {
         obj1->set_collided(true);
-        obj1->set_collision_type("vehicle_collision");
+        obj1->set_collision_type(CollisionType::kVehicleVehicleCollision);
         const_cast<Object*>(obj2)->set_collided(true);
       }
     }
@@ -410,7 +410,7 @@ void Scenario::updateCollision() {
         line_segment_bvh_.IntersectionCandidates<geometry::LineSegment>(*obj);
     for (const auto* seg : candidates) {
       if (checkForCollision(*obj, *seg)) {
-        obj->set_collision_type("road_collision");
+        obj->set_collision_type(CollisionType::kVehicleRoadEdgeCollision);
         obj->set_collided(true);
       }
     }
