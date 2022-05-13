@@ -39,8 +39,20 @@ void Object::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   } else {
     col = sf::Color::Black;
   }
+
   rect.setFillColor(col);
   target.draw(rect, states);
+
+  sf::ConvexShape arrow;
+  arrow.setPointCount(3);
+  arrow.setPoint(0, sf::Vector2f(0.0f, -width_ / 2.0f));
+  arrow.setPoint(1, sf::Vector2f(0.0f, width_ / 2.0f));
+  arrow.setPoint(2, sf::Vector2f(length_ / 2.0f, 0.0f));
+  arrow.setOrigin(0.0f, 0.0f);
+  arrow.setPosition(utils::ToVector2f(position_));
+  arrow.setRotation(geometry::utils::Degrees(heading_));
+  arrow.setFillColor(sf::Color::White);
+  target.draw(arrow, states);
 }
 
 void Object::InitRandomColor() {
