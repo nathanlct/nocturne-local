@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "canvas.h"
 #include "cyclist.h"
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
@@ -128,19 +129,28 @@ class Scenario : public sf::Drawable {
   void DrawOnTarget(sf::RenderTarget& target, const std::vector<P>& drawables,
                     const sf::View& view, const sf::Transform& transform) const;
 
+public:
+  NdArray<unsigned char> Image(uint64_t img_width = 500,
+                               uint64_t img_height = 500,
+                               bool draw_destinations = true,
+                               float padding = 0.0f, Object* source = nullptr,
+                               uint64_t view_width = 200,
+                               uint64_t view_height = 200,
+                               bool rotate_with_source = true) const;
+
+  NdArray<unsigned char> getCone(Object* object, float viewDist = 60.0f,
+                                 float viewAngle = geometry::utils::kHalfPi,
+                                 float headTilt = 0.0f,
+                                 bool obscuredView = true);  // TODO REMOVE
+
+  NdArray<unsigned char> getImage(Object* object = nullptr,
+                                  bool renderGoals = false);  // TODO REMOVE
+
   /*********************** State Accessors *******************/
 
  public:
   std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
       Object* sourceObject);
-
-  NdArray<unsigned char> getCone(Object* object, float viewDist = 60.0f,
-                                 float viewAngle = geometry::utils::kHalfPi,
-                                 float headTilt = 0.0f,
-                                 bool obscuredView = true);
-
-  NdArray<unsigned char> getImage(Object* object = nullptr,
-                                  bool renderGoals = false);
 
   bool checkForCollision(const Object& object1, const Object& object2) const;
   bool checkForCollision(const Object& object,

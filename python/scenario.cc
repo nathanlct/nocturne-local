@@ -32,25 +32,33 @@ void DefineScenario(py::module& m) {
            py::return_value_policy::reference)
       .def("getMaxEnvTime", &Scenario::getMaxEnvTime)
       .def("getRoadLines", &Scenario::getRoadLines)
-      .def(
-          "getCone",
-          [](Scenario& scenario, Object* object, float view_dist,
-             float view_angle, float head_tilt, bool obscured_view) {
-            return utils::AsNumpyArray<unsigned char>(scenario.getCone(
-                object, view_dist, view_angle, head_tilt, obscured_view));
-          },
-          "Draw a cone representing the objects that the agent can see",
-          py::arg("object"), py::arg("view_dist") = 60.0,
-          py::arg("view_angle") = kHalfPi, py::arg("head_tilt") = 0.0,
-          py::arg("obscuredView") = true)
+      //  .def(
+      //      "getCone",
+      //      [](Scenario& scenario, Object* object, float view_dist,
+      //         float view_angle, float head_tilt, bool obscured_view) {
+      //        return utils::AsNumpyArray<unsigned char>(scenario.getCone(
+      //            object, view_dist, view_angle, head_tilt, obscured_view));
+      //      },
+      //      "Draw a cone representing the objects that the agent can see",
+      //      py::arg("object"), py::arg("view_dist") = 60.0,
+      //      py::arg("view_angle") = kHalfPi, py::arg("head_tilt") = 0.0,
+      //      py::arg("obscuredView") = true)
       .def(
           "getImage",
-          [](Scenario& scenario, Object* object, bool render_goals) {
-            return utils::AsNumpyArray<unsigned char>(
-                scenario.getImage(object, render_goals));
+          [](Scenario& scenario, uint64_t img_width, uint64_t img_height,
+             bool draw_destinations, float padding, Object* source,
+             uint64_t view_width, uint64_t view_height,
+             bool rotate_with_source) {
+            return utils::AsNumpyArray<unsigned char>(scenario.Image(
+                img_width, img_height, draw_destinations, padding, source,
+                view_width, view_height, rotate_with_source));
           },
-          "Return a numpy array of dimension (w, h, 4) representing the scene",
-          py::arg("object") = nullptr, py::arg("render_goals") = false)
+          "Return a numpy array of dimension (img_height, img_width, 4) "
+          "representing an image of the scene.",
+          py::arg("img_width") = 500, py::arg("img_height") = 500,
+          py::arg("draw_destinations") = true, py::arg("padding") = 50.0f,
+          py::arg("source") = nullptr, py::arg("view_width") = 200,
+          py::arg("view_height") = 200, py::arg("rotate_with_source") = true)
       .def("removeVehicle", &Scenario::removeVehicle)
       .def("hasExpertAction", &Scenario::hasExpertAction)
       .def("getExpertAction", &Scenario::getExpertAction)

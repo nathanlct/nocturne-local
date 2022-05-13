@@ -1041,7 +1041,8 @@ Scenario::VehiclesDestinationsDrawables(Object* source, float radius) const {
 void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   sf::Transform horizontal_flip;
   horizontal_flip.scale(1, -1);
-  sf::View view = View(target.getSize().x, target.getSize().y, 50.0f);
+  sf::View view =
+      View(target.getSize().x, target.getSize().y, /*padding=*/30.0f);
   DrawOnTarget(target, roadLines, view, horizontal_flip);
   DrawOnTarget(target, roadObjects, view, horizontal_flip);
   DrawOnTarget(target, trafficLights, view, horizontal_flip);
@@ -1058,6 +1059,45 @@ void Scenario::DrawOnTarget(sf::RenderTarget& target,
   for (const P& drawable : drawables) {
     target.draw(*drawable, transform);
   }
+}
+
+NdArray<unsigned char> Scenario::Image(uint64_t img_width, uint64_t img_height,
+                                       bool draw_destinations, float padding,
+                                       Object* source, uint64_t view_width,
+                                       uint64_t view_height,
+                                       bool rotate_with_source) const {
+  // construct transform (flip the y-axis)
+  sf::Transform horizontal_flip;
+  horizontal_flip.scale(1, -1);
+
+  // construct view
+  sf::View view;
+  if (source == nullptr) {
+    // if no source object is provided, get the entire scenario
+    view = View(img_width, img_height, padding);
+  } else {
+    // otherwise get a region around the source object, possibly rotated
+    const float rotation =
+        rotate_with_source ? geometry::utils::Degrees(source->heading()) - 90.0f
+                           : 0.0f;
+    view = View(source->position(), rotation, view_width, view_height,
+                img_width, img_height, padding);
+  }
+
+  // create canvas and draw objects
+  Canvas canvas(img_width, img_height);
+
+  DrawOnTarget(canvas, roadLines, view, horizontal_flip);
+  DrawOnTarget(canvas, roadObjects, view, horizontal_flip);
+  DrawOnTarget(canvas, trafficLights, view, horizontal_flip);
+  DrawOnTarget(canvas, stopSigns, view, horizontal_flip);
+
+  if (draw_destinations) {
+    DrawOnTarget(canvas, VehiclesDestinationsDrawables(source), view,
+                 horizontal_flip);
+  }
+
+  return canvas.AsNdArray();
 }
 
 }  // namespace nocturne
