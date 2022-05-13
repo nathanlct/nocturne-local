@@ -13,6 +13,12 @@ namespace nocturne {
 void DefineObject(py::module& m) {
   m.doc() = "nocturne documentation for class Object";
 
+  py::enum_<CollisionType>(m, "CollisionType")
+      .value("UNCOLLIDED", CollisionType::kNotCollided)
+      .value("VEHICLE_VEHICLE", CollisionType::kVehicleVehicleCollision)
+      .value("VEHICLE_ROAD", CollisionType::kVehicleRoadEdgeCollision)
+      .export_values();
+
   py::enum_<ObjectType>(m, "ObjectType")
       .value("UNSET", ObjectType::kUnset)
       .value("VEHICLE", ObjectType::kVehicle)
@@ -45,6 +51,7 @@ void DefineObject(py::module& m) {
       .def_property("expert_control", &Object::expert_control,
                     &Object::set_expert_control)
       .def_property_readonly("collided", &Object::collided)
+      .def_property_readonly("collision_type", &Object::collision_type)
       .def("set_position",
            py::overload_cast<float, float>(&Object::set_position))
       .def("set_destination",
