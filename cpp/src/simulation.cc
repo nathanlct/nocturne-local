@@ -30,7 +30,7 @@ void Simulation::Render() {
     render_window_->clear(sf::Color(50, 50, 50));
 
     // draw scenario
-    render_window_->draw(*scenario_, render_transform_);
+    render_window_->draw(*scenario_);
   
     // draw frames per seconds on screen
     sf::Time elapsed = clock_.restart();

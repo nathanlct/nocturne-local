@@ -23,9 +23,7 @@ class Simulation {
         scenario_(std::make_unique<Scenario>(scenario_path, start_time,
                                              use_non_vehicles)),
         start_time_(start_time),
-        use_non_vehicles_(use_non_vehicles) {
-    render_transform_.scale(1, -1);
-  }
+        use_non_vehicles_(use_non_vehicles) {}
 
   void Reset() {
     scenario_.reset(
@@ -49,7 +47,6 @@ class Simulation {
   const int64_t start_time_ = 0;
   const bool use_non_vehicles_ = true;
 
-  sf::Transform render_transform_;
   std::unique_ptr<sf::RenderWindow> render_window_ = nullptr;
 
   sf::Font font_;
