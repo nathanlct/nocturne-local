@@ -60,7 +60,9 @@ std::unique_ptr<sf::CircleShape> MakeCircleShape(geometry::Vector2D position,
                                                  sf::Color color) {
   auto circle_shape = std::make_unique<sf::CircleShape>(radius);
   circle_shape->setOrigin(radius, radius);
-  circle_shape->setFillColor(color);
+  circle_shape->setFillColor(sf::Color::Transparent);
+  circle_shape->setOutlineColor(color);
+  circle_shape->setOutlineThickness(0.5);
   circle_shape->setPosition(utils::ToVector2f(position));
   return circle_shape;
 }
