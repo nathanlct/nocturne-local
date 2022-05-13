@@ -1,23 +1,17 @@
 """Each agent receives its observation, a goal position, and tries to get there without colliding."""
 
-from copy import copy
 from collections import defaultdict
 import os
 import time
 
 from gym.spaces import Box, Discrete
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
 import numpy as np
 import torch
 
 from nocturne import Simulation
 
 
-class BaseEnv(MultiAgentEnv):
-    # class BaseEnv(object):
-    metadata = {
-        "render.modes": ["rgb_array"],
-    }
+class BaseEnv(object):
 
     def __init__(self, cfg, should_terminate=True, rank=0):
         """[summary]
@@ -30,7 +24,6 @@ class BaseEnv(MultiAgentEnv):
             rank (int, optional): [description]. Defaults to 0.
         """
         super().__init__()
-        self._skip_env_checking = True  # temporary fix for rllib env checking issue
         with open(os.path.join(cfg['scenario_path'],
                                'valid_files.txt')) as file:
             self.files = [line.strip() for line in file]
