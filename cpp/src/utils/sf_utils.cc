@@ -18,9 +18,7 @@ std::vector<std::string> GetFontPaths() {
 
 #elif defined(_WIN32)  // Windows 32 bit or 64 bit
 
-std::vector<std::string> GetFontPaths() {
-  return {"C:/Windows/Fonts/"};
-}
+std::vector<std::string> GetFontPaths() { return {"C:/Windows/Fonts/"}; }
 
 #else  // Linux
 
@@ -55,6 +53,16 @@ sf::Font LoadFont(const std::string& font_name) {
     throw std::invalid_argument("Could not load font file " + font_name + ".");
   }
   return font;
+}
+
+std::unique_ptr<sf::CircleShape> MakeCircleShape(geometry::Vector2D position,
+                                                 float radius,
+                                                 sf::Color color) {
+  auto circle_shape = std::make_unique<sf::CircleShape>(radius);
+  circle_shape->setOrigin(radius, radius);
+  circle_shape->setFillColor(color);
+  circle_shape->setPosition(utils::ToVector2f(position));
+  return circle_shape;
 }
 
 }  // namespace utils
