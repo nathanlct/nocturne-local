@@ -216,5 +216,5 @@ def create_wrapped_env(cfg):
 
 
 def create_ppo_env(cfg, rank=0):
-    env = BaseEnv(cfg, should_terminate=False, rank=rank)
+    env = BaseEnv(cfg, rank=rank)
     return PPOWrapper(env, use_images=cfg.img_as_state)

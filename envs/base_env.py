@@ -17,14 +17,11 @@ class BaseEnv(MultiAgentEnv):
         "render.modes": ["rgb_array"],
     }
 
-    def __init__(self, cfg, should_terminate=True, rank=0):
+    def __init__(self, cfg, rank=0):
         """[summary]
 
         Args:
             cfg ([type]): configuration file describing the experiment
-            should_terminate (bool, optional): if true, agents continue to receive a -1 vector as their observations
-                even after their rollouts are terminated. This is used for algorithms (like some PPO implementations)
-                that insist that the number of agents throughout an episode are consistent.
             rank (int, optional): [description]. Defaults to 0.
         """
         super().__init__()
