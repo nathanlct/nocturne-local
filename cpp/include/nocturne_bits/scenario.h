@@ -67,7 +67,8 @@ class Scenario : public sf::Drawable {
 
   void step(float dt);
 
-  void removeVehicle(Vehicle* object);
+  // void removeVehicle(Vehicle* object);
+  bool RemoveObject(const Object& object);
 
   int getMaxEnvTime() { return maxEnvTime; }
   // float getSignedAngle(float sourceAngle, float targetAngle) const;
@@ -104,20 +105,24 @@ class Scenario : public sf::Drawable {
   bool checkForCollision(const Object& object,
                          const geometry::LineSegment& segment) const;
 
-  const std::vector<std::shared_ptr<Vehicle>>& getVehicles() const {
-    return vehicles;
+  const std::vector<std::shared_ptr<Vehicle>>& vehicles() const {
+    return vehicles_;
   }
 
-  const std::vector<std::shared_ptr<Pedestrian>>& getPedestrians() const {
-    return pedestrians;
+  const std::vector<std::shared_ptr<Pedestrian>>& pedestrians() const {
+    return pedestrians_;
   }
 
-  const std::vector<std::shared_ptr<Cyclist>>& getCyclists() const {
-    return cyclists;
+  const std::vector<std::shared_ptr<Cyclist>>& cyclists() const {
+    return cyclists_;
   }
 
-  const std::vector<std::shared_ptr<Object>>& getRoadObjects() const {
-    return roadObjects;
+  const std::vector<std::shared_ptr<Object>>& objects() const {
+    return objects_;
+  }
+
+  const std::vector<std::shared_ptr<Object>>& moving_objects() const {
+    return moving_objects_;
   }
 
   const std::vector<std::shared_ptr<RoadLine>>& getRoadLines() const {
@@ -133,10 +138,6 @@ class Scenario : public sf::Drawable {
   NdArray<float> FlattenedVisibleState(const Object& src, float view_dist,
                                        float view_angle) const;
 
-  // get a list of vehicles that actually moved
-  std::vector<std::shared_ptr<Object>> getObjectsThatMoved() {
-    return objectsThatMoved;
-  }
   int64_t getMaxNumVisibleObjects() const { return kMaxVisibleObjects; }
   int64_t getMaxNumVisibleRoadPoints() const { return kMaxVisibleRoadPoints; }
   int64_t getMaxNumVisibleTrafficLights() const {
@@ -166,7 +167,6 @@ class Scenario : public sf::Drawable {
                                                         float view_angle) const;
 
   int currTime;
-  int IDCounter = 0;
   int maxEnvTime =
       int(1e5);  // the maximum time an env can run for
                  // set to a big number so that it never overrides the RL env
@@ -176,16 +176,23 @@ class Scenario : public sf::Drawable {
   bool useNonVehicles;  // used to turn off pedestrians and cyclists
 
   std::string name;
+
   std::vector<std::shared_ptr<geometry::LineSegment>> lineSegments;
   std::vector<std::shared_ptr<RoadLine>> roadLines;
-  std::vector<std::shared_ptr<Vehicle>> vehicles;
-  std::vector<std::shared_ptr<Pedestrian>> pedestrians;
-  std::vector<std::shared_ptr<Cyclist>> cyclists;
-  std::vector<std::shared_ptr<Object>> roadObjects;
+
+  int64_t object_counter_ = 0;
+  std::vector<std::shared_ptr<Vehicle>> vehicles_;
+  std::vector<std::shared_ptr<Pedestrian>> pedestrians_;
+  std::vector<std::shared_ptr<Cyclist>> cyclists_;
+  std::vector<std::shared_ptr<Object>> objects_;
+  // Rrack the object that moved, useful for figuring out which agents should
+  // actually be controlled
+  std::vector<std::shared_ptr<Object>> moving_objects_;
+
   std::vector<std::shared_ptr<StopSign>> stopSigns;
   std::vector<std::shared_ptr<TrafficLight>> trafficLights;
 
-  geometry::BVH vehicle_bvh_;       // track vehicles for collisions
+  geometry::BVH object_bvh_;        // track objects for collisions
   geometry::BVH line_segment_bvh_;  // track line segments for collisions
   geometry::BVH static_bvh_;        // static objects
 
@@ -195,10 +202,6 @@ class Scenario : public sf::Drawable {
   std::vector<std::vector<float>> expertHeadings;
   std::vector<float> lengths;
   std::vector<std::vector<bool>> expertValid;
-
-  // track the object that moved, useful for figuring out which agents should
-  // actually be controlled
-  std::vector<std::shared_ptr<Object>> objectsThatMoved;
 
   std::unique_ptr<sf::RenderTexture> image_texture_ = nullptr;
   sf::FloatRect roadNetworkBounds;

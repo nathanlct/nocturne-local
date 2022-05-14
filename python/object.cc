@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "geometry/vector_2d.h"
+#include "object_base.h"
 
 namespace py = pybind11;
 

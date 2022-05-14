@@ -22,13 +22,23 @@ void DefineScenario(py::module& m) {
       .def(py::init<std::string, int, bool>(), "Constructor for Scenario",
            py::arg("path") = "", py::arg("start_time") = 0,
            py::arg("use_non_vehicles") = true)
-      .def("getVehicles", &Scenario::getVehicles,
+      .def("vehicles", &Scenario::vehicles, py::return_value_policy::reference)
+      .def("pedestrians", &Scenario::pedestrians,
            py::return_value_policy::reference)
-      .def("getPedestrians", &Scenario::getPedestrians,
+      .def("cyclists", &Scenario::cyclists, py::return_value_policy::reference)
+      .def("objects", &Scenario::objects, py::return_value_policy::reference)
+      .def("moving_objects", &Scenario::moving_objects,
            py::return_value_policy::reference)
-      .def("getCyclists", &Scenario::getCyclists,
+      .def("remove_object", &Scenario::RemoveObject)
+
+      // TODO: Deprecate the legacy interface below.
+      .def("getVehicles", &Scenario::vehicles,
            py::return_value_policy::reference)
-      .def("getObjectsThatMoved", &Scenario::getObjectsThatMoved,
+      .def("getPedestrians", &Scenario::pedestrians,
+           py::return_value_policy::reference)
+      .def("getCyclists", &Scenario::cyclists,
+           py::return_value_policy::reference)
+      .def("getObjectsThatMoved", &Scenario::moving_objects,
            py::return_value_policy::reference)
       .def("getMaxEnvTime", &Scenario::getMaxEnvTime)
       .def("getRoadLines", &Scenario::getRoadLines)
@@ -51,7 +61,7 @@ void DefineScenario(py::module& m) {
           },
           "Return a numpy array of dimension (w, h, 4) representing the scene",
           py::arg("object") = nullptr, py::arg("render_goals") = false)
-      .def("removeVehicle", &Scenario::removeVehicle)
+      .def("removeVehicle", &Scenario::RemoveObject)
       .def("hasExpertAction", &Scenario::hasExpertAction)
       .def("getExpertAction", &Scenario::getExpertAction)
       .def("getValidExpertStates", &Scenario::getValidExpertStates)
