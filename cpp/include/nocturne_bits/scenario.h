@@ -87,9 +87,6 @@ class Scenario : public sf::Drawable {
   // void removeVehicle(Vehicle* object);
   bool RemoveObject(const Object& object);
 
-  // int getMaxEnvTime() { return maxEnvTime; }
-  // float getSignedAngle(float sourceAngle, float targetAngle) const;
-
   // query expert data
   geometry::Vector2D getExpertSpeeds(int timeIndex, int vehIndex) {
     return expertSpeeds[vehIndex][timeIndex];
@@ -182,14 +179,6 @@ class Scenario : public sf::Drawable {
   std::vector<const TrafficLight*> VisibleTrafficLights(const Object& src,
                                                         float view_dist,
                                                         float view_angle) const;
-
-  // int currTime;
-  // int maxEnvTime =
-  //     int(1e5);  // the maximum time an env can run for
-  //                // set to a big number so that it never overrides the RL env
-  //                // however, if a traffic light is in the scene then we
-  //                // set it to 90 so that the episode never runs past
-  //                // the maximum length of available traffic light data
 
   std::string name_;
 
