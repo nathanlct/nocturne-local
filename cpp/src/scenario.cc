@@ -157,39 +157,28 @@ void ExtractStopSignFeature(const Object& src, const StopSign& obj, float dis,
 
 using geometry::utils::kPi;
 
-Scenario::Scenario(const std::string& path, int startTime, bool useNonVehicles)
-    : currTime(startTime), useNonVehicles(useNonVehicles) {
-  if (path.size() > 0) {
-    loadScenario(path);
-  } else {
-    throw std::invalid_argument("No scenario file inputted.");
-    // TODO(nl) right now an empty scenario crashes, expectedly
-    std::cout << "No scenario path inputted. Defaulting to an empty scenario."
-              << std::endl;
-  }
-}
-
-void Scenario::loadScenario(std::string path) {
-  std::ifstream data(path);
+void Scenario::LoadScenario(const std::string& scenario_path) {
+  std::ifstream data(scenario_path);
   if (!data.is_open()) {
-    throw std::invalid_argument("Scenario file couldn't be opened: " + path);
+    throw std::invalid_argument("Scenario file couldn't be opened: " +
+                                scenario_path);
   }
+
   json j;
   data >> j;
-
-  name = j["name"];
+  name_ = j["name"];
 
   for (const auto& obj : j["objects"]) {
     // std::string type = obj["type"];
     const ObjectType object_type = ParseObjectType(obj["type"]);
 
     // TODO(ev) currTime should be passed in rather than defined here
-    geometry::Vector2D pos(obj["position"]["x"][currTime],
-                           obj["position"]["y"][currTime]);
+    geometry::Vector2D pos(obj["position"]["x"][current_time_],
+                           obj["position"]["y"][current_time_]);
     float width = float(obj["width"]);
     float length = float(obj["length"]);
-    float heading = geometry::utils::NormalizeAngle(
-        geometry::utils::Radians(static_cast<float>(obj["heading"][currTime])));
+    float heading = geometry::utils::NormalizeAngle(geometry::utils::Radians(
+        static_cast<float>(obj["heading"][current_time_])));
 
     // TODO(ev) this should be set elsewhere
     bool occludes = true;
@@ -227,7 +216,7 @@ void Scenario::loadScenario(std::string path) {
 
     // we only want to store and load vehicles that are valid at this
     // initialization time
-    if (bool(obj["valid"][currTime])) {
+    if (bool(obj["valid"][current_time_])) {
       expertTrajectories.push_back(localExpertTrajectory);
       expertSpeeds.push_back(localExpertSpeeds);
       expertHeadings.push_back(localHeadingVec);
@@ -237,18 +226,18 @@ void Scenario::loadScenario(std::string path) {
       if (object_type == ObjectType::kVehicle) {
         std::shared_ptr<Vehicle> vehicle = std::make_shared<Vehicle>(
             object_counter_++, length, width, pos, goalPos, heading,
-            localExpertSpeeds[currTime].Norm(), occludes, collides,
+            localExpertSpeeds[current_time_].Norm(), occludes, collides,
             checkForCollisions);
         vehicles_.push_back(vehicle);
         objects_.push_back(vehicle);
         if (is_moving) {
           moving_objects_.push_back(vehicle);
         }
-      } else if (useNonVehicles) {
+      } else if (allow_non_vehicles_) {
         if (object_type == ObjectType::kPedestrian) {
           std::shared_ptr<Pedestrian> pedestrian = std::make_shared<Pedestrian>(
               object_counter_++, length, width, pos, goalPos, heading,
-              localExpertSpeeds[currTime].Norm(), occludes, collides,
+              localExpertSpeeds[current_time_].Norm(), occludes, collides,
               checkForCollisions);
           pedestrians_.push_back(pedestrian);
           objects_.push_back(pedestrian);
@@ -258,7 +247,7 @@ void Scenario::loadScenario(std::string path) {
         } else if (object_type == ObjectType::kCyclist) {
           std::shared_ptr<Cyclist> cyclist = std::make_shared<Cyclist>(
               object_counter_++, length, width, pos, goalPos, heading,
-              localExpertSpeeds[currTime].Norm(), occludes, collides,
+              localExpertSpeeds[current_time_].Norm(), occludes, collides,
               checkForCollisions);
           cyclists_.push_back(cyclist);
           objects_.push_back(cyclist);
@@ -334,7 +323,7 @@ void Scenario::loadScenario(std::string path) {
 
   // Now handle the traffic light states
   for (const auto& tl : j["tl_states"]) {
-    maxEnvTime = 90;
+    max_env_time_ = 90;
     // Lane positions don't move so we can just use the first
     // element
     float x_pos = float(tl["x"][0]);
@@ -351,7 +340,7 @@ void Scenario::loadScenario(std::string path) {
     }
     std::shared_ptr<TrafficLight> traffic_light =
         std::make_shared<TrafficLight>(geometry::Vector2D(x_pos, y_pos),
-                                       validTimes, lightStates, currTime);
+                                       validTimes, lightStates, current_time_);
     trafficLights.push_back(traffic_light);
   }
 
@@ -376,7 +365,7 @@ void Scenario::loadScenario(std::string path) {
 }
 
 void Scenario::step(float dt) {
-  currTime += int(dt / 0.1);  // TODO(ev) hardcoding
+  current_time_ += int(dt / 0.1);  // TODO(ev) hardcoding
   for (auto& object : objects_) {
     // reset the collision flags for the objects before stepping
     // we do not want to label a vehicle as persistently having collided
@@ -385,13 +374,13 @@ void Scenario::step(float dt) {
       object->Step(dt);
     } else {
       geometry::Vector2D expertPosition =
-          expertTrajectories[object->id()][currTime];
+          expertTrajectories[object->id()][current_time_];
       object->set_position(expertPosition);
-      object->set_heading(expertHeadings[object->id()][currTime]);
+      object->set_heading(expertHeadings[object->id()][current_time_]);
     }
   }
   for (auto& object : trafficLights) {
-    object->set_current_time(currTime);
+    object->set_current_time(current_time_);
   }
 
   // update the vehicle bvh
@@ -827,11 +816,8 @@ NdArray<unsigned char> Scenario::getCone(
   // TODO(ev) do this for road objects too
   // draw obstructions
   if (obscuredView == true) {
-    const std::vector<std::shared_ptr<Vehicle>>& roadObjects =
-        vehicles();  // todo optimize with objects in range only (quadtree?)
-
-    for (const auto& obj : roadObjects) {
-      if (obj.get() != object && obj->can_block_sight()) {
+    for (const auto& obj : objects_) {
+      if (obj->id() != object->id() && obj->can_block_sight()) {
         const auto lines = obj->BoundingPolygon().Edges();
         // auto lines = obj->getLines();
         for (const auto& line1 : lines) {

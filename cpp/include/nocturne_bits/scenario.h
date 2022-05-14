@@ -28,6 +28,8 @@ namespace nocturne {
 
 using json = nlohmann::json;
 
+constexpr int64_t kMaxEnvTime = 100000;
+
 // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
 // returned in the state
 constexpr int64_t kMaxVisibleObjects = 20;
@@ -61,16 +63,31 @@ constexpr int64_t kEgoFeatureSize = 5;
 
 class Scenario : public sf::Drawable {
  public:
-  Scenario(const std::string& path, int startTime, bool useNonVehicles);
+  Scenario(const std::string& scenario_path, int64_t start_time,
+           bool allow_non_vehicles)
+      : current_time_(start_time), allow_non_vehicles_(allow_non_vehicles) {
+    if (!scenario_path.empty()) {
+      LoadScenario(scenario_path);
+    } else {
+      throw std::invalid_argument("No scenario file inputted.");
+      // TODO(nl) right now an empty scenario crashes, expectedly
+      std::cout << "No scenario path inputted. Defaulting to an empty scenario."
+                << std::endl;
+    }
+  }
 
-  void loadScenario(std::string path);
+  void LoadScenario(const std::string& scenario_path);
+
+  const std::string& name() const { return name_; }
+
+  int64_t max_env_time() const { return max_env_time_; }
 
   void step(float dt);
 
   // void removeVehicle(Vehicle* object);
   bool RemoveObject(const Object& object);
 
-  int getMaxEnvTime() { return maxEnvTime; }
+  // int getMaxEnvTime() { return maxEnvTime; }
   // float getSignedAngle(float sourceAngle, float targetAngle) const;
 
   // query expert data
@@ -166,16 +183,19 @@ class Scenario : public sf::Drawable {
                                                         float view_dist,
                                                         float view_angle) const;
 
-  int currTime;
-  int maxEnvTime =
-      int(1e5);  // the maximum time an env can run for
-                 // set to a big number so that it never overrides the RL env
-                 // however, if a traffic light is in the scene then we
-                 // set it to 90 so that the episode never runs past
-                 // the maximum length of available traffic light data
-  bool useNonVehicles;  // used to turn off pedestrians and cyclists
+  // int currTime;
+  // int maxEnvTime =
+  //     int(1e5);  // the maximum time an env can run for
+  //                // set to a big number so that it never overrides the RL env
+  //                // however, if a traffic light is in the scene then we
+  //                // set it to 90 so that the episode never runs past
+  //                // the maximum length of available traffic light data
 
-  std::string name;
+  std::string name_;
+
+  int64_t current_time_;
+  int64_t max_env_time_ = kMaxEnvTime;
+  const bool allow_non_vehicles_ = true;  // Whether to use non vehicle objects.
 
   std::vector<std::shared_ptr<geometry::LineSegment>> lineSegments;
   std::vector<std::shared_ptr<RoadLine>> roadLines;

@@ -114,7 +114,7 @@ def test_scenario_functions():
     # image
     sim = Simulation(scenario_path=file_path,
                      start_time=20,
-                     use_non_vehicles=False)
+                     allow_non_vehicles=False)
     scenario = sim.getScenario()
 
     img2 = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi,

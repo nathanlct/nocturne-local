@@ -19,9 +19,15 @@ void DefineScenario(py::module& m) {
   m.doc() = "nocturne documentation for class Scenario";
 
   py::class_<Scenario, std::shared_ptr<Scenario>>(m, "Scenario")
-      .def(py::init<std::string, int, bool>(), "Constructor for Scenario",
-           py::arg("path") = "", py::arg("start_time") = 0,
-           py::arg("use_non_vehicles") = true)
+      .def(py::init<const std::string&, int64_t, bool>(),
+           "Constructor for Scenario", py::arg("path") = "",
+           py::arg("start_time") = 0, py::arg("allow_non_vehicles") = true)
+
+      // Properties
+      .def_property_readonly("name", &Scenario::name)
+      .def_property_readonly("max_env_time", &Scenario::max_env_time)
+
+      // Methods
       .def("vehicles", &Scenario::vehicles, py::return_value_policy::reference)
       .def("pedestrians", &Scenario::pedestrians,
            py::return_value_policy::reference)
@@ -31,7 +37,7 @@ void DefineScenario(py::module& m) {
            py::return_value_policy::reference)
       .def("remove_object", &Scenario::RemoveObject)
 
-      // TODO: Deprecate the legacy interface below.
+      // TODO: Deprecate the legacy interfaces below.
       .def("getVehicles", &Scenario::vehicles,
            py::return_value_policy::reference)
       .def("getPedestrians", &Scenario::pedestrians,
@@ -40,7 +46,7 @@ void DefineScenario(py::module& m) {
            py::return_value_policy::reference)
       .def("getObjectsThatMoved", &Scenario::moving_objects,
            py::return_value_policy::reference)
-      .def("getMaxEnvTime", &Scenario::getMaxEnvTime)
+      .def("getMaxEnvTime", &Scenario::max_env_time)
       .def("getRoadLines", &Scenario::getRoadLines)
       .def(
           "getCone",
