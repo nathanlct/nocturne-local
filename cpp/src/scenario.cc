@@ -816,6 +816,7 @@ NdArray<unsigned char> Scenario::getCone(
   // TODO(ev) do this for road objects too
   // draw obstructions
   if (obscuredView == true) {
+    // TODO: Optimize this by checking visible objects only.
     for (const auto& obj : objects_) {
       if (obj->id() != object->id() && obj->can_block_sight()) {
         const auto lines = obj->BoundingPolygon().Edges();
