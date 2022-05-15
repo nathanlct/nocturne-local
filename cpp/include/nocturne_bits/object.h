@@ -68,8 +68,10 @@ class Object : public ObjectBase {
 
   float length() const { return length_; }
   float width() const { return width_; }
-  void set_length(float length) { length_ = length; }
-  void set_width(float width) { width_ = width; }
+  void ScaleShape(float length_scale, float width_scale) {
+    length_ *= length_scale;
+    width_ *= width_scale;
+  }
   float max_speed() const { return max_speed_; }
 
   const geometry::Vector2D& destination() const { return destination_; }
