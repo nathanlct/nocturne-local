@@ -68,6 +68,8 @@ class Object : public ObjectBase {
 
   float length() const { return length_; }
   float width() const { return width_; }
+  void set_length(float length) { length_ = length; }
+  void set_width(float width) { width_ = width; }
   float max_speed() const { return max_speed_; }
 
   const geometry::Vector2D& destination() const { return destination_; }
@@ -146,8 +148,8 @@ class Object : public ObjectBase {
 
   const int64_t id_;
 
-  const float length_ = 0.0f;
-  const float width_ = 0.0f;
+  float length_ = 0.0f;
+  float width_ = 0.0f;
   const float max_speed_ = std::numeric_limits<float>::max();
 
   geometry::Vector2D destination_;

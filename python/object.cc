@@ -32,8 +32,8 @@ void DefineObject(py::module& m) {
       // Properties.
       .def_property_readonly("type", &Object::Type)
       .def_property_readonly("id", &Object::id)
-      .def_property_readonly("length", &Object::length)
-      .def_property_readonly("width", &Object::width)
+      .def_property("length", &Object::length, &Object::set_length)
+      .def_property("width", &Object::width, &Object::set_width)
       .def_property_readonly("max_speed", &Object::max_speed)
       .def_property(
           "position", &Object::position,
