@@ -57,7 +57,7 @@ class Object : public ObjectBase {
         max_speed_(max_speed),
         destination_(destination),
         heading_(heading),
-        speed_(speed),
+        speed_(ClipSpeed(speed)),
         random_gen_(std::random_device()()) {
     InitRandomColor();
   }
@@ -82,7 +82,7 @@ class Object : public ObjectBase {
   void set_heading(float heading) { heading_ = heading; }
 
   float speed() const { return speed_; }
-  void set_speed(float speed) { speed_ = speed; }
+  void set_speed(float speed) { speed_ = ClipSpeed(speed); }
 
   float acceleration() const { return acceleration_; }
   void set_acceleration(float acceleration) { acceleration_ = acceleration; }
