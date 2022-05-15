@@ -2,6 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <random>
 #include <string>
@@ -30,31 +31,33 @@ class Object : public ObjectBase {
 
   Object(int64_t id, float length, float width,
          const geometry::Vector2D& position,
-         const geometry::Vector2D& destination, float heading,
-         const geometry::Vector2D& velocity, bool can_block_sight,
-         bool can_be_collided, bool check_collision)
+         const geometry::Vector2D& destination, float heading, float speed,
+         bool can_block_sight = true, bool can_be_collided = true,
+         bool check_collision = true)
       : ObjectBase(position, can_block_sight, can_be_collided, check_collision),
         id_(id),
         length_(length),
         width_(width),
         destination_(destination),
         heading_(heading),
-        velocity_(velocity),
+        speed_(speed),
         random_gen_(std::random_device()()) {
     InitRandomColor();
   }
 
-  Object(int64_t id, float length, float width,
+  Object(int64_t id, float length, float width, float max_speed,
          const geometry::Vector2D& position,
          const geometry::Vector2D& destination, float heading, float speed,
-         bool can_block_sight, bool can_be_collided, bool check_collision)
+         bool can_block_sight = true, bool can_be_collided = true,
+         bool check_collision = true)
       : ObjectBase(position, can_block_sight, can_be_collided, check_collision),
         id_(id),
         length_(length),
         width_(width),
+        max_speed_(max_speed),
         destination_(destination),
         heading_(heading),
-        velocity_(geometry::PolarToVector2D(speed, heading)),
+        speed_(speed),
         random_gen_(std::random_device()()) {
     InitRandomColor();
   }
@@ -65,6 +68,7 @@ class Object : public ObjectBase {
 
   float length() const { return length_; }
   float width() const { return width_; }
+  float max_speed() const { return max_speed_; }
 
   const geometry::Vector2D& destination() const { return destination_; }
   void set_destination(const geometry::Vector2D& destination) {
@@ -77,13 +81,8 @@ class Object : public ObjectBase {
   float heading() const { return heading_; }
   void set_heading(float heading) { heading_ = heading; }
 
-  const geometry::Vector2D& velocity() const { return velocity_; }
-  void set_velocity(const geometry::Vector2D& velocity) {
-    velocity_ = velocity;
-  }
-  void set_velocity(float v_x, float v_y) {
-    velocity_ = geometry::Vector2D(v_x, v_y);
-  }
+  float speed() const { return speed_; }
+  void set_speed(float speed) { speed_ = speed; }
 
   float acceleration() const { return acceleration_; }
   void set_acceleration(float acceleration) { acceleration_ = acceleration; }
@@ -119,19 +118,8 @@ class Object : public ObjectBase {
     return std::sqrt(length_ * length_ + width_ * width_) * 0.5f;
   }
 
-  // Postive for moving forward, negative for moving backward.
-  float Speed() const {
-    return geometry::DotProduct(velocity_,
-                                geometry::PolarToVector2D(1.0f, heading_));
-  }
-
-  void SetSpeed(float speed) {
-    const float cur_speed = Speed();
-    if (geometry::utils::AlmostEquals(cur_speed, 0.0f)) {
-      velocity_ = geometry::PolarToVector2D(speed, heading_);
-    } else {
-      velocity_ *= speed / cur_speed;
-    }
+  geometry::Vector2D Velocity() const {
+    return geometry::PolarToVector2D(speed_, heading_);
   }
 
   geometry::ConvexPolygon BoundingPolygon() const override;
@@ -152,14 +140,20 @@ class Object : public ObjectBase {
 
   void KinematicBicycleStep(float dt);
 
+  float ClipSpeed(float speed) const {
+    return std::max(std::min(speed, max_speed_), -max_speed_);
+  }
+
   const int64_t id_;
 
   const float length_ = 0.0f;
   const float width_ = 0.0f;
+  const float max_speed_ = std::numeric_limits<float>::max();
 
   geometry::Vector2D destination_;
   float heading_ = 0.0f;
-  geometry::Vector2D velocity_;
+  // Postive for moving forward, negative for moving backward.
+  float speed_ = 0.0f;
 
   float acceleration_ = 0.0f;
   float steering_ = 0.0f;

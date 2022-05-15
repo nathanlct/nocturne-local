@@ -98,7 +98,7 @@ void ExtractObjectFeature(const Object& src, const Object& obj, float dis,
       (obj.position() - src.position()).Angle(), src.heading());
   const float relative_heading =
       geometry::utils::AngleSub(obj.heading(), src.heading());
-  const geometry::Vector2D relative_velocity = obj.velocity() - src.velocity();
+  const geometry::Vector2D relative_velocity = obj.Velocity() - src.Velocity();
   const int64_t obj_type = static_cast<int64_t>(obj.Type());
   feature[0] = 1.0f;  // Valid
   feature[1] = dis;
@@ -501,7 +501,7 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
       geometry::utils::AngleSub(dst_heading, src_heading);
 
   float* state_data = state.DataPtr();
-  state_data[0] = src.Speed();
+  state_data[0] = src.speed();
   state_data[1] = dist;
   state_data[2] = heading_diff;
   state_data[3] = src.length();
