@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-import time
-import os
-import sys
 import argparse
-import pathlib, shutil
+import os
+import pathlib
+import shutil
 from datetime import datetime
-from subprocess import Popen, DEVNULL
+from subprocess import Popen
 
 from cfgs.config import PROJECT_PATH
 
