@@ -27,8 +27,8 @@ def is_file_valid(file_list, output_file, output_file_invalid, lock=None):
             # we shrink the vehicle width and length to tiny values.
             # then, if a vehicle collides with a road edge, we know it had to
             # cross that road edge to actually get to its goal
-            veh.width = 0.1 * veh.width
-            veh.length = 0.3 * veh.length
+            veh.scale_width(0.1)
+            veh.scale_length(0.3)
             veh.expert_control = True
         # dict tracking which vehicles were forced to collide with
         # an edge on their way to goal
