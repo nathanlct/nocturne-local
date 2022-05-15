@@ -40,16 +40,19 @@ class ObjectBase : public sf::Drawable, public geometry::AABBInterface {
   bool can_block_sight() const { return can_block_sight_; }
   bool can_be_collided() const { return can_be_collided_; }
   bool check_collision() const { return check_collision_; }
+
   bool collided() const { return collided_; }
+  void set_collided(bool collided) { collided_ = collided; }
+
   CollisionType collision_type() const { return collision_type_; }
   void set_collision_type(CollisionType collision_type) {
     collision_type_ = collision_type;
   }
-  void reset_collision() {
+
+  void ResetCollision() {
     collided_ = false;
     collision_type_ = CollisionType::kNotCollided;
   }
-  void set_collided(bool collided) { collided_ = collided; }
 
   virtual float Radius() const = 0;
 

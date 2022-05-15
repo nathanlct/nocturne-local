@@ -39,7 +39,7 @@ class BaseEnv(MultiAgentEnv):
         self.file = self.files[np.random.randint(len(self.files))]
         self.simulation = Simulation(os.path.join(cfg['scenario_path'],
                                                   self.file),
-                                     use_non_vehicles=False)
+                                     allow_non_vehicles=False)
         self.scenario = self.simulation.getScenario()
         self.vehicles = self.scenario.getObjectsThatMoved()
         self.single_agent_mode = cfg['single_agent_mode']
@@ -197,7 +197,7 @@ class BaseEnv(MultiAgentEnv):
             self.file = self.files[np.random.randint(len(self.files))]
             self.simulation = Simulation(os.path.join(
                 self.cfg['scenario_path'], self.file),
-                                         use_non_vehicles=False)
+                                         allow_non_vehicles=False)
             self.scenario = self.simulation.getScenario()
 
             # remove all the objects that are in collision or are already in goal dist
