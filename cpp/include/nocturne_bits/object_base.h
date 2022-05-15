@@ -9,13 +9,13 @@
 #include "geometry/polygon.h"
 #include "geometry/vector_2d.h"
 
+namespace nocturne {
+
 enum class CollisionType {
   kNotCollided = 0,
   kVehicleVehicleCollision = 1,
   kVehicleRoadEdgeCollision = 2,
 };
-
-namespace nocturne {
 
 class ObjectBase : public sf::Drawable, public geometry::AABBInterface {
  public:
