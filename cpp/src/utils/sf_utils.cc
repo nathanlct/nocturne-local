@@ -112,9 +112,11 @@ std::vector<std::unique_ptr<sf::VertexArray>> MakeInvertedConeShape(
     const float end_angle = geometry::utils::kPi / 2.0f +
                             2.0f * geometry::utils::kPi - angle / 2.0f + tilt;
     const int n_points_circle = 4 * n_points;
+    // we want to go from start_angle to end_angle
+    float dAngle = geometry::utils::AngleSub(end_angle, start_angle) /
+                   (n_points_circle - 1);
     for (int i = 0; i < n_points_circle; ++i) {
-      const float point_angle =
-          start_angle + i * (end_angle - start_angle) / (n_points_circle - 1);
+      const float point_angle = start_angle + i * dAngle;
       geometry::Vector2D pt = geometry::PolarToVector2D(radius, point_angle);
       cone_drawable->append(sf::Vertex(utils::ToVector2f(pt), fill_color));
     }
@@ -163,13 +165,16 @@ std::vector<std::unique_ptr<sf::ConvexShape>> MakeObstructionShape(
       float angle1 = (pt1 - source_pos).Angle();
       float angle2 = (pt2 - source_pos).Angle();
 
+      // we want to go from angle1 to angle2
+      float dAngle = geometry::utils::AngleSub(angle2, angle1) / (n_points - 1);
+
       hiddenArea->setPointCount(n_points + 2);
       hiddenArea->setFillColor(fill_color);
       // first point of line1
       hiddenArea->setPoint(0, utils::ToVector2f((pt1 - source_pos)));
-      // circular arc 
+      // circular arc
       for (int i = 0; i < n_points; ++i) {
-        float angle = angle1 + i * (angle2 - angle1) / (n_points - 1);
+        float angle = angle1 + i * dAngle;
         geometry::Vector2D pt = geometry::PolarToVector2D(radius, angle);
         hiddenArea->setPoint(1 + i, utils::ToVector2f(pt));
       }
