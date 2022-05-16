@@ -25,18 +25,18 @@ def test_scenario_functions():
     veh1.setPosition(veh0.getPosition().x + 0.001, veh0.getPosition().y)
     sim.step(0.000001)
     assert veh1.getCollided(
-    ) == True, 'vehicle1 should have collided after being placed on vehicle 0'
+    ), 'vehicle1 should have collided after being placed on vehicle 0'
     assert veh0.getCollided(
-    ) == True, 'vehicle0 should have collided after vehicle 0 was placed on it'
-    assert veh2.getCollided() == False, 'vehicle2 should not have collided'
+    ), 'vehicle0 should have collided after vehicle 0 was placed on it'
+    assert not veh2.getCollided(), 'vehicle2 should not have collided'
 
     # confirm that this is still true a time-step later
     sim.step(0.000001)
     assert veh1.getCollided(
-    ) == True, 'vehicle1 should have collided after being placed on vehicle 0'
+    ), 'vehicle1 should have collided after being placed on vehicle 0'
     assert veh0.getCollided(
-    ) == True, 'vehicle0 should have collided after vehicle 0 was placed on it'
-    assert veh2.getCollided() == False, 'vehicle2 should not have collided'
+    ), 'vehicle0 should have collided after vehicle 0 was placed on it'
+    assert not veh2.getCollided(), 'vehicle2 should not have collided'
 
     # now offset them slightly and do the same thing again
     sim = Simulation(scenario_path=file_path)
@@ -49,10 +49,10 @@ def test_scenario_functions():
     veh1.setPosition(veh0.getPosition().x + 0.2, veh0.getPosition().y + 0.2)
     sim.step(0.000001)
     assert veh1.getCollided(
-    ) == True, 'vehicle1 should have collided after being placed overlapping vehicle 0'
+    ), 'vehicle1 should have collided after being placed overlapping vehicle 0'
     assert veh0.getCollided(
-    ) == True, 'vehicle0 should have collided after vehicle 1 was placed on it'
-    assert veh2.getCollided() == False, 'vehicle2 should not have collided'
+    ), 'vehicle0 should have collided after vehicle 1 was placed on it'
+    assert not veh2.getCollided(), 'vehicle2 should not have collided'
 
     ################################
     # Road Collision checking
@@ -72,7 +72,7 @@ def test_scenario_functions():
     assert np.linalg.norm(
         road_segment_dir) < 1  # it should be able to fit inside the vehicle
     road_segment_angle = np.arctan2(
-        road_segment_dir[1], road_segment_dir[0])  #atan2 is (y, x) not (x,y)
+        road_segment_dir[1], road_segment_dir[0])  # atan2 is (y, x) not (x,y)
     veh0.setHeading(road_segment_angle)
 
     # place the vehicle so that the segment is contained inside of it
@@ -84,7 +84,7 @@ def test_scenario_functions():
     plt.imshow(cone)
     plt.savefig('line_veh_check.png')
     assert veh0.getCollided(
-    ) == True, 'vehicle0 should have collided after a road edge is placed inside it'
+    ), 'vehicle0 should have collided after a road edge is placed inside it'
 
     # place the vehicle on one of the points so that the road segment intersects with a vehicle edge
     sim.reset()
@@ -96,7 +96,7 @@ def test_scenario_functions():
     veh0.setPosition(new_center[0], new_center[1])
     sim.step(1e-6)
     assert veh0.getCollided(
-    ) == True, 'vehicle0 should have collided since a road edge intersects it'
+    ), 'vehicle0 should have collided since a road edge intersects it'
 
     ######################
     # Waymo Scene Construction
@@ -114,7 +114,7 @@ def test_scenario_functions():
     # image
     sim = Simulation(scenario_path=file_path,
                      start_time=20,
-                     use_non_vehicles=False)
+                     allow_non_vehicles=False)
     scenario = sim.getScenario()
 
     img2 = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi,
