@@ -110,6 +110,14 @@ class Scenario : public sf::Drawable {
   sf::View View(float target_width, float target_height, float padding) const;
 
  private:
+  // Draws the objects contained in `drawables` on the render target `target`.
+  // The view `view` is applied to the target before drawing the objects, and
+  // the transform `transform` is applied when drawing each object. `drawables`
+  // should contain pointers to objects inheriting from sf::Drawable.
+  template <typename P>
+  void DrawOnTarget(sf::RenderTarget& target, const std::vector<P>& drawables,
+                    const sf::View& view, const sf::Transform& transform) const;
+
   // Computes and returns a list of `sf::Drawable` objects representing the
   // goals/destinations of the `source` vehicle, or of all vehicles in the
   // scenario if `source == nullptr`. Each goal is represented as a circle of
@@ -121,36 +129,48 @@ class Scenario : public sf::Drawable {
   // to draw classes inheriting sf::Drawable.
   void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 
-  // Draws the objects contained in `drawables` on the render target `target`.
-  // The view `view` is applied to the target before drawing the objects, and
-  // the transform `transform` is applied when drawing each object. `drawables`
-  // should contain pointers to objects inheriting from sf::Drawable.
-  template <typename P>
-  void DrawOnTarget(sf::RenderTarget& target, const std::vector<P>& drawables,
-                    const sf::View& view, const sf::Transform& transform) const;
-
  public:
-  NdArray<unsigned char> Image(uint64_t img_width = 500,
-                               uint64_t img_height = 500,
+  // Computes and returns an image of the scenario. The returned image has
+  // dimension `img_height` * `img_width` * 4 where 4 is the number of channels
+  // (RGBA). If `draw_destinations` is true, the vehicles' goals will be drawn.
+  // `padding` (in pixels) can be used to add some padding around the image
+  // (included in its width/height). If a `source` object is provided, computes
+  // an image of a rectangle of size (`view_width`, `view_height`) centered
+  // around the object, rather than of the whole scenario. Besides, if
+  // `rotate_with_source` is set to true, the source object will be pointing
+  // upwards (+pi/2) in the returned image. Note that the size of the view will
+  // be scaled to fit the image size without changing the width:height ratio, so
+  // that the resulting image is not distorted.
+  NdArray<unsigned char> Image(uint64_t img_width = 1000,
+                               uint64_t img_height = 1000,
                                bool draw_destinations = true,
                                float padding = 0.0f, Object* source = nullptr,
                                uint64_t view_width = 200,
                                uint64_t view_height = 200,
                                bool rotate_with_source = true) const;
 
+  // Computes and returns an image of the visible state of the `source` object,
+  // ie. the features returned by the `VisibleState` method. See the
+  // documentation of `VisibleState` for an explanation of the `view_dist`,
+  // `view_angle` and `head_tilt` parameters. See the documentation of `Image`
+  // for an explanation of the remaining parameters of this function.
   NdArray<unsigned char> EgoVehicleFeaturesImage(
       const Object& source, float view_dist = 120.0f,
       float view_angle = geometry::utils::kPi * 0.8f, float head_tilt = 0.0f,
-      uint64_t img_width = 500, uint64_t img_height = 500, float padding = 0.0f,
-      bool draw_source = true, bool draw_destination = true) const;
+      uint64_t img_width = 1000, uint64_t img_height = 1000,
+      float padding = 0.0f, bool draw_destination = true) const;
 
-  NdArray<unsigned char> getCone(Object* object, float viewDist = 60.0f,
-                                 float viewAngle = geometry::utils::kHalfPi,
-                                 float headTilt = 0.0f,
-                                 bool obscuredView = true);  // TODO REMOVE
-
-  NdArray<unsigned char> getImage(Object* object = nullptr,
-                                  bool renderGoals = false);  // TODO REMOVE
+  // Computes and returns an image of a cone of vision of the `source` object.
+  // The image is centered around the `source` object, with a cone of vision of
+  // radius `view_dist` and of angle `view_angle` (in radians). The cone points
+  // upwards (+pi/2) with an optional tilt `head_tilt` (in radians). See the
+  // documentation of `Image` for an explanation of the remaining parameters of
+  // this function.
+  NdArray<unsigned char> EgoVehicleConeImage(
+      const Object& source, float view_dist = 120.0f,
+      float view_angle = geometry::utils::kPi * 0.8f, float head_tilt = 0.0f,
+      uint64_t img_width = 1000, uint64_t img_height = 1000,
+      float padding = 0.0f, bool draw_destinations = true) const;
 
   /*********************** State Accessors *******************/
 

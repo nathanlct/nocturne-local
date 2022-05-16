@@ -71,5 +71,111 @@ std::unique_ptr<sf::CircleShape> MakeCircleShape(geometry::Vector2D position,
   return circle_shape;
 }
 
+std::vector<std::unique_ptr<sf::VertexArray>> MakeInvertedConeShape(
+    float radius, float angle, float tilt, sf::Color fill_color,
+    int64_t n_points) {
+  std::vector<std::unique_ptr<sf::VertexArray>> drawables;
+
+  // fill around the circle (ie. enclosing square minus circle)
+  for (int64_t quadrant = 0; quadrant < 4; ++quadrant) {
+    auto quadrant_drawable = std::make_unique<sf::VertexArray>(sf::TriangleFan);
+    const float quadrant_start_angle = quadrant * geometry::utils::kPi / 2.0f;
+
+    // corner point of the square
+    geometry::Vector2D corner = geometry::PolarToVector2D(
+        std::sqrt(2 * radius * radius),
+        quadrant_start_angle + geometry::utils::kPi / 4.0f);
+    quadrant_drawable->append(
+        sf::Vertex(utils::ToVector2f(corner), fill_color));
+
+    // quarter of circle approximation
+    for (int i = 0; i < n_points; ++i) {
+      const float point_angle =
+          quadrant_start_angle +
+          i * (geometry::utils::kPi / 2.0f) / (n_points - 1);
+      geometry::Vector2D pt = geometry::PolarToVector2D(radius, point_angle);
+      quadrant_drawable->append(sf::Vertex(utils::ToVector2f(pt), fill_color));
+    }
+
+    drawables.push_back(std::move(quadrant_drawable));
+  }
+
+  // fill around cone (ie. part within circle that is not part of the cone)
+  if (angle < 2.0f * geometry::utils::kPi) {
+    auto cone_drawable = std::make_unique<sf::VertexArray>(sf::TriangleFan);
+
+    // origin of the cone (center of the circle)
+    cone_drawable->append(sf::Vertex(sf::Vector2f(0.0f, 0.0f), fill_color));
+
+    // circular arc
+    const float start_angle = geometry::utils::kPi / 2.0f + angle / 2.0f + tilt;
+    const float end_angle = geometry::utils::kPi / 2.0f +
+                            2.0f * geometry::utils::kPi - angle / 2.0f + tilt;
+    const int n_points_circle = 4 * n_points;
+    for (int i = 0; i < n_points_circle; ++i) {
+      const float point_angle =
+          start_angle + i * (end_angle - start_angle) / (n_points_circle - 1);
+      geometry::Vector2D pt = geometry::PolarToVector2D(radius, point_angle);
+      cone_drawable->append(sf::Vertex(utils::ToVector2f(pt), fill_color));
+    }
+
+    drawables.push_back(std::move(cone_drawable));
+  }
+
+  return drawables;
+}
+
+std::vector<std::unique_ptr<sf::ConvexShape>> MakeObstructionShape(
+    geometry::Vector2D source_pos, std::vector<geometry::LineSegment> obj_lines,
+    float radius, sf::Color fill_color, int64_t n_points) {
+  std::vector<std::unique_ptr<sf::ConvexShape>> obscurity_drawables;
+
+  for (const auto& line1 : obj_lines) {
+    const geometry::Vector2D& pt1 = line1.Endpoint0();
+
+    const geometry::Vector2D& pt2 = line1.Endpoint1();
+    int nIntersections = 0;
+    for (const auto& line2 : obj_lines) {
+      const geometry::Vector2D& pt3 = line2.Endpoint0();
+      const geometry::Vector2D& pt4 = line2.Endpoint1();
+      if (pt1 != pt3 && pt1 != pt4 &&
+          geometry::LineSegment(pt1, source_pos).Intersects(line2)) {
+        nIntersections++;
+        break;
+      }
+    }
+    for (const auto& line2 : obj_lines) {
+      const geometry::Vector2D& pt3 = line2.Endpoint0();
+      const geometry::Vector2D& pt4 = line2.Endpoint1();
+      if (pt2 != pt3 && pt2 != pt4 &&
+          geometry::LineSegment(pt2, source_pos).Intersects(line2)) {
+        nIntersections++;
+        break;
+      }
+    }
+
+    if (nIntersections >= 1) {
+      auto hiddenArea = std::make_unique<sf::ConvexShape>();
+
+      float angle1 = (pt1 - source_pos).Angle();
+      float angle2 = (pt2 - source_pos).Angle();
+
+      hiddenArea->setPointCount(n_points + 2);
+
+      hiddenArea->setPoint(0, utils::ToVector2f((pt1 - source_pos)));
+      for (int i = 0; i < n_points; ++i) {
+        float angle = angle1 + i * (angle2 - angle1) / (n_points - 1);
+        geometry::Vector2D pt = geometry::PolarToVector2D(radius, angle);
+        hiddenArea->setPoint(1 + i, utils::ToVector2f(pt));
+      }
+      hiddenArea->setPoint(n_points + 1, utils::ToVector2f((pt2 - source_pos)));
+      hiddenArea->setFillColor(fill_color);
+
+      obscurity_drawables.push_back(std::move(hiddenArea));
+    }
+  }
+  return obscurity_drawables;
+}
+
 }  // namespace utils
 }  // namespace nocturne
