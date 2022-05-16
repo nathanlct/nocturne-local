@@ -130,9 +130,11 @@ std::vector<std::unique_ptr<sf::ConvexShape>> MakeObstructionShape(
     float radius, sf::Color fill_color, int64_t n_points) {
   std::vector<std::unique_ptr<sf::ConvexShape>> obscurity_drawables;
 
+  // check each pair of lines, and if one line is behind the other from the
+  // point of view of the source, then fill all the area behind that line as it
+  // is obscured by the other line.
   for (const auto& line1 : obj_lines) {
     const geometry::Vector2D& pt1 = line1.Endpoint0();
-
     const geometry::Vector2D& pt2 = line1.Endpoint1();
     int nIntersections = 0;
     for (const auto& line2 : obj_lines) {
@@ -155,21 +157,24 @@ std::vector<std::unique_ptr<sf::ConvexShape>> MakeObstructionShape(
     }
 
     if (nIntersections >= 1) {
+      // line1 is behind another line of the object -> fill behind it
       auto hiddenArea = std::make_unique<sf::ConvexShape>();
 
       float angle1 = (pt1 - source_pos).Angle();
       float angle2 = (pt2 - source_pos).Angle();
 
       hiddenArea->setPointCount(n_points + 2);
-
+      hiddenArea->setFillColor(fill_color);
+      // first point of line1
       hiddenArea->setPoint(0, utils::ToVector2f((pt1 - source_pos)));
+      // circular arc 
       for (int i = 0; i < n_points; ++i) {
         float angle = angle1 + i * (angle2 - angle1) / (n_points - 1);
         geometry::Vector2D pt = geometry::PolarToVector2D(radius, angle);
         hiddenArea->setPoint(1 + i, utils::ToVector2f(pt));
       }
+      // second point of line1
       hiddenArea->setPoint(n_points + 1, utils::ToVector2f((pt2 - source_pos)));
-      hiddenArea->setFillColor(fill_color);
 
       obscurity_drawables.push_back(std::move(hiddenArea));
     }
