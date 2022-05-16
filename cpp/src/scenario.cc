@@ -774,7 +774,7 @@ Scenario::VehiclesDestinationsDrawables(const Object* source,
                                         float radius) const {
   std::vector<std::unique_ptr<sf::CircleShape>> destination_drawables;
   if (source == nullptr) {
-    for (const auto& obj : roadObjects) {
+    for (const auto& obj : objects_) {
       auto circle_shape = utils::MakeCircleShape(obj->destination(), radius,
                                                  obj->color(), false);
       destination_drawables.push_back(std::move(circle_shape));
@@ -804,7 +804,7 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   sf::View view =
       View(target.getSize().x, target.getSize().y, /*padding=*/30.0f);
   DrawOnTarget(target, roadLines, view, horizontal_flip);
-  DrawOnTarget(target, roadObjects, view, horizontal_flip);
+  DrawOnTarget(target, objects_, view, horizontal_flip);
   DrawOnTarget(target, trafficLights, view, horizontal_flip);
   DrawOnTarget(target, stopSigns, view, horizontal_flip);
   DrawOnTarget(target, VehiclesDestinationsDrawables(), view, horizontal_flip);
@@ -837,7 +837,7 @@ NdArray<unsigned char> Scenario::Image(uint64_t img_width, uint64_t img_height,
   Canvas canvas(img_width, img_height);
 
   DrawOnTarget(canvas, roadLines, view, horizontal_flip);
-  DrawOnTarget(canvas, roadObjects, view, horizontal_flip);
+  DrawOnTarget(canvas, objects_, view, horizontal_flip);
   DrawOnTarget(canvas, trafficLights, view, horizontal_flip);
   DrawOnTarget(canvas, stopSigns, view, horizontal_flip);
 
@@ -884,7 +884,7 @@ NdArray<unsigned char> Scenario::EgoVehicleConeImage(
 
   // draw roads and objects
   DrawOnTarget(canvas, roadLines, scenario_view, horizontal_flip);
-  DrawOnTarget(canvas, roadObjects, scenario_view, horizontal_flip);
+  DrawOnTarget(canvas, objects_, scenario_view, horizontal_flip);
 
   // draw destinations
   if (draw_destinations) {
@@ -893,7 +893,7 @@ NdArray<unsigned char> Scenario::EgoVehicleConeImage(
   }
 
   // draw obstructions
-  for (const auto& obj : getVehicles()) {
+  for (const auto& obj : objects_) {
     if (obj->id() == source.id() || !obj->can_block_sight()) continue;
     const float dist_to_source = (obj->position() - source.position()).Norm();
     if (dist_to_source > view_dist + obj->Radius()) continue;
