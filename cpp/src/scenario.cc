@@ -173,8 +173,8 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
     const ObjectType object_type = ParseObjectType(obj["type"]);
 
     // TODO(ev) currTime should be passed in rather than defined here
-    geometry::Vector2D pos(obj["position"]["x"][current_time_],
-                           obj["position"]["y"][current_time_]);
+    geometry::Vector2D pos(obj["position"][current_time_]["x"],
+                           obj["position"][current_time_]["y"]);
     float width = float(obj["width"]);
     float length = float(obj["length"]);
     float heading = geometry::utils::NormalizeAngle(geometry::utils::Radians(
@@ -195,11 +195,11 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
     std::vector<bool> localValid;
     std::vector<float> localHeadingVec;
     bool is_moving = false;
-    for (unsigned int i = 0; i < obj["position"]["x"].size(); i++) {
-      geometry::Vector2D currPos(obj["position"]["x"][i],
-                                 obj["position"]["y"][i]);
-      geometry::Vector2D currVel(obj["velocity"]["x"][i],
-                                 obj["velocity"]["y"][i]);
+    for (unsigned int i = 0; i < obj["position"].size(); i++) {
+      geometry::Vector2D currPos(obj["position"][i]["x"],
+                                 obj["position"][i]["y"]);
+      geometry::Vector2D currVel(obj["velocity"][i]["x"],
+                                 obj["velocity"][i]["y"]);
       localExpertTrajectory.push_back(currPos);
       localExpertSpeeds.push_back(currVel);
       if (currVel.Norm() > 0 && bool(obj["valid"][i])) {
