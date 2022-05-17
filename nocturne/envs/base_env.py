@@ -209,16 +209,22 @@ class BaseEnv(MultiAgentEnv):
                 obj_pos = np.array([obj_pos.x, obj_pos.y])
                 goal_pos = veh_obj.getGoalPosition()
                 goal_pos = np.array([goal_pos.x, goal_pos.y])
-                ######################## Remove vehicles at goal #######################
-                if np.linalg.norm(goal_pos - obj_pos
-                                  ) < self.cfg['rew_cfg']['goal_tolerance'] or \
-                                  veh_obj.getCollided():
+                '''############################################
+                    Remove vehicles at goal
+                ############################################'''
+                norm = np.linalg.norm(goal_pos - obj_pos)
+                if norm < self.cfg['rew_cfg'][
+                        'goal_tolerance'] or veh_obj.getCollided():
                     self.scenario.removeVehicle(veh_obj)
-                ########## Set all vehicles with unachievable goals to be experts #########
+                '''############################################
+                    Set all vehicles with unachievable goals to be experts
+                ############################################'''
                 if self.file in self.valid_veh_dict and veh_obj.getID(
                 ) in self.valid_veh_dict[self.file]:
                     veh_obj.expert_control = True
-            ########## Pick out the vehicles that we are controlling #########
+            '''############################################
+                Pick out the vehicles that we are controlling
+            ############################################'''
             # ensure that we have no more than max_num_vehicles are controlled
             temp_vehicles = self.scenario.getObjectsThatMoved()
             curr_index = 0

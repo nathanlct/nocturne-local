@@ -6,7 +6,6 @@ from collections import deque
 import itertools
 import json
 import sys
-import time
 import os
 
 import numpy as np
@@ -26,7 +25,7 @@ from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
 from run_sample_factory import register_custom_components
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL
+from cfgs.config import PROCESSED_VALID_NO_TL
 
 
 def enjoy(cfgs, max_num_frames=1e9):
