@@ -1,3 +1,4 @@
+"""Example run script for RLlib."""
 import hydra
 from omegaconf import OmegaConf
 from pyvirtualdisplay import Display
@@ -10,47 +11,59 @@ from nocturne_utils.wrappers import create_env
 
 
 class RLlibWrapperEnv(MultiAgentEnv):
+    """Thin wrapper making our env look like a MultiAgentEnv."""
+
     metadata = {
         "render.modes": ["rgb_array"],
     }
 
     def __init__(self, env):
+        """See wrapped env class."""
         self._skip_env_checking = True  # temporary fix for rllib env checking issue
         super().__init__()
         self._env = env
 
     def step(self, actions):
+        """See wrapped env class."""
         next_obs, rew, done, info = self._env.step(actions)
         return next_obs, rew, done, info
 
     def reset(self):
+        """See wrapped env class."""
         obses = self._env.reset()
         return obses
 
     @property
     def observation_space(self):
+        """See wrapped env class."""
         return self._env.observation_space
 
     @property
     def action_space(self):
+        """See wrapped env class."""
         return self._env.action_space
 
     def render(self, mode=None):
+        """See wrapped env class."""
         return self._env.render()
 
     def seed(self, seed=None):
+        """Set seed on the wrapped env."""
         self._env.seed(seed)
 
     def __getattr__(self, name):
+        """Return attributes from the wrapped env."""
         return getattr(self._env, name)
 
 
 def create_rllib_env(cfg):
+    """Return an MultiAgentEnv wrapped environment."""
     return RLlibWrapperEnv(create_env(cfg))
 
 
 @hydra.main(config_path="../../cfgs/", config_name="config")
 def main(cfg):
+    """Run RLlib example."""
     disp = Display()
     disp.start()
     cfg = OmegaConf.to_container(cfg, resolve=True)

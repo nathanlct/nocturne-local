@@ -1,3 +1,4 @@
+"""Import file for Nocturne objects."""
 from nocturne_cpp import (CollisionType, ObjectType, Object, RoadLine,
                           Scenario, Simulation, Vector2D, Vehicle)
 

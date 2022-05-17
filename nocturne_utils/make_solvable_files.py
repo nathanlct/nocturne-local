@@ -1,9 +1,8 @@
-# This file runs through the data to look for cases where there are undesirable corner cases
-# the cases we currently check for are:
-# 1) is a vehicle initialized in a colliding state with another vehicle
-# 2) is a vehicle initialized in a colliding state with a road edge?
-# if none of these conditions are violated throughout the entire rollout, we include
-# the file
+"""Find all cases where collisions are required to achieve the goal.
+
+Due to errors in Waymo labeling, some space that is crossable is mistakenly
+labeled as a road edge. This file finds most of those cases.
+"""
 import argparse
 import json
 import multiprocessing
@@ -18,6 +17,24 @@ from nocturne import Simulation
 
 
 def is_file_valid(file_list, output_file, output_file_invalid, lock=None):
+    """Test if file requires an agent to collide with a road edge to get to goal.
+
+    We test for this by making the agent have very thin width. If an agent 
+    is in collision with a road edge despite this thin width, it was crossing
+    that road edge because that road edge was on the way to its goal. We also 
+    shrink the length to avoid the cases where the vehicle is initialized 
+    in collision with a road edge.
+
+    If a file has more than 80% of the agents need to collide with a road edge to get
+    to goal, we store it in output_file_invalid instead.
+
+    Args
+    ----
+        file_list ([str]): list of file paths.
+        output_file (str): file to store valid json names.
+        output_file_invalid (_type_): file to store invalid json names.
+        lock (Lock, optional): Lock used for safe file writing.
+    """
     file_valid_dict = {}
     file_invalid_dict = {}
     for i, file in enumerate(file_list):

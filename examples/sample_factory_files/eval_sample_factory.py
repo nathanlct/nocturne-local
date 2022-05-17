@@ -327,7 +327,7 @@ def main():
     for cfg in cfg_dicts:
         cfg = Bunch(cfg_dict)
         cfgs.append(cfg)
-    status, avg_reward = enjoy(cfgs)
+    status, avg_reward = run_eval(cfgs)
     return status
 
 

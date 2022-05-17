@@ -1,14 +1,11 @@
 """Test step and rendering functions."""
+import os
 
 from hydra import compose, initialize
 from pyvirtualdisplay import Display
 
 from cfgs.config import PROJECT_PATH
-<<<<<<< HEAD
 from nocturne.envs.wrappers import create_env
-=======
-from nocturne_utils.wrappers import create_env
->>>>>>> bc7f21b1d4342cdd17fbffb443eeb0d66d9479ce
 
 
 def test_rl_env():
