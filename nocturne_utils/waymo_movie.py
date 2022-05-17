@@ -1,21 +1,21 @@
-# TODO(ev) make this efficient and called by step rather than re-rendering the scene
 import os
 
-from celluloid import Camera
+import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 from pyvirtualdisplay import Display
 
+from cfgs.config import PROCESSED_TRAIN_NO_TL
 from nocturne import Simulation
 
 disp = Display()
 disp.start()
 fig = plt.figure()
-cam = Camera(fig)
-path = "/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json"
-files = os.listdir(path)
-file = os.path.join(path, files[np.random.randint(len(files))])
+files = os.listdir(PROCESSED_TRAIN_NO_TL)
+file = os.path.join(PROCESSED_TRAIN_NO_TL,
+                    files[np.random.randint(len(files))])
 sim = Simulation(file, start_time=0)
+frames = []
 scenario = sim.getScenario()
 for veh in scenario.getVehicles():
     veh.expert_control = True
@@ -23,12 +23,13 @@ for i in range(90):
     img = scenario.getImage(
         img_width=1600,
         img_height=1600,
-        draw_destinations=True,
+        draw_destinations=False,
         padding=50.0,
     )
-    plt.imshow(img)
-    cam.snap()
+    frames.append(img)
     sim.step(0.1)
 
-animation = cam.animate(interval=50)
-animation.save(f'{os.path.basename(file)}.mp4')
+movie_frames = np.array(frames)
+output_path = f'{os.path.basename(file)}.mp4'
+imageio.mimwrite(output_path, movie_frames, fps=30)
+print('>', output_path)
