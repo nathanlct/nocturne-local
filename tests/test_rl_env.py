@@ -6,14 +6,13 @@ from pyvirtualdisplay import Display
 from cfgs.config import PROJECT_PATH
 from nocturne_utils.wrappers import create_env
 
-os.environ["DISPLAY"] = ":0.0"
-
 
 def test_rl_env():
     disp = Display()
     disp.start()
     initialize(config_path="../cfgs/")
     cfg = compose(config_name="config")
+    cfg.scenario_path = os.path.join(PROJECT_PATH, 'tests')
     cfg.max_num_vehicles = 50
     env = create_env(cfg)
     env.files = [str(PROJECT_PATH / "tests/large_file.json")]
