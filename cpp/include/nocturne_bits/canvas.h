@@ -8,9 +8,9 @@ namespace nocturne {
 
 class Canvas : public sf::RenderTexture {
  public:
-  Canvas(int64_t width, int64_t height,
+  Canvas(int64_t height, int64_t width,
          sf::Color background_color = sf::Color(50, 50, 50))
-      : width_(width), height_(height) {
+      : height_(height), width_(width) {
     sf::ContextSettings texture_settings;
     texture_settings.antialiasingLevel = 4;
     create(width, height, texture_settings);
@@ -26,8 +26,8 @@ class Canvas : public sf::RenderTexture {
   }
 
  private:
-  const int64_t width_;
   const int64_t height_;
+  const int64_t width_;
 };
 
 }  // namespace nocturne

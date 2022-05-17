@@ -729,8 +729,9 @@ bool Scenario::RemoveObject(const Object& object) {
 /*********************** Drawing Functions *****************/
 
 sf::View Scenario::View(geometry::Vector2D view_center, float rotation,
-                        float view_width, float view_height, float target_width,
-                        float target_height, float padding) const {
+                        float view_height, float view_width,
+                        float target_height, float target_width,
+                        float padding) const {
   // create view (note that the y coordinates and the view rotation are flipped
   // because the scenario is always drawn with a horizontally flip transform)
   const sf::Vector2f center = utils::ToVector2f(view_center, /*flip_y=*/true);
@@ -755,7 +756,7 @@ sf::View Scenario::View(geometry::Vector2D view_center, float rotation,
   return view;
 }
 
-sf::View Scenario::View(float target_width, float target_height,
+sf::View Scenario::View(float target_height, float target_width,
                         float padding) const {
   // compute center and size of view based on known scenario bounds
   const geometry::Vector2D view_center(
@@ -765,8 +766,8 @@ sf::View Scenario::View(float target_width, float target_height,
   const float view_height = road_network_bounds_.height;
 
   // build the view from overloaded function
-  return View(view_center, 0.0f, view_width, view_height, target_width,
-              target_height, padding);
+  return View(view_center, 0.0f, view_height, view_width, target_height,
+              target_width, padding);
 }
 
 std::vector<std::unique_ptr<sf::CircleShape>>
@@ -802,7 +803,7 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   sf::Transform horizontal_flip;
   horizontal_flip.scale(1, -1);
   sf::View view =
-      View(target.getSize().x, target.getSize().y, /*padding=*/30.0f);
+      View(target.getSize().y, target.getSize().x, /*padding=*/30.0f);
   DrawOnTarget(target, roadLines, view, horizontal_flip);
   DrawOnTarget(target, objects_, view, horizontal_flip);
   DrawOnTarget(target, trafficLights, view, horizontal_flip);
@@ -810,10 +811,10 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   DrawOnTarget(target, VehiclesDestinationsDrawables(), view, horizontal_flip);
 }
 
-NdArray<unsigned char> Scenario::Image(uint64_t img_width, uint64_t img_height,
+NdArray<unsigned char> Scenario::Image(uint64_t img_height, uint64_t img_width,
                                        bool draw_destinations, float padding,
-                                       Object* source, uint64_t view_width,
-                                       uint64_t view_height,
+                                       Object* source, uint64_t view_height,
+                                       uint64_t view_width,
                                        bool rotate_with_source) const {
   // construct transform (flip the y-axis)
   sf::Transform horizontal_flip;
@@ -823,18 +824,18 @@ NdArray<unsigned char> Scenario::Image(uint64_t img_width, uint64_t img_height,
   sf::View view;
   if (source == nullptr) {
     // if no source object is provided, get the entire scenario
-    view = View(img_width, img_height, padding);
+    view = View(img_height, img_width, padding);
   } else {
     // otherwise get a region around the source object, possibly rotated
     const float rotation =
         rotate_with_source ? geometry::utils::Degrees(source->heading()) - 90.0f
                            : 0.0f;
-    view = View(source->position(), rotation, view_width, view_height,
-                img_width, img_height, padding);
+    view = View(source->position(), rotation, view_height, view_width,
+                img_height, img_width, padding);
   }
 
   // create canvas and draw objects
-  Canvas canvas(img_width, img_height);
+  Canvas canvas(img_height, img_width);
 
   DrawOnTarget(canvas, roadLines, view, horizontal_flip);
   DrawOnTarget(canvas, objects_, view, horizontal_flip);
@@ -851,7 +852,7 @@ NdArray<unsigned char> Scenario::Image(uint64_t img_width, uint64_t img_height,
 
 NdArray<unsigned char> Scenario::EgoVehicleConeImage(
     const Object& source, float view_dist, float view_angle, float head_tilt,
-    uint64_t img_width, uint64_t img_height, float padding,
+    uint64_t img_height, uint64_t img_width, float padding,
     bool draw_destinations) const {
   // define transforms
   sf::Transform horizontal_flip;
@@ -864,13 +865,13 @@ NdArray<unsigned char> Scenario::EgoVehicleConeImage(
   const float rotation = geometry::utils::Degrees(source.heading()) - 90.0f;
   const sf::View scenario_view =
       View(source.position(), rotation, 2.0f * view_dist, 2.0f * view_dist,
-           img_width, img_height, padding);
+           img_height, img_width, padding);
   const sf::View cone_view =
       View(geometry::Vector2D(0.0f, 0.0f), 0.0f, 2.0f * view_dist,
-           2.0f * view_dist, img_width, img_height, padding);
+           2.0f * view_dist, img_height, img_width, padding);
 
   // create canvas
-  Canvas canvas(img_width, img_height, sf::Color::Black);
+  Canvas canvas(img_height, img_width, sf::Color::Black);
 
   // draw background
   auto background = std::make_unique<sf::RectangleShape>(
@@ -918,16 +919,16 @@ NdArray<unsigned char> Scenario::EgoVehicleConeImage(
 
 NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
     const Object& source, float view_dist, float view_angle, float head_tilt,
-    uint64_t img_width, uint64_t img_height, float padding,
+    uint64_t img_height, uint64_t img_width, float padding,
     bool draw_destination) const {
   sf::Transform horizontal_flip;
   horizontal_flip.scale(1, -1);
 
   const float rotation = geometry::utils::Degrees(source.heading()) - 90.0f;
   sf::View view = View(source.position(), rotation, 2.0f * view_dist,
-                       2.0f * view_dist, img_width, img_height, padding);
+                       2.0f * view_dist, img_height, img_width, padding);
 
-  Canvas canvas(img_width, img_height);
+  Canvas canvas(img_height, img_width);
 
   // TODO(nl) remove code duplication and linear overhead
   const auto [kinetic_objects, road_points, traffic_lights, stop_signs] =

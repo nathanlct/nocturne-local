@@ -106,23 +106,23 @@ class Scenario : public sf::Drawable {
   /*********************** Drawing Functions *****************/
 
  public:
-  // Computes and returns an `sf::View` of size (`view_width`, `view_height`)
+  // Computes and returns an `sf::View` of size (`view_height`, `view_width`)
   // (in scenario coordinates), centered around `view_center` (in scenario
   // coordinates) and rotated by `rotation` radians. The view is mapped to a
-  // viewport of size (`target_width`, `target_height`) pixels, with a minimum
+  // viewport of size (`target_height`, `target_width`) pixels, with a minimum
   // padding of `padding` pixels between the scenario boundaries and the
   // viewport border. A scale-to-fit transform is applied so that the scenario
   // view is scaled to fit the viewport (minus padding) without changing the
   // width:height ratio of the captured view.
   sf::View View(geometry::Vector2D view_center, float rotation,
-                float view_width, float view_height, float target_width,
-                float target_height, float padding) const;
+                float view_height, float view_width, float target_height,
+                float target_width, float padding) const;
 
   // Computes and returns an `sf::View``, mapping the whole scenario into a
-  // viewport of size (`target_width`, `target_height`) pixels with a minimum
+  // viewport of size (`target_height`, `target_width`) pixels with a minimum
   // padding of `padding` pixels around the scenario. See the other definition
   // of `sf::View View` for more information.
-  sf::View View(float target_width, float target_height, float padding) const;
+  sf::View View(float target_height, float target_width, float padding) const;
 
  private:
   // Draws the objects contained in `drawables` on the render target `target`.
@@ -150,18 +150,18 @@ class Scenario : public sf::Drawable {
   // (RGBA). If `draw_destinations` is true, the vehicles' goals will be drawn.
   // `padding` (in pixels) can be used to add some padding around the image
   // (included in its width/height). If a `source` object is provided, computes
-  // an image of a rectangle of size (`view_width`, `view_height`) centered
+  // an image of a rectangle of size (`view_height`, `view_width`) centered
   // around the object, rather than of the whole scenario. Besides, if
   // `rotate_with_source` is set to true, the source object will be pointing
   // upwards (+pi/2) in the returned image. Note that the size of the view will
   // be scaled to fit the image size without changing the width:height ratio, so
   // that the resulting image is not distorted.
-  NdArray<unsigned char> Image(uint64_t img_width = 1000,
-                               uint64_t img_height = 1000,
+  NdArray<unsigned char> Image(uint64_t img_height = 1000,
+                               uint64_t img_width = 1000,
                                bool draw_destinations = true,
                                float padding = 0.0f, Object* source = nullptr,
-                               uint64_t view_width = 200,
                                uint64_t view_height = 200,
+                               uint64_t view_width = 200,
                                bool rotate_with_source = true) const;
 
   // Computes and returns an image of the visible state of the `source` object,
@@ -172,7 +172,7 @@ class Scenario : public sf::Drawable {
   NdArray<unsigned char> EgoVehicleFeaturesImage(
       const Object& source, float view_dist = 120.0f,
       float view_angle = geometry::utils::kPi * 0.8f, float head_tilt = 0.0f,
-      uint64_t img_width = 1000, uint64_t img_height = 1000,
+      uint64_t img_height = 1000, uint64_t img_width = 1000,
       float padding = 0.0f, bool draw_destination = true) const;
 
   // Computes and returns an image of a cone of vision of the `source` object.
@@ -184,7 +184,7 @@ class Scenario : public sf::Drawable {
   NdArray<unsigned char> EgoVehicleConeImage(
       const Object& source, float view_dist = 120.0f,
       float view_angle = geometry::utils::kPi * 0.8f, float head_tilt = 0.0f,
-      uint64_t img_width = 1000, uint64_t img_height = 1000,
+      uint64_t img_height = 1000, uint64_t img_width = 1000,
       float padding = 0.0f, bool draw_destinations = true) const;
 
   /*********************** State Accessors *******************/
