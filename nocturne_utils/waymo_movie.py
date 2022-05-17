@@ -20,7 +20,12 @@ scenario = sim.getScenario()
 for veh in scenario.getVehicles():
     veh.expert_control = True
 for i in range(90):
-    img = scenario.getImage(None, render_goals=True)
+    img = scenario.getImage(
+        img_width=1600,
+        img_height=1600,
+        draw_destinations=True,
+        padding=50.0,
+    )
     plt.imshow(img)
     cam.snap()
     sim.step(0.1)

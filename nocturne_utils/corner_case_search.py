@@ -44,7 +44,12 @@ if __name__ == '__main__':
                 if np.isclose(veh.getPosition().x, -10000.0):
                     collided = False
                 if time_index == 0 and not found_collision and collided and SAVE_IMAGES:
-                    img = sim.getScenario().getImage(None, render_goals=True)
+                    img = sim.getScenario().getImage(
+                        img_width=1600,
+                        img_height=1600,
+                        draw_destinations=True,
+                        padding=50.0,
+                    )
                     fig = plt.figure()
                     plt.imshow(img)
                     plt.savefig(f'{output_folder}/{file}.png')
