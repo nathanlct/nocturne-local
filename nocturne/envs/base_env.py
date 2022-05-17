@@ -218,20 +218,25 @@ class BaseEnv(MultiAgentEnv):
                 if self.file in self.valid_veh_dict and veh_obj.getID(
                 ) in self.valid_veh_dict[self.file]:
                     veh_obj.expert_control = True
-            temp_vehicles = self.scenario.getObjectsThatMoved(
-            )[:self.cfg['max_num_vehicles']]
+            ########## Pick out the vehicles that we are controlling #########
+            # ensure that we have no more than max_num_vehicles are controlled
+            temp_vehicles = self.scenario.getObjectsThatMoved()
+            curr_index = 0
             self.controlled_vehicles = []
             for vehicle in temp_vehicles:
                 # we don't want to include vehicles that had unachievable goals
                 # as controlled vehicles
                 if not vehicle.expert_control:
                     self.controlled_vehicles.append(vehicle)
+                else:
+                    curr_index += 1
+                if curr_index > self.cfg['max_num_vehicles']:
+                    break
             self.all_vehicle_ids = [
                 veh.getID() for veh in self.controlled_vehicles
             ]
             # make all the vehicles that are in excess of max_num_vehicles controlled by an expert
-            for veh in self.scenario.getObjectsThatMoved(
-            )[self.cfg['max_num_vehicles']:]:
+            for veh in self.scenario.getObjectsThatMoved()[curr_index:]:
                 veh.expert_control = True
             # check that we have at least one vehicle or if we have just one file, exit anyways
             # or else we might be stuck in an infinite loop
