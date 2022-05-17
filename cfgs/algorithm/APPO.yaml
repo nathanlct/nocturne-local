@@ -5,7 +5,6 @@ train_dir: null
                         # Root for all experiments (default: /private/home/eugenevinitsky/Code/nocturne/examples/train_dir)
                         # if null use the hydra default position
 device: gpu  # CPU training is only recommended for smaller e.g. MLP policies (default: gpu)
-seed: null # Set a fixed seed value (default: None)
 save_every_sec: 120 # Checkpointing rate (default: 120)
 keep_checkpoints: 3 #Number of model checkpoints to keep (default: 3)
 save_milestones_sec: -1 #Save intermediate checkpoints in a separate folder for later evaluation (default=never) (default: -1)

@@ -18,13 +18,13 @@ jobs:
                   git submodule update --init --recursive
             - name: Build C++ nocturne library.
               run: |
-                  cd ${{ github.workspace }}/cpp
+                  cd ${{ github.workspace }}/nocturne/cpp
                   mkdir build
                   cd build
                   cmake ..
                   make
             - name: Run C++ tests.
               run: |
-                  cd ${{ github.workspace }}/cpp/build/tests
+                  cd ${{ github.workspace }}/nocturne/cpp/build/tests
                   ./nocturne_test
             - run: echo "Job finished with status ${{ job.status }}."

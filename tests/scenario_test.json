@@ -2,27 +2,23 @@
     "name": "test.json",
     "objects": [
         {
-            "position": {
-                "x": [
-                    0.0
-                ],
-                "y": [
-                    0.0
-                ]
-            },
+            "position": [
+                {
+                    "x": 0.0,
+                    "y": 0.0
+                }
+            ],
             "width": 1,
             "length": 2,
             "heading": [
                 90.0
             ],
-            "velocity": {
-                "x": [
-                    0.0
-                ],
-                "y": [
-                    5.0
-                ]
-            },
+            "velocity": [
+                {
+                    "x": 0.0,
+                    "y": 5.0
+                }
+            ],
             "valid": [
                 true
             ],
@@ -33,27 +29,23 @@
             "type": "vehicle"
         },
         {
-            "position": {
-                "x": [
-                    0.0
-                ],
-                "y": [
-                    10.0
-                ]
-            },
+            "position": [
+                {
+                    "x": 0.0,
+                    "y": 10.0
+                }
+            ],
             "width": 1,
             "length": 2,
             "heading": [
                 0.0
             ],
-            "velocity": {
-                "x": [
-                    5.0
-                ],
-                "y": [
-                    0.0
-                ]
-            },
+            "velocity": [
+                {
+                    "x": 5.0,
+                    "y": 0.0
+                }
+            ],
             "valid": [
                 true
             ],

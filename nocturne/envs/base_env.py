@@ -1,6 +1,7 @@
 """Each agent receives its observation, a goal position, and tries to get there without colliding."""
 
 from collections import defaultdict
+import json
 import os
 
 from gym.spaces import Box, Discrete
@@ -21,8 +22,9 @@ class BaseEnv(object):
         """
         super().__init__()
         with open(os.path.join(cfg['scenario_path'],
-                               'valid_files.txt')) as file:
-            self.files = [line.strip() for line in file]
+                               'valid_files.json')) as file:
+            self.valid_veh_dict = json.load(file)
+            self.files = list(self.valid_veh_dict.keys())
         if cfg['num_files'] != -1:
             self.files = self.files[0:cfg['num_files']]
         self.file = self.files[np.random.randint(len(self.files))]
@@ -30,7 +32,7 @@ class BaseEnv(object):
                                                   self.file),
                                      allow_non_vehicles=False)
         self.scenario = self.simulation.getScenario()
-        self.vehicles = self.scenario.getObjectsThatMoved()
+        self.controlled_vehicles = self.scenario.getObjectsThatMoved()
         self.single_agent_mode = cfg['single_agent_mode']
         self.cfg = cfg
         self.seed(cfg['seed'])
@@ -93,10 +95,12 @@ class BaseEnv(object):
         self.t += self.cfg['dt']
         self.step_num += 1
         objs_to_remove = []
-        for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
+        for veh_obj in self.controlled_vehicles:
             veh_id = veh_obj.getID()
             if self.single_agent_mode and veh_id != self.single_agent_obj.getID(
             ):
+                continue
+            if veh_id in self.done_ids:
                 continue
             obs_dict[veh_id] = self.get_observation(veh_obj)
             rew_dict[veh_id] = 0
@@ -149,6 +153,7 @@ class BaseEnv(object):
             # remove the vehicle so that its trajectory doesn't continue. This is important
             # in the multi-agent setting.
             if done_dict[veh_id]:
+                self.done_ids.append(veh_id)
                 objs_to_remove.append(veh_obj)
 
         for veh_obj in objs_to_remove:
@@ -182,9 +187,9 @@ class BaseEnv(object):
     def reset(self):
         self.t = 0
         self.step_num = 0
-        too_many_vehicles = True
+        enough_vehicles = False
         # we don't want to initialize scenes with more than N actors
-        while too_many_vehicles:
+        while not enough_vehicles:
             self.file = self.files[np.random.randint(len(self.files))]
             self.simulation = Simulation(os.path.join(
                 self.cfg['scenario_path'], self.file),
@@ -197,33 +202,55 @@ class BaseEnv(object):
                 obj_pos = np.array([obj_pos.x, obj_pos.y])
                 goal_pos = veh_obj.getGoalPosition()
                 goal_pos = np.array([goal_pos.x, goal_pos.y])
-                if np.linalg.norm(goal_pos - obj_pos
-                                  ) < self.cfg['rew_cfg']['goal_tolerance']:
+                '''############################################
+                    Remove vehicles at goal
+                ############################################'''
+                norm = np.linalg.norm(goal_pos - obj_pos)
+                if norm < self.cfg['rew_cfg'][
+                        'goal_tolerance'] or veh_obj.getCollided():
                     self.scenario.removeVehicle(veh_obj)
-                # TODO(eugenevinitsky) remove this once we remove all files that have an
-                # init at collision
-                if veh_obj.getCollided():
-                    self.scenario.removeVehicle(veh_obj)
-            self.vehicles = self.scenario.getObjectsThatMoved()
-            self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
-            # check if we have less than the desired number of vehicles and have
-            # at least one vehicle
-            if len(self.all_vehicle_ids
-                   ) <= self.cfg['max_num_vehicles'] and len(
-                       self.all_vehicle_ids) > 0:
-                too_many_vehicles = False
+                '''############################################
+                    Set all vehicles with unachievable goals to be experts
+                ############################################'''
+                if self.file in self.valid_veh_dict and veh_obj.getID(
+                ) in self.valid_veh_dict[self.file]:
+                    veh_obj.expert_control = True
+            '''############################################
+                Pick out the vehicles that we are controlling
+            ############################################'''
+            # ensure that we have no more than max_num_vehicles are controlled
+            temp_vehicles = self.scenario.getObjectsThatMoved()
+            curr_index = 0
+            self.controlled_vehicles = []
+            for vehicle in temp_vehicles:
+                # we don't want to include vehicles that had unachievable goals
+                # as controlled vehicles
+                if not vehicle.expert_control:
+                    self.controlled_vehicles.append(vehicle)
+                else:
+                    curr_index += 1
+                if curr_index > self.cfg['max_num_vehicles']:
+                    break
+            self.all_vehicle_ids = [
+                veh.getID() for veh in self.controlled_vehicles
+            ]
+            # make all the vehicles that are in excess of max_num_vehicles controlled by an expert
+            for veh in self.scenario.getObjectsThatMoved()[curr_index:]:
+                veh.expert_control = True
+            # check that we have at least one vehicle or if we have just one file, exit anyways
+            # or else we might be stuck in an infinite loop
+            if len(self.all_vehicle_ids) > 0 or len(self.files) == 1:
+                enough_vehicles = True
 
-        obs_dict = {}
-        self.goal_dist_normalizers = {}
-        if self.single_agent_mode:
-            objs_that_moved = self.simulation.getScenario(
-            ).getObjectsThatMoved()
-            self.single_agent_obj = objs_that_moved[np.random.randint(
-                len(objs_that_moved))]
-            # tag all vehicles except for the one you control as controlled by the expert
-            for veh in self.scenario.getObjectsThatMoved():
-                if veh.getID() != self.single_agent_obj.getID():
-                    veh.expert_control = True
+        # for one reason or another (probably we had a file where all the agents achieved their goals)
+        # we have no controlled vehicles
+        if len(self.all_vehicle_ids) == 0:
+            # just grab a vehicle even if it hasn't moved so that we have something
+            # to return obs for even if it's not controlled
+            self.controlled_vehicles = [self.scenario.getVehicles()[0]]
+            self.all_vehicle_ids = [
+                veh.getID() for veh in self.controlled_vehicles
+            ]
 
         # step all the vehicles forward by one second and record their observations as context
         if self.single_agent_mode:
@@ -252,22 +279,34 @@ class BaseEnv(object):
             for veh in self.scenario.getObjectsThatMoved():
                 veh.expert_control = False
 
-        for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
+        # construct the observations and goal normalizers
+        obs_dict = {}
+        self.goal_dist_normalizers = {}
+        if self.single_agent_mode:
+            objs_that_moved = self.simulation.getScenario(
+            ).getObjectsThatMoved()
+            self.single_agent_obj = objs_that_moved[np.random.randint(
+                len(objs_that_moved))]
+            # tag all vehicles except for the one you control as controlled by the expert
+            for veh in self.scenario.getObjectsThatMoved():
+                if veh.getID() != self.single_agent_obj.getID():
+                    veh.expert_control = True
+        for veh_obj in self.controlled_vehicles:
             veh_id = veh_obj.getID()
             if self.single_agent_mode and veh_obj.getID(
             ) != self.single_agent_obj.getID():
                 continue
             # store normalizers for each vehicle
-            if self.cfg['rew_cfg']['shaped_goal_distance']:
-                obj_pos = veh_obj.getPosition()
-                obj_pos = np.array([obj_pos.x, obj_pos.y])
-                goal_pos = veh_obj.getGoalPosition()
-                goal_pos = np.array([goal_pos.x, goal_pos.y])
-                dist = np.linalg.norm(obj_pos - goal_pos)
-                self.goal_dist_normalizers[veh_id] = dist
+            obj_pos = veh_obj.getPosition()
+            obj_pos = np.array([obj_pos.x, obj_pos.y])
+            goal_pos = veh_obj.getGoalPosition()
+            goal_pos = np.array([goal_pos.x, goal_pos.y])
+            dist = np.linalg.norm(obj_pos - goal_pos)
+            self.goal_dist_normalizers[veh_id] = dist
             # compute the obs
             obs_dict[veh_id] = self.get_observation(veh_obj)
 
+        self.done_ids = []
         self.dead_feat = -np.ones_like(obs_dict[list(obs_dict.keys())[0]])
         # we should return obs for the missing agents
         if self.cfg['subscriber']['keep_inactive_agents']:
