@@ -1,4 +1,4 @@
-"""Each agent receives its observation, a goal position, and tries to get there without colliding."""
+"""Default environment for Nocturne."""
 
 from collections import defaultdict
 import os
@@ -12,16 +12,19 @@ from nocturne import Simulation
 
 
 class BaseEnv(MultiAgentEnv):
+    """Default environment for Nocturne."""
+
     # class BaseEnv(object):
     metadata = {
         "render.modes": ["rgb_array"],
     }
 
     def __init__(self, cfg, rank=0):
-        """[summary]
+        """Initialize the environment.
 
-        Args:
-            cfg ([type]): configuration file describing the experiment
+        Args
+        ----
+            cfg (dict): configuration file describing the experiment
             rank (int, optional): [description]. Defaults to 0.
         """
         super().__init__()
@@ -67,6 +70,7 @@ class BaseEnv(MultiAgentEnv):
                                     shape=(2, ))
 
     def apply_actions(self, action_dict):
+        """Apply a dict of actions to the vehicle objects."""
         for veh_obj in self.scenario.getObjectsThatMoved():
             veh_id = veh_obj.getID()
             if veh_id in action_dict.keys():
@@ -89,6 +93,7 @@ class BaseEnv(MultiAgentEnv):
                     veh_obj.steering = steering_action
 
     def step(self, action_dict):
+        """See superclass."""
         obs_dict = {}
         rew_dict = {}
         done_dict = {}
@@ -186,6 +191,7 @@ class BaseEnv(MultiAgentEnv):
         return obs_dict, rew_dict, done_dict, info_dict
 
     def reset(self):
+        """See superclass."""
         self.t = 0
         self.step_num = 0
         too_many_vehicles = True
@@ -291,6 +297,7 @@ class BaseEnv(MultiAgentEnv):
         return obs_dict
 
     def get_observation(self, veh_obj):
+        """Return the observation for a particular vehicle."""
         ego_obs = self.scenario.ego_state(veh_obj)
         if self.cfg['subscriber']['use_ego_state'] and self.cfg['subscriber'][
                 'use_observations']:
@@ -309,11 +316,13 @@ class BaseEnv(MultiAgentEnv):
         return obs
 
     def render(self, mode=None):
+        """See superclass."""
         return np.array(self.simulation.getScenario().getImage(
             None, render_goals=True),
                         copy=False)
 
     def seed(self, seed=None):
+        """Ensure determinism."""
         if seed is None:
             np.random.seed(1)
         else:

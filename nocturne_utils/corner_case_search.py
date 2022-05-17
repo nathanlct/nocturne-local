@@ -1,19 +1,22 @@
-# This file runs through the data to look for cases where there are undesirable corner cases
-# the cases we currently check for are:
-# 1) is a vehicle initialized in a colliding state with another vehicle
-# 2) is a vehicle initialized in a colliding state with a road edge?
+"""Run through the data to look for cases where there are undesirable corner cases.
+
+The cases we currently check for are:
+1) is a vehicle initialized in a colliding state with another vehicle
+2) is a vehicle initialized in a colliding state with a road edge?
+"""
 from pathlib import Path
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+from pyvirtualdisplay import Display
 
 from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH
 from nocturne import Simulation
 
-os.environ["DISPLAY"] = ":0.0"
-
 if __name__ == '__main__':
+    disp = Display()
+    disp.start()
     SAVE_IMAGES = False
     output_folder = 'corner_case_vis'
     output_path = Path(PROJECT_PATH) / f'nocturne_utils/{output_folder}'

@@ -15,7 +15,7 @@ from setuptools.command.build_ext import build_ext
 
 
 class CMakeExtension(Extension):
-    """Use CMake to construct the Nocturne extension"""
+    """Use CMake to construct the Nocturne extension."""
 
     def __init__(self, name, src_dir=""):
         Extension.__init__(self, name, sources=[])
@@ -23,8 +23,10 @@ class CMakeExtension(Extension):
 
 
 class CMakeBuild(build_ext):
+    """Utility class for building Nocturne."""
 
     def run(self):
+        """Run cmake."""
         try:
             cmake_version = subprocess.check_output(["cmake", "--version"])
         except OSError:
@@ -41,6 +43,7 @@ class CMakeBuild(build_ext):
             self.build_extension(ext)
 
     def build_extension(self, ext):
+        """Run the C++ build commands."""
         ext_dir = os.path.abspath(
             os.path.dirname(self.get_ext_fullpath(ext.name)))
 
@@ -80,6 +83,7 @@ class CMakeBuild(build_ext):
 
 
 def main():
+    """Build the C++ code."""
     # with open("./requirements.txt", "r") as f:
     #     requires = f.read().splitlines()
     setup(
