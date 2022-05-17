@@ -1,5 +1,4 @@
 """Run on-policy PPO experiments on a SLURM cluster."""
-#!/usr/bin/env python3
 import argparse
 import os
 import pathlib
@@ -17,7 +16,7 @@ def make_code_snap(experiment, code_path, slurm_dir='exp'):
     Args:
         experiment (str): Name of experiment
         code_path (str): Path to where we are saving the code.
-        str_time (str): Unique time identifier used to distinguish 
+        str_time (str): Unique time identifier used to distinguish
                         experiments with same name.
 
     Returns

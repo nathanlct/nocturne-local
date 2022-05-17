@@ -72,7 +72,7 @@ class SampleFactoryEnv():
             rew_n ([float]): N length list of agent rewards
             info_n ([{str: float}]): N length list of info dicts
             done_n ([bool]): N length list of whether agents are done
-                                               
+
         """
         agent_actions = {}
         for action, agent_id, already_done in zip(actions, self.agent_ids,
@@ -178,7 +178,7 @@ class SampleFactoryEnv():
         1) build a map between the agent IDs in the environment (which are not necessarily 0-N)
            and the agent IDs for sample factory which are from 0 to the maximum number of agents
         2) sample factory (until some bugs are fixed) requires a fixed number of agents. Some of these
-           agents will be dummy agents that do not act in the environment. So, here we build valid 
+           agents will be dummy agents that do not act in the environment. So, here we build valid
            indices which can be used to figure out which agent IDs correspond
 
         Returns
