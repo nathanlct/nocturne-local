@@ -173,8 +173,8 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
     const ObjectType object_type = ParseObjectType(obj["type"]);
 
     // TODO(ev) currTime should be passed in rather than defined here
-    geometry::Vector2D pos(obj["position"]["x"][current_time_],
-                           obj["position"]["y"][current_time_]);
+    geometry::Vector2D pos(obj["position"][current_time_]["x"],
+                           obj["position"][current_time_]["y"]);
     float width = float(obj["width"]);
     float length = float(obj["length"]);
     float heading = geometry::utils::NormalizeAngle(geometry::utils::Radians(
