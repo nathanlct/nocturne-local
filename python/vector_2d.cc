@@ -16,12 +16,12 @@ void DefineVector2D(py::module& m) {
   m.doc() = "nocturne documentation for class Vector2D";
 
   py::class_<geometry::Vector2D>(m, "Vector2D")
+      .def(py::init<float, float>())
       .def("__repr__",
            [](const geometry::Vector2D& vec) {
              return "(" + std::to_string(vec.x()) + ", " +
                     std::to_string(vec.y()) + ")";
            })
-      .def(py::init<float, float>())
       .def_property("x", &geometry::Vector2D::x, &geometry::Vector2D::set_x)
       .def_property("y", &geometry::Vector2D::y, &geometry::Vector2D::set_y)
       // Operators

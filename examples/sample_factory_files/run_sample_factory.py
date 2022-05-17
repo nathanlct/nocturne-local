@@ -1,30 +1,32 @@
 """
 To run in single agent mode on one file for testing
-python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME ++single_agent_mode=True ++num_files=1 
+python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True \
+    ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME \
+    ++single_agent_mode=True ++num_files=1
 
 To run in multiagent mode on one file for testing
-python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME ++single_agent_mode=False ++num_files=1 
+python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True \
+    ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME \
+        ++single_agent_mode=False ++num_files=1
 
 To run on all files set num_files=-1
 
 For debugging
-python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=False ++algorithm.num_workers=1 ++force_envs_single_thread=False
+python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=False \
+    ++algorithm.num_workers=1 ++force_envs_single_thread=False
 After training for a desired period of time, evaluate the policy by running:
-python -m sample_factory_examples.enjoy_custom_multi_env --algo=APPO --env=my_custom_multi_env_v1 --experiment=example
+python -m sample_factory_examples.enjoy_custom_multi_env --algo=APPO \
+    --env=my_custom_multi_env_v1 --experiment=example
 """
 import os
-import random
 import sys
 
 import hydra
-import gym
 import numpy as np
 from omegaconf import OmegaConf
-from sample_factory.algorithms.appo.model_utils import register_custom_encoder
-from sample_factory.algorithms.utils.arguments import parse_args
 from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
-from sample_factory_examples.train_custom_env_custom_model import CustomEncoder, override_default_params_func
+from sample_factory_examples.train_custom_env_custom_model import override_default_params_func
 
 from nocturne_utils.wrappers import create_env
 
@@ -40,7 +42,7 @@ class SampleFactoryEnv():
                 'max_num_vehicles']  # TODO(ev) pick a good value
         self.agent_ids = [i for i in range(self.num_agents)]
         self.is_multiagent = True
-        obs = self.env.reset()
+        _ = self.env.reset()
         # used to track which agents are done
         self.already_done = [False for _ in self.agent_ids]
         self.episode_rewards = np.zeros(self.num_agents)
@@ -164,8 +166,9 @@ class SampleFactoryEnv():
             else:
                 # check that this isn't actually a fake padding agent used
                 # when keep_inactive_agents is True
-                if agent_id in self.agent_id_to_env_id_map.keys() and \
-                    self.agent_id_to_env_id_map[agent_id] not in self.env.dead_agent_ids:
+                if agent_id in self.agent_id_to_env_id_map.keys(
+                ) and self.agent_id_to_env_id_map[
+                        agent_id] not in self.env.dead_agent_ids:
                     self.valid_indices.append(agent_id)
         obs_n = self.obs_dict_to_list(next_obses)
         return obs_n

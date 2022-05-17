@@ -2,7 +2,6 @@
 
 from collections import defaultdict
 import os
-import time
 
 from gym.spaces import Box, Discrete
 import numpy as np
@@ -13,14 +12,11 @@ from nocturne import Simulation
 
 class BaseEnv(object):
 
-    def __init__(self, cfg, should_terminate=True, rank=0):
+    def __init__(self, cfg, rank=0):
         """[summary]
 
         Args:
             cfg ([type]): configuration file describing the experiment
-            should_terminate (bool, optional): if true, agents continue to receive a -1 vector as their observations
-                even after their rollouts are terminated. This is used for algorithms (like some PPO implementations)
-                that insist that the number of agents throughout an episode are consistent. 
             rank (int, optional): [description]. Defaults to 0.
         """
         super().__init__()
@@ -32,11 +28,12 @@ class BaseEnv(object):
         self.file = self.files[np.random.randint(len(self.files))]
         self.simulation = Simulation(os.path.join(cfg['scenario_path'],
                                                   self.file),
-                                     use_non_vehicles=False)
+                                     allow_non_vehicles=False)
         self.scenario = self.simulation.getScenario()
         self.vehicles = self.scenario.getObjectsThatMoved()
         self.single_agent_mode = cfg['single_agent_mode']
         self.cfg = cfg
+        self.seed(cfg['seed'])
         self.episode_length = cfg['episode_length']
         self.t = 0
         self.step_num = 0
@@ -96,25 +93,12 @@ class BaseEnv(object):
         self.t += self.cfg['dt']
         self.step_num += 1
         objs_to_remove = []
-        t = time.time()
         for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
             veh_id = veh_obj.getID()
-            if self.single_agent_mode and veh_id != self.single_agent_id:
+            if self.single_agent_mode and veh_id != self.single_agent_obj.getID(
+            ):
                 continue
-            if self.cfg['subscriber']['use_ego_state'] and self.cfg[
-                    'subscriber']['use_observations']:
-                obs_dict[veh_id] = np.concatenate(
-                    (self.scenario.ego_state(veh_obj),
-                     self.scenario.flattened_visible_state(
-                         veh_obj, self.cfg['subscriber']['view_dist'],
-                         self.cfg['subscriber']['view_angle'])))
-            elif self.cfg['subscriber']['use_ego_state'] and not self.cfg[
-                    'subscriber']['use_observations']:
-                obs_dict[veh_id] = self.scenario.ego_state(veh_obj)
-            else:
-                obs_dict[veh_id] = self.scenario.flattened_visible_state(
-                    veh_obj, self.cfg['subscriber']['view_dist'],
-                    self.cfg['subscriber']['view_angle'])
+            obs_dict[veh_id] = self.get_observation(veh_obj)
             rew_dict[veh_id] = 0
             done_dict[veh_id] = False
             info_dict[veh_id]['goal_achieved'] = False
@@ -123,7 +107,9 @@ class BaseEnv(object):
             obj_pos = np.array([obj_pos.x, obj_pos.y])
             goal_pos = veh_obj.getGoalPosition()
             goal_pos = np.array([goal_pos.x, goal_pos.y])
-            ######################## Compute rewards #######################
+            '''############################################
+                            Compute rewards
+               ############################################'''
             if np.linalg.norm(goal_pos - obj_pos) < rew_cfg['goal_tolerance']:
                 info_dict[veh_id]['goal_achieved'] = True
                 rew_dict[veh_id] += rew_cfg['goal_achieved_bonus'] / rew_cfg[
@@ -149,8 +135,9 @@ class BaseEnv(object):
                         (goal_pos - obj_pos), ord=2) /
                                          self.goal_dist_normalizers[veh_id]
                                          ) / rew_cfg['reward_scaling']
-
-            ######################## Handle potential done conditions #######################
+            '''############################################
+                    Handle potential done conditions
+            ############################################'''
             # achieved our goal
             if info_dict[veh_id]['goal_achieved']:
                 done_dict[veh_id] = True
@@ -190,11 +177,6 @@ class BaseEnv(object):
             all_done *= value
         done_dict['__all__'] = all_done
 
-        # for val in obs_dict.values():
-        #     if np.any(np.isnan(val)):
-        #         import ipdb
-        #         ipdb.set_trace()
-
         return obs_dict, rew_dict, done_dict, info_dict
 
     def reset(self):
@@ -206,7 +188,7 @@ class BaseEnv(object):
             self.file = self.files[np.random.randint(len(self.files))]
             self.simulation = Simulation(os.path.join(
                 self.cfg['scenario_path'], self.file),
-                                         use_non_vehicles=False)
+                                         allow_non_vehicles=False)
             self.scenario = self.simulation.getScenario()
 
             # remove all the objects that are in collision or are already in goal dist
@@ -215,7 +197,6 @@ class BaseEnv(object):
                 obj_pos = np.array([obj_pos.x, obj_pos.y])
                 goal_pos = veh_obj.getGoalPosition()
                 goal_pos = np.array([goal_pos.x, goal_pos.y])
-                ######################## Compute rewards #######################
                 if np.linalg.norm(goal_pos - obj_pos
                                   ) < self.cfg['rew_cfg']['goal_tolerance']:
                     self.scenario.removeVehicle(veh_obj)
@@ -227,25 +208,54 @@ class BaseEnv(object):
             self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
             # check if we have less than the desired number of vehicles and have
             # at least one vehicle
-            if len(self.all_vehicle_ids) <= self.cfg['max_num_vehicles'] \
-                and len(self.all_vehicle_ids) > 0:
+            if len(self.all_vehicle_ids
+                   ) <= self.cfg['max_num_vehicles'] and len(
+                       self.all_vehicle_ids) > 0:
                 too_many_vehicles = False
 
         obs_dict = {}
         self.goal_dist_normalizers = {}
-        # in single agent mode, we always declare the same agent in each scene
-        # the controlled agent to make the learning process simpler
         if self.single_agent_mode:
             objs_that_moved = self.simulation.getScenario(
             ).getObjectsThatMoved()
-            self.single_agent_id = objs_that_moved[-1].getID()
+            self.single_agent_obj = objs_that_moved[np.random.randint(
+                len(objs_that_moved))]
             # tag all vehicles except for the one you control as controlled by the expert
-            for veh in self.simulation.getScenario().getVehicles():
-                if veh.getID() != self.single_agent_id:
+            for veh in self.scenario.getObjectsThatMoved():
+                if veh.getID() != self.single_agent_obj.getID():
                     veh.expert_control = True
+
+        # step all the vehicles forward by one second and record their observations as context
+        if self.single_agent_mode:
+            self.context_dict = {self.single_agent_obj.getID(): []}
+            self.single_agent_obj.expert_control = True
+        else:
+            self.context_dict = {
+                veh.getID(): []
+                for veh in self.scenario.getObjectsThatMoved()
+            }
+            for veh in self.scenario.getObjectsThatMoved():
+                veh.expert_control = True
+        for _ in range(10):
+            if self.single_agent_mode:
+                self.context_dict[self.single_agent_obj.getID()].append(
+                    self.get_observation(self.single_agent_obj))
+            else:
+                for veh in self.scenario.getObjectsThatMoved():
+                    self.context_dict[veh.getID()].append(
+                        self.get_observation(veh))
+            self.simulation.step(self.cfg['dt'])
+        # now hand back control to our actual controllers
+        if self.single_agent_mode:
+            self.single_agent_obj.expert_control = False
+        else:
+            for veh in self.scenario.getObjectsThatMoved():
+                veh.expert_control = False
+
         for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
             veh_id = veh_obj.getID()
-            if self.single_agent_mode and veh_id != self.single_agent_id:
+            if self.single_agent_mode and veh_obj.getID(
+            ) != self.single_agent_obj.getID():
                 continue
             # store normalizers for each vehicle
             if self.cfg['rew_cfg']['shaped_goal_distance']:
@@ -256,21 +266,7 @@ class BaseEnv(object):
                 dist = np.linalg.norm(obj_pos - goal_pos)
                 self.goal_dist_normalizers[veh_id] = dist
             # compute the obs
-            ego_obs = self.scenario.ego_state(veh_obj)
-            if self.cfg['subscriber']['use_ego_state'] and self.cfg[
-                    'subscriber']['use_observations']:
-                obs_dict[veh_id] = np.concatenate(
-                    (ego_obs,
-                     self.scenario.flattened_visible_state(
-                         veh_obj, self.cfg['subscriber']['view_dist'],
-                         self.cfg['subscriber']['view_angle'])))
-            elif self.cfg['subscriber']['use_ego_state'] and not self.cfg[
-                    'subscriber']['use_observations']:
-                obs_dict[veh_id] = ego_obs
-            else:
-                obs_dict[veh_id] = self.scenario.flattened_visible_state(
-                    veh_obj, self.cfg['subscriber']['view_dist'],
-                    self.cfg['subscriber']['view_angle'])
+            obs_dict[veh_id] = self.get_observation(veh_obj)
 
         self.dead_feat = -np.ones_like(obs_dict[list(obs_dict.keys())[0]])
         # we should return obs for the missing agents
@@ -287,6 +283,24 @@ class BaseEnv(object):
         else:
             self.dead_agent_ids = []
         return obs_dict
+
+    def get_observation(self, veh_obj):
+        ego_obs = self.scenario.ego_state(veh_obj)
+        if self.cfg['subscriber']['use_ego_state'] and self.cfg['subscriber'][
+                'use_observations']:
+            obs = np.concatenate(
+                (ego_obs,
+                 self.scenario.flattened_visible_state(
+                     veh_obj, self.cfg['subscriber']['view_dist'],
+                     self.cfg['subscriber']['view_angle'])))
+        elif self.cfg['subscriber']['use_ego_state'] and not self.cfg[
+                'subscriber']['use_observations']:
+            obs = ego_obs
+        else:
+            obs = self.scenario.flattened_visible_state(
+                veh_obj, self.cfg['subscriber']['view_dist'],
+                self.cfg['subscriber']['view_angle'])
+        return obs
 
     def render(self, mode=None):
         return np.array(self.simulation.getScenario().getImage(

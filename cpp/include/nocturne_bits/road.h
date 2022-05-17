@@ -41,6 +41,7 @@ class RoadPoint : public StaticObject {
     return StaticObjectType::kRoadPoint;
   }
   RoadType road_type() const { return road_type_; }
+
   geometry::Vector2D neighbor_position() const { return neighbor_position_; }
 
   float Radius() const { return kRoadPointRadius; }
@@ -56,9 +57,10 @@ class RoadPoint : public StaticObject {
   void draw(sf::RenderTarget& /*target*/,
             sf::RenderStates /*states*/) const override {}
 
-  const RoadType road_type_ = RoadType::kNone;
   // coordinates of the next point in the roadline
-  geometry::Vector2D neighbor_position_;
+  const geometry::Vector2D neighbor_position_;
+
+  const RoadType road_type_ = RoadType::kNone;
 };
 
 // RoadLine is not an Object now.

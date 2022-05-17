@@ -15,9 +15,10 @@ from sample_factory.algorithms.appo.actor_worker import transform_dict_observati
 from sample_factory.algorithms.appo.learner import LearnerWorker
 from sample_factory.algorithms.appo.model import create_actor_critic
 from sample_factory.algorithms.appo.model_utils import get_hidden_size
-from sample_factory.algorithms.utils.action_distributions import ContinuousActionDistribution, CategoricalActionDistribution
+from sample_factory.algorithms.utils.action_distributions import ContinuousActionDistribution, \
+     CategoricalActionDistribution
 from sample_factory.algorithms.utils.algo_utils import ExperimentStatus
-from sample_factory.algorithms.utils.arguments import parse_args, load_from_checkpoint
+from sample_factory.algorithms.utils.arguments import load_from_checkpoint
 from sample_factory.algorithms.utils.multi_agent_wrapper import MultiAgentWrapper, is_multiagent_env
 from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
@@ -68,7 +69,6 @@ def enjoy(cfg, max_num_frames=1e9):
     true_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
     collision_rate = 0
     goal_rate = 0
-    total_episode_reward = 0
 
     with open(os.path.join(PROCESSED_VALID_NO_TL, 'valid_files.txt')) as file:
         files = [line.strip() for line in file]
@@ -185,7 +185,11 @@ def main():
     disp = Display()
     disp.start()
     register_custom_components()
-    file_path = '/checkpoint/eugenevinitsky/nocturne/test/2022.05.09/intersection/10.28.16/++algorithm.experiment=test,++algorithm.num_workers=10,++algorithm.train_in_background_thread=True,++num_files=100,++single_agent_mode=False,algorithm=APPO/test/cfg.json'
+    file_path = '/checkpoint/eugenevinitsky/nocturne/test/2022.05.09/\
+        intersection/10.28.16/++algorithm.experiment=test,++algorithm.num_workers=10\
+            ,++algorithm.train_in_background_thread=True,++num_files=100,\
+                ++single_agent_mode=False,algorithm=APPO/test/cfg.json'
+
     with open(file_path, 'r') as file:
         cfg_dict = json.load(file)
 

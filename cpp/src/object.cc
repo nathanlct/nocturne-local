@@ -57,20 +57,18 @@ void Object::InitRandomColor() {
 }
 
 void Object::SetActionFromKeyboard() {
-  const float speed = Speed();
-
   // up: accelerate ; down: brake
   if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
     acceleration_ = 1.0f;
   } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
     // larger acceleration for braking than for moving backwards
-    acceleration_ = speed > 0 ? -2.0f : -1.0f;
-  } else if (std::abs(speed) < 0.05) {
+    acceleration_ = speed_ > 0 ? -2.0f : -1.0f;
+  } else if (std::abs(speed_) < 0.05) {
     // clip to 0
-    velocity_ = geometry::PolarToVector2D(0, heading_);
+    speed_ = 0.0f;
   } else {
     // friction
-    acceleration_ = 0.5f * (speed > 0 ? -1.0f : 1.0f);
+    acceleration_ = 0.5f * (speed_ > 0 ? -1.0f : 1.0f);
   }
 
   // right: turn right; left: turn left
@@ -86,8 +84,8 @@ void Object::SetActionFromKeyboard() {
 // Kinematic Bicycle Model
 // https://thef1clan.com/2020/09/21/vehicle-dynamics-the-kinematic-bicycle-model/
 void Object::KinematicBicycleStep(float dt) {
-  const float speed = Speed();
-  const float v = speed + acceleration_ * dt * 0.5f;  // Average speed
+  const float v =
+      ClipSpeed(speed_ + acceleration_ * dt * 0.5f);  // Average speed
   const float tan_zeta = std::tan(steering_);
   // Assume center of mass lies at the middle of length, then l / L == 0.5.
   const float beta = std::atan(tan_zeta * 0.5f);
@@ -95,7 +93,7 @@ void Object::KinematicBicycleStep(float dt) {
   const float w = v * tan_zeta * std::cos(beta) / length_;
   position_ += d * dt;
   heading_ = geometry::utils::AngleAdd(heading_, w * dt);
-  velocity_ = geometry::PolarToVector2D(speed + acceleration_ * dt, heading_);
+  speed_ = ClipSpeed(speed_ + acceleration_ * dt);
 }
 
 }  // namespace nocturne

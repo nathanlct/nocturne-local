@@ -1,4 +1,3 @@
-from xml.sax.handler import property_declaration_handler
 import hydra
 from omegaconf import OmegaConf
 from pyvirtualdisplay import Display
@@ -72,7 +71,7 @@ def main(cfg):
 
     tune.run(
         "PPO",
-        #TODO(eugenevinitsky) move into config
+        # TODO(eugenevinitsky) move into config
         local_dir="/checkpoint/eugenevinitsky/nocturne/ray_results",
         stop={"episodes_total": 60000},
         checkpoint_freq=1000,
@@ -120,7 +119,7 @@ def main(cfg):
             "model": {
                 "use_lstm": use_lstm
             },
-            ### Evaluation stuff #####
+            # Evaluation stuff
             "evaluation_interval":
             50,
             # Run evaluation on (at least) one episodes

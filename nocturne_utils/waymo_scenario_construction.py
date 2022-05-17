@@ -39,12 +39,13 @@ def _parse_object_state(
         states: scenario_pb2.ObjectState,
         final_state: scenario_pb2.ObjectState) -> Dict[str, Any]:
     return {
-        "position": {
-            "x":
-            [state.center_x if state.valid else ERR_VAL for state in states],
-            "y":
-            [state.center_y if state.valid else ERR_VAL for state in states],
-        },
+        "position": [{
+            "x": state.center_x,
+            "y": state.center_y
+        } if state.valid else {
+            "x": ERR_VAL,
+            "y": ERR_VAL
+        } for state in states],
         "width":
         states[0].width,
         "length":
@@ -53,12 +54,13 @@ def _parse_object_state(
             math.degrees(state.heading) if state.valid else ERR_VAL
             for state in states
         ],  # Use rad here?
-        "velocity": {
-            "x":
-            [state.velocity_x if state.valid else ERR_VAL for state in states],
-            "y":
-            [state.velocity_y if state.valid else ERR_VAL for state in states],
-        },
+        "velocity": [{
+            "x": state.velocity_x,
+            "y": state.velocity_y
+        } if state.valid else {
+            "x": ERR_VAL,
+            "y": ERR_VAL
+        } for state in states],
         "valid": [state.valid for state in states],
         "goalPosition": {
             "x": final_state.center_x,
@@ -97,14 +99,11 @@ def _init_road(map_feature: map_pb2.MapFeature) -> Optional[Dict[str, Any]]:
                     map_feature.WhichOneof("feature_data")).position
         geometry = [{"x": p.x, "y": p.y}]
     elif feature != 'crosswalk' and feature != 'speed_bump':
-        try:
-            geometry = [{
-                "x": p.x,
-                "y": p.y
-            } for p in getattr(
-                map_feature, map_feature.WhichOneof("feature_data")).polyline]
-        except:
-            return None
+        geometry = [{
+            "x": p.x,
+            "y": p.y
+        } for p in getattr(map_feature, map_feature.WhichOneof(
+            "feature_data")).polyline]
     else:
         geometry = [{
             "x": p.x,
