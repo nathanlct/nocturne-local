@@ -1,7 +1,7 @@
 from gym.spaces import Box, Discrete
 import numpy as np
 
-from envs import BaseEnv
+from nocturne.envs import BaseEnv
 
 
 class PPOWrapper(object):
