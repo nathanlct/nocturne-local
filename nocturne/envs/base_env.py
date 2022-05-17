@@ -1,6 +1,7 @@
 """Each agent receives its observation, a goal position, and tries to get there without colliding."""
 
 from collections import defaultdict
+import json
 import os
 
 from gym.spaces import Box, Discrete
@@ -28,11 +29,9 @@ class BaseEnv(MultiAgentEnv):
         self._skip_env_checking = True  # temporary fix for rllib env checking issue
         self.files = []
         with open(os.path.join(cfg['scenario_path'],
-                               'valid_files.txt')) as file:
-            self.files = [line.strip() for line in file]
-        # with open(os.path.join(cfg['scenario_path'],
-        #                        'invalid_files.txt')) as file:
-        #     self.files += [line.strip() for line in file]
+                               'valid_files.json')) as file:
+            self.valid_veh_dict = json.load(file)
+            self.files = list(self.valid_veh_dict.keys())
         if cfg['num_files'] != -1:
             self.files = self.files[0:cfg['num_files']]
         self.file = self.files[np.random.randint(len(self.files))]
@@ -40,7 +39,7 @@ class BaseEnv(MultiAgentEnv):
                                                   self.file),
                                      allow_non_vehicles=False)
         self.scenario = self.simulation.getScenario()
-        self.vehicles = self.scenario.getObjectsThatMoved()
+        self.controlled_vehicles = self.scenario.getObjectsThatMoved()
         self.single_agent_mode = cfg['single_agent_mode']
         self.cfg = cfg
         self.seed(cfg['seed'])
@@ -103,7 +102,7 @@ class BaseEnv(MultiAgentEnv):
         self.t += self.cfg['dt']
         self.step_num += 1
         objs_to_remove = []
-        for veh_obj in self.vehicles:
+        for veh_obj in self.controlled_vehicles:
             veh_id = veh_obj.getID()
             if self.single_agent_mode and veh_id != self.single_agent_obj.getID(
             ):
@@ -215,9 +214,21 @@ class BaseEnv(MultiAgentEnv):
                                   ) < self.cfg['rew_cfg']['goal_tolerance'] or \
                                   veh_obj.getCollided():
                     self.scenario.removeVehicle(veh_obj)
-            self.vehicles = self.scenario.getObjectsThatMoved(
+                ########## Set all vehicles with unachievable goals to be experts #########
+                if self.file in self.valid_veh_dict and veh_obj.getID(
+                ) in self.valid_veh_dict[self.file]:
+                    veh_obj.expert_control = True
+            temp_vehicles = self.scenario.getObjectsThatMoved(
             )[:self.cfg['max_num_vehicles']]
-            self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
+            self.controlled_vehicles = []
+            for vehicle in temp_vehicles:
+                # we don't want to include vehicles that had unachievable goals
+                # as controlled vehicles
+                if not vehicle.expert_control:
+                    self.controlled_vehicles.append(vehicle)
+            self.all_vehicle_ids = [
+                veh.getID() for veh in self.controlled_vehicles
+            ]
             # make all the vehicles that are in excess of max_num_vehicles controlled by an expert
             for veh in self.scenario.getObjectsThatMoved(
             )[self.cfg['max_num_vehicles']:]:
@@ -232,8 +243,10 @@ class BaseEnv(MultiAgentEnv):
         if len(self.all_vehicle_ids) == 0:
             # just grab a vehicle even if it hasn't moved so that we have something
             # to return obs for even if it's not controlled
-            self.vehicles = [self.scenario.getVehicles()[0]]
-            self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
+            self.controlled_vehicles = [self.scenario.getVehicles()[0]]
+            self.all_vehicle_ids = [
+                veh.getID() for veh in self.controlled_vehicles
+            ]
 
         # step all the vehicles forward by one second and record their observations as context
         if self.single_agent_mode:
@@ -274,7 +287,7 @@ class BaseEnv(MultiAgentEnv):
             for veh in self.scenario.getObjectsThatMoved():
                 if veh.getID() != self.single_agent_obj.getID():
                     veh.expert_control = True
-        for veh_obj in self.vehicles:
+        for veh_obj in self.controlled_vehicles:
             veh_id = veh_obj.getID()
             if self.single_agent_mode and veh_obj.getID(
             ) != self.single_agent_obj.getID():
