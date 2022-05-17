@@ -14,12 +14,14 @@ from setuptools.command.build_ext import build_ext
 
 
 class CMakeExtension(Extension):
+
     def __init__(self, name, src_dir=""):
         Extension.__init__(self, name, sources=[])
         self.src_dir = os.path.abspath(src_dir)
 
 
 class CMakeBuild(build_ext):
+
     def run(self):
         try:
             cmake_version = subprocess.check_output(["cmake", "--version"])

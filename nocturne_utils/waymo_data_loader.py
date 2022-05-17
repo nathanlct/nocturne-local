@@ -107,6 +107,7 @@ def precompute_dataset(from_path, to_path, samples_per_file=5000):
 
 
 class WaymoDataset(Dataset):
+
     def __init__(self, cfg):
         self.cached_data = None
         self.dataset_path = Path(cfg['dataset_path'])
