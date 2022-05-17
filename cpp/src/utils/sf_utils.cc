@@ -79,20 +79,19 @@ std::vector<std::unique_ptr<sf::VertexArray>> MakeInvertedConeShape(
   // fill around the circle (ie. enclosing square minus circle)
   for (int64_t quadrant = 0; quadrant < 4; ++quadrant) {
     auto quadrant_drawable = std::make_unique<sf::VertexArray>(sf::TriangleFan);
-    const float quadrant_start_angle = quadrant * geometry::utils::kPi / 2.0f;
+    const float quadrant_start_angle = quadrant * geometry::utils::kHalfPi;
 
     // corner point of the square
     geometry::Vector2D corner = geometry::PolarToVector2D(
         std::sqrt(2 * radius * radius),
-        quadrant_start_angle + geometry::utils::kPi / 4.0f);
+        quadrant_start_angle + geometry::utils::kQuarterPi);
     quadrant_drawable->append(
         sf::Vertex(utils::ToVector2f(corner), fill_color));
 
     // quarter of circle approximation
     for (int i = 0; i < n_points; ++i) {
-      const float point_angle =
-          quadrant_start_angle +
-          i * (geometry::utils::kPi / 2.0f) / (n_points - 1);
+      const float point_angle = quadrant_start_angle +
+                                i * (geometry::utils::kHalfPi) / (n_points - 1);
       geometry::Vector2D pt = geometry::PolarToVector2D(radius, point_angle);
       quadrant_drawable->append(sf::Vertex(utils::ToVector2f(pt), fill_color));
     }
@@ -101,16 +100,16 @@ std::vector<std::unique_ptr<sf::VertexArray>> MakeInvertedConeShape(
   }
 
   // fill around cone (ie. part within circle that is not part of the cone)
-  if (angle < 2.0f * geometry::utils::kPi) {
+  if (angle < geometry::utils::kTwoPi) {
     auto cone_drawable = std::make_unique<sf::VertexArray>(sf::TriangleFan);
 
     // origin of the cone (center of the circle)
     cone_drawable->append(sf::Vertex(sf::Vector2f(0.0f, 0.0f), fill_color));
 
     // circular arc
-    const float start_angle = geometry::utils::kPi / 2.0f + angle / 2.0f + tilt;
-    const float end_angle = geometry::utils::kPi / 2.0f +
-                            2.0f * geometry::utils::kPi - angle / 2.0f + tilt;
+    const float start_angle = geometry::utils::kHalfPi + angle / 2.0f + tilt;
+    const float end_angle = geometry::utils::kHalfPi + geometry::utils::kTwoPi -
+                            angle / 2.0f + tilt;
     const int n_points_circle = 4 * n_points;
     for (int i = 0; i < n_points_circle; ++i) {
       const float point_angle =
@@ -170,7 +169,7 @@ std::vector<std::unique_ptr<sf::ConvexShape>> MakeObstructionShape(
       hiddenArea->setFillColor(fill_color);
       // first point of line1
       hiddenArea->setPoint(0, utils::ToVector2f((pt1 - source_pos)));
-      // circular arc 
+      // circular arc
       for (int i = 0; i < n_points; ++i) {
         float angle = angle1 + i * dAngle;
         geometry::Vector2D pt = geometry::PolarToVector2D(radius, angle);
