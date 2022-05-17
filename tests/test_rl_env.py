@@ -4,7 +4,11 @@ from hydra import compose, initialize
 from pyvirtualdisplay import Display
 
 from cfgs.config import PROJECT_PATH
+<<<<<<< HEAD
 from nocturne.envs.wrappers import create_env
+=======
+from nocturne_utils.wrappers import create_env
+>>>>>>> bc7f21b1d4342cdd17fbffb443eeb0d66d9479ce
 
 
 def test_rl_env():
@@ -13,6 +17,7 @@ def test_rl_env():
     disp.start()
     initialize(config_path="../cfgs/")
     cfg = compose(config_name="config")
+    cfg.scenario_path = os.path.join(PROJECT_PATH, 'tests')
     cfg.max_num_vehicles = 50
     env = create_env(cfg)
     env.files = [str(PROJECT_PATH / "tests/large_file.json")]
