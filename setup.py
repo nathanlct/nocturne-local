@@ -1,3 +1,4 @@
+"""Run via ```python setup.py develop``` to install Nocturne in your environment."""
 import logging
 import multiprocessing
 import os
@@ -14,6 +15,7 @@ from setuptools.command.build_ext import build_ext
 
 
 class CMakeExtension(Extension):
+    """Use CMake to construct the Nocturne extension"""
 
     def __init__(self, name, src_dir=""):
         Extension.__init__(self, name, sources=[])

@@ -1,3 +1,4 @@
+"""Set path to all the Waymo data and the parsed Waymo files."""
 import os
 from pathlib import Path
 

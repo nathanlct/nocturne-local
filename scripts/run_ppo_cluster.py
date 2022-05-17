@@ -1,3 +1,4 @@
+"""Run on-policy PPO experiments on a SLURM cluster."""
 #!/usr/bin/env python3
 import argparse
 import os
@@ -7,26 +8,22 @@ from datetime import datetime
 from subprocess import Popen
 
 from cfgs.config import PROJECT_PATH
-
-
-class Overrides(object):
-
-    def __init__(self):
-        self.kvs = dict()
-
-    def add(self, key, values):
-        value = ','.join(str(v) for v in values)
-        assert key not in self.kvs
-        self.kvs[key] = value
-
-    def cmd(self):
-        cmd = []
-        for k, v in self.kvs.items():
-            cmd.append(f'{k}={v}')
-        return cmd
+from scripts.utils import Overrides
 
 
 def make_code_snap(experiment, code_path, slurm_dir='exp'):
+    """Copy code to directory to ensure that the run launches with correct commit.
+
+    Args:
+        experiment (str): Name of experiment
+        code_path (str): Path to where we are saving the code.
+        str_time (str): Unique time identifier used to distinguish 
+                        experiments with same name.
+
+    Returns
+    -------
+        snap_dir (str): path to where the code has been copied.
+    """
     now = datetime.now()
     if len(code_path) > 0:
         snap_dir = pathlib.Path(code_path) / slurm_dir
@@ -57,6 +54,7 @@ def make_code_snap(experiment, code_path, slurm_dir='exp'):
 
 
 def main():
+    """Launch experiments on SLURM cluster by overriding Hydra config."""
     parser = argparse.ArgumentParser()
     parser.add_argument('experiment', type=str)
     parser.add_argument('--code_path',

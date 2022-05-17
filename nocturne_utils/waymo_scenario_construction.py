@@ -1,5 +1,4 @@
-"""Construct a scenarios.json file from a waymos protobuf
-"""
+"""Construct a scenarios.json file from a waymos protobuf."""
 
 from collections import defaultdict
 import math
@@ -38,6 +37,16 @@ _WAYMO_ROAD_STR = {
 def _parse_object_state(
         states: scenario_pb2.ObjectState,
         final_state: scenario_pb2.ObjectState) -> Dict[str, Any]:
+    """Construct a dict representing the trajectory and goals of an object.
+
+    Args:
+        states (scenario_pb2.ObjectState): Protobuf of object state
+        final_state (scenario_pb2.ObjectState): Protobuf of last valid object state.
+
+    Returns
+    -------
+        Dict[str, Any]: Dict representing an object.
+    """
     return {
         "position": {
             "x":
@@ -68,6 +77,7 @@ def _parse_object_state(
 
 
 def _init_tl_object(track):
+    """Construct a dict representing the traffic light states."""
     returned_dict = {}
     for lane_state in track.lane_states:
         returned_dict[lane_state.lane] = {
@@ -79,8 +89,16 @@ def _init_tl_object(track):
 
 
 def _init_object(track: scenario_pb2.Track) -> Optional[Dict[str, Any]]:
+    """Construct a dict representing the state of the object (vehicle, cyclist, pedestrian).
+
+    Args:
+        track (scenario_pb2.Track): protobuf representing the scenario
+
+    Returns
+    -------
+        Optional[Dict[str, Any]]: dict representing the trajectory and velocity of an object.
+    """
     final_valid_index = 0
-    # TODO(eugenevinitsky) valid may be false at the start
     for i, state in enumerate(track.states):
         if state.valid:
             final_valid_index = i
@@ -91,6 +109,7 @@ def _init_object(track: scenario_pb2.Track) -> Optional[Dict[str, Any]]:
 
 
 def _init_road(map_feature: map_pb2.MapFeature) -> Optional[Dict[str, Any]]:
+    """Convert an element of the map protobuf to a dict representing its coordinates and type."""
     feature = map_feature.WhichOneof("feature_data")
     if feature == 'stop_sign':
         p = getattr(map_feature,
@@ -115,6 +134,7 @@ def _init_road(map_feature: map_pb2.MapFeature) -> Optional[Dict[str, Any]]:
 
 
 def load_protobuf(protobuf_path: str) -> Iterator[scenario_pb2.Scenario]:
+    """Yield the sharded protobufs from the TFRecord."""
     dataset = tf.data.TFRecordDataset(protobuf_path, compression_type="")
     for data in dataset:
         scenario = scenario_pb2.Scenario()
@@ -122,21 +142,16 @@ def load_protobuf(protobuf_path: str) -> Iterator[scenario_pb2.Scenario]:
         yield scenario
 
 
-def get_actions_from_protobuf(protobuf: scenario_pb2.Scenario, veh_id: int,
-                              time_step: int) -> Dict[str, Any]:
-    obj = protobuf.tracks[veh_id]
-    state = obj.states[time_step]
-    assert state.valid
-    ret = _parse_object_state(state)
-    ret["type"] = _WAYMO_OBJECT_STR[obj.object_type]
-    return ret
-
-
 def waymo_to_scenario(scenario_path: str,
                       protobuf: scenario_pb2.Scenario,
                       no_tl: bool = False) -> None:
-    """
-    no_tl: if no_tl is true, do not dump the file if there is a traffic light in there
+    """Dump a JSON File containing the protobuf parsed into the right format.
+
+    Args
+    ----
+        scenario_path (str): path to dump the json file
+        protobuf (scenario_pb2.Scenario): the protobuf we are converting
+        no_tl (bool, optional): If true, environments with traffic lights are not dumped.
     """
     # read the protobuf file to get the right state
 

@@ -1,3 +1,4 @@
+"""Use to create movies of trained policies."""
 from collections import deque
 import json
 import sys
@@ -25,7 +26,18 @@ from sample_factory.utils.utils import log, AttrDict
 from run_sample_factory import register_custom_components
 
 
-def enjoy(cfg, max_num_frames=1e9):
+def run_eval(cfg, max_num_frames=1e9):
+    """Run evaluation over a single file. Exits when one episode finishes.
+
+    Args:
+        cfg (dict): configuration file for instantiating the agents and environment.
+        max_num_frames (int, optional): Deprecated. Should be removed.
+
+    Returns
+    -------
+        None: None
+
+    """
     cfg = load_from_checkpoint(cfg)
 
     render_action_repeat = cfg.render_action_repeat if cfg.render_action_repeat is not None else cfg.env_frameskip
@@ -226,7 +238,7 @@ def main():
             self.__dict__.update(adict)
 
     cfg = Bunch(cfg_dict)
-    status, avg_reward = enjoy(cfg)
+    status, avg_reward = run_eval(cfg)
     return status
 
 
