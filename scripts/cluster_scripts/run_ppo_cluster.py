@@ -29,8 +29,8 @@ def make_code_snap(experiment, code_path, slurm_dir='exp'):
     dirs_to_copy = [
         '.', './cfgs/', './cfgs/algo', './algos/', './algos/ppo/',
         './algos/ppo/ppo_utils', './algos/ppo/r_mappo',
-        './algos/ppo/r_mappo/algorithm', './algos/ppo/utils', './algos/gcsl/',
-        './envs/', './nocturne_utils/', './python/', './scenarios/', './build'
+        './algos/ppo/r_mappo/algorithm', './algos/ppo/utils',
+        '.nocturne/envs/', './nocturne_utils/', '.nocturne/python/', './build'
     ]
     src_dir = pathlib.Path(os.path.dirname(os.getcwd()))
     for dir in dirs_to_copy:
