@@ -1,1 +1,1 @@
-from .base_env import BaseEnv
+from nocturne.envs.base_env import BaseEnv
