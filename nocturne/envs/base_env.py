@@ -1,6 +1,7 @@
 """Default environment for Nocturne."""
 
 from collections import defaultdict
+import json
 import os
 
 from gym.spaces import Box, Discrete
@@ -23,8 +24,9 @@ class BaseEnv(object):
         """
         super().__init__()
         with open(os.path.join(cfg['scenario_path'],
-                               'valid_files.txt')) as file:
-            self.files = [line.strip() for line in file]
+                               'valid_files.json')) as file:
+            self.valid_veh_dict = json.load(file)
+            self.files = list(self.valid_veh_dict.keys())
         if cfg['num_files'] != -1:
             self.files = self.files[0:cfg['num_files']]
         self.file = self.files[np.random.randint(len(self.files))]
@@ -209,6 +211,9 @@ class BaseEnv(object):
                 # init at collision
                 if veh_obj.getCollided():
                     self.scenario.removeVehicle(veh_obj)
+                if self.file in self.valid_veh_dict and veh_obj.getID(
+                ) in self.valid_veh_dict[self.file]:
+                    veh_obj.expert_control = True
             self.vehicles = self.scenario.getObjectsThatMoved()
             self.all_vehicle_ids = [veh.getID() for veh in self.vehicles]
             # check if we have less than the desired number of vehicles and have

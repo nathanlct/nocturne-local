@@ -51,6 +51,8 @@ def test_state_subscribers():
     # [(10, 10), (11, 11)] and are "road edge = 3, road edge = 3"
     # since these are road edges the one hot encoding will be
     # [0, 0, 0, 1, 0, 0, 0]
+    import ipdb
+    ipdb.set_trace()
     road_point_state = new_state[max_num_visible_objects *
                                  num_object_states:max_num_visible_objects *
                                  num_object_states + num_road_point_states * 2]

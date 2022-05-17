@@ -59,6 +59,8 @@ void DefineObject(py::module& m) {
            py::overload_cast<float, float>(&Object::set_position))
       .def("set_destination",
            py::overload_cast<float, float>(&Object::set_destination))
+      .def("_scale_shape", &Object::ScaleShape, py::arg("length_scale") = 1.0,
+           py::arg("width_scale") = 1.0)
 
       // TODO: Deprecate the legacy interfaces below.
       .def("getWidth", &Object::width)
