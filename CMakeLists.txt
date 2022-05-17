@@ -24,7 +24,6 @@ add_subdirectory(
 
 pybind11_add_module(
   nocturne
-  ${CMAKE_CURRENT_SOURCE_DIR}/python/image.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/python/nocturne.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/python/object.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/python/road.cc
