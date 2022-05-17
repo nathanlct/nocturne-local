@@ -59,8 +59,13 @@ void DefineObject(py::module& m) {
            py::overload_cast<float, float>(&Object::set_position))
       .def("set_destination",
            py::overload_cast<float, float>(&Object::set_destination))
+<<<<<<< HEAD:nocturne/python/object.cc
       .def("_scale_shape", &Object::ScaleShape, py::arg("length_scale") = 1.0,
            py::arg("width_scale") = 1.0)
+=======
+      .def("scale_width", &Object::_scale_width)
+      .def("scale_length", &Object::_scale_length)
+>>>>>>> 437e90248e6d01322c86bc84cb73e90a680f55e0:python/object.cc
 
       // TODO: Deprecate the legacy interfaces below.
       .def("getWidth", &Object::width)
