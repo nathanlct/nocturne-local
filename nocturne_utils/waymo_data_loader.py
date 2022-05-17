@@ -56,7 +56,7 @@ def precompute_dataset(from_path, to_path, samples_per_file=5000):
         scenario = sim.getScenario()
         
         # for each time and valid vehicle at that time
-        for obj in scenario.getRoadObjects():
+        for obj in scenario.getObjectsThatMoved():
             obj.expert_control = True
         for time in range(tmin, tmax + 1):
             for veh in scenario.getVehicles():

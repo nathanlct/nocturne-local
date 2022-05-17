@@ -53,7 +53,7 @@ if __name__ == '__main__':
             sim.reset()
             scenario = sim.getScenario()
 
-            for obj in scenario.getRoadObjects():
+            for obj in scenario.getObjectsThatMoved():
                 obj.expert_control = True
             for veh in scenario.getVehicles():
                 veh.expert_control = expert_control_vehicles
