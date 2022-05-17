@@ -46,7 +46,7 @@ add_library(
 target_include_directories(
   nocturne_core
   PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/json/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/json/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include/nocturne_bits
 )
 
@@ -55,13 +55,6 @@ find_package(SFML 2.5 COMPONENTS window system graphics audio REQUIRED)
 set(SFML_LIBS sfml-window sfml-system sfml-graphics sfml-audio)
 
 target_link_libraries(nocturne_core PUBLIC ${SFML_LIBS} nocturne_geometry)
-# target_link_libraries(nocturne PUBLIC ${SFML_LIBS} geometry)
-# target_link_libraries(nocturne_static PUBLIC ${SFML_LIBS} geometry)
-
-# Install library and includes
-# install(TARGETS nocturne DESTINATION lib)
-# install(FILES include/nocturne DESTINATION include)
-# install(DIRECTORY include/nocturne_bits DESTINATION include)
 
 # Google Test
 include(FetchContent)
