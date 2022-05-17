@@ -4,20 +4,14 @@ from collections import defaultdict
 import os
 
 from gym.spaces import Box, Discrete
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
 import numpy as np
 import torch
 
 from nocturne import Simulation
 
 
-class BaseEnv(MultiAgentEnv):
+class BaseEnv(object):
     """Default environment for Nocturne."""
-
-    # class BaseEnv(object):
-    metadata = {
-        "render.modes": ["rgb_array"],
-    }
 
     def __init__(self, cfg, rank=0):
         """Initialize the environment.
@@ -28,7 +22,6 @@ class BaseEnv(MultiAgentEnv):
             rank (int, optional): [description]. Defaults to 0.
         """
         super().__init__()
-        self._skip_env_checking = True  # temporary fix for rllib env checking issue
         with open(os.path.join(cfg['scenario_path'],
                                'valid_files.txt')) as file:
             self.files = [line.strip() for line in file]
