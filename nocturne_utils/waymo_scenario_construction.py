@@ -48,12 +48,13 @@ def _parse_object_state(
         Dict[str, Any]: Dict representing an object.
     """
     return {
-        "position": {
-            "x":
-            [state.center_x if state.valid else ERR_VAL for state in states],
-            "y":
-            [state.center_y if state.valid else ERR_VAL for state in states],
-        },
+        "position": [{
+            "x": state.center_x,
+            "y": state.center_y
+        } if state.valid else {
+            "x": ERR_VAL,
+            "y": ERR_VAL
+        } for state in states],
         "width":
         states[0].width,
         "length":
@@ -62,12 +63,13 @@ def _parse_object_state(
             math.degrees(state.heading) if state.valid else ERR_VAL
             for state in states
         ],  # Use rad here?
-        "velocity": {
-            "x":
-            [state.velocity_x if state.valid else ERR_VAL for state in states],
-            "y":
-            [state.velocity_y if state.valid else ERR_VAL for state in states],
-        },
+        "velocity": [{
+            "x": state.velocity_x,
+            "y": state.velocity_y
+        } if state.valid else {
+            "x": ERR_VAL,
+            "y": ERR_VAL
+        } for state in states],
         "valid": [state.valid for state in states],
         "goalPosition": {
             "x": final_state.center_x,
