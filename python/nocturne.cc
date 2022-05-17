@@ -9,7 +9,6 @@ namespace {
 PYBIND11_MODULE(nocturne, m) {
   m.doc() = "Nocturne library - 2D Driving Simulator";
 
-  nocturne::DefineImage(m);
   nocturne::DefineObject(m);
   nocturne::DefineRoadLine(m);
   nocturne::DefineScenario(m);
