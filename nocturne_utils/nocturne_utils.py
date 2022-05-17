@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def angle_between(v1, v2):
     """ Returns the angle in radians between vectors 'v1' and 'v2'::
 

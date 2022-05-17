@@ -28,6 +28,8 @@ namespace nocturne {
 
 using json = nlohmann::json;
 
+constexpr int64_t kMaxEnvTime = 100000;
+
 // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
 // returned in the state
 constexpr int64_t kMaxVisibleObjects = 20;
@@ -61,16 +63,29 @@ constexpr int64_t kEgoFeatureSize = 5;
 
 class Scenario : public sf::Drawable {
  public:
-  Scenario(const std::string& path, int startTime, bool useNonVehicles);
+  Scenario(const std::string& scenario_path, int64_t start_time,
+           bool allow_non_vehicles)
+      : current_time_(start_time), allow_non_vehicles_(allow_non_vehicles) {
+    if (!scenario_path.empty()) {
+      LoadScenario(scenario_path);
+    } else {
+      throw std::invalid_argument("No scenario file inputted.");
+      // TODO(nl) right now an empty scenario crashes, expectedly
+      std::cout << "No scenario path inputted. Defaulting to an empty scenario."
+                << std::endl;
+    }
+  }
 
-  void loadScenario(std::string path);
+  void LoadScenario(const std::string& scenario_path);
+
+  const std::string& name() const { return name_; }
+
+  int64_t max_env_time() const { return max_env_time_; }
 
   void step(float dt);
 
-  void removeVehicle(Vehicle* object);
-
-  int getMaxEnvTime() { return maxEnvTime; }
-  // float getSignedAngle(float sourceAngle, float targetAngle) const;
+  // void removeVehicle(Vehicle* object);
+  bool RemoveObject(const Object& object);
 
   // query expert data
   geometry::Vector2D getExpertSpeeds(int timeIndex, int vehIndex) {
@@ -104,20 +119,24 @@ class Scenario : public sf::Drawable {
   bool checkForCollision(const Object& object,
                          const geometry::LineSegment& segment) const;
 
-  const std::vector<std::shared_ptr<Vehicle>>& getVehicles() const {
-    return vehicles;
+  const std::vector<std::shared_ptr<Vehicle>>& vehicles() const {
+    return vehicles_;
   }
 
-  const std::vector<std::shared_ptr<Pedestrian>>& getPedestrians() const {
-    return pedestrians;
+  const std::vector<std::shared_ptr<Pedestrian>>& pedestrians() const {
+    return pedestrians_;
   }
 
-  const std::vector<std::shared_ptr<Cyclist>>& getCyclists() const {
-    return cyclists;
+  const std::vector<std::shared_ptr<Cyclist>>& cyclists() const {
+    return cyclists_;
   }
 
-  const std::vector<std::shared_ptr<Object>>& getRoadObjects() const {
-    return roadObjects;
+  const std::vector<std::shared_ptr<Object>>& objects() const {
+    return objects_;
+  }
+
+  const std::vector<std::shared_ptr<Object>>& moving_objects() const {
+    return moving_objects_;
   }
 
   const std::vector<std::shared_ptr<RoadLine>>& getRoadLines() const {
@@ -133,10 +152,6 @@ class Scenario : public sf::Drawable {
   NdArray<float> FlattenedVisibleState(const Object& src, float view_dist,
                                        float view_angle) const;
 
-  // get a list of vehicles that actually moved
-  std::vector<std::shared_ptr<Object>> getObjectsThatMoved() {
-    return objectsThatMoved;
-  }
   int64_t getMaxNumVisibleObjects() const { return kMaxVisibleObjects; }
   int64_t getMaxNumVisibleRoadPoints() const { return kMaxVisibleRoadPoints; }
   int64_t getMaxNumVisibleTrafficLights() const {
@@ -165,27 +180,28 @@ class Scenario : public sf::Drawable {
                                                         float view_dist,
                                                         float view_angle) const;
 
-  int currTime;
-  int IDCounter = 0;
-  int maxEnvTime =
-      int(1e5);  // the maximum time an env can run for
-                 // set to a big number so that it never overrides the RL env
-                 // however, if a traffic light is in the scene then we
-                 // set it to 90 so that the episode never runs past
-                 // the maximum length of available traffic light data
-  bool useNonVehicles;  // used to turn off pedestrians and cyclists
+  std::string name_;
 
-  std::string name;
+  int64_t current_time_;
+  int64_t max_env_time_ = kMaxEnvTime;
+  const bool allow_non_vehicles_ = true;  // Whether to use non vehicle objects.
+
   std::vector<std::shared_ptr<geometry::LineSegment>> lineSegments;
   std::vector<std::shared_ptr<RoadLine>> roadLines;
-  std::vector<std::shared_ptr<Vehicle>> vehicles;
-  std::vector<std::shared_ptr<Pedestrian>> pedestrians;
-  std::vector<std::shared_ptr<Cyclist>> cyclists;
-  std::vector<std::shared_ptr<Object>> roadObjects;
+
+  int64_t object_counter_ = 0;
+  std::vector<std::shared_ptr<Vehicle>> vehicles_;
+  std::vector<std::shared_ptr<Pedestrian>> pedestrians_;
+  std::vector<std::shared_ptr<Cyclist>> cyclists_;
+  std::vector<std::shared_ptr<Object>> objects_;
+  // Rrack the object that moved, useful for figuring out which agents should
+  // actually be controlled
+  std::vector<std::shared_ptr<Object>> moving_objects_;
+
   std::vector<std::shared_ptr<StopSign>> stopSigns;
   std::vector<std::shared_ptr<TrafficLight>> trafficLights;
 
-  geometry::BVH vehicle_bvh_;       // track vehicles for collisions
+  geometry::BVH object_bvh_;        // track objects for collisions
   geometry::BVH line_segment_bvh_;  // track line segments for collisions
   geometry::BVH static_bvh_;        // static objects
 
@@ -195,10 +211,6 @@ class Scenario : public sf::Drawable {
   std::vector<std::vector<float>> expertHeadings;
   std::vector<float> lengths;
   std::vector<std::vector<bool>> expertValid;
-
-  // track the object that moved, useful for figuring out which agents should
-  // actually be controlled
-  std::vector<std::shared_ptr<Object>> objectsThatMoved;
 
   std::unique_ptr<sf::RenderTexture> image_texture_ = nullptr;
   sf::FloatRect roadNetworkBounds;

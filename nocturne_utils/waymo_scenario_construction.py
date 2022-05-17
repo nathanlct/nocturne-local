@@ -97,14 +97,11 @@ def _init_road(map_feature: map_pb2.MapFeature) -> Optional[Dict[str, Any]]:
                     map_feature.WhichOneof("feature_data")).position
         geometry = [{"x": p.x, "y": p.y}]
     elif feature != 'crosswalk' and feature != 'speed_bump':
-        try:
-            geometry = [{
-                "x": p.x,
-                "y": p.y
-            } for p in getattr(
-                map_feature, map_feature.WhichOneof("feature_data")).polyline]
-        except:
-            return None
+        geometry = [{
+            "x": p.x,
+            "y": p.y
+        } for p in getattr(map_feature, map_feature.WhichOneof(
+            "feature_data")).polyline]
     else:
         geometry = [{
             "x": p.x,

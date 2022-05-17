@@ -19,7 +19,7 @@ wandb_group: ${experiment}
 # replay trajectories
 single_agent_mode: False
 # all goals are achievable within 90 steps
-episode_length: 90
+episode_length: 80
 # how many files of the total dataset to use. -1 indicates to use all of them
 num_files: -1
 scenario_path: '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json_v2_no_tl_train'

@@ -5,10 +5,8 @@ import time
 import os
 
 from celluloid import Camera
-import hydra
 import matplotlib.pyplot as plt
 import numpy as np
-from omegaconf import OmegaConf
 from pyvirtualdisplay import Display
 import torch
 
@@ -16,9 +14,10 @@ from sample_factory.algorithms.appo.actor_worker import transform_dict_observati
 from sample_factory.algorithms.appo.learner import LearnerWorker
 from sample_factory.algorithms.appo.model import create_actor_critic
 from sample_factory.algorithms.appo.model_utils import get_hidden_size
-from sample_factory.algorithms.utils.action_distributions import ContinuousActionDistribution, CategoricalActionDistribution
+from sample_factory.algorithms.utils.action_distributions import ContinuousActionDistribution, \
+     CategoricalActionDistribution
 from sample_factory.algorithms.utils.algo_utils import ExperimentStatus
-from sample_factory.algorithms.utils.arguments import parse_args, load_from_checkpoint
+from sample_factory.algorithms.utils.arguments import load_from_checkpoint
 from sample_factory.algorithms.utils.multi_agent_wrapper import MultiAgentWrapper, is_multiagent_env
 from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict

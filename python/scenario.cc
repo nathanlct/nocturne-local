@@ -19,18 +19,34 @@ void DefineScenario(py::module& m) {
   m.doc() = "nocturne documentation for class Scenario";
 
   py::class_<Scenario, std::shared_ptr<Scenario>>(m, "Scenario")
-      .def(py::init<std::string, int, bool>(), "Constructor for Scenario",
-           py::arg("path") = "", py::arg("start_time") = 0,
-           py::arg("use_non_vehicles") = true)
-      .def("getVehicles", &Scenario::getVehicles,
+      .def(py::init<const std::string&, int64_t, bool>(),
+           "Constructor for Scenario", py::arg("path") = "",
+           py::arg("start_time") = 0, py::arg("allow_non_vehicles") = true)
+
+      // Properties
+      .def_property_readonly("name", &Scenario::name)
+      .def_property_readonly("max_env_time", &Scenario::max_env_time)
+
+      // Methods
+      .def("vehicles", &Scenario::vehicles, py::return_value_policy::reference)
+      .def("pedestrians", &Scenario::pedestrians,
            py::return_value_policy::reference)
-      .def("getPedestrians", &Scenario::getPedestrians,
+      .def("cyclists", &Scenario::cyclists, py::return_value_policy::reference)
+      .def("objects", &Scenario::objects, py::return_value_policy::reference)
+      .def("moving_objects", &Scenario::moving_objects,
            py::return_value_policy::reference)
-      .def("getCyclists", &Scenario::getCyclists,
+      .def("remove_object", &Scenario::RemoveObject)
+
+      // TODO: Deprecate the legacy interfaces below.
+      .def("getVehicles", &Scenario::vehicles,
            py::return_value_policy::reference)
-      .def("getObjectsThatMoved", &Scenario::getObjectsThatMoved,
+      .def("getPedestrians", &Scenario::pedestrians,
            py::return_value_policy::reference)
-      .def("getMaxEnvTime", &Scenario::getMaxEnvTime)
+      .def("getCyclists", &Scenario::cyclists,
+           py::return_value_policy::reference)
+      .def("getObjectsThatMoved", &Scenario::moving_objects,
+           py::return_value_policy::reference)
+      .def("getMaxEnvTime", &Scenario::max_env_time)
       .def("getRoadLines", &Scenario::getRoadLines)
       .def(
           "getCone",
@@ -51,7 +67,7 @@ void DefineScenario(py::module& m) {
           },
           "Return a numpy array of dimension (w, h, 4) representing the scene",
           py::arg("object") = nullptr, py::arg("render_goals") = false)
-      .def("removeVehicle", &Scenario::removeVehicle)
+      .def("removeVehicle", &Scenario::RemoveObject)
       .def("hasExpertAction", &Scenario::hasExpertAction)
       .def("getExpertAction", &Scenario::getExpertAction)
       .def("getExpertSpeeds", &Scenario::getExpertSpeeds)

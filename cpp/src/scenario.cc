@@ -18,6 +18,19 @@ namespace nocturne {
 
 namespace {
 
+template <class T>
+bool RemoveObjectImpl(const Object& object, std::vector<T>& objects) {
+  const int64_t id = object.id();
+  const auto it = std::find_if(
+      objects.begin(), objects.end(),
+      [id](const std::shared_ptr<Object>& obj) { return obj->id() == id; });
+  if (it == objects.end()) {
+    return false;
+  }
+  objects.erase(it);
+  return true;
+}
+
 std::vector<const ObjectBase*> VisibleCandidates(const geometry::BVH& bvh,
                                                  const Object& src,
                                                  const ViewField& vf) {
@@ -85,7 +98,7 @@ void ExtractObjectFeature(const Object& src, const Object& obj, float dis,
       (obj.position() - src.position()).Angle(), src.heading());
   const float relative_heading =
       geometry::utils::AngleSub(obj.heading(), src.heading());
-  const geometry::Vector2D relative_velocity = obj.velocity() - src.velocity();
+  const geometry::Vector2D relative_velocity = obj.Velocity() - src.Velocity();
   const int64_t obj_type = static_cast<int64_t>(obj.Type());
   feature[0] = 1.0f;  // Valid
   feature[1] = dis;
@@ -144,37 +157,28 @@ void ExtractStopSignFeature(const Object& src, const StopSign& obj, float dis,
 
 using geometry::utils::kPi;
 
-Scenario::Scenario(const std::string& path, int startTime, bool useNonVehicles)
-    : currTime(startTime), useNonVehicles(useNonVehicles) {
-  if (path.size() > 0) {
-    loadScenario(path);
-  } else {
-    throw std::invalid_argument("No scenario file inputted.");
-    // TODO(nl) right now an empty scenario crashes, expectedly
-    std::cout << "No scenario path inputted. Defaulting to an empty scenario."
-              << std::endl;
-  }
-}
-
-void Scenario::loadScenario(std::string path) {
-  std::ifstream data(path);
+void Scenario::LoadScenario(const std::string& scenario_path) {
+  std::ifstream data(scenario_path);
   if (!data.is_open()) {
-    throw std::invalid_argument("Scenario file couldn't be opened: " + path);
+    throw std::invalid_argument("Scenario file couldn't be opened: " +
+                                scenario_path);
   }
+
   json j;
   data >> j;
-
-  name = j["name"];
+  name_ = j["name"];
 
   for (const auto& obj : j["objects"]) {
-    std::string type = obj["type"];
+    // std::string type = obj["type"];
+    const ObjectType object_type = ParseObjectType(obj["type"]);
+
     // TODO(ev) currTime should be passed in rather than defined here
-    geometry::Vector2D pos(obj["position"]["x"][currTime],
-                           obj["position"]["y"][currTime]);
+    geometry::Vector2D pos(obj["position"]["x"][current_time_],
+                           obj["position"]["y"][current_time_]);
     float width = float(obj["width"]);
     float length = float(obj["length"]);
-    float heading = geometry::utils::NormalizeAngle(
-        geometry::utils::Radians(static_cast<float>(obj["heading"][currTime])));
+    float heading = geometry::utils::NormalizeAngle(geometry::utils::Radians(
+        static_cast<float>(obj["heading"][current_time_])));
 
     // TODO(ev) this should be set elsewhere
     bool occludes = true;
@@ -190,7 +194,7 @@ void Scenario::loadScenario(std::string path) {
     std::vector<geometry::Vector2D> localExpertSpeeds;
     std::vector<bool> localValid;
     std::vector<float> localHeadingVec;
-    bool didObjectMove = false;
+    bool is_moving = false;
     for (unsigned int i = 0; i < obj["position"]["x"].size(); i++) {
       geometry::Vector2D currPos(obj["position"]["x"][i],
                                  obj["position"]["y"][i]);
@@ -199,7 +203,7 @@ void Scenario::loadScenario(std::string path) {
       localExpertTrajectory.push_back(currPos);
       localExpertSpeeds.push_back(currVel);
       if (currVel.Norm() > 0 && bool(obj["valid"][i])) {
-        didObjectMove = true;
+        is_moving = true;
       }
       localValid.push_back(bool(obj["valid"][i]));
       // waymo data is in degrees!
@@ -212,51 +216,53 @@ void Scenario::loadScenario(std::string path) {
 
     // we only want to store and load vehicles that are valid at this
     // initialization time
-    if (bool(obj["valid"][currTime])) {
+    if (bool(obj["valid"][current_time_])) {
       expertTrajectories.push_back(localExpertTrajectory);
       expertSpeeds.push_back(localExpertSpeeds);
       expertHeadings.push_back(localHeadingVec);
       lengths.push_back(length);
       expertValid.push_back(localValid);
-      if (type == "vehicle") {
+
+      if (object_type == ObjectType::kVehicle) {
         std::shared_ptr<Vehicle> vehicle = std::make_shared<Vehicle>(
-            IDCounter, length, width, pos, goalPos, heading,
-            localExpertSpeeds[currTime].Norm(), occludes, collides,
+            object_counter_++, length, width, pos, goalPos, heading,
+            localExpertSpeeds[current_time_].Norm(), occludes, collides,
             checkForCollisions);
-        vehicles.push_back(vehicle);
-        roadObjects.push_back(vehicle);
-        if (didObjectMove) {
-          objectsThatMoved.push_back(vehicle);
+        vehicles_.push_back(vehicle);
+        objects_.push_back(vehicle);
+        if (is_moving) {
+          moving_objects_.push_back(vehicle);
         }
-      } else if (type == "pedestrian" && useNonVehicles) {
-        std::shared_ptr<Pedestrian> pedestrian = std::make_shared<Pedestrian>(
-            IDCounter, length, width, pos, goalPos, heading,
-            localExpertSpeeds[currTime].Norm(), occludes, collides,
-            checkForCollisions);
-        pedestrians.push_back(pedestrian);
-        roadObjects.push_back(pedestrian);
-        if (didObjectMove) {
-          objectsThatMoved.push_back(pedestrian);
-        }
-      } else if (type == "cyclist" && useNonVehicles) {
-        std::shared_ptr<Cyclist> cyclist = std::make_shared<Cyclist>(
-            IDCounter, length, width, pos, goalPos, heading,
-            localExpertSpeeds[currTime].Norm(), occludes, collides,
-            checkForCollisions);
-        cyclists.push_back(cyclist);
-        roadObjects.push_back(cyclist);
-        if (didObjectMove) {
-          objectsThatMoved.push_back(cyclist);
+      } else if (allow_non_vehicles_) {
+        if (object_type == ObjectType::kPedestrian) {
+          std::shared_ptr<Pedestrian> pedestrian = std::make_shared<Pedestrian>(
+              object_counter_++, length, width, pos, goalPos, heading,
+              localExpertSpeeds[current_time_].Norm(), occludes, collides,
+              checkForCollisions);
+          pedestrians_.push_back(pedestrian);
+          objects_.push_back(pedestrian);
+          if (is_moving) {
+            moving_objects_.push_back(pedestrian);
+          }
+        } else if (object_type == ObjectType::kCyclist) {
+          std::shared_ptr<Cyclist> cyclist = std::make_shared<Cyclist>(
+              object_counter_++, length, width, pos, goalPos, heading,
+              localExpertSpeeds[current_time_].Norm(), occludes, collides,
+              checkForCollisions);
+          cyclists_.push_back(cyclist);
+          objects_.push_back(cyclist);
+          if (is_moving) {
+            moving_objects_.push_back(cyclist);
+          }
+        } else {
+          std::cerr << "Unknown object type: " << obj["type"] << std::endl;
         }
       }
-      // No point in printing this if we are not using non-vehicles
-      // TODO(ev) we should include the UNKNOWN type objects
-      else if (useNonVehicles) {
-        std::cerr << "Unknown object type: " << type << std::endl;
-      }
-      IDCounter++;
     }
   }
+
+  // initialize the road objects bvh
+  object_bvh_.InitHierarchy(objects_);
 
   float min_x = std::numeric_limits<float>::max();
   float min_y = std::numeric_limits<float>::max();
@@ -317,7 +323,7 @@ void Scenario::loadScenario(std::string path) {
 
   // Now handle the traffic light states
   for (const auto& tl : j["tl_states"]) {
-    maxEnvTime = 90;
+    max_env_time_ = 90;
     // Lane positions don't move so we can just use the first
     // element
     float x_pos = float(tl["x"][0]);
@@ -334,12 +340,9 @@ void Scenario::loadScenario(std::string path) {
     }
     std::shared_ptr<TrafficLight> traffic_light =
         std::make_shared<TrafficLight>(geometry::Vector2D(x_pos, y_pos),
-                                       validTimes, lightStates, currTime);
+                                       validTimes, lightStates, current_time_);
     trafficLights.push_back(traffic_light);
   }
-
-  // initialize the road objects bvh
-  vehicle_bvh_.InitHierarchy(roadObjects);
 
   std::vector<const geometry::AABBInterface*> static_objects;
   for (const auto& roadLine : roadLines) {
@@ -362,43 +365,34 @@ void Scenario::loadScenario(std::string path) {
 }
 
 void Scenario::step(float dt) {
-  currTime += int(dt / 0.1);  // TODO(ev) hardcoding
-  for (auto& object : roadObjects) {
+  current_time_ += int(dt / 0.1);  // TODO(ev) hardcoding
+  for (auto& object : objects_) {
     // reset the collision flags for the objects before stepping
     // we do not want to label a vehicle as persistently having collided
-    object->set_collided(false);
+    object->ResetCollision();
     if (!object->expert_control()) {
       object->Step(dt);
     } else {
       geometry::Vector2D expertPosition =
-          expertTrajectories[object->id()][currTime];
+          expertTrajectories[object->id()][current_time_];
       object->set_position(expertPosition);
-      object->set_heading(expertHeadings[object->id()][currTime]);
+      object->set_heading(expertHeadings[object->id()][current_time_]);
     }
   }
   for (auto& object : trafficLights) {
-    object->set_current_time(currTime);
+    object->set_current_time(current_time_);
   }
 
   // update the vehicle bvh
-  if (!roadObjects.empty()) {
-    const int64_t n = roadObjects.size();
-    std::vector<const geometry::AABBInterface*> objects;
-    objects.reserve(n);
-    for (const auto& obj : roadObjects) {
-      objects.push_back(
-          dynamic_cast<const geometry::AABBInterface*>(obj.get()));
-    }
-    vehicle_bvh_.InitHierarchy(objects);
-  }
+  object_bvh_.InitHierarchy(objects_);
   updateCollision();
 }
 
 void Scenario::updateCollision() {
   // check vehicle-vehicle collisions
-  for (auto& obj1 : roadObjects) {
+  for (auto& obj1 : objects_) {
     std::vector<const Object*> candidates =
-        vehicle_bvh_.IntersectionCandidates<Object>(*obj1);
+        object_bvh_.IntersectionCandidates<Object>(*obj1);
     for (const auto* obj2 : candidates) {
       if (obj1->id() == obj2->id()) {
         continue;
@@ -411,16 +405,18 @@ void Scenario::updateCollision() {
       }
       if (checkForCollision(*obj1, *obj2)) {
         obj1->set_collided(true);
+        obj1->set_collision_type(CollisionType::kVehicleVehicleCollision);
         const_cast<Object*>(obj2)->set_collided(true);
       }
     }
   }
   // check vehicle-lane segment collisions
-  for (auto& obj : roadObjects) {
+  for (auto& obj : objects_) {
     std::vector<const geometry::LineSegment*> candidates =
         line_segment_bvh_.IntersectionCandidates<geometry::LineSegment>(*obj);
     for (const auto* seg : candidates) {
       if (checkForCollision(*obj, *seg)) {
+        obj->set_collision_type(CollisionType::kVehicleRoadEdgeCollision);
         obj->set_collided(true);
       }
     }
@@ -444,7 +440,7 @@ Scenario::VisibleObjects(const Object& src, float view_dist,
   const ViewField vf(position, view_dist, heading, view_angle);
 
   std::vector<const ObjectBase*> objects =
-      VisibleCandidates(vehicle_bvh_, src, vf);
+      VisibleCandidates(object_bvh_, src, vf);
   const std::vector<const ObjectBase*> static_candidates =
       VisibleCandidates(static_bvh_, src, vf);
   std::vector<const ObjectBase*> road_points;
@@ -505,7 +501,7 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
       geometry::utils::AngleSub(dst_heading, src_heading);
 
   float* state_data = state.DataPtr();
-  state_data[0] = src.Speed();
+  state_data[0] = src.speed();
   state_data[1] = dist;
   state_data[2] = heading_diff;
   state_data[3] = src.length();
@@ -712,7 +708,7 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   for (const auto& object : stopSigns) {
     target.draw(*object, states);
   }
-  for (const auto& object : roadObjects) {
+  for (const auto& object : objects_) {
     target.draw(*object, states);
     // draw goal destination
     float radius = 2;
@@ -724,33 +720,31 @@ void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   }
 }
 
-void Scenario::removeVehicle(Vehicle* object) {
-  for (auto it = vehicles.begin(); it != vehicles.end();) {
-    if ((*it).get() == object) {
-      it = vehicles.erase(it);
-    } else {
-      it++;
+// O(N) time remove.
+bool Scenario::RemoveObject(const Object& object) {
+  if (!RemoveObjectImpl(object, objects_)) {
+    return false;
+  }
+  switch (object.Type()) {
+    case ObjectType::kVehicle: {
+      RemoveObjectImpl(object, vehicles_);
+      break;
+    }
+    case ObjectType::kPedestrian: {
+      RemoveObjectImpl(object, pedestrians_);
+      break;
+    }
+    case ObjectType::kCyclist: {
+      RemoveObjectImpl(object, cyclists_);
+      break;
+    }
+    default: {
+      break;
     }
   }
-
-  for (auto it = roadObjects.begin(); it != roadObjects.end();) {
-    if ((*it).get() == object) {
-      it = roadObjects.erase(it);
-    } else {
-      it++;
-    }
-  }
-  for (auto it = objectsThatMoved.begin(); it != objectsThatMoved.end();) {
-    if ((*it).get() == object) {
-      it = objectsThatMoved.erase(it);
-    } else {
-      it++;
-    }
-  }
-  // Update the BVH to account for the fact that some vehicles are now gone
-  if (!roadObjects.empty()) {
-    vehicle_bvh_.InitHierarchy(roadObjects);
-  }
+  RemoveObjectImpl(object, moving_objects_);
+  object_bvh_.InitHierarchy(objects_);
+  return true;
 }
 
 sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
@@ -822,11 +816,9 @@ NdArray<unsigned char> Scenario::getCone(
   // TODO(ev) do this for road objects too
   // draw obstructions
   if (obscuredView == true) {
-    std::vector<std::shared_ptr<Vehicle>> roadObjects =
-        getVehicles();  // todo optimize with objects in range only (quadtree?)
-
-    for (const auto& obj : roadObjects) {
-      if (obj.get() != object && obj->can_block_sight()) {
+    // TODO: Optimize this by checking visible objects only.
+    for (const auto& obj : objects_) {
+      if (obj->id() != object->id() && obj->can_block_sight()) {
         const auto lines = obj->BoundingPolygon().Edges();
         // auto lines = obj->getLines();
         for (const auto& line1 : lines) {
@@ -972,7 +964,7 @@ NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
   //   texture->draw(*road, renderTransform);
   // }
   if (object == nullptr) {
-    for (const auto& obj : vehicles) {
+    for (const auto& obj : vehicles_) {
       texture->draw(*obj, renderTransform);
       if (renderGoals) {
         // draw goal destination
