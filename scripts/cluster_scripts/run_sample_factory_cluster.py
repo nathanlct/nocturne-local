@@ -1,4 +1,4 @@
-"""Run on-policy PPO experiments on a SLURM cluster."""
+"""Run sample factory experiments on a SLURM cluster."""
 import argparse
 import os
 import pathlib
@@ -7,10 +7,10 @@ from datetime import datetime
 from subprocess import Popen
 
 from cfgs.config import PROJECT_PATH
-from scripts.utils import Overrides
+from scripts.cluster_scripts.utils import Overrides
 
 
-def make_code_snap(experiment, code_path, slurm_dir='exp'):
+def make_code_snap(experiment, code_path, str_time):
     """Copy code to directory to ensure that the run launches with correct commit.
 
     Args:
@@ -23,13 +23,12 @@ def make_code_snap(experiment, code_path, slurm_dir='exp'):
     -------
         snap_dir (str): path to where the code has been copied.
     """
-    now = datetime.now()
     if len(code_path) > 0:
-        snap_dir = pathlib.Path(code_path) / slurm_dir
+        snap_dir = pathlib.Path(code_path)
     else:
-        snap_dir = pathlib.Path.cwd() / slurm_dir
-    snap_dir /= now.strftime('%Y.%m.%d')
-    snap_dir /= now.strftime('%H%M%S') + f'_{experiment}'
+        snap_dir = pathlib.Path.cwd()
+    snap_dir /= str_time
+    snap_dir /= f'{experiment}'
     snap_dir.mkdir(exist_ok=True, parents=True)
 
     def copy_dir(dir, pat):
@@ -39,12 +38,11 @@ def make_code_snap(experiment, code_path, slurm_dir='exp'):
             shutil.copy(f, dst_dir / f.name)
 
     dirs_to_copy = [
-        '.', './cfgs/', './cfgs/algo', './algos/', './algos/ppo/',
-        './algos/ppo/ppo_utils', './algos/ppo/r_mappo',
-        './algos/ppo/r_mappo/algorithm', './algos/ppo/utils',
-        '.nocturne/envs/', './nocturne_utils/', '.nocturne/python/', './build'
+        '.', './cfgs/', './examples/', './examples/sample_factory_files',
+        './cfgs/algorithm', './nocturne/envs/', './nocturne_utils/',
+        './nocturne/python/', './scenarios/', './build'
     ]
-    src_dir = pathlib.Path(os.path.dirname(os.getcwd()))
+    src_dir = pathlib.Path(PROJECT_PATH)
     for dir in dirs_to_copy:
         copy_dir(dir, '*.py')
         copy_dir(dir, '*.yaml')
@@ -56,32 +54,26 @@ def main():
     """Launch experiments on SLURM cluster by overriding Hydra config."""
     parser = argparse.ArgumentParser()
     parser.add_argument('experiment', type=str)
-    parser.add_argument('--code_path',
-                        default='/checkpoint/eugenevinitsky/nocturne')
+    parser.add_argument(
+        '--code_path',
+        default='/checkpoint/eugenevinitsky/nocturne/sample_factory_runs')
     parser.add_argument('--dry', action='store_true')
     args = parser.parse_args()
 
-    snap_dir = make_code_snap(args.experiment, args.code_path)
-    print(str(snap_dir))
+    now = datetime.now()
+    str_time = now.strftime('%Y.%m.%d_%H%M%S')
+    snap_dir = make_code_snap(args.experiment, args.code_path, str_time)
     overrides = Overrides()
     overrides.add('hydra/launcher', ['submitit_slurm'])
     overrides.add('hydra.launcher.partition', ['learnlab'])
     overrides.add('experiment', [args.experiment])
-    # experiment parameters
-    overrides.add('episode_length', [200])
-    # algo
-    overrides.add('algo', ['ppo'])
-    overrides.add('algo.entropy_coef', [-0.001, 0.0, 0.001])
-    overrides.add('algo.n_rollout_threads', [128])
-    # rewards
-    overrides.add('rew_cfg.goal_achieved_bonus', [10, 50])
-    # misc
-    overrides.add('scenario_path',
-                  [PROJECT_PATH / 'scenarios/twenty_car_intersection.json'])
+    overrides.add('num_files', [100])
+    overrides.add('seed', [0, 1, 2, 3, 4])
 
     cmd = [
         'python',
-        str(snap_dir / 'code' / 'algos' / 'ppo' / 'nocturne_runner.py'), '-m'
+        str(snap_dir / 'code' / 'examples' / 'sample_factory_files' /
+            'run_sample_factory.py'), '-m', 'algorithm=APPO'
     ]
     print(cmd)
     cmd += overrides.cmd()
