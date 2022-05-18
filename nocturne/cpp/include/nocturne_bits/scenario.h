@@ -37,7 +37,7 @@ constexpr int64_t kMaxEnvTime = 100000;
 constexpr float kMovingThreshold = 0.2;
 // The vehicle speed at some point must be greater than this
 // for a vehicle to be included in ObjectsThatMoved
-constexpr float kMovingThreshold = 0.05;
+constexpr float kSpeedThreshold = 0.05;
 
 // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
 // returned in the state
