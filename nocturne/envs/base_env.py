@@ -1,33 +1,28 @@
-"""Each agent receives its observation, a goal position, and tries to get there without colliding."""
+"""Default environment for Nocturne."""
 
 from collections import defaultdict
 import json
 import os
 
 from gym.spaces import Box, Discrete
-from ray.rllib.env.multi_agent_env import MultiAgentEnv
 import numpy as np
 import torch
 
 from nocturne import Simulation
 
 
-class BaseEnv(MultiAgentEnv):
-    # class BaseEnv(object):
-    metadata = {
-        "render.modes": ["rgb_array"],
-    }
+class BaseEnv(object):
+    """Default environment for Nocturne."""
 
     def __init__(self, cfg, rank=0):
-        """[summary]
+        """Initialize the environment.
 
-        Args:
-            cfg ([type]): configuration file describing the experiment
+        Args
+        ----
+            cfg (dict): configuration file describing the experiment
             rank (int, optional): [description]. Defaults to 0.
         """
         super().__init__()
-        self._skip_env_checking = True  # temporary fix for rllib env checking issue
-        self.files = []
         with open(os.path.join(cfg['scenario_path'],
                                'valid_files.json')) as file:
             self.valid_veh_dict = json.load(file)
@@ -72,6 +67,7 @@ class BaseEnv(MultiAgentEnv):
                                     shape=(2, ))
 
     def apply_actions(self, action_dict):
+        """Apply a dict of actions to the vehicle objects."""
         for veh_obj in self.scenario.getObjectsThatMoved():
             veh_id = veh_obj.getID()
             if veh_id in action_dict.keys():
@@ -94,6 +90,7 @@ class BaseEnv(MultiAgentEnv):
                     veh_obj.steering = steering_action
 
     def step(self, action_dict):
+        """See superclass."""
         obs_dict = {}
         rew_dict = {}
         done_dict = {}
@@ -194,6 +191,7 @@ class BaseEnv(MultiAgentEnv):
         return obs_dict, rew_dict, done_dict, info_dict
 
     def reset(self):
+        """See superclass."""
         self.t = 0
         self.step_num = 0
         enough_vehicles = False
@@ -333,6 +331,7 @@ class BaseEnv(MultiAgentEnv):
         return obs_dict
 
     def get_observation(self, veh_obj):
+        """Return the observation for a particular vehicle."""
         ego_obs = self.scenario.ego_state(veh_obj)
         if self.cfg['subscriber']['use_ego_state'] and self.cfg['subscriber'][
                 'use_observations']:
@@ -351,11 +350,16 @@ class BaseEnv(MultiAgentEnv):
         return obs
 
     def render(self, mode=None):
-        return np.array(self.simulation.getScenario().getImage(
-            None, render_goals=True),
-                        copy=False)
+        """See superclass."""
+        return self.scenario.getImage(
+            img_width=1600,
+            img_height=1600,
+            draw_destinations=True,
+            padding=50.0,
+        )
 
     def seed(self, seed=None):
+        """Ensure determinism."""
         if seed is None:
             np.random.seed(1)
         else:

@@ -1,4 +1,4 @@
-from copy import deepcopy
+"""Runner for PPO from https://github.com/marlbenchmark/on-policy."""
 from pathlib import Path
 import os
 import time
@@ -12,7 +12,7 @@ import torch
 import wandb
 
 from algos.ppo.base_runner import Runner
-from algos.ppo.env_wrappers import SubprocVecEnv, DummyVecEnv, ShareDummyVecEnv, ShareSubprocVecEnv
+from algos.ppo.env_wrappers import SubprocVecEnv, DummyVecEnv
 
 from nocturne_utils.wrappers import create_ppo_env
 
@@ -23,6 +23,7 @@ def _t2n(x):
 
 
 def make_train_env(cfg):
+    """Construct a training environment."""
 
     def get_env_fn(rank):
 
@@ -42,6 +43,7 @@ def make_train_env(cfg):
 
 
 def make_eval_env(cfg):
+    """Construct an eval environment."""
 
     def get_env_fn(rank):
 
@@ -61,6 +63,7 @@ def make_eval_env(cfg):
 
 
 def make_render_env(cfg):
+    """Construct a rendering environment."""
 
     def get_env_fn(rank):
 
@@ -76,14 +79,20 @@ def make_render_env(cfg):
 
 
 class NocturneSharedRunner(Runner):
-    """Runner class to perform training, evaluation. and data collection for the Nocturne envs. Assumes a shared policy."""
+    """
+    Runner class to perform training, evaluation and data collection for the Nocturne envs.
+
+    WARNING: Assumes a shared policy.
+    """
 
     def __init__(self, config):
+        """Initialize."""
         super(NocturneSharedRunner, self).__init__(config)
         self.cfg = config['cfg.algo']
         self.render_envs = config['render_envs']
 
     def run(self):
+        """Run the training code."""
         self.warmup()
 
         start = time.time()
@@ -94,8 +103,6 @@ class NocturneSharedRunner(Runner):
             if self.use_linear_lr_decay:
                 self.trainer.policy.lr_decay(episode, episodes)
 
-            # for _ in range(self.episodes_per_thread):
-            # done_initialized = False
             for step in range(self.episode_length):
                 # Sample actions
                 values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env = self.collect(
@@ -115,8 +122,7 @@ class NocturneSharedRunner(Runner):
 
             # post process
             total_num_steps = (
-                episode + 1
-            ) * self.episode_length * self.n_rollout_threads  #* self.episodes_per_thread
+                episode + 1) * self.episode_length * self.n_rollout_threads
 
             # save model
             if (episode % self.save_interval == 0 or episode == episodes - 1):
@@ -167,6 +173,7 @@ class NocturneSharedRunner(Runner):
                 self.render(total_num_steps)
 
     def warmup(self):
+        """Initialize the buffers."""
         # reset env
         obs = self.envs.reset()
 
@@ -183,13 +190,14 @@ class NocturneSharedRunner(Runner):
 
     @torch.no_grad()
     def collect(self, step):
+        """Collect rollout data."""
         self.trainer.prep_rollout()
         value, action, action_log_prob, rnn_states, rnn_states_critic \
             = self.trainer.policy.get_actions(np.concatenate(self.buffer.share_obs[step]),
-                            np.concatenate(self.buffer.obs[step]),
-                            np.concatenate(self.buffer.rnn_states[step]),
-                            np.concatenate(self.buffer.rnn_states_critic[step]),
-                            np.concatenate(self.buffer.masks[step]))
+                                              np.concatenate(self.buffer.obs[step]),
+                                              np.concatenate(self.buffer.rnn_states[step]),
+                                              np.concatenate(self.buffer.rnn_states_critic[step]),
+                                              np.concatenate(self.buffer.masks[step]))
         # [self.envs, agents, dim]
         values = np.array(np.split(_t2n(value), self.n_rollout_threads))
         actions = np.array(np.split(_t2n(action), self.n_rollout_threads))
@@ -218,31 +226,29 @@ class NocturneSharedRunner(Runner):
         return values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env
 
     def insert(self, data):
-        obs, rewards, dones, infos, \
-        values, actions, action_log_probs, rnn_states, rnn_states_critic = data
+        """Store the data in the buffers."""
+        obs, rewards, dones, _, values, actions, action_log_probs, rnn_states, rnn_states_critic = data
 
         dones_env = np.all(dones, axis=1)
 
-        rnn_states[dones_env == True] = np.zeros(
-            ((dones_env == True).sum(), self.num_agents, self.recurrent_N,
-             self.hidden_size),
-            dtype=np.float32)
-        rnn_states_critic[dones_env == True] = np.zeros(
-            ((dones_env == True).sum(), self.num_agents,
+        rnn_states[dones_env] = np.zeros(((dones_env).sum(), self.num_agents,
+                                          self.recurrent_N, self.hidden_size),
+                                         dtype=np.float32)
+        rnn_states_critic[dones_env] = np.zeros(
+            ((dones_env).sum(), self.num_agents,
              *self.buffer.rnn_states_critic.shape[3:]),
             dtype=np.float32)
 
         masks = np.ones((self.n_rollout_threads, self.num_agents, 1),
                         dtype=np.float32)
-        masks[dones_env == True] = np.zeros(
-            ((dones_env == True).sum(), self.num_agents, 1), dtype=np.float32)
+        masks[dones_env] = np.zeros(((dones_env).sum(), self.num_agents, 1),
+                                    dtype=np.float32)
 
         active_masks = np.ones((self.n_rollout_threads, self.num_agents, 1),
                                dtype=np.float32)
-        active_masks[dones == True] = np.zeros(((dones == True).sum(), 1),
-                                               dtype=np.float32)
-        active_masks[dones_env == True] = np.ones(
-            ((dones_env == True).sum(), self.num_agents, 1), dtype=np.float32)
+        active_masks[dones] = np.zeros(((dones).sum(), 1), dtype=np.float32)
+        active_masks[dones_env] = np.ones(
+            ((dones_env).sum(), self.num_agents, 1), dtype=np.float32)
 
         if self.use_centralized_V:
             share_obs = obs.reshape(self.n_rollout_threads, -1)
@@ -264,6 +270,7 @@ class NocturneSharedRunner(Runner):
 
     @torch.no_grad()
     def eval(self, total_num_steps):
+        """Get the policy returns in deterministic mode."""
         eval_episode = 0
 
         eval_episode_rewards = []
@@ -311,17 +318,16 @@ class NocturneSharedRunner(Runner):
 
             eval_dones_env = np.all(eval_dones, axis=1)
 
-            eval_rnn_states[eval_dones_env == True] = np.zeros(
-                ((eval_dones_env == True).sum(), self.num_agents,
-                 self.recurrent_N, self.hidden_size),
+            eval_rnn_states[eval_dones_env] = np.zeros(
+                ((eval_dones_env).sum(), self.num_agents, self.recurrent_N,
+                 self.hidden_size),
                 dtype=np.float32)
 
             eval_masks = np.ones(
                 (self.n_eval_rollout_threads, self.num_agents, 1),
                 dtype=np.float32)
-            eval_masks[eval_dones_env == True] = np.zeros(
-                ((eval_dones_env == True).sum(), self.num_agents, 1),
-                dtype=np.float32)
+            eval_masks[eval_dones_env] = np.zeros(
+                ((eval_dones_env).sum(), self.num_agents, 1), dtype=np.float32)
 
             for eval_i in range(self.n_eval_rollout_threads):
                 if eval_dones_env[eval_i]:
@@ -356,7 +362,6 @@ class NocturneSharedRunner(Runner):
 
         all_frames = []
         for episode in range(self.cfg.render_episodes):
-            done_initialized = False
             obs = envs.reset()
             if self.cfg.save_gifs:
                 image = envs.envs[0].render('rgb_array')
@@ -402,13 +407,11 @@ class NocturneSharedRunner(Runner):
                 obs, rewards, dones, infos = envs.step(actions_env)
                 episode_rewards.append(rewards)
 
-                rnn_states[dones == True] = np.zeros(
-                    ((dones
-                      == True).sum(), self.recurrent_N, self.hidden_size),
+                rnn_states[dones] = np.zeros(
+                    ((dones).sum(), self.recurrent_N, self.hidden_size),
                     dtype=np.float32)
                 masks = np.ones((1, self.num_agents, 1), dtype=np.float32)
-                masks[dones == True] = np.zeros(((dones == True).sum(), 1),
-                                                dtype=np.float32)
+                masks[dones] = np.zeros(((dones).sum(), 1), dtype=np.float32)
 
                 if self.cfg.save_gifs:
                     image = envs.envs[0].render('rgb_array')
@@ -444,6 +447,7 @@ class NocturneSharedRunner(Runner):
 
 @hydra.main(config_path='../../cfgs/', config_name='config')
 def main(cfg):
+    """Run the on-policy code."""
     disp = Display()
     disp.start()
     logdir = Path(os.getcwd())
@@ -485,9 +489,9 @@ def main(cfg):
                 or cfg.algo.use_naive_recurrent_policy), (
                     "check recurrent policy!")
     elif cfg.algo.algorithm_name == "mappo":
-        assert (cfg.algo.use_recurrent_policy == False
-                and cfg.algo.use_naive_recurrent_policy
-                == False), ("check recurrent policy!")
+        assert (not cfg.algo.use_recurrent_policy
+                and not cfg.algo.use_naive_recurrent_policy), (
+                    "check recurrent policy!")
     else:
         raise NotImplementedError
 

@@ -1,5 +1,7 @@
-# TODO(ev) refactor, this is wildly similar to visualize_sample_factory
-# run a policy over the entire train set
+"""Run a policy over the entire train set.
+
+TODO(ev) refactor, this is wildly similar to visualize_sample_factory
+"""
 
 from copy import deepcopy
 from collections import deque
@@ -28,7 +30,16 @@ from run_sample_factory import register_custom_components
 from cfgs.config import PROCESSED_VALID_NO_TL
 
 
-def enjoy(cfgs, max_num_frames=1e9):
+def run_eval(cfgs):
+    """Eval a stored agent over all files in validation set.
+
+    Args:
+        cfg (dict): configuration file for instantiating the agents and environment.
+
+    Returns
+    -------
+        None: None
+    """
     actor_critics = []
     for i, cfg in enumerate(cfgs):
         cfg = load_from_checkpoint(cfg)
@@ -316,7 +327,7 @@ def main():
     for cfg in cfg_dicts:
         cfg = Bunch(cfg_dict)
         cfgs.append(cfg)
-    status, avg_reward = enjoy(cfgs)
+    status, avg_reward = run_eval(cfgs)
     return status
 
 
