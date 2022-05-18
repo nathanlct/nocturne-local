@@ -10,7 +10,7 @@ class OnPolicyPPOWrapper(object):
 
     def __init__(self, env, use_images=False):
         """Wrap with appropriate observation spaces and make fixed length.
-        
+
         Args
         ----
             env ([type]): [description]

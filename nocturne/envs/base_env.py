@@ -348,6 +348,7 @@ class BaseEnv(object):
         return obs
 
     def render(self, mode=None):
+        """See superclass."""
         return self.scenario.getImage(
             img_width=1600,
             img_height=1600,

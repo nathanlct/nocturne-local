@@ -19,10 +19,10 @@ from nocturne import Simulation
 def is_file_valid(file_list, output_file, output_file_invalid, lock=None):
     """Test if file requires an agent to collide with a road edge to get to goal.
 
-    We test for this by making the agent have very thin width. If an agent 
+    We test for this by making the agent have very thin width. If an agent
     is in collision with a road edge despite this thin width, it was crossing
-    that road edge because that road edge was on the way to its goal. We also 
-    shrink the length to avoid the cases where the vehicle is initialized 
+    that road edge because that road edge was on the way to its goal. We also
+    shrink the length to avoid the cases where the vehicle is initialized
     in collision with a road edge.
 
     If a file has more than 80% of the agents need to collide with a road edge to get

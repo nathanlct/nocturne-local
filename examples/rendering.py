@@ -1,3 +1,4 @@
+"""Example of how to make movies of Nocturne scenarios."""
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,6 +9,7 @@ from nocturne import Simulation
 
 
 def get_sim():
+    """Initialize the scenario."""
     # load scenario, set vehicles to be expert-controlled
     sim = Simulation(scenario_path=str(PROJECT_PATH / 'examples' /
                                        'example_scenario.json'))
@@ -17,6 +19,7 @@ def get_sim():
 
 
 def make_movie(scenario_fn, output_path='./vid.mp4', dt=0.1, steps=90, fps=10):
+    """Make a movie from the scenario."""
     sim = get_sim()
     scenario = sim.getScenario()
     movie_frames = []
@@ -34,6 +37,7 @@ def make_movie(scenario_fn, output_path='./vid.mp4', dt=0.1, steps=90, fps=10):
 
 
 def make_image(scenario_fn, output_path='./img.png'):
+    """Make a single image from the scenario."""
     sim = get_sim()
     scenario = sim.getScenario()
     img = scenario_fn(scenario)
