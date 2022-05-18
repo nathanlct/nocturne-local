@@ -6,7 +6,6 @@ namespace py = pybind11;
 
 namespace nocturne {
 
-void DefineImage(py::module& m);
 void DefineObject(py::module& m);
 void DefineRoadLine(py::module& m);
 void DefineScenario(py::module& m);
