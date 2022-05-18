@@ -27,6 +27,8 @@ class BaseEnv(object):
                                'valid_files.json')) as file:
             self.valid_veh_dict = json.load(file)
             self.files = list(self.valid_veh_dict.keys())
+            # sort the files so that we have a consistent order
+            self.files = sorted(self.files)
         if cfg['num_files'] != -1:
             self.files = self.files[0:cfg['num_files']]
         self.file = self.files[np.random.randint(len(self.files))]
