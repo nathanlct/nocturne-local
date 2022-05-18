@@ -1,4 +1,4 @@
-"""This file contains utils that we use to understand the datasets we are working with"""
+"""Utils that we use to understand the datasets we are working with."""
 import os
 
 import matplotlib.pyplot as plt
@@ -9,6 +9,16 @@ from nocturne import Simulation
 
 
 def run_analysis(files):
+    """Compute the expert accelerations and number of vehicles across the dataset.
+
+    Args:
+        files ([str]): List of files to analyze
+
+    Returns
+    -------
+        [np.float], [np.float]: List of expert accels, list of number
+                                of moving vehicles in file
+    """
     observed_accels = []
     num_vehicles = []
     for file_idx, file in enumerate(files):
@@ -62,6 +72,7 @@ def run_analysis(files):
 
 
 def analyze_accels():
+    """Plot the expert accels and number of observed moving vehicles."""
     f_path = PROCESSED_TRAIN_NO_TL
     with open(os.path.join(f_path, 'valid_files.txt')) as file:
         files = [line.strip() for line in file]
