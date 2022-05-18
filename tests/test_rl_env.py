@@ -20,8 +20,8 @@ def test_rl_env():
     env.files = [str(PROJECT_PATH / "tests/large_file.json")]
     _ = env.reset()
     # quick check that rendering works
-    _ = env.scenario.getCone(env.scenario.getVehicles()[0], 120.0, 1.99 * 3.14,
-                             0.0, False)
+    _ = env.scenario.getConeImage(env.scenario.getVehicles()[0], 120.0,
+                                  1.99 * 3.14, 0.0, False)
     for _ in range(90):
         vehs = env.scenario.getObjectsThatMoved()
         prev_position = {

@@ -80,7 +80,7 @@ def test_scenario_functions():
     new_center = start_point + 0.5 * road_segment_dir
     veh0.setPosition(new_center[0], new_center[1])
     sim.step(1e-6)
-    cone = np.array(scenario.getCone(veh0, 2 * np.pi, 0.0), copy=False)
+    cone = np.array(scenario.getConeImage(veh0, 2 * np.pi, 0.0), copy=False)
     plt.figure()
     plt.imshow(cone)
     plt.savefig('line_veh_check.png')
@@ -107,7 +107,7 @@ def test_scenario_functions():
     sim = Simulation(scenario_path=file_path, start_time=20)
     scenario = sim.getScenario()
 
-    img1 = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi,
+    img1 = np.array(scenario.getConeImage(scenario.getVehicles()[3], 2 * np.pi,
                                      120.0, 0.0, False),
                     copy=False)
 
@@ -118,7 +118,7 @@ def test_scenario_functions():
                      allow_non_vehicles=False)
     scenario = sim.getScenario()
 
-    img2 = np.array(scenario.getCone(scenario.getVehicles()[3], 2 * np.pi,
+    img2 = np.array(scenario.getConeImage(scenario.getVehicles()[3], 2 * np.pi,
                                      120.0, 0.0, False),
                     copy=False)
     assert not np.isclose(np.sum(img1 - img2),
