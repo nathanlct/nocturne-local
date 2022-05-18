@@ -7,23 +7,7 @@ from datetime import datetime
 from subprocess import Popen
 
 from cfgs.config import PROJECT_PATH
-
-
-class Overrides(object):
-
-    def __init__(self):
-        self.kvs = dict()
-
-    def add(self, key, values):
-        value = ','.join(str(v) for v in values)
-        assert key not in self.kvs
-        self.kvs[key] = value
-
-    def cmd(self):
-        cmd = []
-        for k, v in self.kvs.items():
-            cmd.append(f'{k}={v}')
-        return cmd
+from scripts.cluster_scripts.utils import Overrides
 
 
 def make_code_snap(experiment, code_path, slurm_dir='exp'):
