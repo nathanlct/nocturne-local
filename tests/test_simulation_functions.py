@@ -80,7 +80,7 @@ def test_scenario_functions():
     new_center = start_point + 0.5 * road_segment_dir
     veh0.setPosition(new_center[0], new_center[1])
     sim.step(1e-6)
-    cone = np.array(scenario.getConeImage(veh0, 2 * np.pi, 0.0), copy=False)
+    cone = scenario.getConeImage(veh0, view_angle=2 * np.pi, head_tilt=0.0)
     plt.figure()
     plt.imshow(cone)
     plt.savefig('line_veh_check.png')
@@ -107,9 +107,8 @@ def test_scenario_functions():
     sim = Simulation(scenario_path=file_path, start_time=20)
     scenario = sim.getScenario()
 
-    img1 = np.array(scenario.getConeImage(scenario.getVehicles()[3], 2 * np.pi,
-                                     120.0, 0.0, False),
-                    copy=False)
+    img1 = scenario.getConeImage(scenario.getVehicles()[4], 120.0, 2 * np.pi,
+                                 0.0)
 
     # check that initializing things with and without pedestrians leads to a different
     # image
@@ -118,11 +117,10 @@ def test_scenario_functions():
                      allow_non_vehicles=False)
     scenario = sim.getScenario()
 
-    img2 = np.array(scenario.getConeImage(scenario.getVehicles()[3], 2 * np.pi,
-                                     120.0, 0.0, False),
-                    copy=False)
+    img2 = scenario.getConeImage(scenario.getVehicles()[4], 120.0, 2 * np.pi,
+                                 0.0)
     assert not np.isclose(np.sum(img1 - img2),
-                          0.0), 'adding pedestrians doesn\'t change the image'
+                          0.0), 'adding pedestrians should change the image'
 
 
 if __name__ == '__main__':
