@@ -202,7 +202,7 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
                                  obj["velocity"][i]["y"]);
       localExpertTrajectory.push_back(currPos);
       localExpertSpeeds.push_back(currVel);
-      if (currVel.Norm() > 0 && bool(obj["valid"][i])) {
+      if ((currPos - goalPos).Norm() > 0.2 && bool(obj["valid"][i])) {
         is_moving = true;
       }
       localValid.push_back(bool(obj["valid"][i]));
