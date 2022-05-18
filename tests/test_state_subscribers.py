@@ -6,6 +6,9 @@ from nocturne import Simulation
 
 
 def test_state_subscribers():
+    # TODO(eugenevinitsky) complete this once we have a better idea
+    # of how to test things
+    pass
     sim = Simulation(scenario_path=str(PROJECT_PATH /
                                        'tests/scenario_test.json'))
     scenario = sim.getScenario()
