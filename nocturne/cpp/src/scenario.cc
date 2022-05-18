@@ -315,7 +315,8 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
       roadLines.push_back(roadLine);
     }
   }
-  roadNetworkBounds = sf::FloatRect(min_x, min_y, max_x - min_x, max_y - min_y);
+  road_network_bounds_ =
+      sf::FloatRect(min_x, min_y, max_x - min_x, max_y - min_y);
 
   // Now create the BVH for the line segments
   // Since the line segments never move we only need to define this once
@@ -433,9 +434,9 @@ std::pair<float, geometry::Vector2D> Scenario::getObjectHeadingAndPos(
 
 std::tuple<std::vector<const ObjectBase*>, std::vector<const ObjectBase*>,
            std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
-Scenario::VisibleObjects(const Object& src, float view_dist,
-                         float view_angle) const {
-  const float heading = src.heading();
+Scenario::VisibleObjects(const Object& src, float view_dist, float view_angle,
+                         float head_tilt) const {
+  const float heading = geometry::utils::AngleAdd(src.heading(), head_tilt);
   const geometry::Vector2D& position = src.position();
   const ViewField vf(position, view_dist, heading, view_angle);
 
@@ -467,10 +468,11 @@ Scenario::VisibleObjects(const Object& src, float view_dist,
 }
 
 std::vector<const TrafficLight*> Scenario::VisibleTrafficLights(
-    const Object& src, float view_dist, float view_angle) const {
+    const Object& src, float view_dist, float view_angle,
+    float head_tilt) const {
   std::vector<const TrafficLight*> ret;
 
-  const float heading = src.heading();
+  const float heading = geometry::utils::AngleAdd(src.heading(), head_tilt);
   const geometry::Vector2D& position = src.position();
   const ViewField vf(position, view_dist, heading, view_angle);
 
@@ -511,9 +513,10 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
 }
 
 std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
-    const Object& src, float view_dist, float view_angle, bool padding) const {
+    const Object& src, float view_dist, float view_angle, float head_tilt,
+    bool padding) const {
   const auto [objects, road_points, traffic_lights, stop_signs] =
-      VisibleObjects(src, view_dist, view_angle);
+      VisibleObjects(src, view_dist, view_angle, head_tilt);
   const auto o_targets = NearestK(src, objects, kMaxVisibleObjects);
   const auto r_targets = NearestK(src, road_points, kMaxVisibleRoadPoints);
   const auto t_targets =
@@ -576,7 +579,8 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
 
 NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
                                                float view_dist,
-                                               float view_angle) const {
+                                               float view_angle,
+                                               float head_tilt) const {
   constexpr int64_t kObjectFeatureStride = 0;
   constexpr int64_t kRoadPointFeatureStride =
       kObjectFeatureStride + kMaxVisibleObjects * kObjectFeatureSize;
@@ -589,7 +593,7 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
       kStopSignFeatureStride + kMaxVisibleStopSigns * kStopSignsFeatureSize;
 
   const auto [objects, road_points, traffic_lights, stop_signs] =
-      VisibleObjects(src, view_dist, view_angle);
+      VisibleObjects(src, view_dist, view_angle, head_tilt);
 
   const auto o_targets = NearestK(src, objects, kMaxVisibleObjects);
   const auto r_targets = NearestK(src, road_points, kMaxVisibleRoadPoints);
@@ -695,31 +699,6 @@ std::vector<bool> Scenario::getValidExpertStates(int objID) {
   return expertValid[objID];
 }
 
-void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
-  // for (const auto& road : roads) {
-  //   target.draw(*road, states);
-  // }
-  for (const auto& object : roadLines) {
-    target.draw(*object, states);
-  }
-  for (const auto& object : trafficLights) {
-    target.draw(*object, states);
-  }
-  for (const auto& object : stopSigns) {
-    target.draw(*object, states);
-  }
-  for (const auto& object : objects_) {
-    target.draw(*object, states);
-    // draw goal destination
-    float radius = 2;
-    sf::CircleShape ptShape(radius);
-    ptShape.setOrigin(radius, radius);
-    ptShape.setFillColor(object->color());
-    ptShape.setPosition(utils::ToVector2f(object->destination()));
-    target.draw(ptShape, states);
-  }
-}
-
 // O(N) time remove.
 bool Scenario::RemoveObject(const Object& object) {
   if (!RemoveObjectImpl(object, objects_)) {
@@ -747,266 +726,235 @@ bool Scenario::RemoveObject(const Object& object) {
   return true;
 }
 
-sf::FloatRect Scenario::getRoadNetworkBoundaries() const {
-  return roadNetworkBounds;
-}
+/*********************** Drawing Functions *****************/
 
-NdArray<unsigned char> Scenario::getCone(
-    Object* object, float viewDist, float viewAngle, float headTilt,
-    bool obscuredView) {  // args in radians
-  float circleRadius = viewDist;
-  constexpr int64_t kRenderedCircleRadius = 300;
-  constexpr int64_t kWidth = kRenderedCircleRadius * 2;
-  constexpr int64_t kHeight = kRenderedCircleRadius * 2;
-
-  if (object->ConeTexture() == nullptr) {
-    sf::ContextSettings settings;
-    settings.antialiasingLevel = 1;
-    object->InitConeTexture(kHeight, kWidth, settings);
-  }
-  sf::RenderTexture* texture = object->ConeTexture();
-
-  sf::Transform renderTransform;
-  renderTransform.scale(1, -1);  // horizontal flip
-
-  geometry::Vector2D center = object->position();
-
-  texture->clear(sf::Color(50, 50, 50));
-  sf::View view(utils::ToVector2f(center, /*flip_y=*/true),
-                sf::Vector2f(2.0f * circleRadius, 2.0f * circleRadius));
-  view.rotate(-geometry::utils::Degrees(object->heading()) + 90.0f);
-  texture->setView(view);
-
-  texture->draw(
-      *this,
-      renderTransform);  // todo optimize with objects in range only (quadtree?)
-
-  texture->setView(
-      sf::View(sf::Vector2f(0.0f, 0.0f), sf::Vector2f(texture->getSize())));
-
-  // draw circle
-  const float r = kRenderedCircleRadius;
-  const float diag = std::sqrt(2 * r * r);
-
-  for (int quadrant = 0; quadrant < 4; ++quadrant) {
-    std::vector<sf::Vertex> outerCircle;  // todo precompute just once
-
-    float angleShift = quadrant * kPi / 2.0f;
-
-    geometry::Vector2D corner =
-        geometry::PolarToVector2D(diag, kPi / 4.0f + angleShift);
-    outerCircle.push_back(
-        sf::Vertex(utils::ToVector2f(corner), sf::Color::Black));
-
-    int nPoints = 20;
-    for (int i = 0; i < nPoints; ++i) {
-      float angle = angleShift + i * (kPi / 2.0f) / (nPoints - 1);
-
-      geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
-      outerCircle.push_back(
-          sf::Vertex(utils::ToVector2f(pt), sf::Color::Black));
-    }
-
-    texture->draw(&outerCircle[0], outerCircle.size(),
-                  sf::TriangleFan);  //, renderTransform);
-  }
-
-  renderTransform.rotate(-geometry::utils::Degrees(object->heading()) + 90.0f);
-
-  // TODO(ev) do this for road objects too
-  // draw obstructions
-  if (obscuredView == true) {
-    // TODO: Optimize this by checking visible objects only.
-    for (const auto& obj : objects_) {
-      if (obj->id() != object->id() && obj->can_block_sight()) {
-        const auto lines = obj->BoundingPolygon().Edges();
-        // auto lines = obj->getLines();
-        for (const auto& line1 : lines) {
-          const geometry::Vector2D& pt1 = line1.Endpoint0();
-          const geometry::Vector2D& pt2 = line1.Endpoint1();
-          int nIntersections = 0;
-          for (const auto& line2 : lines) {
-            const geometry::Vector2D& pt3 = line2.Endpoint0();
-            const geometry::Vector2D& pt4 = line2.Endpoint1();
-            if (pt1 != pt3 && pt1 != pt4 &&
-                geometry::LineSegment(pt1, center).Intersects(line2)) {
-              nIntersections++;
-              break;
-            }
-          }
-          for (const auto& line2 : lines) {
-            const geometry::Vector2D& pt3 = line2.Endpoint0();
-            const geometry::Vector2D& pt4 = line2.Endpoint1();
-            if (pt2 != pt3 && pt2 != pt4 &&
-                geometry::LineSegment(pt2, center).Intersects(line2)) {
-              nIntersections++;
-              break;
-            }
-          }
-
-          if (nIntersections >= 1) {
-            sf::ConvexShape hiddenArea;
-
-            float angle1 = (pt1 - center).Angle();
-            float angle2 = (pt2 - center).Angle();
-
-            int nPoints = 80;  // todo function of angle
-            hiddenArea.setPointCount(nPoints + 2);
-
-            float ratio =
-                static_cast<float>(kRenderedCircleRadius) / circleRadius;
-            hiddenArea.setPoint(0, utils::ToVector2f((pt1 - center) * ratio));
-            for (int i = 0; i < nPoints; ++i) {
-              float angle = angle1 + i * (angle2 - angle1) / (nPoints - 1);
-              geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
-              hiddenArea.setPoint(1 + i, utils::ToVector2f(pt));
-            }
-            hiddenArea.setPoint(nPoints + 1,
-                                utils::ToVector2f((pt2 - center) * ratio));
-
-            hiddenArea.setFillColor(sf::Color::Black);
-
-            texture->draw(hiddenArea, renderTransform);
-          }
-        }
-      }
-    }
-  }
-
-  // TODO(ev) this represents traffic lights by drawing the
-  // light state onto the lane. It should never be obscured.
-  // Once we figure out where the traffic light actually is,
-  // we can remove this
-  sf::Transform renderTransform2;
-  renderTransform2.scale(1, -1);
-
-  const auto traffic_lights =
-      VisibleTrafficLights(*object, viewDist, viewAngle);
-  texture->setView(view);
-  for (const auto& tl : traffic_lights) {
-    texture->draw(*tl, renderTransform2);
-  }
-
-  texture->display();
-
-  // draw cone
-  texture->setView(
-      sf::View(sf::Vector2f(0.0f, 0.0f), sf::Vector2f(texture->getSize())));
-
-  renderTransform.rotate(geometry::utils::Degrees(object->heading()) - 90.0f);
-  if (viewAngle < 2.0f * kPi) {
-    std::vector<sf::Vertex> innerCircle;  // todo precompute just once
-
-    innerCircle.push_back(
-        sf::Vertex(sf::Vector2f(0.0f, 0.0f), sf::Color::Black));
-    float startAngle = kPi / 2.0f + headTilt + viewAngle / 2.0f;
-    float endAngle = kPi / 2.0f + headTilt + 2.0f * kPi - viewAngle / 2.0f;
-
-    int nPoints = 80;  // todo function of angle
-    for (int i = 0; i < nPoints; ++i) {
-      float angle = startAngle + i * (endAngle - startAngle) / (nPoints - 1);
-      geometry::Vector2D pt = geometry::PolarToVector2D(r, angle);
-      innerCircle.push_back(
-          sf::Vertex(utils::ToVector2f(pt), sf::Color::Black));
-    }
-
-    texture->draw(&innerCircle[0], innerCircle.size(), sf::TriangleFan,
-                  renderTransform);
-  }
-  texture->display();
-
-  sf::Image img = texture->getTexture().copyToImage();
-  unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
-
-  return NdArray<unsigned char>({kHeight, kWidth, /*channels=*/int64_t(4)},
-                                pixelsArr);
-}
-
-NdArray<unsigned char> Scenario::getImage(Object* object, bool renderGoals) {
-  const int64_t kSquareSide = 600;
-
-  if (image_texture_ == nullptr) {
-    sf::ContextSettings settings;
-    settings.antialiasingLevel = 4;
-    image_texture_ = std::make_unique<sf::RenderTexture>();
-    image_texture_->create(kSquareSide, kSquareSide, settings);
-  }
-  sf::RenderTexture* texture = image_texture_.get();
-
-  sf::Transform renderTransform;
-  renderTransform.scale(1, -1);  // horizontal flip
-
-  texture->clear(sf::Color(50, 50, 50));
-
-  // same as in Simulation.cpp
-  float padding = 0.0f;
-  sf::FloatRect scenarioBounds = getRoadNetworkBoundaries();
-  scenarioBounds.top = -scenarioBounds.top - scenarioBounds.height;
-  scenarioBounds.top -= padding;
-  scenarioBounds.left -= padding;
-  scenarioBounds.width += 2 * padding;
-  scenarioBounds.height += 2 * padding;
-  sf::Vector2f center =
-      sf::Vector2f(scenarioBounds.left + scenarioBounds.width / 2.0f,
-                   scenarioBounds.top + scenarioBounds.height / 2.0f);
-  sf::Vector2f size =
-      sf::Vector2f(kSquareSide, kSquareSide) *
-      std::max(scenarioBounds.width / static_cast<float>(kSquareSide),
-               scenarioBounds.height / static_cast<float>(kSquareSide));
+sf::View Scenario::View(geometry::Vector2D view_center, float rotation,
+                        float view_height, float view_width,
+                        float target_height, float target_width,
+                        float padding) const {
+  // create view (note that the y coordinates and the view rotation are flipped
+  // because the scenario is always drawn with a horizontally flip transform)
+  const sf::Vector2f center = utils::ToVector2f(view_center, /*flip_y=*/true);
+  const sf::Vector2f size(view_width, view_height);
   sf::View view(center, size);
-  if (object != nullptr) {
-    view.rotate(-geometry::utils::Degrees(object->heading()) + 90.0f);
-  }
+  view.setRotation(-rotation);
 
-  texture->setView(view);
+  // compute the placement (viewport) of the view within its render target of
+  // size (target_width, target_height), so that it is centered with adequate
+  // padding and that proportions are keeped (ie. scale-to-fit)
+  const float min_ratio = std::min((target_width - 2 * padding) / view_width,
+                                   (target_height - 2 * padding) / view_height);
+  const float real_view_width_ratio = min_ratio * view_width / target_width;
+  const float real_view_height_ratio = min_ratio * view_height / target_height;
+  const sf::FloatRect viewport(
+      /*left=*/(1.0f - real_view_width_ratio) / 2.0f,
+      /*top=*/(1.0f - real_view_height_ratio) / 2.0f,
+      /*width=*/real_view_width_ratio,
+      /*height=*/real_view_height_ratio);
+  view.setViewport(viewport);
 
-  // for (const auto& road : roads) {
-  //   texture->draw(*road, renderTransform);
-  // }
-  if (object == nullptr) {
-    for (const auto& obj : vehicles_) {
-      texture->draw(*obj, renderTransform);
-      if (renderGoals) {
-        // draw goal destination
-        float radius = 2;
-        sf::CircleShape ptShape(radius);
-        ptShape.setOrigin(radius, radius);
-        ptShape.setFillColor(obj->color());
-        ptShape.setPosition(utils::ToVector2f(obj->destination()));
-        texture->draw(ptShape, renderTransform);
-      }
+  return view;
+}
+
+sf::View Scenario::View(float target_height, float target_width,
+                        float padding) const {
+  // compute center and size of view based on known scenario bounds
+  const geometry::Vector2D view_center(
+      road_network_bounds_.left + road_network_bounds_.width / 2.0f,
+      road_network_bounds_.top + road_network_bounds_.height / 2.0f);
+  const float view_width = road_network_bounds_.width;
+  const float view_height = road_network_bounds_.height;
+
+  // build the view from overloaded function
+  return View(view_center, 0.0f, view_height, view_width, target_height,
+              target_width, padding);
+}
+
+std::vector<std::unique_ptr<sf::CircleShape>>
+Scenario::VehiclesDestinationsDrawables(const Object* source,
+                                        float radius) const {
+  std::vector<std::unique_ptr<sf::CircleShape>> destination_drawables;
+  if (source == nullptr) {
+    for (const auto& obj : objects_) {
+      auto circle_shape = utils::MakeCircleShape(obj->destination(), radius,
+                                                 obj->color(), false);
+      destination_drawables.push_back(std::move(circle_shape));
     }
   } else {
-    texture->draw(*object, renderTransform);
+    auto circle_shape = utils::MakeCircleShape(source->destination(), radius,
+                                               source->color(), false);
+    destination_drawables.push_back(std::move(circle_shape));
+  }
+  return destination_drawables;
+}
 
-    if (renderGoals) {
-      // draw goal destination
-      float radius = 2;
-      sf::CircleShape ptShape(radius);
-      ptShape.setOrigin(radius, radius);
-      ptShape.setFillColor(object->color());
-      ptShape.setPosition(utils::ToVector2f(object->destination()));
-      texture->draw(ptShape, renderTransform);
+template <typename P>
+void Scenario::DrawOnTarget(sf::RenderTarget& target,
+                            const std::vector<P>& drawables,
+                            const sf::View& view,
+                            const sf::Transform& transform) const {
+  target.setView(view);
+  for (const P& drawable : drawables) {
+    target.draw(*drawable, transform);
+  }
+}
+
+void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
+  sf::Transform horizontal_flip;
+  horizontal_flip.scale(1, -1);
+  sf::View view =
+      View(target.getSize().y, target.getSize().x, /*padding=*/30.0f);
+  DrawOnTarget(target, roadLines, view, horizontal_flip);
+  DrawOnTarget(target, objects_, view, horizontal_flip);
+  DrawOnTarget(target, trafficLights, view, horizontal_flip);
+  DrawOnTarget(target, stopSigns, view, horizontal_flip);
+  DrawOnTarget(target, VehiclesDestinationsDrawables(), view, horizontal_flip);
+}
+
+NdArray<unsigned char> Scenario::Image(uint64_t img_height, uint64_t img_width,
+                                       bool draw_destinations, float padding,
+                                       Object* source, uint64_t view_height,
+                                       uint64_t view_width,
+                                       bool rotate_with_source) const {
+  // construct transform (flip the y-axis)
+  sf::Transform horizontal_flip;
+  horizontal_flip.scale(1, -1);
+
+  // construct view
+  sf::View view;
+  if (source == nullptr) {
+    // if no source object is provided, get the entire scenario
+    view = View(img_height, img_width, padding);
+  } else {
+    // otherwise get a region around the source object, possibly rotated
+    const float rotation =
+        rotate_with_source ? geometry::utils::Degrees(source->heading()) - 90.0f
+                           : 0.0f;
+    view = View(source->position(), rotation, view_height, view_width,
+                img_height, img_width, padding);
+  }
+
+  // create canvas and draw objects
+  Canvas canvas(img_height, img_width);
+
+  DrawOnTarget(canvas, roadLines, view, horizontal_flip);
+  DrawOnTarget(canvas, objects_, view, horizontal_flip);
+  DrawOnTarget(canvas, trafficLights, view, horizontal_flip);
+  DrawOnTarget(canvas, stopSigns, view, horizontal_flip);
+
+  if (draw_destinations) {
+    DrawOnTarget(canvas, VehiclesDestinationsDrawables(source), view,
+                 horizontal_flip);
+  }
+
+  return canvas.AsNdArray();
+}
+
+NdArray<unsigned char> Scenario::EgoVehicleConeImage(
+    const Object& source, float view_dist, float view_angle, float head_tilt,
+    uint64_t img_height, uint64_t img_width, float padding,
+    bool draw_destinations) const {
+  // define transforms
+  sf::Transform horizontal_flip;
+  horizontal_flip.scale(1, -1);
+  sf::Transform obstruction_transform = horizontal_flip;
+  obstruction_transform.rotate(-geometry::utils::Degrees(source.heading()) +
+                               90.0f);
+
+  // define views
+  const float rotation = geometry::utils::Degrees(source.heading()) - 90.0f;
+  const sf::View scenario_view =
+      View(source.position(), rotation, 2.0f * view_dist, 2.0f * view_dist,
+           img_height, img_width, padding);
+  const sf::View cone_view =
+      View(geometry::Vector2D(0.0f, 0.0f), 0.0f, 2.0f * view_dist,
+           2.0f * view_dist, img_height, img_width, padding);
+
+  // create canvas
+  Canvas canvas(img_height, img_width, sf::Color::Black);
+
+  // draw background
+  auto background = std::make_unique<sf::RectangleShape>(
+      sf::Vector2f(2.0f * view_dist, 2.0f * view_dist));
+  background->setOrigin(view_dist, view_dist);
+  background->setPosition(0.0f, 0.0f);
+  background->setFillColor(sf::Color(50, 50, 50));
+  std::vector<std::unique_ptr<sf::RectangleShape>> background_drawable;
+  background_drawable.push_back(std::move(background));
+  DrawOnTarget(canvas, background_drawable, cone_view, horizontal_flip);
+
+  // draw roads and objects
+  DrawOnTarget(canvas, roadLines, scenario_view, horizontal_flip);
+  DrawOnTarget(canvas, objects_, scenario_view, horizontal_flip);
+
+  // draw destinations
+  if (draw_destinations) {
+    DrawOnTarget(canvas, VehiclesDestinationsDrawables(&source), scenario_view,
+                 horizontal_flip);
+  }
+
+  // draw obstructions
+  for (const auto& obj : objects_) {
+    if (obj->id() == source.id() || !obj->can_block_sight()) continue;
+    const float dist_to_source = (obj->position() - source.position()).Norm();
+    if (dist_to_source > view_dist + obj->Radius()) continue;
+
+    const auto obj_lines = obj->BoundingPolygon().Edges();
+    auto obscurity_drawables =
+        utils::MakeObstructionShape(source.position(), obj_lines, view_dist);
+    DrawOnTarget(canvas, obscurity_drawables, cone_view, obstruction_transform);
+  }
+
+  // draw stop signs and traffic lights (not subject to obstructions)
+  DrawOnTarget(canvas, trafficLights, scenario_view, horizontal_flip);
+  DrawOnTarget(canvas, stopSigns, scenario_view, horizontal_flip);
+
+  // draw cone
+  auto cone_drawables =
+      utils::MakeInvertedConeShape(view_dist, view_angle, head_tilt);
+  DrawOnTarget(canvas, cone_drawables, cone_view, horizontal_flip);
+
+  return canvas.AsNdArray();
+}
+
+NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
+    const Object& source, float view_dist, float view_angle, float head_tilt,
+    uint64_t img_height, uint64_t img_width, float padding,
+    bool draw_destination) const {
+  sf::Transform horizontal_flip;
+  horizontal_flip.scale(1, -1);
+
+  const float rotation = geometry::utils::Degrees(source.heading()) - 90.0f;
+  sf::View view = View(source.position(), rotation, 2.0f * view_dist,
+                       2.0f * view_dist, img_height, img_width, padding);
+
+  Canvas canvas(img_height, img_width);
+
+  // TODO(nl) remove code duplication and linear overhead
+  const auto [kinetic_objects, road_points, traffic_lights, stop_signs] =
+      VisibleObjects(source, view_dist, view_angle, head_tilt);
+  std::vector<const ObjectBase*> drawables;
+
+  for (const auto [objects, kMaxObjects] :
+       std::vector<std::pair<std::vector<const ObjectBase*>, int64_t>>{
+           {road_points, kMaxVisibleRoadPoints},
+           {kinetic_objects, kMaxVisibleObjects},
+           {traffic_lights, kMaxVisibleStopSigns},
+           {stop_signs, kMaxVisibleTrafficLights},
+       }) {
+    for (const auto [obj, dist] : NearestK(source, objects, kMaxObjects)) {
+      drawables.emplace_back(obj);
     }
   }
-  for (const auto& obj : roadLines) {
-    texture->draw(*obj, renderTransform);
+  // draw source
+  drawables.emplace_back(&source);
+  DrawOnTarget(canvas, drawables, view, horizontal_flip);
+  if (draw_destination) {
+    DrawOnTarget(canvas, VehiclesDestinationsDrawables(&source), view,
+                 horizontal_flip);
   }
-  for (const auto& obj : trafficLights) {
-    texture->draw(*obj, renderTransform);
-  }
-  for (const auto& obj : stopSigns) {
-    texture->draw(*obj, renderTransform);
-  }
-  // render texture and return
-  texture->display();
 
-  sf::Image img = texture->getTexture().copyToImage();
-  unsigned char* pixelsArr = (unsigned char*)img.getPixelsPtr();
-
-  return NdArray<unsigned char>({kSquareSide, kSquareSide,
-                                 /*channels=*/int64_t(4)},
-                                pixelsArr);
+  return canvas.AsNdArray();
 }
 
 }  // namespace nocturne

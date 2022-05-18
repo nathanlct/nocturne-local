@@ -46,7 +46,7 @@ class TrafficLight : public StaticObject {
     return StaticObjectType::kTrafficLight;
   }
 
-  float Radius() const { return kTrafficLightRadius; }
+  float Radius() const override { return kTrafficLightRadius; }
 
   geometry::ConvexPolygon BoundingPolygon() const override;
 

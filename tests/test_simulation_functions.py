@@ -1,3 +1,4 @@
+"""Test that all available environment calls work + check collisions are recorded correctly."""
 import os
 
 import matplotlib.pyplot as plt
@@ -8,7 +9,7 @@ from nocturne import Simulation
 
 
 def test_scenario_functions():
-
+    """Check that collisions are appropriately recorded and that functions don't error."""
     file_path = str(PROJECT_PATH / 'tests/large_file.json')
     os.environ["DISPLAY"] = ":0.0"
     ################################
