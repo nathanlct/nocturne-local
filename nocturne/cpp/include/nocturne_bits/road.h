@@ -9,6 +9,7 @@
 #include "geometry/aabb_interface.h"
 #include "geometry/vector_2d.h"
 #include "static_object.h"
+#include "utils/sf_utils.h"
 
 namespace nocturne {
 
@@ -26,6 +27,8 @@ enum class RoadType {
   kSpeedBump = 6,
 };
 
+sf::Color RoadTypeColor(const RoadType& road_type);
+
 class RoadPoint : public StaticObject {
  public:
   RoadPoint() = default;
@@ -35,7 +38,9 @@ class RoadPoint : public StaticObject {
                      /*can_block_sight=*/false,
                      /*can_be_collided=*/false, /*check_collision=*/false),
         neighbor_position_(neighbor_position),
-        road_type_(road_type) {}
+        road_type_(road_type),
+        drawable_(
+            utils::MakeCircleShape(position, 0.5, RoadTypeColor(road_type), true)) {}
 
   StaticObjectType Type() const override {
     return StaticObjectType::kRoadPoint;
@@ -54,13 +59,13 @@ class RoadPoint : public StaticObject {
   }
 
  protected:
-  void draw(sf::RenderTarget& /*target*/,
-            sf::RenderStates /*states*/) const override {}
+  void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 
   // coordinates of the next point in the roadline
   const geometry::Vector2D neighbor_position_;
 
   const RoadType road_type_ = RoadType::kNone;
+  std::unique_ptr<sf::CircleShape> drawable_;
 };
 
 // RoadLine is not an Object now.

@@ -348,10 +348,12 @@ class BaseEnv(object):
         return obs
 
     def render(self, mode=None):
-        """See superclass."""
-        return np.array(self.simulation.getScenario().getImage(
-            None, render_goals=True),
-                        copy=False)
+        return self.scenario.getImage(
+            img_width=1600,
+            img_height=1600,
+            draw_destinations=True,
+            padding=50.0,
+        )
 
     def seed(self, seed=None):
         """Ensure determinism."""
