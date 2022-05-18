@@ -1,13 +1,16 @@
-from nocturne import Simulation
-from cfgs.config import PROJECT_PATH
-import numpy as np
 import imageio
 import matplotlib.pyplot as plt
+import numpy as np
+from pyvirtualdisplay import Display
+
+from cfgs.config import PROJECT_PATH
+from nocturne import Simulation
 
 
 def get_sim():
     # load scenario, set vehicles to be expert-controlled
-    sim = Simulation(scenario_path=str(PROJECT_PATH / 'examples' / 'example_scenario.json'))
+    sim = Simulation(scenario_path=str(PROJECT_PATH / 'examples' /
+                                       'example_scenario.json'))
     for obj in sim.getScenario().getObjectsThatMoved():
         obj.expert_control = True
     return sim
@@ -47,6 +50,8 @@ def make_image(scenario_fn, output_path='./img.png'):
 if __name__ == '__main__':
     # NOTE: don't run this file all at once since the memory usage for
     # rendering all the videos will be dozens of gigabytes
+    disp = Display()
+    disp.start()
 
     # movie of whole scenario
     make_movie(
@@ -81,18 +86,19 @@ if __name__ == '__main__':
             img_height=1600,
             draw_destinations=True,
             padding=50.0,
-            source=scenario.getVehicles()[3],
+            source=scenario.getObjectsThatMoved()[3],
             view_width=120,
             view_height=120,
             rotate_with_source=False,
         ),
-        output_path=PROJECT_PATH / 'examples' / 'movie_around_vehicle_stable.mp4',
+        output_path=PROJECT_PATH / 'examples' /
+        'movie_around_vehicle_stable.mp4',
     )
 
     # movie of cone around vehicle
     make_movie(
         scenario_fn=lambda scenario, _: scenario.getConeImage(
-            source=scenario.getVehicles()[6],
+            source=scenario.getObjectsThatMoved()[6],
             view_dist=120.0,
             view_angle=np.pi * 0.8,
             head_tilt=0.0,
