@@ -24,6 +24,8 @@ from sample_factory.utils.utils import log, AttrDict
 
 from run_sample_factory import register_custom_components
 
+from cfgs.config import PROCESSED_TRAIN_NO_TL
+
 
 def enjoy(cfg, max_num_frames=1e9):
     cfg = load_from_checkpoint(cfg)
@@ -36,12 +38,12 @@ def enjoy(cfg, max_num_frames=1e9):
 
     cfg.env_frameskip = 1  # for evaluation
     cfg.num_envs = 1
+    cfg.seed = np.random.randint(10000)
 
     def make_env_func(env_config):
         return create_env(cfg.env, cfg=cfg, env_config=env_config)
 
     env = make_env_func(AttrDict({'worker_index': 0, 'vector_index': 0}))
-    # env.seed(0)
 
     is_multiagent = is_multiagent_env(env)
     if not is_multiagent:
@@ -159,7 +161,6 @@ def enjoy(cfg, max_num_frames=1e9):
                     if not cfg.no_render:
                         env.render()
                     time.sleep(0.05)
-                    sys.exit()
 
                 if all(finished_episode):
                     finished_episode = [False] * env.num_agents
@@ -175,7 +176,11 @@ def enjoy(cfg, max_num_frames=1e9):
                             if avg_true_reward_str:
                                 avg_true_reward_str += ', '
                             avg_true_reward_str += f'#{agent_i}: {avg_true_rew:.3f}'
-
+                    avg_goal = infos[0]['episode_extra_stats']['goal_achieved']
+                    avg_collisions = infos[0]['episode_extra_stats'][
+                        'collided']
+                    log.info(f'Avg goal achieved, {avg_goal}')
+                    log.info(f'Avg num collisions, {avg_collisions}')
                     log.info('Avg episode rewards: %s, true rewards: %s',
                              avg_episode_rewards_str, avg_true_reward_str)
                     log.info(
@@ -188,6 +193,7 @@ def enjoy(cfg, max_num_frames=1e9):
                             np.mean(true_rewards[i])
                             for i in range(env.num_agents)
                         ]))
+                    sys.exit()
 
                 # VizDoom multiplayer stuff
                 # for player in [1, 2, 3, 4, 5, 6, 7, 8]:
@@ -205,9 +211,8 @@ def main():
     disp = Display()
     disp.start()
     register_custom_components()
-    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.05/\
-        test_invalid/12.09.28/0/test_invalid/cfg.json'
-
+    # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.04/s_kl_control/06.47.53/9/s_kl_control/cfg.json'
+    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.10/new_features/15.10.09/4/new_features/cfg.json'
     with open(file_path, 'r') as file:
         cfg_dict = json.load(file)
 
@@ -219,6 +224,7 @@ def main():
     cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
     cfg_dict['continuous_actions_sample'] = True
     cfg_dict['discrete_actions_sample'] = True
+    cfg_dict['scenario_path'] = PROCESSED_TRAIN_NO_TL
 
     class Bunch(object):
 

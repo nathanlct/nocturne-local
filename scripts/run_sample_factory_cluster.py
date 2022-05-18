@@ -43,7 +43,7 @@ def make_code_snap(experiment, code_path, str_time):
 
     dirs_to_copy = [
         '.', './cfgs/', './examples/', './examples/sample_factory_files',
-        './cfgs/algorithm', './envs/', './nocturne_utils/', './python/',
+        './cfgs/algorithm', './nocturne/envs/', './nocturne_utils/', './nocturne/python/',
         './scenarios/', './build'
     ]
     src_dir = pathlib.Path(PROJECT_PATH)
@@ -71,7 +71,7 @@ def main():
     overrides.add('hydra.launcher.partition', ['learnlab'])
     overrides.add('experiment', [args.experiment])
     overrides.add('num_files', [100])
-    overrides.add('seed', [1, 2, 3, 4, 5])
+    overrides.add('seed', [0, 1, 2, 3, 4])
 
     cmd = [
         'python',
