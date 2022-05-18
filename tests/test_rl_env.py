@@ -1,13 +1,15 @@
+"""Test step and rendering functions."""
 import os
 
 from hydra import compose, initialize
 from pyvirtualdisplay import Display
 
 from cfgs.config import PROJECT_PATH
-from nocturne_utils.wrappers import create_env
+from nocturne.envs.wrappers import create_env
 
 
 def test_rl_env():
+    """Test step and rendering functions."""
     disp = Display()
     disp.start()
     initialize(config_path="../cfgs/")

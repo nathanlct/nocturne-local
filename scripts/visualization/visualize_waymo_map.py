@@ -1,3 +1,4 @@
+"""Plot the text file representation of a protobuf."""
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import pprint

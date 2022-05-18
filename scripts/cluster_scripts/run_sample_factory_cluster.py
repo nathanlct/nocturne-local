@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Run sample factory experiments on a SLURM cluster."""
 import argparse
 import os
 import pathlib
@@ -11,6 +11,18 @@ from scripts.cluster_scripts.utils import Overrides
 
 
 def make_code_snap(experiment, code_path, str_time):
+    """Copy code to directory to ensure that the run launches with correct commit.
+
+    Args:
+        experiment (str): Name of experiment
+        code_path (str): Path to where we are saving the code.
+        str_time (str): Unique time identifier used to distinguish
+                        experiments with same name.
+
+    Returns
+    -------
+        snap_dir (str): path to where the code has been copied.
+    """
     if len(code_path) > 0:
         snap_dir = pathlib.Path(code_path)
     else:
@@ -27,8 +39,8 @@ def make_code_snap(experiment, code_path, str_time):
 
     dirs_to_copy = [
         '.', './cfgs/', './examples/', './examples/sample_factory_files',
-        './cfgs/algorithm', './nocturne/envs/', './nocturne_utils/', './nocturne/python/',
-        './scenarios/', './build'
+        './cfgs/algorithm', './nocturne/envs/', './nocturne_utils/',
+        './nocturne/python/', './scenarios/', './build'
     ]
     src_dir = pathlib.Path(PROJECT_PATH)
     for dir in dirs_to_copy:
@@ -39,6 +51,7 @@ def make_code_snap(experiment, code_path, str_time):
 
 
 def main():
+    """Launch experiments on SLURM cluster by overriding Hydra config."""
     parser = argparse.ArgumentParser()
     parser.add_argument('experiment', type=str)
     parser.add_argument(

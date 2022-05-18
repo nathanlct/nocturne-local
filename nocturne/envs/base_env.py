@@ -1,4 +1,4 @@
-"""Each agent receives its observation, a goal position, and tries to get there without colliding."""
+"""Default environment for Nocturne."""
 
 from collections import defaultdict
 import json
@@ -12,12 +12,14 @@ from nocturne import Simulation
 
 
 class BaseEnv(object):
+    """Default environment for Nocturne."""
 
     def __init__(self, cfg, rank=0):
-        """[summary]
+        """Initialize the environment.
 
-        Args:
-            cfg ([type]): configuration file describing the experiment
+        Args
+        ----
+            cfg (dict): configuration file describing the experiment
             rank (int, optional): [description]. Defaults to 0.
         """
         super().__init__()
@@ -63,6 +65,7 @@ class BaseEnv(object):
                                     shape=(2, ))
 
     def apply_actions(self, action_dict):
+        """Apply a dict of actions to the vehicle objects."""
         for veh_obj in self.scenario.getObjectsThatMoved():
             veh_id = veh_obj.getID()
             if veh_id in action_dict.keys():
@@ -85,6 +88,7 @@ class BaseEnv(object):
                     veh_obj.steering = steering_action
 
     def step(self, action_dict):
+        """See superclass."""
         obs_dict = {}
         rew_dict = {}
         done_dict = {}
@@ -185,6 +189,7 @@ class BaseEnv(object):
         return obs_dict, rew_dict, done_dict, info_dict
 
     def reset(self):
+        """See superclass."""
         self.t = 0
         self.step_num = 0
         enough_vehicles = False
@@ -324,6 +329,7 @@ class BaseEnv(object):
         return obs_dict
 
     def get_observation(self, veh_obj):
+        """Return the observation for a particular vehicle."""
         ego_obs = self.scenario.ego_state(veh_obj)
         if self.cfg['subscriber']['use_ego_state'] and self.cfg['subscriber'][
                 'use_observations']:
@@ -342,6 +348,7 @@ class BaseEnv(object):
         return obs
 
     def render(self, mode=None):
+        """See superclass."""
         return self.scenario.getImage(
             img_width=1600,
             img_height=1600,
@@ -350,6 +357,7 @@ class BaseEnv(object):
         )
 
     def seed(self, seed=None):
+        """Ensure determinism."""
         if seed is None:
             np.random.seed(1)
         else:

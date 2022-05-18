@@ -1,3 +1,4 @@
+"""Runner for PPO from https://github.com/marlbenchmark/on-policy."""
 from pathlib import Path
 import os
 import time
@@ -22,6 +23,7 @@ def _t2n(x):
 
 
 def make_train_env(cfg):
+    """Construct a training environment."""
 
     def get_env_fn(rank):
 
@@ -41,6 +43,7 @@ def make_train_env(cfg):
 
 
 def make_eval_env(cfg):
+    """Construct an eval environment."""
 
     def get_env_fn(rank):
 
@@ -60,6 +63,7 @@ def make_eval_env(cfg):
 
 
 def make_render_env(cfg):
+    """Construct a rendering environment."""
 
     def get_env_fn(rank):
 
@@ -76,16 +80,19 @@ def make_render_env(cfg):
 
 class NocturneSharedRunner(Runner):
     """
-    Runner class to perform training, evaluation. and data collection for the Nocturne envs.
-    Assumes a shared policy.
+    Runner class to perform training, evaluation and data collection for the Nocturne envs.
+
+    WARNING: Assumes a shared policy.
     """
 
     def __init__(self, config):
+        """Initialize."""
         super(NocturneSharedRunner, self).__init__(config)
         self.cfg = config['cfg.algo']
         self.render_envs = config['render_envs']
 
     def run(self):
+        """Run the training code."""
         self.warmup()
 
         start = time.time()
@@ -166,6 +173,7 @@ class NocturneSharedRunner(Runner):
                 self.render(total_num_steps)
 
     def warmup(self):
+        """Initialize the buffers."""
         # reset env
         obs = self.envs.reset()
 
@@ -182,6 +190,7 @@ class NocturneSharedRunner(Runner):
 
     @torch.no_grad()
     def collect(self, step):
+        """Collect rollout data."""
         self.trainer.prep_rollout()
         value, action, action_log_prob, rnn_states, rnn_states_critic \
             = self.trainer.policy.get_actions(np.concatenate(self.buffer.share_obs[step]),
@@ -217,6 +226,7 @@ class NocturneSharedRunner(Runner):
         return values, actions, action_log_probs, rnn_states, rnn_states_critic, actions_env
 
     def insert(self, data):
+        """Store the data in the buffers."""
         obs, rewards, dones, _, values, actions, action_log_probs, rnn_states, rnn_states_critic = data
 
         dones_env = np.all(dones, axis=1)
@@ -260,6 +270,7 @@ class NocturneSharedRunner(Runner):
 
     @torch.no_grad()
     def eval(self, total_num_steps):
+        """Get the policy returns in deterministic mode."""
         eval_episode = 0
 
         eval_episode_rewards = []
@@ -436,6 +447,7 @@ class NocturneSharedRunner(Runner):
 
 @hydra.main(config_path='../../cfgs/', config_name='config')
 def main(cfg):
+    """Run the on-policy code."""
     disp = Display()
     disp.start()
     logdir = Path(os.getcwd())
