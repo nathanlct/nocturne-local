@@ -881,7 +881,8 @@ void Scenario::LoadObjects(const json& objects_json) {
       cur_speeds.push_back(cur_speed);
       valid_mask.push_back(valid);
 
-      if (valid && cur_speed > 0.0f) {
+      if (valid && cur_speed > kSpeedThreshold &&
+          geometry::Distance(cur_pos, destination) > kMovingThreshold) {
         is_moving = true;
       }
     }
