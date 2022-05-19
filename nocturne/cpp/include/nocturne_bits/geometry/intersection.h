@@ -23,6 +23,10 @@ bool Intersects(const LineSegment& segment, const AABB& aabb);
 bool Intersects(const ConvexPolygon& polygon, const LineSegment& segment);
 bool Intersects(const LineSegment& segment, const ConvexPolygon& polygon);
 
+inline bool Intersects(const ConvexPolygon& lhs, const ConvexPolygon& rhs) {
+  return lhs.Intersects(rhs);
+}
+
 inline std::pair<std::optional<Vector2D>, std::optional<Vector2D>> Intersection(
     const Circle& circle, const LineSegment& segment) {
   return circle.Intersection(segment);

@@ -34,6 +34,7 @@ void DefineScenario(py::module& m) {
       .def("moving_objects", &Scenario::moving_objects,
            py::return_value_policy::reference)
       .def("remove_object", &Scenario::RemoveObject)
+      .def("road_lines", &Scenario::road_lines)
 
       .def("ego_state",
            [](const Scenario& scenario, const Object& src) {
@@ -72,7 +73,7 @@ void DefineScenario(py::module& m) {
       .def("getObjectsThatMoved", &Scenario::moving_objects,
            py::return_value_policy::reference)
       .def("getMaxEnvTime", &Scenario::max_env_time)
-      .def("getRoadLines", &Scenario::getRoadLines)
+      .def("getRoadLines", &Scenario::road_lines)
       .def(
           "getImage",
           [](Scenario& scenario, uint64_t img_height, uint64_t img_width,
