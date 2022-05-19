@@ -4,14 +4,16 @@ from collections import defaultdict
 import json
 import os
 
+from gym import Env
 from gym.spaces import Box, Discrete
 import numpy as np
 import torch
 
+from cfgs.config import ERR_VAL as INVALID_POSITION
 from nocturne import Simulation
 
 
-class BaseEnv(object):
+class BaseEnv(Env):
     """Default environment for Nocturne."""
 
     def __init__(self, cfg, rank=0):
@@ -194,6 +196,43 @@ class BaseEnv(object):
         """See superclass."""
         self.t = 0
         self.step_num = 0
+
+        # declare the single agent if needed
+        if self.single_agent_mode:
+            objs_that_moved = self.simulation.getScenario(
+            ).getObjectsThatMoved()
+            self.single_agent_obj = objs_that_moved[np.random.randint(
+                len(objs_that_moved))]
+        '''##################################################################
+            Construct context dictionary of observations that can be used to
+            warm up policies by stepping all vehicles as experts.
+        #####################################################################'''
+        # step all the vehicles forward by one second and record their observations as context
+        if self.single_agent_mode:
+            self.context_dict = {self.single_agent_obj.getID(): []}
+        else:
+            self.context_dict = {
+                veh.getID(): []
+                for veh in self.scenario.getObjectsThatMoved()
+            }
+        for veh in self.scenario.getObjectsThatMoved():
+            veh.expert_control = True
+        for _ in range(10):
+            if self.single_agent_mode:
+                self.context_dict[self.single_agent_obj.getID()].append(
+                    self.get_observation(self.single_agent_obj))
+            else:
+                for veh in self.scenario.getObjectsThatMoved():
+                    self.context_dict[veh.getID()].append(
+                        self.get_observation(veh))
+            self.simulation.step(self.cfg['dt'])
+        # now hand back control to our actual controllers
+        if self.single_agent_mode:
+            self.single_agent_obj.expert_control = False
+        else:
+            for veh in self.scenario.getObjectsThatMoved():
+                veh.expert_control = False
+
         enough_vehicles = False
         # we don't want to initialize scenes with more than N actors
         while not enough_vehicles:
@@ -229,21 +268,31 @@ class BaseEnv(object):
             temp_vehicles = self.scenario.getObjectsThatMoved()
             curr_index = 0
             self.controlled_vehicles = []
+            self.expert_controlled_vehicles = []
+            self.vehicles_to_delete = []
             for vehicle in temp_vehicles:
+                # this vehicle was invalid at the end of the 1 second context
+                # step so we need to remove it.
+                if np.isclose(vehicle.position.x, INVALID_POSITION):
+                    self.vehicles_to_delete.append(vehicle)
                 # we don't want to include vehicles that had unachievable goals
                 # as controlled vehicles
-                if not vehicle.expert_control:
+                elif not vehicle.expert_control and curr_index < self.cfg[
+                        'max_num_vehicles']:
                     self.controlled_vehicles.append(vehicle)
-                else:
                     curr_index += 1
-                if curr_index > self.cfg['max_num_vehicles']:
-                    break
+                else:
+                    self.expert_controlled_vehicles.append(vehicle)
             self.all_vehicle_ids = [
                 veh.getID() for veh in self.controlled_vehicles
             ]
             # make all the vehicles that are in excess of max_num_vehicles controlled by an expert
-            for veh in self.scenario.getObjectsThatMoved()[curr_index:]:
+            for veh in self.expert_controlled_vehicles:
                 veh.expert_control = True
+            # remove vehicles that are currently at an invalid position
+            for veh in self.vehicles_to_delete:
+                self.scenario.removeVehicle(veh)
+
             # check that we have at least one vehicle or if we have just one file, exit anyways
             # or else we might be stuck in an infinite loop
             if len(self.all_vehicle_ids) > 0 or len(self.files) == 1:
@@ -251,49 +300,21 @@ class BaseEnv(object):
 
         # for one reason or another (probably we had a file where all the agents achieved their goals)
         # we have no controlled vehicles
+        # just grab a vehicle even if it hasn't moved so that we have something
+        # to return obs for even if it's not controlled
+        # NOTE: this case only occurs during our eval procedure where we set the
+        # self.files list to be length 1. Otherwise, the while loop above will repeat
+        # until a file is found.
         if len(self.all_vehicle_ids) == 0:
-            # just grab a vehicle even if it hasn't moved so that we have something
-            # to return obs for even if it's not controlled
             self.controlled_vehicles = [self.scenario.getVehicles()[0]]
             self.all_vehicle_ids = [
                 veh.getID() for veh in self.controlled_vehicles
             ]
 
-        # step all the vehicles forward by one second and record their observations as context
-        if self.single_agent_mode:
-            self.context_dict = {self.single_agent_obj.getID(): []}
-            self.single_agent_obj.expert_control = True
-        else:
-            self.context_dict = {
-                veh.getID(): []
-                for veh in self.scenario.getObjectsThatMoved()
-            }
-            for veh in self.scenario.getObjectsThatMoved():
-                veh.expert_control = True
-        for _ in range(10):
-            if self.single_agent_mode:
-                self.context_dict[self.single_agent_obj.getID()].append(
-                    self.get_observation(self.single_agent_obj))
-            else:
-                for veh in self.scenario.getObjectsThatMoved():
-                    self.context_dict[veh.getID()].append(
-                        self.get_observation(veh))
-            self.simulation.step(self.cfg['dt'])
-        # now hand back control to our actual controllers
-        if self.single_agent_mode:
-            self.single_agent_obj.expert_control = False
-        else:
-            for veh in self.scenario.getObjectsThatMoved():
-                veh.expert_control = False
-
         # construct the observations and goal normalizers
         obs_dict = {}
         self.goal_dist_normalizers = {}
         if self.single_agent_mode:
-            objs_that_moved = self.simulation.getScenario(
-            ).getObjectsThatMoved()
-            self.single_agent_obj = objs_that_moved[np.random.randint(
-                len(objs_that_moved))]
             # tag all vehicles except for the one you control as controlled by the expert
             for veh in self.scenario.getObjectsThatMoved():
                 if veh.getID() != self.single_agent_obj.getID():

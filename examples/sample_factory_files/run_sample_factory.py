@@ -30,7 +30,7 @@ from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
 from sample_factory_examples.train_custom_env_custom_model import override_default_params_func
 
-from nocturne_utils.wrappers import create_env
+from nocturne.envs.wrappers import create_env
 
 
 class SampleFactoryEnv():
