@@ -9,7 +9,7 @@ from gym.spaces import Box, Discrete
 import numpy as np
 import torch
 
-from cfgs.config import ERR_VAL
+from cfgs.config import ERR_VAL as INVALID_POSITION
 from nocturne import Simulation
 
 
@@ -204,19 +204,19 @@ class BaseEnv(Env):
             self.single_agent_obj = objs_that_moved[np.random.randint(
                 len(objs_that_moved))]
         '''##################################################################
-            Construct context dictionary that can be used to warm up policies.
+            Construct context dictionary of observations that can be used to
+            warm up policies by stepping all vehicles as experts.
         #####################################################################'''
         # step all the vehicles forward by one second and record their observations as context
         if self.single_agent_mode:
             self.context_dict = {self.single_agent_obj.getID(): []}
-            self.single_agent_obj.expert_control = True
         else:
             self.context_dict = {
                 veh.getID(): []
                 for veh in self.scenario.getObjectsThatMoved()
             }
-            for veh in self.scenario.getObjectsThatMoved():
-                veh.expert_control = True
+        for veh in self.scenario.getObjectsThatMoved():
+            veh.expert_control = True
         for _ in range(10):
             if self.single_agent_mode:
                 self.context_dict[self.single_agent_obj.getID()].append(
@@ -272,8 +272,8 @@ class BaseEnv(Env):
             self.vehicles_to_delete = []
             for vehicle in temp_vehicles:
                 # this vehicle was invalid at the end of the 1 second context
-                # step so we need to remove it
-                if np.isclose(vehicle.position.x, ERR_VAL):
+                # step so we need to remove it.
+                if np.isclose(vehicle.position.x, INVALID_POSITION):
                     self.vehicles_to_delete.append(vehicle)
                 # we don't want to include vehicles that had unachievable goals
                 # as controlled vehicles
