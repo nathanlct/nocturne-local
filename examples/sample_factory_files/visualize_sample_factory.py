@@ -5,7 +5,7 @@ import sys
 import time
 import os
 
-from celluloid import Camera
+import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 from pyvirtualdisplay import Display
@@ -96,7 +96,7 @@ def run_eval(cfg, max_num_frames=1e9):
 
     if not cfg.no_render:
         fig = plt.figure()
-        camera = Camera(fig)
+        frames = []
 
     with torch.no_grad():
         while not max_frames_reached(num_frames):
@@ -135,8 +135,7 @@ def run_eval(cfg, max_num_frames=1e9):
 
                     last_render_start = time.time()
                     img = env.render()
-                    plt.imshow(img)
-                    camera.snap()
+                    frames.append(img)
 
                 obs, rew, done, infos = env.step(actions)
 
@@ -163,13 +162,11 @@ def run_eval(cfg, max_num_frames=1e9):
                 # if episode terminated synchronously for all agents, pause a bit before starting a new one
                 if all(done):
                     if not cfg.no_render:
-                        animation = camera.animate()
-                        animation.save(
-                            '/private/home/eugenevinitsky/Code/nocturne/animation.mp4'
-                        )
+                        imageio.mimsave(
+                            '/private/home/eugenevinitsky/Code/nocturne/animation.mp4',
+                            np.array(frames),
+                            fps=30)
                         plt.close(fig)
-                        fig = plt.figure()
-                        camera = Camera(fig)
                     if not cfg.no_render:
                         env.render()
                     time.sleep(0.05)
@@ -224,7 +221,7 @@ def main():
     disp.start()
     register_custom_components()
     # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.04/s_kl_control/06.47.53/9/s_kl_control/cfg.json'
-    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.10/new_features/15.10.09/4/new_features/cfg.json'
+    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.18/srt_v1/16.40.50/2/srt_v1/cfg.json'
     with open(file_path, 'r') as file:
         cfg_dict = json.load(file)
 
