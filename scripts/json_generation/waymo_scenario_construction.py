@@ -3,14 +3,13 @@
 from collections import defaultdict
 import math
 import json
-
 from typing import Any, Dict, Iterator, Optional
 
 import tensorflow as tf
-
 from waymo_open_dataset.protos import map_pb2, scenario_pb2
 
-ERR_VAL = -1e4
+from cfgs.config import ERR_VAL
+
 
 _WAYMO_OBJECT_STR = {
     scenario_pb2.Track.TYPE_UNSET: "unset",

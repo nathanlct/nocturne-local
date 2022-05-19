@@ -14,7 +14,7 @@ import wandb
 from algos.ppo.base_runner import Runner
 from algos.ppo.env_wrappers import SubprocVecEnv, DummyVecEnv
 
-from nocturne_utils.wrappers import create_ppo_env
+from nocturne.envs.wrappers import create_ppo_env
 
 
 def _t2n(x):
