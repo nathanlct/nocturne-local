@@ -1,3 +1,4 @@
+"""Utils for converting TFRecords into Nocturne compatible JSON."""
 import argparse
 from pathlib import Path
 import os
@@ -9,6 +10,15 @@ import waymo_scenario_construction as waymo
 
 
 def convert_files(args, files, output_dir, rank):
+    """Convert the list of files into nocturne compatible JSON.
+
+    Args
+    ----
+        args (NameSpace): args from the argument parser.
+        files ([str]): list of file paths for TFRecords that we should convert
+        output_dir (str): output path in which we should store the JSON
+        rank (int): rank of the process.
+    """
     cnt = 0
     for file in files:
         inner_count = 0
@@ -30,6 +40,7 @@ def convert_files(args, files, output_dir, rank):
 
 
 def main():
+    """Run the json generators."""
     parser = argparse.ArgumentParser(
         description="Load and show waymo scenario data.")
     parser.add_argument("--file",

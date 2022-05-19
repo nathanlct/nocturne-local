@@ -1,5 +1,7 @@
 """
-To run in single agent mode on one file for testing
+Runner script for sample factory.
+
+To run in single agent mode on one file for testing.
 python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True \
     ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME \
     ++single_agent_mode=True ++num_files=1
@@ -9,7 +11,7 @@ python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thre
     ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME \
         ++single_agent_mode=False ++num_files=1
 
-To run on all files set num_files=-1
+To run on all files set ++num_files=-1
 
 For debugging
 python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=False \
@@ -32,14 +34,20 @@ from nocturne_utils.wrappers import create_env
 
 
 class SampleFactoryEnv():
+    """Wrapper environment that converts between our dicts and Sample Factory format."""
 
     def __init__(self, env):
+        """Initialize wrapper.
+
+        Args
+        ----
+            env (BaseEnv): Base environment that we are wrapping.
+        """
         self.env = env
         if self.env.single_agent_mode:
             self.num_agents = 1
         else:
-            self.num_agents = self.env.cfg[
-                'max_num_vehicles']  # TODO(ev) pick a good value
+            self.num_agents = self.env.cfg['max_num_vehicles']
         self.agent_ids = [i for i in range(self.num_agents)]
         self.is_multiagent = True
         _ = self.env.reset()
@@ -48,6 +56,24 @@ class SampleFactoryEnv():
         self.episode_rewards = np.zeros(self.num_agents)
 
     def step(self, actions):
+        """Convert between environment dicts and sample factory lists.
+
+        Important to note:
+        1) Items in info['episode_extra_stats'] will be logged by sample factory.
+        2) sample factory does not reset the environment for you
+           so we reset it if the env returns __all__ in its done dict
+
+        Args:
+            actions ({str: numpy array}): agent actions
+
+        Returns
+        -------
+            obs_n ([np.array]): N length list of agent observations
+            rew_n ([float]): N length list of agent rewards
+            info_n ([{str: float}]): N length list of info dicts
+            done_n ([bool]): N length list of whether agents are done
+
+        """
         agent_actions = {}
         for action, agent_id, already_done in zip(actions, self.agent_ids,
                                                   self.already_done):
@@ -124,6 +150,15 @@ class SampleFactoryEnv():
         return obs_n, rew_n, done_n, info_n
 
     def obs_dict_to_list(self, obs_dict):
+        """Convert the dictionary returned by the environment into a fixed size list of arrays.
+
+        Args:
+            obs_dict ({agent id in environment: observation}): dict mapping ID to observation
+
+        Returns
+        -------
+            [np.array]: List of arrays ordered by which agent ID they correspond to.
+        """
         obs_n = []
         for agent_id in self.agent_ids:
             # first check that the agent_id ever had a corresponding vehicle
@@ -137,6 +172,19 @@ class SampleFactoryEnv():
         return obs_n
 
     def reset(self):
+        """Reset the environment.
+
+        Key things done here:
+        1) build a map between the agent IDs in the environment (which are not necessarily 0-N)
+           and the agent IDs for sample factory which are from 0 to the maximum number of agents
+        2) sample factory (until some bugs are fixed) requires a fixed number of agents. Some of these
+           agents will be dummy agents that do not act in the environment. So, here we build valid
+           indices which can be used to figure out which agent IDs correspond
+
+        Returns
+        -------
+            [np.array]: List of numpy arrays, one for each agent.
+        """
         # track the agent_ids that actually take an action during the episode
         self.valid_indices = []
         self.episode_rewards = np.zeros(self.num_agents)
@@ -175,50 +223,50 @@ class SampleFactoryEnv():
 
     @property
     def observation_space(self):
+        """See superclass."""
         return self.env.observation_space
 
     @property
     def action_space(self):
+        """See superclass."""
         return self.env.action_space
 
     def render(self, mode=None):
+        """See superclass."""
         return self.env.render(mode)
 
     def seed(self, seed=None):
+        """Pass the seed to the environment."""
         self.env.seed(seed)
 
     def __getattr__(self, name):
+        """Pass attributes directly through to the wrapped env. TODO(remove)."""
         return getattr(self.env, name)
 
 
-def make_custom_multi_env_func(full_env_name, cfg=None, env_config=None):
+def make_custom_multi_env_func(full_env_name, cfg, env_config=None):
+    """Return a wrapped base environment.
+
+    Args:
+        full_env_name (str): Unused.
+        cfg (dict): Dict needed to configure the environment.
+        env_config (dict, optional): Deprecated. Will be removed from SampleFactory later.
+
+    Returns
+    -------
+        SampleFactoryEnv: Wrapped environment.
+    """
     env = create_env(cfg)
-    # env = RecordingWrapper(
-    #     env, os.path.join(os.getcwd(), cfg['algorithm']['experiment'],
-    #                       'videos'), 0)
     return SampleFactoryEnv(env)
 
 
-def add_extra_params_func(env, parser):
-    """
-    Specify any additional command line arguments for this family of custom environments.
-    """
-    p = parser
-    p.add_argument('--custom_env_episode_len',
-                   default=10,
-                   type=int,
-                   help='Number of steps in the episode')
-
-
 def register_custom_components():
+    """Register needed constructors for custom environments."""
     global_env_registry().register_env(
         env_name_prefix='my_custom_multi_env_',
         make_env_func=make_custom_multi_env_func,
-        # add_extra_params_func=add_extra_params_func,
         override_default_params_func=override_default_params_func,
     )
-
-    # register_custom_encoder('custom_env_encoder', CustomEncoder)
 
 
 @hydra.main(config_path="../../cfgs/", config_name="config")

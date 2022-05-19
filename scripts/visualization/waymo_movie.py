@@ -1,3 +1,4 @@
+"""Make a movie from a random file."""
 import os
 
 import imageio

@@ -1,7 +1,9 @@
-# This file runs through the data to look for cases where there are undesirable corner cases
-# the cases we currently check for are:
-# 1) is a vehicle initialized in a colliding state with another vehicle
-# 2) is a vehicle initialized in a colliding state with a road edge?
+"""Run through the data to look for cases where there are undesirable corner cases.
+
+The cases we currently check for are:
+1) is a vehicle initialized in a colliding state with another vehicle
+2) is a vehicle initialized in a colliding state with a road edge?
+"""
 from pathlib import Path
 import os
 import sys
