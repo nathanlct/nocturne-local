@@ -23,7 +23,9 @@ class Simulation {
         scenario_(std::make_unique<Scenario>(scenario_path, start_time,
                                              use_non_vehicles)),
         start_time_(start_time),
-        use_non_vehicles_(use_non_vehicles) {}
+        use_non_vehicles_(use_non_vehicles) {
+          std::cout << "[Simulation] Ctor finished." << std::endl;
+        }
 
   void Reset() {
     scenario_.reset(

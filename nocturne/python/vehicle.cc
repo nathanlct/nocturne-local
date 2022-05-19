@@ -12,8 +12,6 @@ namespace py = pybind11;
 namespace nocturne {
 
 void DefineVehicle(py::module& m) {
-  m.doc() = "nocturne documentation for class Vehicle";
-
   py::class_<Vehicle, std::shared_ptr<Vehicle>, Object>(m, "Vehicle");
 }
 

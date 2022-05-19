@@ -1,5 +1,7 @@
 """Default environment for Nocturne."""
 
+from typing import Any, Dict, Union
+
 from collections import defaultdict
 import json
 import os
@@ -8,13 +10,13 @@ from gym.spaces import Box, Discrete
 import numpy as np
 import torch
 
-from nocturne import Simulation
+from nocturne import Action, Simulation
 
 
 class BaseEnv(object):
     """Default environment for Nocturne."""
 
-    def __init__(self, cfg, rank=0):
+    def __init__(self, cfg: Dict[str, Any], rank: int = 0) -> None:
         """Initialize the environment.
 
         Args
@@ -23,6 +25,7 @@ class BaseEnv(object):
             rank (int, optional): [description]. Defaults to 0.
         """
         super().__init__()
+
         with open(os.path.join(cfg['scenario_path'],
                                'valid_files.json')) as file:
             self.valid_veh_dict = json.load(file)
@@ -32,9 +35,15 @@ class BaseEnv(object):
         if cfg['num_files'] != -1:
             self.files = self.files[0:cfg['num_files']]
         self.file = self.files[np.random.randint(len(self.files))]
+
+        print(f"[BaseEnv] self.file = {self.file}")
+
         self.simulation = Simulation(os.path.join(cfg['scenario_path'],
                                                   self.file),
                                      allow_non_vehicles=False)
+
+        print(f"[BaseEnv] simulation created")
+
         self.scenario = self.simulation.getScenario()
         self.controlled_vehicles = self.scenario.getObjectsThatMoved()
         self.single_agent_mode = cfg['single_agent_mode']
@@ -66,30 +75,24 @@ class BaseEnv(object):
                                     high=self.cfg['accel_upper_bound'],
                                     shape=(2, ))
 
-    def apply_actions(self, action_dict):
+    def apply_actions(self, action_dict: Dict[int, Union[Action,
+                                                         int]]) -> None:
         """Apply a dict of actions to the vehicle objects."""
         for veh_obj in self.scenario.getObjectsThatMoved():
-            veh_id = veh_obj.getID()
-            if veh_id in action_dict.keys():
-                action = action_dict[veh_id]
-                if isinstance(action, dict):
-                    if 'accel' in action.keys():
-                        veh_obj.acceleration = action['accel']
-                    if 'turn' in action.keys():
-                        veh_obj.steering = action['turn']
-                elif isinstance(action, list) or isinstance(
-                        action, np.ndarray):
-                    veh_obj.acceleration = action[0]
-                    veh_obj.steering = action[1]
-                else:
-                    accel_action = self.accel_grid[int(
-                        action // self.steering_discretization)]
-                    steering_action = self.steering_grid[
-                        action % self.accel_discretization]
-                    veh_obj.acceleration = accel_action
-                    veh_obj.steering = steering_action
+            action = action_dict.get(veh_obj.id, None)
+            if action is None:
+                continue
+            if isinstance(action, Action):
+                veh_obj.apply_action(action)
+            else:
+                accel_action = self.accel_grid[action //
+                                               self.steering_discretization]
+                steering_action = self.steering_grid[action %
+                                                     self.accel_discretization]
+                veh_obj.acceleration = accel_action
+                veh_obj.steering = steering_action
 
-    def step(self, action_dict):
+    def step(self, action_dict: Dict[int, Union[Action, int]]) -> None:
         """See superclass."""
         obs_dict = {}
         rew_dict = {}

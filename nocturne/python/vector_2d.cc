@@ -13,8 +13,6 @@ namespace py = pybind11;
 namespace nocturne {
 
 void DefineVector2D(py::module& m) {
-  m.doc() = "nocturne documentation for class Vector2D";
-
   py::class_<geometry::Vector2D>(m, "Vector2D")
       .def(py::init<float, float>())
       .def("__repr__",

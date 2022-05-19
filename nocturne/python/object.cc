@@ -12,8 +12,6 @@ namespace py = pybind11;
 namespace nocturne {
 
 void DefineObject(py::module& m) {
-  m.doc() = "nocturne documentation for class Object";
-
   py::enum_<CollisionType>(m, "CollisionType")
       .value("UNCOLLIDED", CollisionType::kNotCollided)
       .value("VEHICLE_VEHICLE", CollisionType::kVehicleVehicleCollision)
@@ -59,6 +57,7 @@ void DefineObject(py::module& m) {
            py::overload_cast<float, float>(&Object::set_position))
       .def("set_destination",
            py::overload_cast<float, float>(&Object::set_destination))
+      .def("apply_action", &Object::ApplyAction)
       .def("_scale_shape", &Object::ScaleShape, py::arg("length_scale") = 1.0,
            py::arg("width_scale") = 1.0)
 

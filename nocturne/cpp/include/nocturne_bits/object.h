@@ -7,6 +7,7 @@
 #include <random>
 #include <string>
 
+#include "action.h"
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
 #include "geometry/polygon.h"
@@ -127,6 +128,11 @@ class Object : public ObjectBase {
   }
 
   geometry::ConvexPolygon BoundingPolygon() const override;
+
+  void ApplyAction(const Action& action) {
+    acceleration_ = action.acceleration();
+    steering_ = action.steering();
+  }
 
   void SetActionFromKeyboard();
 

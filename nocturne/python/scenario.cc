@@ -16,8 +16,6 @@ namespace nocturne {
 using geometry::utils::kHalfPi;
 
 void DefineScenario(py::module& m) {
-  m.doc() = "nocturne documentation for class Scenario";
-
   py::class_<Scenario, std::shared_ptr<Scenario>>(m, "Scenario")
       .def(py::init<const std::string&, int64_t, bool>(),
            "Constructor for Scenario", py::arg("path") = "",
@@ -36,6 +34,33 @@ void DefineScenario(py::module& m) {
       .def("moving_objects", &Scenario::moving_objects,
            py::return_value_policy::reference)
       .def("remove_object", &Scenario::RemoveObject)
+
+      .def("ego_state",
+           [](const Scenario& scenario, const Object& src) {
+             return utils::AsNumpyArray(scenario.EgoState(src));
+           })
+      .def(
+          "visible_state",
+          [](const Scenario& scenario, const Object& src, float view_dist,
+             float view_angle, bool padding) {
+            return utils::AsNumpyArrayDict(
+                scenario.VisibleState(src, view_dist, view_angle, padding));
+          },
+          py::arg("object"), py::arg("view_dist") = 60,
+          py::arg("view_angle") = kHalfPi, py::arg("padding") = false)
+      .def(
+          "flattened_visible_state",
+          [](const Scenario& scenario, const Object& src, float view_dist,
+             float view_angle) {
+            return utils::AsNumpyArray(
+                scenario.FlattenedVisibleState(src, view_dist, view_angle));
+          },
+          py::arg("object"), py::arg("view_dist") = 60,
+          py::arg("view_angle") = kHalfPi)
+      .def("expert_heading", &Scenario::ExpertHeading)
+      .def("expert_speed", &Scenario::ExpertSpeed)
+      .def("expert_velocity", &Scenario::ExpertVelocity)
+      .def("expert_action", &Scenario::ExpertAction)
 
       // TODO: Deprecate the legacy interfaces below.
       .def("getVehicles", &Scenario::vehicles,
@@ -99,10 +124,10 @@ void DefineScenario(py::module& m) {
           py::arg("img_width") = 1000, py::arg("padding") = 0.0f,
           py::arg("draw_destination") = true)
       .def("removeVehicle", &Scenario::RemoveObject)
-      .def("hasExpertAction", &Scenario::hasExpertAction)
-      .def("getExpertAction", &Scenario::getExpertAction)
-      .def("getExpertSpeeds", &Scenario::getExpertSpeeds)
-      .def("getValidExpertStates", &Scenario::getValidExpertStates)
+      // .def("hasExpertAction", &Scenario::hasExpertAction)
+      .def("getExpertAction", &Scenario::ExpertAction)
+      .def("getExpertSpeeds", &Scenario::ExpertVelocity)
+      // .def("getValidExpertStates", &Scenario::getValidExpertStates)
       .def("getMaxNumVisibleObjects", &Scenario::getMaxNumVisibleObjects)
       .def("getMaxNumVisibleRoadPoints", &Scenario::getMaxNumVisibleRoadPoints)
       .def("getMaxNumVisibleStopSigns", &Scenario::getMaxNumVisibleStopSigns)
@@ -112,33 +137,7 @@ void DefineScenario(py::module& m) {
       .def("getRoadPointFeatureSize", &Scenario::getRoadPointFeatureSize)
       .def("getTrafficLightFeatureSize", &Scenario::getTrafficLightFeatureSize)
       .def("getStopSignsFeatureSize", &Scenario::getStopSignsFeatureSize)
-      .def("getEgoFeatureSize", &Scenario::getEgoFeatureSize)
-      // .def("getVisibleObjects", &Scenario::getVisibleObjects)
-      // .def("getVisibleRoadPoints", &Scenario::getVisibleRoadPoints)
-      // .def("getVisibleStopSigns", &Scenario::getVisibleStopSigns)
-      // .def("getVisibleTrafficLights", &Scenario::getVisibleTrafficLights)
-      .def("ego_state",
-           [](const Scenario& scenario, const Object& src) {
-             return utils::AsNumpyArray(scenario.EgoState(src));
-           })
-      .def(
-          "visible_state",
-          [](const Scenario& scenario, const Object& src, float view_dist,
-             float view_angle, bool padding) {
-            return utils::AsNumpyArrayDict(
-                scenario.VisibleState(src, view_dist, view_angle, padding));
-          },
-          py::arg("object"), py::arg("view_dist") = 60,
-          py::arg("view_angle") = kHalfPi, py::arg("padding") = false)
-      .def(
-          "flattened_visible_state",
-          [](const Scenario& scenario, const Object& src, float view_dist,
-             float view_angle) {
-            return utils::AsNumpyArray(
-                scenario.FlattenedVisibleState(src, view_dist, view_angle));
-          },
-          py::arg("object"), py::arg("view_dist") = 60,
-          py::arg("view_angle") = kHalfPi);
+      .def("getEgoFeatureSize", &Scenario::getEgoFeatureSize);
 }
 
 }  // namespace nocturne
