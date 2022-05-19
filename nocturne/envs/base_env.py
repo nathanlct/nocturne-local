@@ -1,6 +1,6 @@
 """Default environment for Nocturne."""
 
-from typing import Any, Dict, Union
+from typing import Any, Dict, Sequence, Union
 
 from collections import defaultdict
 import json
@@ -70,17 +70,24 @@ class BaseEnv(object):
                                     high=self.cfg['accel_upper_bound'],
                                     shape=(2, ))
 
-    def apply_actions(self, action_dict: Dict[int, Union[Action,
-                                                         int]]) -> None:
+    def apply_actions(
+        self, action_dict: Dict[int, Union[Action, np.ndarray, Sequence[float],
+                                           int]]
+    ) -> None:
         """Apply a dict of actions to the vehicle objects."""
         for veh_obj in self.scenario.getObjectsThatMoved():
             action = action_dict.get(veh_obj.id, None)
             if action is None:
                 continue
+
+            # TODO: Make this a util function.
             if isinstance(action, Action):
                 veh_obj.apply_action(action)
             elif isinstance(action, np.ndarray):
                 veh_obj.apply_action(Action.from_numpy(action))
+            elif isinstance(action, (tuple, list)):
+                veh_obj.acceleration = action[0]
+                veh_obj.steering = action[1]
             else:
                 accel_action = self.accel_grid[action //
                                                self.steering_discretization]
@@ -89,7 +96,10 @@ class BaseEnv(object):
                 veh_obj.acceleration = accel_action
                 veh_obj.steering = steering_action
 
-    def step(self, action_dict: Dict[int, Union[Action, int]]) -> None:
+    def step(
+        self, action_dict: Dict[int, Union[Action, np.ndarray, Sequence[float],
+                                           int]]
+    ) -> None:
         """See superclass."""
         obs_dict = {}
         rew_dict = {}
