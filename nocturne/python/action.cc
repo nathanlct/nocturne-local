@@ -17,7 +17,7 @@ namespace nocturne {
 
 namespace {
 
-py::array_t<float> Numpy(const Action& action) {
+py::array_t<float> AsNumpyArray(const Action& action) {
   py::array_t<float> arr(2);
   float* arr_data = arr.mutable_data();
   arr_data[0] =
@@ -62,10 +62,10 @@ void DefineAction(py::module& m) {
       .def_property("acceleration", &Action::acceleration,
                     &Action::set_acceleration)
       .def_property("steering", &Action::steering, &Action::set_steering)
-      .def("numpy", &Numpy)
+      .def("numpy", &AsNumpyArray)
       .def_static("from_numpy", &FromNumpy)
       .def(py::pickle(
-          [](const Action& act) { return Numpy(act); },
+          [](const Action& act) { return AsNumpyArray(act); },
           [](const py::array_t<float>& arr) { return FromNumpy(arr); }));
 }
 

@@ -14,7 +14,7 @@ namespace nocturne {
 
 namespace {
 
-py::array_t<float> Numpy(const geometry::Vector2D& vec) {
+py::array_t<float> AsNumpyArray(const geometry::Vector2D& vec) {
   py::array_t<float> arr(2);
   float* arr_data = arr.mutable_data();
   arr_data[0] = vec.x();
@@ -62,10 +62,10 @@ void DefineVector2D(py::module& m) {
       .def("norm", &geometry::Vector2D::Norm, py::arg("p") = 2)
       .def("angle", &geometry::Vector2D::Angle)
       .def("rotate", &geometry::Vector2D::Rotate)
-      .def("numpy", &Numpy)
+      .def("numpy", &AsNumpyArray)
       .def_static("from_numpy", &FromNumpy)
       .def(py::pickle(
-          [](const geometry::Vector2D& vec) { return Numpy(vec); },
+          [](const geometry::Vector2D& vec) { return AsNumpyArray(vec); },
           [](const py::array_t<float>& arr) { return FromNumpy(arr); }));
 }
 
