@@ -1,22 +1,26 @@
 #pragma once
 
+#include <optional>
+
 namespace nocturne {
 
 class Action {
  public:
   Action() = default;
-  Action(float acceleration, float steering)
+  Action(std::optional<float> acceleration, std::optional<float> steering)
       : acceleration_(acceleration), steering_(steering) {}
 
-  float acceleration() const { return acceleration_; }
-  void set_acceleration(float acceleration) { acceleration_ = acceleration; }
+  std::optional<float> acceleration() const { return acceleration_; }
+  void set_acceleration(std::optional<float> acceleration) {
+    acceleration_ = acceleration;
+  }
 
-  float steering() const { return steering_; }
-  void set_steering(float steering) { steering_ = steering; }
+  std::optional<float> steering() const { return steering_; }
+  void set_steering(std::optional<float> steering) { steering_ = steering; }
 
  protected:
-  float acceleration_ = 0.0;
-  float steering_ = 0.0f;
+  std::optional<float> acceleration_ = std::nullopt;
+  std::optional<float> steering_ = std::nullopt;
 };
 
 }  // namespace nocturne

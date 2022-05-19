@@ -130,8 +130,12 @@ class Object : public ObjectBase {
   geometry::ConvexPolygon BoundingPolygon() const override;
 
   void ApplyAction(const Action& action) {
-    acceleration_ = action.acceleration();
-    steering_ = action.steering();
+    if (action.acceleration().has_value()) {
+      acceleration_ = action.acceleration().value();
+    }
+    if (action.steering().has_value()) {
+      steering_ = action.steering().value();
+    }
   }
 
   void SetActionFromKeyboard();
