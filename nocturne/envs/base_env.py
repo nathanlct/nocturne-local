@@ -79,6 +79,8 @@ class BaseEnv(object):
                 continue
             if isinstance(action, Action):
                 veh_obj.apply_action(action)
+            elif isinstance(action, np.ndarray):
+                veh_obj.apply_action(Action.from_numpy(action))
             else:
                 accel_action = self.accel_grid[action //
                                                self.steering_discretization]

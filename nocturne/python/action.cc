@@ -4,6 +4,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <cmath>
 #include <limits>
 #include <string>
 
@@ -34,15 +35,28 @@ void DefineAction(py::module& m) {
       .def_property("acceleration", &Action::acceleration,
                     &Action::set_acceleration)
       .def_property("steering", &Action::steering, &Action::set_steering)
-      .def("numpy", [](const Action& action) {
-        py::array_t<float> arr(2);
-        float* arr_data = arr.mutable_data();
-        arr_data[0] = action.acceleration().value_or(
-            std::numeric_limits<float>::quiet_NaN());
-        arr_data[1] =
-            action.steering().value_or(std::numeric_limits<float>::quiet_NaN());
-        return arr;
+      .def("numpy",
+           [](const Action& action) {
+             py::array_t<float> arr(2);
+             float* arr_data = arr.mutable_data();
+             arr_data[0] = action.acceleration().value_or(
+                 std::numeric_limits<float>::quiet_NaN());
+             arr_data[1] = action.steering().value_or(
+                 std::numeric_limits<float>::quiet_NaN());
+             return arr;
+           })
+      .def_static("from_numpy", [](const py::array_t<float>& arr) {
+        assert(arr.size() == 2);
+        const float* arr_data = arr.data();
+        std::optional<float> acceleration =
+            std::isnan(arr_data[0]) ? std::nullopt
+                                    : std::make_optional<float>(arr_data[0]);
+        std::optional<float> steering =
+            std::isnan(arr_data[1]) ? std::nullopt
+                                    : std::make_optional<float>(arr_data[1]);
+        return Action(acceleration, steering);
       });
+  ;
 }
 
 }  // namespace nocturne
