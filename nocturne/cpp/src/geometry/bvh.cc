@@ -117,7 +117,7 @@ std::vector<BVH::Node*> BVH::CombineNodes(const std::vector<BVH::Node*>& nodes,
   return ret;
 }
 
-std::vector<BVH::Node*> BVH::InitHierarchyImpl(
+std::vector<BVH::Node*> BVH::InitHierarchy(
     const std::vector<std::pair<uint64_t, const AABBInterface*>>& objects,
     int64_t l, int64_t r) {
   assert(l < r);
@@ -134,8 +134,8 @@ std::vector<BVH::Node*> BVH::InitHierarchyImpl(
     p = l + (r - l) / 2;
   }
 
-  const std::vector<Node*> l_nodes = InitHierarchyImpl(objects, l, p);
-  const std::vector<Node*> r_nodes = InitHierarchyImpl(objects, p, r);
+  const std::vector<Node*> l_nodes = InitHierarchy(objects, l, p);
+  const std::vector<Node*> r_nodes = InitHierarchy(objects, p, r);
   std::vector<Node*> nodes;
   nodes.reserve(l_nodes.size() + r_nodes.size());
   for (Node* node : l_nodes) {

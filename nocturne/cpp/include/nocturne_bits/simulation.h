@@ -30,7 +30,7 @@ class Simulation {
         new Scenario(scenario_path_, start_time_, use_non_vehicles_));
   }
 
-  void Step(float dt) { scenario_->step(dt); }
+  void Step(float dt) { scenario_->Step(dt); }
 
   void Render();
 

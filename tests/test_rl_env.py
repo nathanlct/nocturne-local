@@ -5,6 +5,7 @@ from hydra import compose, initialize
 from pyvirtualdisplay import Display
 
 from cfgs.config import PROJECT_PATH
+from nocturne import Action
 from nocturne.envs.wrappers import create_env
 
 
@@ -29,10 +30,7 @@ def test_rl_env():
             for veh in vehs
         }
         obs, rew, done, info = env.step(
-            {veh.getID(): {
-                'accel': 2.0,
-                'turn': 1.0
-            }
+            {veh.id: Action(acceleration=2.0, steering=1.0)
              for veh in vehs})
         for veh in vehs:
             if veh in env.scenario.getObjectsThatMoved():

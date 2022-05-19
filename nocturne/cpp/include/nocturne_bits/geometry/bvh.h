@@ -55,23 +55,23 @@ class BVH {
 
   template <class ObjectType>
   explicit BVH(const std::vector<ObjectType>& objects) {
-    InitHierarchy(objects);
+    Reset(objects);
   }
 
   template <class ObjectType>
   BVH(const std::vector<ObjectType>& objects, int64_t delta) : delta_(delta) {
-    InitHierarchy(objects);
+    Reset(objects);
   }
 
   template <class ObjectType>
   explicit BVH(const std::vector<const ObjectType*>& objects) {
-    InitHierarchy(objects);
+    Reset(objects);
   }
 
   template <class ObjectType>
   BVH(const std::vector<const ObjectType*>& objects, int64_t delta)
       : delta_(delta) {
-    InitHierarchy(objects);
+    Reset(objects);
   }
 
   bool Empty() const { return nodes_.empty(); }
@@ -83,22 +83,22 @@ class BVH {
   }
 
   template <class ObjectType>
-  void InitHierarchy(const std::vector<ObjectType>& objects) {
-    InitHierarchyInternal(
+  void Reset(const std::vector<ObjectType>& objects) {
+    ResetImpl(
         objects, [](const ObjectType& obj) { return obj.GetAABB(); },
         [](const ObjectType& obj) { return &obj; });
   }
 
   template <class ObjectType>
-  void InitHierarchy(const std::vector<const ObjectType*>& objects) {
-    InitHierarchyInternal(
+  void Reset(const std::vector<const ObjectType*>& objects) {
+    ResetImpl(
         objects, [](const ObjectType* obj) { return obj->GetAABB(); },
         [](const ObjectType* obj) { return obj; });
   }
 
   template <class ObjectType>
-  void InitHierarchy(const std::vector<std::shared_ptr<ObjectType>>& objects) {
-    InitHierarchyInternal(
+  void Reset(const std::vector<std::shared_ptr<ObjectType>>& objects) {
+    ResetImpl(
         objects,
         [](const std::shared_ptr<ObjectType>& obj) { return obj->GetAABB(); },
         [](const std::shared_ptr<ObjectType>& obj) { return obj.get(); });
@@ -140,8 +140,8 @@ class BVH {
   // Implement AAC algorithm in
   // http://graphics.cs.cmu.edu/projects/aac/aac_build.pdf
   template <class ObjectType, class AABBFunc, class PtrFunc>
-  void InitHierarchyInternal(const std::vector<ObjectType>& objects,
-                             AABBFunc aabb_func, PtrFunc ptr_func) {
+  void ResetImpl(const std::vector<ObjectType>& objects, AABBFunc aabb_func,
+                 PtrFunc ptr_func) {
     Clear();
     if (objects.empty()) {
       return;
@@ -159,13 +159,13 @@ class BVH {
     }
     std::sort(encoded_objects.begin(), encoded_objects.end());
     const std::vector<Node*> nodes =
-        InitHierarchyImpl(encoded_objects, /*l=*/0, /*r=*/n);
+        InitHierarchy(encoded_objects, /*l=*/0, /*r=*/n);
     const std::vector<Node*> root = CombineNodes(nodes, 1);
     root_ = root[0];
   }
 
   // Init hierarchy in range [l, r).
-  std::vector<Node*> InitHierarchyImpl(
+  std::vector<Node*> InitHierarchy(
       const std::vector<std::pair<uint64_t, const AABBInterface*>>& objects,
       int64_t l, int64_t r);
 

@@ -1,6 +1,7 @@
 #include "scenario.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -155,8 +156,6 @@ void ExtractStopSignFeature(const Object& src, const StopSign& obj, float dis,
 
 }  // namespace
 
-using geometry::utils::kPi;
-
 void Scenario::LoadScenario(const std::string& scenario_path) {
   std::ifstream data(scenario_path);
   if (!data.is_open()) {
@@ -168,101 +167,7 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
   data >> j;
   name_ = j["name"];
 
-  for (const auto& obj : j["objects"]) {
-    // std::string type = obj["type"];
-    const ObjectType object_type = ParseObjectType(obj["type"]);
-
-    // TODO(ev) currTime should be passed in rather than defined here
-    geometry::Vector2D pos(obj["position"][current_time_]["x"],
-                           obj["position"][current_time_]["y"]);
-    float width = float(obj["width"]);
-    float length = float(obj["length"]);
-    float heading = geometry::utils::NormalizeAngle(geometry::utils::Radians(
-        static_cast<float>(obj["heading"][current_time_])));
-
-    // TODO(ev) this should be set elsewhere
-    bool occludes = true;
-    bool collides = true;
-    bool checkForCollisions = true;
-
-    geometry::Vector2D goalPos;
-    if (obj.contains("goalPosition")) {
-      goalPos = geometry::Vector2D(obj["goalPosition"]["x"],
-                                   obj["goalPosition"]["y"]);
-    }
-    std::vector<geometry::Vector2D> localExpertTrajectory;
-    std::vector<geometry::Vector2D> localExpertSpeeds;
-    std::vector<bool> localValid;
-    std::vector<float> localHeadingVec;
-    bool is_moving = false;
-    for (unsigned int i = 0; i < obj["position"].size(); i++) {
-      geometry::Vector2D currPos(obj["position"][i]["x"],
-                                 obj["position"][i]["y"]);
-      geometry::Vector2D currVel(obj["velocity"][i]["x"],
-                                 obj["velocity"][i]["y"]);
-      localExpertTrajectory.push_back(currPos);
-      localExpertSpeeds.push_back(currVel);
-      if (currVel.Norm() > 0 && bool(obj["valid"][i])) {
-        is_moving = true;
-      }
-      localValid.push_back(bool(obj["valid"][i]));
-      // waymo data is in degrees!
-      float expertHeading = geometry::utils::NormalizeAngle(
-          geometry::utils::Radians(float(obj["heading"][i])));
-      localHeadingVec.push_back(expertHeading);
-    }
-    // TODO(ev) make it a flag whether all vehicles are added or just the
-    // vehicles that are valid
-
-    // we only want to store and load vehicles that are valid at this
-    // initialization time
-    if (bool(obj["valid"][current_time_])) {
-      expertTrajectories.push_back(localExpertTrajectory);
-      expertSpeeds.push_back(localExpertSpeeds);
-      expertHeadings.push_back(localHeadingVec);
-      lengths.push_back(length);
-      expertValid.push_back(localValid);
-
-      if (object_type == ObjectType::kVehicle) {
-        std::shared_ptr<Vehicle> vehicle = std::make_shared<Vehicle>(
-            object_counter_++, length, width, pos, goalPos, heading,
-            localExpertSpeeds[current_time_].Norm(), occludes, collides,
-            checkForCollisions);
-        vehicles_.push_back(vehicle);
-        objects_.push_back(vehicle);
-        if (is_moving) {
-          moving_objects_.push_back(vehicle);
-        }
-      } else if (allow_non_vehicles_) {
-        if (object_type == ObjectType::kPedestrian) {
-          std::shared_ptr<Pedestrian> pedestrian = std::make_shared<Pedestrian>(
-              object_counter_++, length, width, pos, goalPos, heading,
-              localExpertSpeeds[current_time_].Norm(), occludes, collides,
-              checkForCollisions);
-          pedestrians_.push_back(pedestrian);
-          objects_.push_back(pedestrian);
-          if (is_moving) {
-            moving_objects_.push_back(pedestrian);
-          }
-        } else if (object_type == ObjectType::kCyclist) {
-          std::shared_ptr<Cyclist> cyclist = std::make_shared<Cyclist>(
-              object_counter_++, length, width, pos, goalPos, heading,
-              localExpertSpeeds[current_time_].Norm(), occludes, collides,
-              checkForCollisions);
-          cyclists_.push_back(cyclist);
-          objects_.push_back(cyclist);
-          if (is_moving) {
-            moving_objects_.push_back(cyclist);
-          }
-        } else {
-          std::cerr << "Unknown object type: " << obj["type"] << std::endl;
-        }
-      }
-    }
-  }
-
-  // initialize the road objects bvh
-  object_bvh_.InitHierarchy(objects_);
+  LoadObjects(j["objects"]);
 
   float min_x = std::numeric_limits<float>::max();
   float min_y = std::numeric_limits<float>::max();
@@ -320,7 +225,7 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
 
   // Now create the BVH for the line segments
   // Since the line segments never move we only need to define this once
-  line_segment_bvh_.InitHierarchy(lineSegments);
+  line_segment_bvh_.Reset(lineSegments);
 
   // Now handle the traffic light states
   for (const auto& tl : j["tl_states"]) {
@@ -360,13 +265,13 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
     static_objects.push_back(
         dynamic_cast<const geometry::AABBInterface*>(obj.get()));
   }
-  static_bvh_.InitHierarchy(static_objects);
+  static_bvh_.Reset(static_objects);
   // update collision to check for collisions of any vehicles at initialization
   updateCollision();
 }
 
-void Scenario::step(float dt) {
-  current_time_ += int(dt / 0.1);  // TODO(ev) hardcoding
+void Scenario::Step(float dt) {
+  current_time_ += static_cast<int>(dt / 0.1);  // TODO(ev) hardcoding
   for (auto& object : objects_) {
     // reset the collision flags for the objects before stepping
     // we do not want to label a vehicle as persistently having collided
@@ -374,10 +279,10 @@ void Scenario::step(float dt) {
     if (!object->expert_control()) {
       object->Step(dt);
     } else {
-      geometry::Vector2D expertPosition =
-          expertTrajectories[object->id()][current_time_];
-      object->set_position(expertPosition);
-      object->set_heading(expertHeadings[object->id()][current_time_]);
+      const int64_t obj_id = object->id();
+      object->set_position(expert_trajectories_.at(obj_id).at(current_time_));
+      object->set_heading(expert_headings_.at(obj_id).at(current_time_));
+      object->set_speed(expert_speeds_.at(obj_id).at(current_time_));
     }
   }
   for (auto& object : trafficLights) {
@@ -385,7 +290,7 @@ void Scenario::step(float dt) {
   }
 
   // update the vehicle bvh
-  object_bvh_.InitHierarchy(objects_);
+  object_bvh_.Reset(objects_);
   updateCollision();
 }
 
@@ -422,14 +327,6 @@ void Scenario::updateCollision() {
       }
     }
   }
-}
-
-std::pair<float, geometry::Vector2D> Scenario::getObjectHeadingAndPos(
-    Object* sourceObject) {
-  float sourceHeading =
-      geometry::utils::NormalizeAngle(sourceObject->heading());
-  geometry::Vector2D sourcePos = sourceObject->position();
-  return std::make_pair(sourceHeading, sourcePos);
 }
 
 std::tuple<std::vector<const ObjectBase*>, std::vector<const ObjectBase*>,
@@ -659,44 +556,29 @@ bool Scenario::checkForCollision(const Object& object,
   return geometry::Intersects(segment, object.BoundingPolygon());
 }
 
-// TODO(ev) make smoother, also maybe return something named so that
-// it's clear what's accel and what's steeringAngle
-std::vector<float> Scenario::getExpertAction(int objID, int timeIdx) {
-  // we want to return accel, steering angle
-  // so first we get the accel
-  geometry::Vector2D accel_vec =
-      (expertSpeeds[objID][timeIdx + 1] - expertSpeeds[objID][timeIdx - 1]) /
-      0.2;
-  float accel = accel_vec.Norm();
-  float speed = expertSpeeds[objID][timeIdx].Norm();
-  float dHeading = (expertHeadings[objID][timeIdx + 1] -
-                    expertHeadings[objID][timeIdx - 1]) /
-                   0.2;
-  float steeringAngle;
-  if (speed > 0.0) {
-    steeringAngle = asin(dHeading / speed * lengths[objID]);
-  } else {
-    steeringAngle = 0.0;
-  }
-  std::vector<float> expertAction = {accel, steeringAngle};
-  return expertAction;
-};
+std::optional<Action> Scenario::ExpertAction(const Object& obj,
+                                             int64_t timestamp) const {
+  const std::vector<float>& cur_headings = expert_headings_.at(obj.id());
+  const std::vector<float>& cur_speeds = expert_speeds_.at(obj.id());
+  const std::vector<bool>& valid_mask = expert_valid_masks_.at(obj.id());
+  const int64_t trajectory_length = valid_mask.size();
 
-bool Scenario::hasExpertAction(int objID, unsigned int timeIdx) {
-  // The user requested too large a point or a point that
-  // can't be used for a second order expansion
-  if (timeIdx > expertValid[objID].size() - 1 || timeIdx < 1) {
-    return false;
-  } else if (!expertValid[objID][timeIdx - 1] ||
-             !expertValid[objID][timeIdx + 1]) {
-    return false;
-  } else {
-    return true;
+  if (timestamp < 1 || timestamp > trajectory_length - 1) {
+    return std::nullopt;
   }
-}
+  if (!valid_mask[timestamp - 1] || !valid_mask[timestamp + 1]) {
+    return std::nullopt;
+  }
 
-std::vector<bool> Scenario::getValidExpertStates(int objID) {
-  return expertValid[objID];
+  const float speed = cur_speeds[timestamp];
+  const float acceleration =
+      (cur_speeds[timestamp + 1] - cur_speeds[timestamp - 1]) /
+      (2.0f * expert_dt_);
+  const float w = geometry::utils::AngleSub(cur_headings[timestamp + 1],
+                                            cur_headings[timestamp - 1]) /
+                  (2.0 * expert_dt_);
+  const float steering = speed > 0 ? std::asin(w / speed * obj.length()) : 0.0f;
+  return std::make_optional<Action>(acceleration, steering);
 }
 
 // O(N) time remove.
@@ -722,7 +604,7 @@ bool Scenario::RemoveObject(const Object& object) {
     }
   }
   RemoveObjectImpl(object, moving_objects_);
-  object_bvh_.InitHierarchy(objects_);
+  object_bvh_.Reset(objects_);
   return true;
 }
 
@@ -799,7 +681,8 @@ void Scenario::DrawOnTarget(sf::RenderTarget& target,
   }
 }
 
-void Scenario::draw(sf::RenderTarget& target, sf::RenderStates states) const {
+void Scenario::draw(sf::RenderTarget& target,
+                    sf::RenderStates /*states*/) const {
   sf::Transform horizontal_flip;
   horizontal_flip.scale(1, -1);
   sf::View view =
@@ -955,6 +838,105 @@ NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
   }
 
   return canvas.AsNdArray();
+}
+
+void Scenario::LoadObjects(const json& objects_json) {
+  int64_t cur_id = 0;
+  for (const auto& obj : objects_json) {
+    const ObjectType object_type = ParseObjectType(obj["type"]);
+
+    // TODO(ev) current_time_ should be passed in rather than defined here.
+    const geometry::Vector2D position(obj["position"][current_time_]["x"],
+                                      obj["position"][current_time_]["y"]);
+    const float width = static_cast<float>(obj["width"]);
+    const float length = static_cast<float>(obj["length"]);
+    const float heading =
+        geometry::utils::NormalizeAngle(geometry::utils::Radians(
+            static_cast<float>(obj["heading"][current_time_])));
+    geometry::Vector2D destination;
+    if (obj.contains("goalPosition")) {
+      destination = geometry::Vector2D(obj["goalPosition"]["x"],
+                                       obj["goalPosition"]["y"]);
+    }
+
+    std::vector<geometry::Vector2D> cur_trajectory;
+    std::vector<float> cur_headings;
+    std::vector<float> cur_speeds;
+    std::vector<bool> valid_mask;
+
+    const int64_t trajectory_length = obj["position"].size();
+    bool is_moving = false;
+    for (int64_t i = 0; i < trajectory_length; ++i) {
+      const geometry::Vector2D cur_pos(obj["position"][i]["x"],
+                                       obj["position"][i]["y"]);
+      const float cur_heading = geometry::utils::NormalizeAngle(
+          geometry::utils::Radians(float(obj["heading"][i])));
+      const float cur_speed =
+          geometry::Vector2D(obj["velocity"][i]["x"], obj["velocity"][i]["y"])
+              .Norm();
+      const bool valid = static_cast<bool>(obj["valid"][i]);
+
+      cur_trajectory.push_back(cur_pos);
+      cur_headings.push_back(cur_heading);
+      cur_speeds.push_back(cur_speed);
+      valid_mask.push_back(valid);
+
+      if (valid && cur_speed > 0.0f) {
+        is_moving = true;
+      }
+    }
+
+    // TODO(ev) make it a flag whether all vehicles are added or just the
+    // vehicles that are valid
+    // we only want to store and load vehicles that are valid at this
+    // initialization time
+
+    if (!valid_mask[current_time_]) {
+      continue;
+    }
+
+    if (object_type == ObjectType::kVehicle) {
+      std::shared_ptr<Vehicle> vehicle = std::make_shared<Vehicle>(
+          cur_id, length, width, position, destination, heading,
+          cur_speeds[current_time_]);
+      vehicles_.push_back(vehicle);
+      objects_.push_back(vehicle);
+      if (is_moving) {
+        moving_objects_.push_back(vehicle);
+      }
+    } else if (allow_non_vehicles_) {
+      if (object_type == ObjectType::kPedestrian) {
+        std::shared_ptr<Pedestrian> pedestrian = std::make_shared<Pedestrian>(
+            cur_id, length, width, position, destination, heading,
+            cur_speeds[current_time_]);
+        pedestrians_.push_back(pedestrian);
+        objects_.push_back(pedestrian);
+        if (is_moving) {
+          moving_objects_.push_back(pedestrian);
+        }
+      } else if (object_type == ObjectType::kCyclist) {
+        std::shared_ptr<Cyclist> cyclist = std::make_shared<Cyclist>(
+            cur_id, length, width, position, destination, heading,
+            cur_speeds[current_time_]);
+        cyclists_.push_back(cyclist);
+        objects_.push_back(cyclist);
+        if (is_moving) {
+          moving_objects_.push_back(cyclist);
+        }
+      } else {
+        std::cerr << "Unknown object type: " << obj["type"] << std::endl;
+      }
+    }
+
+    expert_trajectories_.push_back(std::move(cur_trajectory));
+    expert_headings_.push_back(std::move(cur_headings));
+    expert_speeds_.push_back(std::move(cur_speeds));
+    expert_valid_masks_.push_back(std::move(valid_mask));
+    ++cur_id;
+  }
+
+  // Reset the road objects bvh
+  object_bvh_.Reset(objects_);
 }
 
 }  // namespace nocturne

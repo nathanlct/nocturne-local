@@ -24,9 +24,10 @@ add_subdirectory(
 
 pybind11_add_module(
   nocturne_cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/action.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/python/nocturne.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/python/object.cc
-${CMAKE_CURRENT_SOURCE_DIR}/python/road.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/road.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/python/scenario.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/python/simulation.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/python/vector_2d.cc
