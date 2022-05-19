@@ -4,12 +4,14 @@
 #include <fstream>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
 
+#include "action.h"
 #include "canvas.h"
 #include "cyclist.h"
 #include "geometry/bvh.h"
@@ -80,7 +82,7 @@ class Scenario : public sf::Drawable {
     } else {
       throw std::invalid_argument("No scenario file inputted.");
       // TODO(nl) right now an empty scenario crashes, expectedly
-      std::cout << "No scenario path inputted. Defaulting to an empty scenario."
+      std::cerr << "No scenario path inputted. Defaulting to an empty scenario."
                 << std::endl;
     }
   }
@@ -91,28 +93,40 @@ class Scenario : public sf::Drawable {
 
   int64_t max_env_time() const { return max_env_time_; }
 
-  void step(float dt);
+  void Step(float dt);
 
   // void removeVehicle(Vehicle* object);
   bool RemoveObject(const Object& object);
 
-  // query expert data
-  geometry::Vector2D getExpertSpeeds(int timeIndex, int vehIndex) {
-    return expertSpeeds[vehIndex][timeIndex];
-  };
-  std::vector<float> getExpertAction(
-      int objID,
-      int timeIdx);  // return the expert action of object at time timeIDX
-  bool hasExpertAction(
-      int objID,
-      unsigned int
-          timeIdx);  // given the currIndex, figure out if we actually can
-                     // compute an expert action given the valid vector
-  std::vector<bool> getValidExpertStates(int objID);
+  // Returns expert position for obj at timestamp.
+  geometry::Vector2D ExpertPosition(const Object& obj,
+                                    int64_t timestamp) const {
+    return expert_trajectories_.at(obj.id()).at(timestamp);
+  }
+
+  // Returns expert heading for obj at timestamp.
+  float ExpertHeading(const Object& obj, int64_t timestamp) const {
+    return expert_headings_.at(obj.id()).at(timestamp);
+  }
+
+  // Returns expert speed for obj at timestamp.
+  float ExpertSpeed(const Object& obj, int64_t timestamp) const {
+    return expert_speeds_.at(obj.id()).at(timestamp);
+  }
+
+  // Returns expert velocity for obj at timestamp.
+  geometry::Vector2D ExpertVelocity(const Object& obj,
+                                    int64_t timestamp) const {
+    const float heading = expert_headings_.at(obj.id()).at(timestamp);
+    const float speed = expert_speeds_.at(obj.id()).at(timestamp);
+    return geometry::PolarToVector2D(speed, heading);
+  }
+
+  std::optional<Action> ExpertAction(const Object& obj,
+                                     int64_t timestamp) const;
 
   /*********************** Drawing Functions *****************/
 
- public:
   // Computes and returns an `sf::View` of size (`view_height`, `view_width`)
   // (in scenario coordinates), centered around `view_center` (in scenario
   // coordinates) and rotated by `rotation` radians. The view is mapped to a
@@ -131,27 +145,6 @@ class Scenario : public sf::Drawable {
   // of `sf::View View` for more information.
   sf::View View(float target_height, float target_width, float padding) const;
 
- private:
-  // Draws the objects contained in `drawables` on the render target `target`.
-  // The view `view` is applied to the target before drawing the objects, and
-  // the transform `transform` is applied when drawing each object. `drawables`
-  // should contain pointers to objects inheriting from sf::Drawable.
-  template <typename P>
-  void DrawOnTarget(sf::RenderTarget& target, const std::vector<P>& drawables,
-                    const sf::View& view, const sf::Transform& transform) const;
-
-  // Computes and returns a list of `sf::Drawable` objects representing the
-  // goals/destinations of the `source` vehicle, or of all vehicles in the
-  // scenario if `source == nullptr`. Each goal is represented as a circle of
-  // radius `radius`.
-  std::vector<std::unique_ptr<sf::CircleShape>> VehiclesDestinationsDrawables(
-      const Object* source = nullptr, float radius = 2.0f) const;
-
-  // Draws the scenario to a render target. This is used by SFML to know how
-  // to draw classes inheriting sf::Drawable.
-  void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
-
- public:
   // Computes and returns an image of the scenario. The returned image has
   // dimension `img_height` * `img_width` * 4 where 4 is the number of channels
   // (RGBA). If `draw_destinations` is true, the vehicles' goals will be drawn.
@@ -196,9 +189,8 @@ class Scenario : public sf::Drawable {
 
   /*********************** State Accessors *******************/
 
- public:
-  std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
-      Object* sourceObject);
+  // std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
+  //     Object* sourceObject);
 
   bool checkForCollision(const Object& object1, const Object& object2) const;
   bool checkForCollision(const Object& object,
@@ -253,6 +245,8 @@ class Scenario : public sf::Drawable {
   int64_t getEgoFeatureSize() const { return kEgoFeatureSize; }
 
  protected:
+  void LoadObjects(const json& objects_json);
+
   // update the collision status of all objects
   void updateCollision();
 
@@ -265,6 +259,25 @@ class Scenario : public sf::Drawable {
       const Object& src, float view_dist, float view_angle,
       float head_tilt = 0.0f) const;
 
+  // Draws the objects contained in `drawables` on the render target `target`.
+  // The view `view` is applied to the target before drawing the objects, and
+  // the transform `transform` is applied when drawing each object. `drawables`
+  // should contain pointers to objects inheriting from sf::Drawable.
+  template <typename P>
+  void DrawOnTarget(sf::RenderTarget& target, const std::vector<P>& drawables,
+                    const sf::View& view, const sf::Transform& transform) const;
+
+  // Computes and returns a list of `sf::Drawable` objects representing the
+  // goals/destinations of the `source` vehicle, or of all vehicles in the
+  // scenario if `source == nullptr`. Each goal is represented as a circle of
+  // radius `radius`.
+  std::vector<std::unique_ptr<sf::CircleShape>> VehiclesDestinationsDrawables(
+      const Object* source = nullptr, float radius = 2.0f) const;
+
+  // Draws the scenario to a render target. This is used by SFML to know how
+  // to draw classes inheriting sf::Drawable.
+  void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
+
   std::string name_;
 
   int64_t current_time_;
@@ -274,7 +287,6 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<geometry::LineSegment>> lineSegments;
   std::vector<std::shared_ptr<RoadLine>> roadLines;
 
-  int64_t object_counter_ = 0;
   std::vector<std::shared_ptr<Vehicle>> vehicles_;
   std::vector<std::shared_ptr<Pedestrian>> pedestrians_;
   std::vector<std::shared_ptr<Cyclist>> cyclists_;
@@ -291,11 +303,11 @@ class Scenario : public sf::Drawable {
   geometry::BVH static_bvh_;        // static objects
 
   // expert data
-  std::vector<std::vector<geometry::Vector2D>> expertTrajectories;
-  std::vector<std::vector<geometry::Vector2D>> expertSpeeds;
-  std::vector<std::vector<float>> expertHeadings;
-  std::vector<float> lengths;
-  std::vector<std::vector<bool>> expertValid;
+  const float expert_dt_ = 0.1f;
+  std::vector<std::vector<geometry::Vector2D>> expert_trajectories_;
+  std::vector<std::vector<float>> expert_headings_;
+  std::vector<std::vector<float>> expert_speeds_;
+  std::vector<std::vector<bool>> expert_valid_masks_;
 
   std::unique_ptr<sf::RenderTexture> image_texture_ = nullptr;
   sf::FloatRect road_network_bounds_;
