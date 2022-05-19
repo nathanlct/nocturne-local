@@ -4,6 +4,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <limits>
 #include <string>
 
 #include "nocturne.h"
@@ -32,7 +33,16 @@ void DefineAction(py::module& m) {
            })
       .def_property("acceleration", &Action::acceleration,
                     &Action::set_acceleration)
-      .def_property("steering", &Action::steering, &Action::set_steering);
+      .def_property("steering", &Action::steering, &Action::set_steering)
+      .def("numpy", [](const Action& action) {
+        py::array_t<float> arr(2);
+        float* arr_data = arr.mutable_data();
+        arr_data[0] = action.acceleration().value_or(
+            std::numeric_limits<float>::quiet_NaN());
+        arr_data[1] =
+            action.steering().value_or(std::numeric_limits<float>::quiet_NaN());
+        return arr;
+      });
 }
 
 }  // namespace nocturne
