@@ -169,8 +169,6 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
 
   LoadObjects(j["objects"]);
 
-  std::cout << "[LoadScenario] LoadObjects finished." << std::endl;
-
   float min_x = std::numeric_limits<float>::max();
   float min_y = std::numeric_limits<float>::max();
   float max_x = std::numeric_limits<float>::lowest();
@@ -229,8 +227,6 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
   // Since the line segments never move we only need to define this once
   line_segment_bvh_.Reset(lineSegments);
 
-  std::cout << "[LoadScenario] LoadRoads finished." << std::endl;
-
   // Now handle the traffic light states
   for (const auto& tl : j["tl_states"]) {
     max_env_time_ = 90;
@@ -272,12 +268,10 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
   static_bvh_.Reset(static_objects);
   // update collision to check for collisions of any vehicles at initialization
   updateCollision();
-
-  std::cout << "[LoadScenario] finished." << std::endl;
 }
 
-void Scenario::step(float dt) {
-  current_time_ += int(dt / 0.1);  // TODO(ev) hardcoding
+void Scenario::Step(float dt) {
+  current_time_ += static_cast<int>(dt / 0.1);  // TODO(ev) hardcoding
   for (auto& object : objects_) {
     // reset the collision flags for the objects before stepping
     // we do not want to label a vehicle as persistently having collided
@@ -285,10 +279,10 @@ void Scenario::step(float dt) {
     if (!object->expert_control()) {
       object->Step(dt);
     } else {
-      geometry::Vector2D expertPosition =
-          expertTrajectories[object->id()][current_time_];
-      object->set_position(expertPosition);
-      object->set_heading(expertHeadings[object->id()][current_time_]);
+      const int64_t obj_id = object->id();
+      object->set_position(expert_trajectories_.at(obj_id).at(current_time_));
+      object->set_heading(expert_headings_.at(obj_id).at(current_time_));
+      object->set_speed(expert_speeds_.at(obj_id).at(current_time_));
     }
   }
   for (auto& object : trafficLights) {
@@ -896,8 +890,6 @@ NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
 void Scenario::LoadObjects(const json& objects_json) {
   int64_t cur_id = 0;
   for (const auto& obj : objects_json) {
-    printf("[LoadObjects] cur_id = %ld\n", cur_id);
-
     const ObjectType object_type = ParseObjectType(obj["type"]);
 
     // TODO(ev) current_time_ should be passed in rather than defined here.
@@ -940,8 +932,6 @@ void Scenario::LoadObjects(const json& objects_json) {
         is_moving = true;
       }
     }
-
-    printf("[LoadObjects] cur_id = %ld, is_moving = %d\n", cur_id, (int)is_moving);
 
     // TODO(ev) make it a flag whether all vehicles are added or just the
     // vehicles that are valid
@@ -992,13 +982,8 @@ void Scenario::LoadObjects(const json& objects_json) {
     ++cur_id;
   }
 
-  printf("[LoadObjects] total_objects = %ld\n", cur_id);
-  std::cout << "[LoadObjects] objects_size = " << objects_.size() << std::endl;
-
   // Reset the road objects bvh
   object_bvh_.Reset(objects_);
-
-  printf("[LoadObjects] Finished\n");
 }
 
 }  // namespace nocturne

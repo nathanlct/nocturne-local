@@ -75,7 +75,7 @@ class Scenario : public sf::Drawable {
     } else {
       throw std::invalid_argument("No scenario file inputted.");
       // TODO(nl) right now an empty scenario crashes, expectedly
-      std::cout << "No scenario path inputted. Defaulting to an empty scenario."
+      std::cerr << "No scenario path inputted. Defaulting to an empty scenario."
                 << std::endl;
     }
   }
@@ -86,7 +86,7 @@ class Scenario : public sf::Drawable {
 
   int64_t max_env_time() const { return max_env_time_; }
 
-  void step(float dt);
+  void Step(float dt);
 
   // void removeVehicle(Vehicle* object);
   bool RemoveObject(const Object& object);
@@ -117,21 +117,6 @@ class Scenario : public sf::Drawable {
 
   std::optional<Action> ExpertAction(const Object& obj,
                                      int64_t timestamp) const;
-
-  // query expert data
-  // geometry::Vector2D getExpertSpeeds(int timeIndex, int vehIndex) {
-  //   return expertSpeeds[vehIndex][timeIndex];
-  // };
-  //
-  // std::vector<float> getExpertAction(
-  //     int objID,
-  //     int timeIdx);  // return the expert action of object at time timeIDX
-  // bool hasExpertAction(
-  //     int objID,
-  //     unsigned int
-  //         timeIdx);  // given the currIndex, figure out if we actually can
-  //                    // compute an expert action given the valid vector
-  // std::vector<bool> getValidExpertStates(int objID);
 
   /*********************** Drawing Functions *****************/
 
@@ -312,12 +297,6 @@ class Scenario : public sf::Drawable {
   geometry::BVH static_bvh_;        // static objects
 
   // expert data
-  std::vector<std::vector<geometry::Vector2D>> expertTrajectories;
-  std::vector<std::vector<geometry::Vector2D>> expertSpeeds;
-  std::vector<std::vector<float>> expertHeadings;
-  std::vector<float> lengths;
-  std::vector<std::vector<bool>> expertValid;
-
   std::vector<std::vector<geometry::Vector2D>> expert_trajectories_;
   std::vector<std::vector<float>> expert_headings_;
   std::vector<std::vector<float>> expert_speeds_;

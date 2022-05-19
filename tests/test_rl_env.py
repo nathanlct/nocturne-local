@@ -17,20 +17,15 @@ def test_rl_env():
     cfg = compose(config_name="config")
     cfg.scenario_path = os.path.join(PROJECT_PATH, 'tests')
     cfg.max_num_vehicles = 50
-    print(f"cfg = {cfg}")
     env = create_env(cfg)
-    print("Create env finished")
     env.files = [str(PROJECT_PATH / "tests/large_file.json")]
     _ = env.reset()
-    print("Reset finished")
     # quick check that rendering works
     _ = env.scenario.getConeImage(env.scenario.getVehicles()[0], 120.0,
                                   1.99 * 3.14, 0.0, False)
     # for _ in range(90):
     for step in range(90):
-        print(f"step = {step}")
         vehs = env.scenario.getObjectsThatMoved()
-        print(f"vehcile = {vehicle.id}")
         prev_position = {
             veh.getID(): [veh.position.x, veh.position.y]
             for veh in vehs

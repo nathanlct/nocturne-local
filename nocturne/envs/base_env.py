@@ -35,14 +35,9 @@ class BaseEnv(object):
         if cfg['num_files'] != -1:
             self.files = self.files[0:cfg['num_files']]
         self.file = self.files[np.random.randint(len(self.files))]
-
-        print(f"[BaseEnv] self.file = {self.file}")
-
         self.simulation = Simulation(os.path.join(cfg['scenario_path'],
                                                   self.file),
                                      allow_non_vehicles=False)
-
-        print(f"[BaseEnv] simulation created")
 
         self.scenario = self.simulation.getScenario()
         self.controlled_vehicles = self.scenario.getObjectsThatMoved()
@@ -273,6 +268,7 @@ class BaseEnv(object):
             }
             for veh in self.scenario.getObjectsThatMoved():
                 veh.expert_control = True
+
         for _ in range(10):
             if self.single_agent_mode:
                 self.context_dict[self.single_agent_obj.getID()].append(
@@ -282,6 +278,7 @@ class BaseEnv(object):
                     self.context_dict[veh.getID()].append(
                         self.get_observation(veh))
             self.simulation.step(self.cfg['dt'])
+
         # now hand back control to our actual controllers
         if self.single_agent_mode:
             self.single_agent_obj.expert_control = False
