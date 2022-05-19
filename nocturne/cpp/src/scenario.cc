@@ -329,14 +329,6 @@ void Scenario::updateCollision() {
   }
 }
 
-// std::pair<float, geometry::Vector2D> Scenario::getObjectHeadingAndPos(
-//     Object* sourceObject) {
-//   float sourceHeading =
-//       geometry::utils::NormalizeAngle(sourceObject->heading());
-//   geometry::Vector2D sourcePos = sourceObject->position();
-//   return std::make_pair(sourceHeading, sourcePos);
-// }
-
 std::tuple<std::vector<const ObjectBase*>, std::vector<const ObjectBase*>,
            std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
 Scenario::VisibleObjects(const Object& src, float view_dist, float view_angle,
