@@ -570,13 +570,13 @@ std::optional<Action> Scenario::ExpertAction(const Object& obj,
     return std::nullopt;
   }
 
-  const float dt = 0.1f;
   const float speed = cur_speeds[timestamp];
   const float acceleration =
-      (cur_speeds[timestamp + 1] - cur_speeds[timestamp - 1]) / (2.0f * dt);
+      (cur_speeds[timestamp + 1] - cur_speeds[timestamp - 1]) /
+      (2.0f * expert_dt_);
   const float w = geometry::utils::AngleSub(cur_headings[timestamp + 1],
                                             cur_headings[timestamp - 1]) /
-                  (2.0 * dt);
+                  (2.0 * expert_dt_);
   const float steering = speed > 0 ? std::asin(w / speed * obj.length()) : 0.0f;
   return std::make_optional<Action>(acceleration, steering);
 }

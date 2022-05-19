@@ -296,6 +296,7 @@ class Scenario : public sf::Drawable {
   geometry::BVH static_bvh_;        // static objects
 
   // expert data
+  const float expert_dt_ = 0.1f;
   std::vector<std::vector<geometry::Vector2D>> expert_trajectories_;
   std::vector<std::vector<float>> expert_headings_;
   std::vector<std::vector<float>> expert_speeds_;
