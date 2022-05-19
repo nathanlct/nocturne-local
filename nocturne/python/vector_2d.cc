@@ -14,7 +14,7 @@ namespace nocturne {
 
 void DefineVector2D(py::module& m) {
   py::class_<geometry::Vector2D>(m, "Vector2D")
-      .def(py::init<float, float>())
+      .def(py::init<float, float>(), py::arg("x") = 0.0, py::arg("y") = 0.0)
       .def("__repr__",
            [](const geometry::Vector2D& vec) {
              return "(" + std::to_string(vec.x()) + ", " +

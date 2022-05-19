@@ -13,7 +13,8 @@ namespace nocturne {
 
 void DefineAction(py::module& m) {
   py::class_<Action>(m, "Action")
-      .def(py::init<float, float>())
+      .def(py::init<float, float>(), py::arg("acceleration") = 0.0,
+           py::arg("steering") = 0.0)
       .def("__repr__",
            [](const Action& action) {
              return "{acceleration: " + std::to_string(action.acceleration()) +

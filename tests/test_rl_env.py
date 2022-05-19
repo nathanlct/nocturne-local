@@ -23,15 +23,14 @@ def test_rl_env():
     # quick check that rendering works
     _ = env.scenario.getConeImage(env.scenario.getVehicles()[0], 120.0,
                                   1.99 * 3.14, 0.0, False)
-    # for _ in range(90):
-    for step in range(90):
+    for _ in range(90):
         vehs = env.scenario.getObjectsThatMoved()
         prev_position = {
             veh.getID(): [veh.position.x, veh.position.y]
             for veh in vehs
         }
         obs, rew, done, info = env.step(
-            {veh.id: Action(2.0, 1.0)
+            {veh.id: Action(acceleration=2.0, steering=1.0)
              for veh in vehs})
         for veh in vehs:
             if veh in env.scenario.getObjectsThatMoved():

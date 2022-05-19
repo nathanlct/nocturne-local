@@ -588,46 +588,6 @@ std::optional<Action> Scenario::ExpertAction(const Object& obj,
   return std::make_optional<Action>(acceleration, steering);
 }
 
-// TODO(ev) make smoother, also maybe return something named so that
-// it's clear what's accel and what's steeringAngle
-// std::vector<float> Scenario::getExpertAction(int objID, int timeIdx) {
-//   // we want to return accel, steering angle
-//   // so first we get the accel
-//   geometry::Vector2D accel_vec =
-//       (expertSpeeds[objID][timeIdx + 1] - expertSpeeds[objID][timeIdx - 1]) /
-//       0.2;
-//   float accel = accel_vec.Norm();
-//   float speed = expertSpeeds[objID][timeIdx].Norm();
-//   float dHeading = (expertHeadings[objID][timeIdx + 1] -
-//                     expertHeadings[objID][timeIdx - 1]) /
-//                    0.2;
-//   float steeringAngle;
-//   if (speed > 0.0) {
-//     steeringAngle = asin(dHeading / speed * lengths[objID]);
-//   } else {
-//     steeringAngle = 0.0;
-//   }
-//   std::vector<float> expertAction = {accel, steeringAngle};
-//   return expertAction;
-// };
-//
-// bool Scenario::hasExpertAction(int objID, unsigned int timeIdx) {
-//   // The user requested too large a point or a point that
-//   // can't be used for a second order expansion
-//   if (timeIdx > expertValid[objID].size() - 1 || timeIdx < 1) {
-//     return false;
-//   } else if (!expertValid[objID][timeIdx - 1] ||
-//              !expertValid[objID][timeIdx + 1]) {
-//     return false;
-//   } else {
-//     return true;
-//   }
-// }
-
-// std::vector<bool> Scenario::getValidExpertStates(int objID) {
-//   return expertValid[objID];
-// }
-
 // O(N) time remove.
 bool Scenario::RemoveObject(const Object& object) {
   if (!RemoveObjectImpl(object, objects_)) {

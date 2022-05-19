@@ -280,7 +280,6 @@ class Scenario : public sf::Drawable {
   std::vector<std::shared_ptr<geometry::LineSegment>> lineSegments;
   std::vector<std::shared_ptr<RoadLine>> roadLines;
 
-  // int64_t object_counter_ = 0;
   std::vector<std::shared_ptr<Vehicle>> vehicles_;
   std::vector<std::shared_ptr<Pedestrian>> pedestrians_;
   std::vector<std::shared_ptr<Cyclist>> cyclists_;

@@ -127,7 +127,6 @@ void DefineScenario(py::module& m) {
       // .def("hasExpertAction", &Scenario::hasExpertAction)
       .def("getExpertAction", &Scenario::ExpertAction)
       .def("getExpertSpeeds", &Scenario::ExpertVelocity)
-      // .def("getValidExpertStates", &Scenario::getValidExpertStates)
       .def("getMaxNumVisibleObjects", &Scenario::getMaxNumVisibleObjects)
       .def("getMaxNumVisibleRoadPoints", &Scenario::getMaxNumVisibleRoadPoints)
       .def("getMaxNumVisibleStopSigns", &Scenario::getMaxNumVisibleStopSigns)
