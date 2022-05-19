@@ -195,6 +195,7 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
     std::vector<bool> localValid;
     std::vector<float> localHeadingVec;
     bool is_moving = false;
+    bool goal_far_away = false;
     for (unsigned int i = 0; i < obj["position"].size(); i++) {
       geometry::Vector2D currPos(obj["position"][i]["x"],
                                  obj["position"][i]["y"]);
@@ -202,7 +203,11 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
                                  obj["velocity"][i]["y"]);
       localExpertTrajectory.push_back(currPos);
       localExpertSpeeds.push_back(currVel);
-      if (currVel.Norm() > 0 && bool(obj["valid"][i])) {
+      if ((currPos - goalPos).Norm() > kMovingThreshold &&
+          bool(obj["valid"][i])) {
+        goal_far_away = true;
+      }
+      if (currVel.Norm() > kSpeedThreshold && bool(obj["valid"][i])) {
         is_moving = true;
       }
       localValid.push_back(bool(obj["valid"][i]));
@@ -230,7 +235,7 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
             checkForCollisions);
         vehicles_.push_back(vehicle);
         objects_.push_back(vehicle);
-        if (is_moving) {
+        if (goal_far_away && is_moving) {
           moving_objects_.push_back(vehicle);
         }
       } else if (allow_non_vehicles_) {
@@ -241,7 +246,7 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
               checkForCollisions);
           pedestrians_.push_back(pedestrian);
           objects_.push_back(pedestrian);
-          if (is_moving) {
+          if (goal_far_away && is_moving) {
             moving_objects_.push_back(pedestrian);
           }
         } else if (object_type == ObjectType::kCyclist) {
@@ -251,7 +256,7 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
               checkForCollisions);
           cyclists_.push_back(cyclist);
           objects_.push_back(cyclist);
-          if (is_moving) {
+          if (goal_far_away && is_moving) {
             moving_objects_.push_back(cyclist);
           }
         } else {
