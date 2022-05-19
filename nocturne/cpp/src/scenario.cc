@@ -575,7 +575,8 @@ std::optional<Action> Scenario::ExpertAction(const Object& obj,
   const float acceleration =
       (cur_speeds[timestamp + 1] - cur_speeds[timestamp - 1]) / (2.0f * dt);
   const float w = geometry::utils::AngleSub(cur_headings[timestamp + 1],
-                                            cur_headings[timestamp - 1]);
+                                            cur_headings[timestamp - 1]) /
+                  (2.0 * dt);
   const float steering = speed > 0 ? std::asin(w / speed * obj.length()) : 0.0f;
   return std::make_optional<Action>(acceleration, steering);
 }
