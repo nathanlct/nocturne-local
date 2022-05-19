@@ -311,6 +311,38 @@ class BaseEnv(Env):
                 veh.getID() for veh in self.controlled_vehicles
             ]
 
+        # construct the observations and goal normalizers
+        obs_dict = {}
+        self.goal_dist_normalizers = {}
+        if self.single_agent_mode:
+            # tag all vehicles except for the one you control as controlled by the expert
+            for veh in self.scenario.getObjectsThatMoved():
+                if veh.getID() != self.single_agent_obj.getID():
+                    veh.expert_control = True
+        for veh_obj in self.controlled_vehicles:
+            veh_id = veh_obj.getID()
+            if self.single_agent_mode and veh_obj.getID(
+            ) != self.single_agent_obj.getID():
+                continue
+            # store normalizers for each vehicle
+            obj_pos = veh_obj.getPosition()
+            obj_pos = np.array([obj_pos.x, obj_pos.y])
+            goal_pos = veh_obj.getGoalPosition()
+            goal_pos = np.array([goal_pos.x, goal_pos.y])
+            dist = np.linalg.norm(obj_pos - goal_pos)
+            self.goal_dist_normalizers[veh_id] = dist
+            # compute the obs
+            obs_dict[veh_id] = self.get_observation(veh_obj)
+
+        self.done_ids = []
+        self.dead_feat = -np.ones_like(obs_dict[list(obs_dict.keys())[0]])
+        # we should return obs for the missing agents
+        if self.cfg['subscriber']['keep_inactive_agents']:
+            max_id = max([int(key) for key in obs_dict.keys()])
+            num_missing_agents = max(
+                0, self.cfg['max_num_vehicles'] - len(obs_dict))
+            for i in range(num_missing_agents):
+                obs_dict[max_id + i + 1] = self.dead_feat
             self.dead_agent_ids = [
                 max_id + i + 1 for i in range(num_missing_agents)
             ]
