@@ -73,20 +73,21 @@ if __name__ == '__main__':
         sim = get_sim(file)
         if os.path.exists(file):
             # image of whole scenario
-            # make_image(
-            #     sim,
-            #     file,
-            #     scenario_fn=lambda scenario: scenario.getImage(
-            #         img_width=2000,
-            #         img_height=2000,
-            #         padding=50.0,
-            #         draw_destinations=True,
-            #     ),
-            #     output_path=PROJECT_PATH /
-            #     'scripts/paper_plots/figs/scene_{}.png'.format(
-            #         os.path.basename(file)),
-            # )
-
+            make_image(
+                sim,
+                file,
+                scenario_fn=lambda scenario: scenario.getImage(
+                    img_width=2000,
+                    img_height=2000,
+                    padding=50.0,
+                    draw_destinations=True,
+                ),
+                output_path=PROJECT_PATH /
+                'scripts/paper_plots/figs/scene_{}.png'.format(
+                    os.path.basename(file)),
+            )
+            # generate images of obscured views
+            veh_index = -3
             make_image(
                 sim,
                 file,
@@ -95,7 +96,7 @@ if __name__ == '__main__':
                     img_width=1600,
                     draw_destinations=True,
                     padding=50.0,
-                    source=scenario.getVehicles()[-1],
+                    source=scenario.getVehicles()[veh_index],
                     view_height=120,
                     view_width=120,
                     rotate_with_source=True,
@@ -108,7 +109,7 @@ if __name__ == '__main__':
                 sim,
                 file,
                 scenario_fn=lambda scenario: scenario.getConeImage(
-                    source=scenario.getVehicles()[-1],
+                    source=scenario.getVehicles()[veh_index],
                     view_dist=120.0,
                     view_angle=np.pi,
                     head_tilt=0.0,
@@ -125,7 +126,7 @@ if __name__ == '__main__':
                 sim,
                 file,
                 scenario_fn=lambda scenario: scenario.getFeaturesImage(
-                    source=scenario.getVehicles()[-1],
+                    source=scenario.getVehicles()[veh_index],
                     view_dist=120.0,
                     view_angle=np.pi,
                     head_tilt=0.0,
