@@ -125,14 +125,27 @@ class BaseEnv(Env):
             done_dict[veh_id] = False
             info_dict[veh_id]['goal_achieved'] = False
             info_dict[veh_id]['collided'] = False
-            obj_pos = veh_obj.getPosition()
-            obj_pos = np.array([obj_pos.x, obj_pos.y])
-            goal_pos = veh_obj.getGoalPosition()
-            goal_pos = np.array([goal_pos.x, goal_pos.y])
+            obj_pos = veh_obj.position
+            goal_pos = veh_obj.target_position
             '''############################################
                             Compute rewards
                ############################################'''
-            if np.linalg.norm(goal_pos - obj_pos) < rew_cfg['goal_tolerance']:
+            position_target_achieved = True
+            speed_target_achieved = True
+            heading_target_achieved = True
+            if rew_cfg['position_target']:
+                position_target_achieved = (
+                    goal_pos -
+                    obj_pos).norm() < rew_cfg['position_target_tolerance']
+            if rew_cfg['speed_target']:
+                speed_target_achieved = np.abs(
+                    veh_obj.speed -
+                    veh_obj.target_speed) < rew_cfg['speed_target_tolerance']
+            if rew_cfg['heading_target']:
+                heading_target_achieved = np.abs(
+                    veh_obj.heading - veh_obj.target_heading
+                ) < rew_cfg['heading_target_tolerance']
+            if position_target_achieved and speed_target_achieved and heading_target_achieved:
                 info_dict[veh_id]['goal_achieved'] = True
                 rew_dict[veh_id] += rew_cfg['goal_achieved_bonus'] / rew_cfg[
                     'reward_scaling']
@@ -141,8 +154,7 @@ class BaseEnv(Env):
                 # we scale by goal_dist_normalizers to ensure that this value is always less than the penalty for
                 # collision
                 if rew_cfg['goal_distance_penalty']:
-                    rew_dict[veh_id] -= (np.linalg.norm(
-                        (goal_pos - obj_pos), ord=2) /
+                    rew_dict[veh_id] -= ((goal_pos - obj_pos).norm() /
                                          self.goal_dist_normalizers[veh_id]
                                          ) / rew_cfg['reward_scaling']
                 else:
@@ -153,8 +165,7 @@ class BaseEnv(Env):
                     # we also assume that vehicles are never more than 400 meters from their goal
                     # which makes sense as the episodes are 9 seconds long i.e. we'd have to go more than
                     # 40 m/s to get there
-                    rew_dict[veh_id] += (1 - np.linalg.norm(
-                        (goal_pos - obj_pos), ord=2) /
+                    rew_dict[veh_id] += (1 - (goal_pos - obj_pos).norm() /
                                          self.goal_dist_normalizers[veh_id]
                                          ) / rew_cfg['reward_scaling']
             '''############################################
@@ -387,7 +398,7 @@ class BaseEnv(Env):
         return self.scenario.getImage(
             img_width=1600,
             img_height=1600,
-            draw_destinations=True,
+            draw_target_positions=True,
             padding=50.0,
         )
 

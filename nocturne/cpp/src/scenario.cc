@@ -107,9 +107,9 @@ void ExtractObjectFeature(const Object& src, const Object& obj, float dis,
   feature[3] = obj.length();
   feature[4] = obj.width();
   feature[5] = relative_heading;
-  feature[6] = relative_velocity.Norm();
-  feature[7] =
+  feature[6] =
       geometry::utils::AngleSub(relative_velocity.Angle(), src.heading());
+  feature[7] = relative_velocity.Norm();
   // One-hot vector for object_type, assume feature is initially 0.
   feature[8 + obj_type] = 1.0f;
 }
@@ -338,18 +338,22 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
   NdArray<float> state({kEgoFeatureSize}, 0.0f);
 
   const float src_heading = src.heading();
-  const geometry::Vector2D d = src.destination() - src.position();
-  const float dist = d.Norm();
-  const float dst_heading = d.Angle();
-  const float heading_diff =
-      geometry::utils::AngleSub(dst_heading, src_heading);
+  const geometry::Vector2D d = src.target_position() - src.position();
+  const float target_dist = d.Norm();
+  const float target_azimuth =
+      geometry::utils::AngleSub(d.Angle(), src_heading);
+  const float target_heading =
+      geometry::utils::AngleSub(src.target_heading(), src_heading);
+  const float target_speed = src.target_speed() - src.speed();
 
   float* state_data = state.DataPtr();
-  state_data[0] = src.speed();
-  state_data[1] = dist;
-  state_data[2] = heading_diff;
-  state_data[3] = src.length();
-  state_data[4] = src.width();
+  state_data[0] = src.length();
+  state_data[1] = src.width();
+  state_data[2] = src.speed();
+  state_data[3] = target_dist;
+  state_data[4] = target_azimuth;
+  state_data[5] = target_heading;
+  state_data[6] = target_speed;
 
   return state;
 }
@@ -579,19 +583,19 @@ sf::View Scenario::View(float target_height, float target_width,
 std::vector<std::unique_ptr<sf::CircleShape>>
 Scenario::VehiclesDestinationsDrawables(const Object* source,
                                         float radius) const {
-  std::vector<std::unique_ptr<sf::CircleShape>> destination_drawables;
+  std::vector<std::unique_ptr<sf::CircleShape>> target_position_drawables;
   if (source == nullptr) {
     for (const auto& obj : objects_) {
-      auto circle_shape = utils::MakeCircleShape(obj->destination(), radius,
+      auto circle_shape = utils::MakeCircleShape(obj->target_position(), radius,
                                                  obj->color(), false);
-      destination_drawables.push_back(std::move(circle_shape));
+      target_position_drawables.push_back(std::move(circle_shape));
     }
   } else {
-    auto circle_shape = utils::MakeCircleShape(source->destination(), radius,
-                                               source->color(), false);
-    destination_drawables.push_back(std::move(circle_shape));
+    auto circle_shape = utils::MakeCircleShape(source->target_position(),
+                                               radius, source->color(), false);
+    target_position_drawables.push_back(std::move(circle_shape));
   }
-  return destination_drawables;
+  return target_position_drawables;
 }
 
 template <typename P>
@@ -619,8 +623,9 @@ void Scenario::draw(sf::RenderTarget& target,
 }
 
 NdArray<unsigned char> Scenario::Image(uint64_t img_height, uint64_t img_width,
-                                       bool draw_destinations, float padding,
-                                       Object* source, uint64_t view_height,
+                                       bool draw_target_positions,
+                                       float padding, Object* source,
+                                       uint64_t view_height,
                                        uint64_t view_width,
                                        bool rotate_with_source) const {
   // construct transform (flip the y-axis)
@@ -649,7 +654,7 @@ NdArray<unsigned char> Scenario::Image(uint64_t img_height, uint64_t img_width,
   DrawOnTarget(canvas, traffic_lights_, view, horizontal_flip);
   DrawOnTarget(canvas, stop_signs_, view, horizontal_flip);
 
-  if (draw_destinations) {
+  if (draw_target_positions) {
     DrawOnTarget(canvas, VehiclesDestinationsDrawables(source), view,
                  horizontal_flip);
   }
@@ -660,7 +665,7 @@ NdArray<unsigned char> Scenario::Image(uint64_t img_height, uint64_t img_width,
 NdArray<unsigned char> Scenario::EgoVehicleConeImage(
     const Object& source, float view_dist, float view_angle, float head_tilt,
     uint64_t img_height, uint64_t img_width, float padding,
-    bool draw_destinations) const {
+    bool draw_target_positions) const {
   // define transforms
   sf::Transform horizontal_flip;
   horizontal_flip.scale(1, -1);
@@ -694,8 +699,8 @@ NdArray<unsigned char> Scenario::EgoVehicleConeImage(
   DrawOnTarget(canvas, road_lines_, scenario_view, horizontal_flip);
   DrawOnTarget(canvas, objects_, scenario_view, horizontal_flip);
 
-  // draw destinations
-  if (draw_destinations) {
+  // draw target_positions
+  if (draw_target_positions) {
     DrawOnTarget(canvas, VehiclesDestinationsDrawables(&source), scenario_view,
                  horizontal_flip);
   }
@@ -727,7 +732,7 @@ NdArray<unsigned char> Scenario::EgoVehicleConeImage(
 NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
     const Object& source, float view_dist, float view_angle, float head_tilt,
     uint64_t img_height, uint64_t img_width, float padding,
-    bool draw_destination) const {
+    bool draw_target_position) const {
   sf::Transform horizontal_flip;
   horizontal_flip.scale(1, -1);
 
@@ -756,7 +761,7 @@ NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
   // draw source
   drawables.emplace_back(&source);
   DrawOnTarget(canvas, drawables, view, horizontal_flip);
-  if (draw_destination) {
+  if (draw_target_position) {
     DrawOnTarget(canvas, VehiclesDestinationsDrawables(&source), view,
                  horizontal_flip);
   }
@@ -774,13 +779,10 @@ void Scenario::LoadObjects(const json& objects_json) {
                                       obj["position"][current_time_]["y"]);
     const float width = static_cast<float>(obj["width"]);
     const float length = static_cast<float>(obj["length"]);
-    const float heading =
-        geometry::utils::NormalizeAngle(geometry::utils::Radians(
-            static_cast<float>(obj["heading"][current_time_])));
-    geometry::Vector2D destination;
+    geometry::Vector2D target_position;
     if (obj.contains("goalPosition")) {
-      destination = geometry::Vector2D(obj["goalPosition"]["x"],
-                                       obj["goalPosition"]["y"]);
+      target_position = geometry::Vector2D(obj["goalPosition"]["x"],
+                                           obj["goalPosition"]["y"]);
     }
 
     const auto& obj_position = obj["position"];
@@ -798,6 +800,8 @@ void Scenario::LoadObjects(const json& objects_json) {
     cur_speeds.reserve(trajectory_length);
     valid_mask.reserve(trajectory_length);
 
+    float target_heading = 0.0f;
+    float target_speed = 0.0f;
     bool is_moving = false;
     for (int64_t i = 0; i < trajectory_length; ++i) {
       const geometry::Vector2D cur_pos(obj_position[i]["x"],
@@ -813,9 +817,15 @@ void Scenario::LoadObjects(const json& objects_json) {
       cur_speeds.push_back(cur_speed);
       valid_mask.push_back(valid);
 
-      if (valid && cur_speed > kSpeedThreshold &&
-          geometry::Distance(cur_pos, destination) > kMovingThreshold) {
-        is_moving = true;
+      if (valid) {
+        // Use the last valid heading and speed as target heading and speed.
+        // TODO: Improve this later.
+        target_heading = cur_heading;
+        target_speed = cur_speed;
+        if (cur_speed > kSpeedThreshold &&
+            geometry::Distance(cur_pos, target_position) > kMovingThreshold) {
+          is_moving = true;
+        }
       }
     }
 
@@ -830,8 +840,9 @@ void Scenario::LoadObjects(const json& objects_json) {
 
     if (object_type == ObjectType::kVehicle) {
       std::shared_ptr<Vehicle> vehicle = std::make_shared<Vehicle>(
-          cur_id, length, width, position, destination, heading,
-          cur_speeds[current_time_]);
+          cur_id, length, width, position, cur_headings[current_time_],
+          cur_speeds[current_time_], target_position, target_heading,
+          target_speed);
       vehicles_.push_back(vehicle);
       objects_.push_back(vehicle);
       if (is_moving) {
@@ -840,8 +851,9 @@ void Scenario::LoadObjects(const json& objects_json) {
     } else if (allow_non_vehicles_) {
       if (object_type == ObjectType::kPedestrian) {
         std::shared_ptr<Pedestrian> pedestrian = std::make_shared<Pedestrian>(
-            cur_id, length, width, position, destination, heading,
-            cur_speeds[current_time_]);
+            cur_id, length, width, position, cur_headings[current_time_],
+            cur_speeds[current_time_], target_position, target_heading,
+            target_speed);
         pedestrians_.push_back(pedestrian);
         objects_.push_back(pedestrian);
         if (is_moving) {
@@ -849,8 +861,9 @@ void Scenario::LoadObjects(const json& objects_json) {
         }
       } else if (object_type == ObjectType::kCyclist) {
         std::shared_ptr<Cyclist> cyclist = std::make_shared<Cyclist>(
-            cur_id, length, width, position, destination, heading,
-            cur_speeds[current_time_]);
+            cur_id, length, width, position, cur_headings[current_time_],
+            cur_speeds[current_time_], target_position, target_heading,
+            target_speed);
         cyclists_.push_back(cyclist);
         objects_.push_back(cyclist);
         if (is_moving) {

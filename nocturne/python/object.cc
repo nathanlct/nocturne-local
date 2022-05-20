@@ -36,11 +36,15 @@ void DefineObject(py::module& m) {
       .def_property(
           "position", &Object::position,
           py::overload_cast<const geometry::Vector2D&>(&Object::set_position))
-      .def_property("destination", &Object::destination,
-                    py::overload_cast<const geometry::Vector2D&>(
-                        &Object::set_destination))
       .def_property("heading", &Object::heading, &Object::set_heading)
       .def_property("speed", &Object::speed, &Object::set_speed)
+      .def_property("target_position", &Object::target_position,
+                    py::overload_cast<const geometry::Vector2D&>(
+                        &Object::set_target_position))
+      .def_property("target_heading", &Object::target_heading,
+                    &Object::set_target_heading)
+      .def_property("target_speed", &Object::target_speed,
+                    &Object::set_target_speed)
       .def_property("acceleration", &Object::acceleration,
                     &Object::set_acceleration)
       .def_property("steering", &Object::steering, &Object::set_steering)
@@ -55,8 +59,8 @@ void DefineObject(py::module& m) {
       .def("velocity", &Object::Velocity)
       .def("set_position",
            py::overload_cast<float, float>(&Object::set_position))
-      .def("set_destination",
-           py::overload_cast<float, float>(&Object::set_destination))
+      .def("set_target_position",
+           py::overload_cast<float, float>(&Object::set_target_position))
       .def("apply_action", &Object::ApplyAction)
       .def("_scale_shape", &Object::ScaleShape, py::arg("length_scale") = 1.0,
            py::arg("width_scale") = 1.0)
@@ -65,7 +69,7 @@ void DefineObject(py::module& m) {
       .def("getWidth", &Object::width)
       .def("getLength", &Object::length)
       .def("getPosition", &Object::position)
-      .def("getGoalPosition", &Object::destination)
+      .def("getGoalPosition", &Object::target_position)
       .def("getSpeed", &Object::speed)
       .def("getHeading", &Object::heading)
       .def("getID", &Object::id)
@@ -76,9 +80,9 @@ void DefineObject(py::module& m) {
       .def("setPosition",
            py::overload_cast<float, float>(&Object::set_position))
       .def("setGoalPosition", py::overload_cast<const geometry::Vector2D&>(
-                                  &Object::set_destination))
+                                  &Object::set_target_position))
       .def("setGoalPosition",
-           py::overload_cast<float, float>(&Object::set_destination))
+           py::overload_cast<float, float>(&Object::set_target_position))
       .def("setHeading", &Object::set_heading)
       .def("setSpeed", &Object::set_speed);
 }
