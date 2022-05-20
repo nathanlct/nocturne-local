@@ -107,9 +107,9 @@ void ExtractObjectFeature(const Object& src, const Object& obj, float dis,
   feature[3] = obj.length();
   feature[4] = obj.width();
   feature[5] = relative_heading;
-  feature[6] = relative_velocity.Norm();
-  feature[7] =
+  feature[6] =
       geometry::utils::AngleSub(relative_velocity.Angle(), src.heading());
+  feature[7] = relative_velocity.Norm();
   // One-hot vector for object_type, assume feature is initially 0.
   feature[8 + obj_type] = 1.0f;
 }
@@ -344,6 +344,7 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
       geometry::utils::AngleSub(d.Angle(), src_heading);
   const float target_heading =
       geometry::utils::AngleSub(src.target_heading(), src_heading);
+  const float target_speed = src.target_speed() - src.speed();
 
   float* state_data = state.DataPtr();
   state_data[0] = src.length();
@@ -352,7 +353,7 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
   state_data[3] = target_dist;
   state_data[4] = target_azimuth;
   state_data[5] = target_heading;
-  state_data[6] = src.target_speed();
+  state_data[6] = target_speed;
 
   return state;
 }
