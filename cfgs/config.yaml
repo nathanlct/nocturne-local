@@ -46,6 +46,15 @@ rew_cfg:
   goal_distance_penalty: False # if shaped_goal_distance is true, then when this is True the goal distance is a penalty for being far from 
                                # goal instead of a reward for being close
   goal_achieved_bonus: ${episode_length}
+  # goal is only achieved if you're within this tolerance on distance from goal
+  position_target: True
+  position_target_tolerance: 1.0
+  # goal is only achieved if you're within this tolerance on final agent speed at goal position
+  speed_target: True
+  speed_target_tolerance: 0.5
+  # goal is only achieved if you're within this tolerance on final agent heading at goal position
+  heading_target: False
+  heading_target_tolerance: 0.3
 subscriber:
   view_angle: 3.14
   # the distance which the cone extends before agents are not visible
