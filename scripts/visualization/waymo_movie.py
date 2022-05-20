@@ -24,7 +24,7 @@ for i in range(90):
     img = scenario.getImage(
         img_width=1600,
         img_height=1600,
-        draw_destinations=False,
+        draw_target_positions=False,
         padding=50.0,
     )
     frames.append(img)
