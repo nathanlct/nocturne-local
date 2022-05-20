@@ -34,7 +34,7 @@ def make_movie(sim,
         sim.step(dt)
         timestep += 1
         movie_frames.append(scenario_fn(scenario, timestep))
-    movie_frames = np.array(movie_frames)
+    movie_frames = np.stack(movie_frames, axis=0)
     imageio.mimwrite(output_path, movie_frames, fps=fps)
     print('>', output_path)
     del sim
@@ -47,7 +47,7 @@ def make_image(sim, scenario_file, scenario_fn, output_path='./img.png'):
     img = scenario_fn(scenario)
     dpi = 100
     height, width, depth = img.shape
-    figsize = width / float(dpi), height / float(dpi)
+    figsize = width / dpi, height / dpi
     plt.figure(figsize=figsize, dpi=dpi)
     plt.axis('off')
     plt.imshow(img)
@@ -91,13 +91,13 @@ if __name__ == '__main__':
                 sim,
                 file,
                 scenario_fn=lambda scenario: scenario.getImage(
-                    img_width=1600,
                     img_height=1600,
+                    img_width=1600,
                     draw_destinations=True,
                     padding=50.0,
                     source=scenario.getVehicles()[-1],
-                    view_width=120,
                     view_height=120,
+                    view_width=120,
                     rotate_with_source=True,
                 ),
                 output_path=PROJECT_PATH /
@@ -112,8 +112,8 @@ if __name__ == '__main__':
                     view_dist=120.0,
                     view_angle=np.pi,
                     head_tilt=0.0,
-                    img_width=1600,
                     img_height=1600,
+                    img_width=1600,
                     padding=50.0,
                     draw_destination=True,
                 ),
@@ -122,15 +122,15 @@ if __name__ == '__main__':
                     os.path.basename(file)),
             )
             make_image(
-                sim, 
+                sim,
                 file,
                 scenario_fn=lambda scenario: scenario.getFeaturesImage(
                     source=scenario.getVehicles()[-1],
                     view_dist=120.0,
                     view_angle=np.pi,
                     head_tilt=0.0,
-                    img_width=1600,
                     img_height=1600,
+                    img_width=1600,
                     padding=50.0,
                     draw_destination=True,
                 ),

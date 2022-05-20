@@ -25,7 +25,7 @@ from sample_factory.utils.utils import log, AttrDict
 
 from run_sample_factory import register_custom_components
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH
 
 
 def run_eval(cfg, max_num_frames=1e9):
@@ -162,10 +162,10 @@ def run_eval(cfg, max_num_frames=1e9):
                 # if episode terminated synchronously for all agents, pause a bit before starting a new one
                 if all(done):
                     if not cfg.no_render:
-                        imageio.mimsave(
-                            '/private/home/eugenevinitsky/Code/nocturne/animation.mp4',
-                            np.array(frames),
-                            fps=30)
+                        imageio.mimsave(os.path.join(PROJECT_PATH,
+                                                     'animation.mp4'),
+                                        np.array(frames),
+                                        fps=30)
                         plt.close(fig)
                     if not cfg.no_render:
                         env.render()
@@ -232,7 +232,7 @@ def main():
     cfg_dict['policy_index'] = 0
     cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
     cfg_dict['continuous_actions_sample'] = True
-    cfg_dict['discrete_actions_sample'] = True
+    cfg_dict['discrete_actions_sample'] = False
     cfg_dict['scenario_path'] = PROCESSED_TRAIN_NO_TL
 
     class Bunch(object):
