@@ -168,64 +168,7 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
   name_ = j["name"];
 
   LoadObjects(j["objects"]);
-
-  float min_x = std::numeric_limits<float>::max();
-  float min_y = std::numeric_limits<float>::max();
-  float max_x = std::numeric_limits<float>::lowest();
-  float max_y = std::numeric_limits<float>::lowest();
-
-  // TODO(ev) refactor into a roadline object
-  for (const auto& road : j["roads"]) {
-    std::vector<geometry::Vector2D> laneGeometry;
-    std::string type = road["type"];
-    const RoadType road_type = ParseRoadType(type);
-    const bool checkForCollisions = (road_type == RoadType::kRoadEdge);
-    // we have to handle stop signs differently from other lane types
-    if (road_type == RoadType::kStopSign) {
-      const geometry::Vector2D position(road["geometry"][0]["x"],
-                                        road["geometry"][0]["y"]);
-      std::shared_ptr<StopSign> stop_sign =
-          std::make_shared<StopSign>(position);
-      stopSigns.emplace_back(stop_sign);
-    } else {
-      // Iterate over every line segment
-      for (size_t i = 0; i < road["geometry"].size() - 1; i++) {
-        laneGeometry.emplace_back(road["geometry"][i]["x"],
-                                  road["geometry"][i]["y"]);
-        geometry::Vector2D startPoint(road["geometry"][i]["x"],
-                                      road["geometry"][i]["y"]);
-        geometry::Vector2D endPoint(road["geometry"][i + 1]["x"],
-                                    road["geometry"][i + 1]["y"]);
-        min_x = std::min(min_x, std::min(startPoint.x(), endPoint.x()));
-        min_y = std::min(min_y, std::min(startPoint.y(), endPoint.y()));
-        max_x = std::max(max_x, std::max(startPoint.x(), endPoint.x()));
-        max_y = std::max(max_y, std::max(startPoint.y(), endPoint.y()));
-        // We only want to store the line segments for collision checking if
-        // collisions are possible
-        if (checkForCollisions == true) {
-          std::shared_ptr<geometry::LineSegment> lineSegment =
-              std::make_shared<geometry::LineSegment>(startPoint, endPoint);
-          lineSegments.push_back(lineSegment);
-        }
-      }
-      // Now finish constructing the entire roadline object which is what will
-      // be used for drawing
-      int road_size = road["geometry"].size();
-      laneGeometry.emplace_back(road["geometry"][road_size - 1]["x"],
-                                road["geometry"][road_size - 1]["y"]);
-      // TODO(ev) 8 is a hardcoding
-      std::shared_ptr<RoadLine> roadLine =
-          std::make_shared<RoadLine>(road_type, std::move(laneGeometry),
-                                     /*num_road_points=*/8, checkForCollisions);
-      roadLines.push_back(roadLine);
-    }
-  }
-  road_network_bounds_ =
-      sf::FloatRect(min_x, min_y, max_x - min_x, max_y - min_y);
-
-  // Now create the BVH for the line segments
-  // Since the line segments never move we only need to define this once
-  line_segment_bvh_.Reset(lineSegments);
+  LoadRoads(j["roads"]);
 
   // Now handle the traffic light states
   for (const auto& tl : j["tl_states"]) {
@@ -247,27 +190,28 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
     std::shared_ptr<TrafficLight> traffic_light =
         std::make_shared<TrafficLight>(geometry::Vector2D(x_pos, y_pos),
                                        validTimes, lightStates, current_time_);
-    trafficLights.push_back(traffic_light);
+    traffic_lights_.push_back(traffic_light);
   }
 
   std::vector<const geometry::AABBInterface*> static_objects;
-  for (const auto& roadLine : roadLines) {
-    for (const auto& roadPoint : roadLine->road_points()) {
+  for (const auto& road_line : road_lines_) {
+    for (const auto& road_point : road_line->road_points()) {
       static_objects.push_back(
-          dynamic_cast<const geometry::AABBInterface*>(&roadPoint));
+          dynamic_cast<const geometry::AABBInterface*>(&road_point));
     }
   }
-  for (const auto& obj : stopSigns) {
+  for (const auto& obj : stop_signs_) {
     static_objects.push_back(
         dynamic_cast<const geometry::AABBInterface*>(obj.get()));
   }
-  for (const auto& obj : trafficLights) {
+  for (const auto& obj : traffic_lights_) {
     static_objects.push_back(
         dynamic_cast<const geometry::AABBInterface*>(obj.get()));
   }
   static_bvh_.Reset(static_objects);
-  // update collision to check for collisions of any vehicles at initialization
-  updateCollision();
+
+  // Update collision to check for collisions of any vehicles at initialization
+  UpdateCollision();
 }
 
 void Scenario::Step(float dt) {
@@ -285,16 +229,16 @@ void Scenario::Step(float dt) {
       object->set_speed(expert_speeds_.at(obj_id).at(current_time_));
     }
   }
-  for (auto& object : trafficLights) {
+  for (auto& object : traffic_lights_) {
     object->set_current_time(current_time_);
   }
 
   // update the vehicle bvh
   object_bvh_.Reset(objects_);
-  updateCollision();
+  UpdateCollision();
 }
 
-void Scenario::updateCollision() {
+void Scenario::UpdateCollision() {
   // check vehicle-vehicle collisions
   for (auto& obj1 : objects_) {
     std::vector<const Object*> candidates =
@@ -309,7 +253,8 @@ void Scenario::updateCollision() {
       if (!obj1->check_collision() && !obj2->check_collision()) {
         continue;
       }
-      if (checkForCollision(*obj1, *obj2)) {
+      if (geometry::Intersects(obj1->BoundingPolygon(),
+                               obj2->BoundingPolygon())) {
         obj1->set_collided(true);
         obj1->set_collision_type(CollisionType::kVehicleVehicleCollision);
         const_cast<Object*>(obj2)->set_collided(true);
@@ -321,7 +266,7 @@ void Scenario::updateCollision() {
     std::vector<const geometry::LineSegment*> candidates =
         line_segment_bvh_.IntersectionCandidates<geometry::LineSegment>(*obj);
     for (const auto* seg : candidates) {
-      if (checkForCollision(*obj, *seg)) {
+      if (geometry::Intersects(obj->BoundingPolygon(), *seg)) {
         obj->set_collision_type(CollisionType::kVehicleRoadEdgeCollision);
         obj->set_collided(true);
       }
@@ -375,8 +320,8 @@ std::vector<const TrafficLight*> Scenario::VisibleTrafficLights(
 
   // Assume limited number of TrafficLights, check all of them.
   std::vector<const ObjectBase*> objects;
-  objects.reserve(trafficLights.size());
-  for (const auto& obj : trafficLights) {
+  objects.reserve(traffic_lights_.size());
+  for (const auto& obj : traffic_lights_) {
     objects.push_back(dynamic_cast<const ObjectBase*>(obj.get()));
   }
   objects = vf.VisibleNonblockingObjects(objects);
@@ -535,27 +480,6 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
   return state;
 }
 
-bool Scenario::checkForCollision(const Object& object1,
-                                 const Object& object2) const {
-  // note: right now objects are rectangles but this code works for any pair of
-  // convex polygons
-
-  // first check for circles collision
-  const float dist = geometry::Distance(object1.position(), object2.position());
-  const float min_dist = object1.Radius() + object2.Radius();
-  if (dist > min_dist) {
-    return false;
-  }
-  const geometry::ConvexPolygon polygon1 = object1.BoundingPolygon();
-  const geometry::ConvexPolygon polygon2 = object2.BoundingPolygon();
-  return polygon1.Intersects(polygon2);
-}
-
-bool Scenario::checkForCollision(const Object& object,
-                                 const geometry::LineSegment& segment) const {
-  return geometry::Intersects(segment, object.BoundingPolygon());
-}
-
 std::optional<Action> Scenario::ExpertAction(const Object& obj,
                                              int64_t timestamp) const {
   const std::vector<float>& cur_headings = expert_headings_.at(obj.id());
@@ -687,10 +611,10 @@ void Scenario::draw(sf::RenderTarget& target,
   horizontal_flip.scale(1, -1);
   sf::View view =
       View(target.getSize().y, target.getSize().x, /*padding=*/30.0f);
-  DrawOnTarget(target, roadLines, view, horizontal_flip);
+  DrawOnTarget(target, road_lines_, view, horizontal_flip);
   DrawOnTarget(target, objects_, view, horizontal_flip);
-  DrawOnTarget(target, trafficLights, view, horizontal_flip);
-  DrawOnTarget(target, stopSigns, view, horizontal_flip);
+  DrawOnTarget(target, traffic_lights_, view, horizontal_flip);
+  DrawOnTarget(target, stop_signs_, view, horizontal_flip);
   DrawOnTarget(target, VehiclesDestinationsDrawables(), view, horizontal_flip);
 }
 
@@ -720,10 +644,10 @@ NdArray<unsigned char> Scenario::Image(uint64_t img_height, uint64_t img_width,
   // create canvas and draw objects
   Canvas canvas(img_height, img_width);
 
-  DrawOnTarget(canvas, roadLines, view, horizontal_flip);
+  DrawOnTarget(canvas, road_lines_, view, horizontal_flip);
   DrawOnTarget(canvas, objects_, view, horizontal_flip);
-  DrawOnTarget(canvas, trafficLights, view, horizontal_flip);
-  DrawOnTarget(canvas, stopSigns, view, horizontal_flip);
+  DrawOnTarget(canvas, traffic_lights_, view, horizontal_flip);
+  DrawOnTarget(canvas, stop_signs_, view, horizontal_flip);
 
   if (draw_destinations) {
     DrawOnTarget(canvas, VehiclesDestinationsDrawables(source), view,
@@ -767,7 +691,7 @@ NdArray<unsigned char> Scenario::EgoVehicleConeImage(
   DrawOnTarget(canvas, background_drawable, cone_view, horizontal_flip);
 
   // draw roads and objects
-  DrawOnTarget(canvas, roadLines, scenario_view, horizontal_flip);
+  DrawOnTarget(canvas, road_lines_, scenario_view, horizontal_flip);
   DrawOnTarget(canvas, objects_, scenario_view, horizontal_flip);
 
   // draw destinations
@@ -789,8 +713,8 @@ NdArray<unsigned char> Scenario::EgoVehicleConeImage(
   }
 
   // draw stop signs and traffic lights (not subject to obstructions)
-  DrawOnTarget(canvas, trafficLights, scenario_view, horizontal_flip);
-  DrawOnTarget(canvas, stopSigns, scenario_view, horizontal_flip);
+  DrawOnTarget(canvas, traffic_lights_, scenario_view, horizontal_flip);
+  DrawOnTarget(canvas, stop_signs_, scenario_view, horizontal_flip);
 
   // draw cone
   auto cone_drawables =
@@ -859,22 +783,30 @@ void Scenario::LoadObjects(const json& objects_json) {
                                        obj["goalPosition"]["y"]);
     }
 
+    const auto& obj_position = obj["position"];
+    const auto& obj_heading = obj["heading"];
+    const auto& obj_velocity = obj["velocity"];
+    const auto& obj_valid = obj["valid"];
+    const int64_t trajectory_length = obj_position.size();
+
     std::vector<geometry::Vector2D> cur_trajectory;
     std::vector<float> cur_headings;
     std::vector<float> cur_speeds;
     std::vector<bool> valid_mask;
+    cur_trajectory.reserve(trajectory_length);
+    cur_headings.reserve(trajectory_length);
+    cur_speeds.reserve(trajectory_length);
+    valid_mask.reserve(trajectory_length);
 
-    const int64_t trajectory_length = obj["position"].size();
     bool is_moving = false;
     for (int64_t i = 0; i < trajectory_length; ++i) {
-      const geometry::Vector2D cur_pos(obj["position"][i]["x"],
-                                       obj["position"][i]["y"]);
+      const geometry::Vector2D cur_pos(obj_position[i]["x"],
+                                       obj_position[i]["y"]);
       const float cur_heading = geometry::utils::NormalizeAngle(
-          geometry::utils::Radians(float(obj["heading"][i])));
+          geometry::utils::Radians(static_cast<float>(obj_heading[i])));
       const float cur_speed =
-          geometry::Vector2D(obj["velocity"][i]["x"], obj["velocity"][i]["y"])
-              .Norm();
-      const bool valid = static_cast<bool>(obj["valid"][i]);
+          geometry::Vector2D(obj_velocity[i]["x"], obj_velocity[i]["y"]).Norm();
+      const bool valid = static_cast<bool>(obj_valid[i]);
 
       cur_trajectory.push_back(cur_pos);
       cur_headings.push_back(cur_heading);
@@ -938,6 +870,60 @@ void Scenario::LoadObjects(const json& objects_json) {
 
   // Reset the road objects bvh
   object_bvh_.Reset(objects_);
+}
+
+void Scenario::LoadRoads(const json& roads_json) {
+  float min_x = std::numeric_limits<float>::max();
+  float min_y = std::numeric_limits<float>::max();
+  float max_x = std::numeric_limits<float>::lowest();
+  float max_y = std::numeric_limits<float>::lowest();
+
+  for (const auto& road : roads_json) {
+    const auto& geometry_json = road["geometry"];
+    const RoadType road_type = ParseRoadType(road["type"]);
+    const bool check_collision = (road_type == RoadType::kRoadEdge);
+
+    // We have to handle stop signs differently from other lane types
+    if (road_type == RoadType::kStopSign) {
+      const geometry::Vector2D position(geometry_json.front()["x"],
+                                        geometry_json.front()["y"]);
+      stop_signs_.push_back(std::make_shared<StopSign>(position));
+    } else {
+      const int64_t geometry_size = geometry_json.size();
+      std::vector<geometry::Vector2D> geometry;
+      geometry.reserve(geometry_size);
+
+      // Iterate over every line segment
+      for (int64_t i = 0; i < geometry_size; ++i) {
+        const geometry::Vector2D cur_pos(geometry_json[i]["x"],
+                                         geometry_json[i]["y"]);
+        min_x = std::min(min_x, cur_pos.x());
+        min_y = std::min(min_y, cur_pos.y());
+        max_x = std::max(max_x, cur_pos.x());
+        max_y = std::max(max_y, cur_pos.y());
+        geometry.push_back(cur_pos);
+
+        if (check_collision && i < geometry_size - 1) {
+          const geometry::Vector2D nxt_pos(geometry_json[i + 1]["x"],
+                                           geometry_json[i + 1]["y"]);
+          line_segments_.push_back(
+              std::make_shared<geometry::LineSegment>(cur_pos, nxt_pos));
+        }
+      }
+      // TODO(ev) 8 is a hardcoding
+      std::shared_ptr<RoadLine> road_line =
+          std::make_shared<RoadLine>(road_type, std::move(geometry),
+                                     /*num_road_points=*/8, check_collision);
+      road_lines_.push_back(road_line);
+    }
+  }
+
+  road_network_bounds_ =
+      sf::FloatRect(min_x, min_y, max_x - min_x, max_y - min_y);
+
+  // Now create the BVH for the line segments
+  // Since the line segments never move we only need to define this once
+  line_segment_bvh_.Reset(line_segments_);
 }
 
 }  // namespace nocturne

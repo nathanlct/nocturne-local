@@ -189,13 +189,6 @@ class Scenario : public sf::Drawable {
 
   /*********************** State Accessors *******************/
 
-  // std::pair<float, geometry::Vector2D> getObjectHeadingAndPos(
-  //     Object* sourceObject);
-
-  bool checkForCollision(const Object& object1, const Object& object2) const;
-  bool checkForCollision(const Object& object,
-                         const geometry::LineSegment& segment) const;
-
   const std::vector<std::shared_ptr<Vehicle>>& vehicles() const {
     return vehicles_;
   }
@@ -216,8 +209,8 @@ class Scenario : public sf::Drawable {
     return moving_objects_;
   }
 
-  const std::vector<std::shared_ptr<RoadLine>>& getRoadLines() const {
-    return roadLines;
+  const std::vector<std::shared_ptr<RoadLine>>& road_lines() const {
+    return road_lines_;
   }
 
   NdArray<float> EgoState(const Object& src) const;
@@ -246,9 +239,10 @@ class Scenario : public sf::Drawable {
 
  protected:
   void LoadObjects(const json& objects_json);
+  void LoadRoads(const json& roads_json);
 
-  // update the collision status of all objects
-  void updateCollision();
+  // Update the collision status of all objects
+  void UpdateCollision();
 
   std::tuple<std::vector<const ObjectBase*>, std::vector<const ObjectBase*>,
              std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
@@ -284,9 +278,6 @@ class Scenario : public sf::Drawable {
   int64_t max_env_time_ = kMaxEnvTime;
   const bool allow_non_vehicles_ = true;  // Whether to use non vehicle objects.
 
-  std::vector<std::shared_ptr<geometry::LineSegment>> lineSegments;
-  std::vector<std::shared_ptr<RoadLine>> roadLines;
-
   std::vector<std::shared_ptr<Vehicle>> vehicles_;
   std::vector<std::shared_ptr<Pedestrian>> pedestrians_;
   std::vector<std::shared_ptr<Cyclist>> cyclists_;
@@ -295,8 +286,10 @@ class Scenario : public sf::Drawable {
   // actually be controlled
   std::vector<std::shared_ptr<Object>> moving_objects_;
 
-  std::vector<std::shared_ptr<StopSign>> stopSigns;
-  std::vector<std::shared_ptr<TrafficLight>> trafficLights;
+  std::vector<std::shared_ptr<geometry::LineSegment>> line_segments_;
+  std::vector<std::shared_ptr<RoadLine>> road_lines_;
+  std::vector<std::shared_ptr<StopSign>> stop_signs_;
+  std::vector<std::shared_ptr<TrafficLight>> traffic_lights_;
 
   geometry::BVH object_bvh_;        // track objects for collisions
   geometry::BVH line_segment_bvh_;  // track line segments for collisions
