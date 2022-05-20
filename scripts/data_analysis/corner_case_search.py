@@ -60,7 +60,7 @@ if __name__ == '__main__':
                     img = sim.getScenario().getImage(
                         img_width=1600,
                         img_height=1600,
-                        draw_destinations=True,
+                        draw_target_positions=True,
                         padding=50.0,
                     )
                     fig = plt.figure()
