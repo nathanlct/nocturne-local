@@ -62,7 +62,7 @@ if __name__ == '__main__':
         scenario_fn=lambda scenario, _: scenario.getImage(
             img_width=1600,
             img_height=1600,
-            draw_destinations=True,
+            draw_target_positions=True,
             padding=50.0,
         ),
         output_path=PROJECT_PATH / 'examples' / 'movie_whole_scenario.mp4',
@@ -73,7 +73,7 @@ if __name__ == '__main__':
         scenario_fn=lambda scenario, _: scenario.getImage(
             img_width=1600,
             img_height=1600,
-            draw_destinations=True,
+            draw_target_positions=True,
             padding=50.0,
             source=scenario.getVehicles()[3],
             view_width=120,
@@ -88,7 +88,7 @@ if __name__ == '__main__':
         scenario_fn=lambda scenario, _: scenario.getImage(
             img_width=1600,
             img_height=1600,
-            draw_destinations=True,
+            draw_target_positions=True,
             padding=50.0,
             source=scenario.getObjectsThatMoved()[3],
             view_width=120,
@@ -109,7 +109,7 @@ if __name__ == '__main__':
             img_width=1600,
             img_height=1600,
             padding=50.0,
-            draw_destination=True,
+            draw_target_position=True,
         ),
         output_path=PROJECT_PATH / 'examples' / 'movie_cone.mp4',
     )
@@ -124,7 +124,7 @@ if __name__ == '__main__':
             img_width=1600,
             img_height=1600,
             padding=50.0,
-            draw_destination=True,
+            draw_target_position=True,
         ),
         output_path=PROJECT_PATH / 'examples' / 'movie_cone_head_tilt.mp4',
     )
@@ -135,7 +135,7 @@ if __name__ == '__main__':
             img_width=2000,
             img_height=2000,
             padding=50.0,
-            draw_destinations=True,
+            draw_target_positions=True,
         ),
         output_path=PROJECT_PATH / 'examples' / 'img_scenario.png',
     )
@@ -150,7 +150,7 @@ if __name__ == '__main__':
             img_width=2000,
             img_height=2000,
             padding=50.0,
-            draw_destination=True,
+            draw_target_position=True,
         ),
         output_path=PROJECT_PATH / 'examples' / 'img_cone_tilted.png',
     )
@@ -165,7 +165,7 @@ if __name__ == '__main__':
             img_width=2000,
             img_height=2000,
             padding=50.0,
-            draw_destination=True,
+            draw_target_position=True,
         ),
         output_path=PROJECT_PATH / 'examples' / 'img_features_tilted.png',
     )

@@ -31,34 +31,38 @@ class Object : public ObjectBase {
   Object() = default;
 
   Object(int64_t id, float length, float width,
-         const geometry::Vector2D& position,
-         const geometry::Vector2D& destination, float heading, float speed,
-         bool can_block_sight = true, bool can_be_collided = true,
-         bool check_collision = true)
+         const geometry::Vector2D& position, float heading, float speed,
+         const geometry::Vector2D& target_position, float target_heading,
+         float target_speed, bool can_block_sight = true,
+         bool can_be_collided = true, bool check_collision = true)
       : ObjectBase(position, can_block_sight, can_be_collided, check_collision),
         id_(id),
         length_(length),
         width_(width),
-        destination_(destination),
         heading_(heading),
-        speed_(speed),
+        speed_(ClipSpeed(speed)),
+        target_position_(target_position),
+        target_heading_(target_heading),
+        target_speed_(target_speed),
         random_gen_(std::random_device()()) {
     InitRandomColor();
   }
 
   Object(int64_t id, float length, float width, float max_speed,
-         const geometry::Vector2D& position,
-         const geometry::Vector2D& destination, float heading, float speed,
-         bool can_block_sight = true, bool can_be_collided = true,
-         bool check_collision = true)
+         const geometry::Vector2D& position, float heading, float speed,
+         const geometry::Vector2D& target_position, float target_heading,
+         float target_speed, bool can_block_sight = true,
+         bool can_be_collided = true, bool check_collision = true)
       : ObjectBase(position, can_block_sight, can_be_collided, check_collision),
         id_(id),
         length_(length),
         width_(width),
         max_speed_(max_speed),
-        destination_(destination),
         heading_(heading),
         speed_(ClipSpeed(speed)),
+        target_position_(target_position),
+        target_heading_(target_heading),
+        target_speed_(target_speed),
         random_gen_(std::random_device()()) {
     InitRandomColor();
   }
@@ -69,25 +73,29 @@ class Object : public ObjectBase {
 
   float length() const { return length_; }
   float width() const { return width_; }
-  void ScaleShape(float length_scale, float width_scale) {
-    length_ *= length_scale;
-    width_ *= width_scale;
-  }
   float max_speed() const { return max_speed_; }
-
-  const geometry::Vector2D& destination() const { return destination_; }
-  void set_destination(const geometry::Vector2D& destination) {
-    destination_ = destination;
-  }
-  void set_destination(float x, float y) {
-    destination_ = geometry::Vector2D(x, y);
-  }
 
   float heading() const { return heading_; }
   void set_heading(float heading) { heading_ = heading; }
 
   float speed() const { return speed_; }
   void set_speed(float speed) { speed_ = ClipSpeed(speed); }
+
+  const geometry::Vector2D& target_position() const { return target_position_; }
+  void set_target_position(const geometry::Vector2D& target_position) {
+    target_position_ = target_position;
+  }
+  void set_target_position(float x, float y) {
+    target_position_ = geometry::Vector2D(x, y);
+  }
+
+  float target_heading() const { return target_heading_; }
+  void set_target_heading(float target_heading) {
+    target_heading_ = target_heading;
+  }
+
+  float target_speed() const { return target_speed_; }
+  void set_target_speed(float target_speed) { target_speed_ = target_speed; }
 
   float acceleration() const { return acceleration_; }
   void set_acceleration(float acceleration) { acceleration_ = acceleration; }
@@ -129,6 +137,11 @@ class Object : public ObjectBase {
 
   geometry::ConvexPolygon BoundingPolygon() const override;
 
+  void ScaleShape(float length_scale, float width_scale) {
+    length_ *= length_scale;
+    width_ *= width_scale;
+  }
+
   void ApplyAction(const Action& action) {
     if (action.acceleration().has_value()) {
       acceleration_ = action.acceleration().value();
@@ -164,10 +177,13 @@ class Object : public ObjectBase {
   float width_ = 0.0f;
   const float max_speed_ = std::numeric_limits<float>::max();
 
-  geometry::Vector2D destination_;
   float heading_ = 0.0f;
   // Postive for moving forward, negative for moving backward.
   float speed_ = 0.0f;
+
+  geometry::Vector2D target_position_;
+  float target_heading_ = 0.0f;
+  float target_speed_ = 0.0f;
 
   float acceleration_ = 0.0f;
   float steering_ = 0.0f;

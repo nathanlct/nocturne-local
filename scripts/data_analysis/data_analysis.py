@@ -30,7 +30,7 @@ def run_analysis(files):
         for veh in vehs:
             veh.expert_control = True
             obj_pos = veh.position
-            goal_pos = veh.destination
+            goal_pos = veh.target_position
             if (obj_pos - goal_pos).norm() > 0.5:
                 valid_vehs.append(veh)
             if veh in valid_vehs:
