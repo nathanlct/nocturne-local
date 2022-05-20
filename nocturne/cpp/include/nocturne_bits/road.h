@@ -17,9 +17,6 @@ namespace nocturne {
 // Add a dummy radius here for AABB.
 constexpr float kRoadPointRadius = 1e-3;
 
-// Default sampling rate for RoadPoints.
-constexpr int64_t kSampleEveryN = 10;
-
 enum class RoadType {
   kNone = 0,
   kLane = 1,
