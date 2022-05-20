@@ -197,44 +197,9 @@ class BaseEnv(Env):
         self.t = 0
         self.step_num = 0
 
-        # declare the single agent if needed
-        if self.single_agent_mode:
-            objs_that_moved = self.simulation.getScenario(
-            ).getObjectsThatMoved()
-            self.single_agent_obj = objs_that_moved[np.random.randint(
-                len(objs_that_moved))]
-        '''##################################################################
-            Construct context dictionary of observations that can be used to
-            warm up policies by stepping all vehicles as experts.
-        #####################################################################'''
-        # step all the vehicles forward by one second and record their observations as context
-        if self.single_agent_mode:
-            self.context_dict = {self.single_agent_obj.getID(): []}
-        else:
-            self.context_dict = {
-                veh.getID(): []
-                for veh in self.scenario.getObjectsThatMoved()
-            }
-        for veh in self.scenario.getObjectsThatMoved():
-            veh.expert_control = True
-        for _ in range(10):
-            if self.single_agent_mode:
-                self.context_dict[self.single_agent_obj.getID()].append(
-                    self.get_observation(self.single_agent_obj))
-            else:
-                for veh in self.scenario.getObjectsThatMoved():
-                    self.context_dict[veh.getID()].append(
-                        self.get_observation(veh))
-            self.simulation.step(self.cfg['dt'])
-        # now hand back control to our actual controllers
-        if self.single_agent_mode:
-            self.single_agent_obj.expert_control = False
-        else:
-            for veh in self.scenario.getObjectsThatMoved():
-                veh.expert_control = False
-
         enough_vehicles = False
-        # we don't want to initialize scenes with more than N actors
+        # we don't want to initialize scenes with 0 actors after satisfying
+        # all the conditions on a scene that we have
         while not enough_vehicles:
             self.file = self.files[np.random.randint(len(self.files))]
             self.simulation = Simulation(os.path.join(
@@ -242,7 +207,44 @@ class BaseEnv(Env):
                                          allow_non_vehicles=False)
             self.scenario = self.simulation.getScenario()
 
+            # declare the single agent if needed
+            if self.single_agent_mode:
+                objs_that_moved = self.simulation.getScenario(
+                ).getObjectsThatMoved()
+                self.single_agent_obj = objs_that_moved[np.random.randint(
+                    len(objs_that_moved))]
+            '''##################################################################
+                Construct context dictionary of observations that can be used to
+                warm up policies by stepping all vehicles as experts.
+            #####################################################################'''
+            # step all the vehicles forward by one second and record their observations as context
+            if self.single_agent_mode:
+                self.context_dict = {self.single_agent_obj.getID(): []}
+            else:
+                self.context_dict = {
+                    veh.getID(): []
+                    for veh in self.scenario.getObjectsThatMoved()
+                }
+            for veh in self.scenario.getObjectsThatMoved():
+                veh.expert_control = True
+            for _ in range(10):
+                if self.single_agent_mode:
+                    self.context_dict[self.single_agent_obj.getID()].append(
+                        self.get_observation(self.single_agent_obj))
+                else:
+                    for veh in self.scenario.getObjectsThatMoved():
+                        self.context_dict[veh.getID()].append(
+                            self.get_observation(veh))
+                self.simulation.step(self.cfg['dt'])
+            # now hand back control to our actual controllers
+            if self.single_agent_mode:
+                self.single_agent_obj.expert_control = False
+            else:
+                for veh in self.scenario.getObjectsThatMoved():
+                    veh.expert_control = False
+
             # remove all the objects that are in collision or are already in goal dist
+            # additionally set the objects that have infeasible goals to be experts
             for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
                 obj_pos = veh_obj.getPosition()
                 obj_pos = np.array([obj_pos.x, obj_pos.y])
