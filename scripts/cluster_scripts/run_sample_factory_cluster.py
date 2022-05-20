@@ -67,7 +67,7 @@ def main():
     overrides.add('hydra/launcher', ['submitit_slurm'])
     overrides.add('hydra.launcher.partition', ['learnlab'])
     overrides.add('experiment', [args.experiment])
-    overrides.add('num_files', [100])
+    overrides.add('num_files', [1, 10, 100, 1000, 10000, -1])
     overrides.add('seed', [0, 1, 2, 3, 4])
 
     cmd = [
