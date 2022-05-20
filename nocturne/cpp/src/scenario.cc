@@ -339,17 +339,20 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
 
   const float src_heading = src.heading();
   const geometry::Vector2D d = src.target_position() - src.position();
-  const float dist = d.Norm();
-  const float dst_heading = d.Angle();
-  const float heading_diff =
-      geometry::utils::AngleSub(dst_heading, src_heading);
+  const float target_dist = d.Norm();
+  const float target_azimuth =
+      geometry::utils::AngleSub(d.Angle(), src_heading);
+  const float target_heading =
+      geometry::utils::AngleSub(src.target_heading(), src_heading);
 
   float* state_data = state.DataPtr();
-  state_data[0] = src.speed();
-  state_data[1] = dist;
-  state_data[2] = heading_diff;
-  state_data[3] = src.length();
-  state_data[4] = src.width();
+  state_data[0] = src.length();
+  state_data[1] = src.width();
+  state_data[2] = src.speed();
+  state_data[3] = target_dist;
+  state_data[4] = target_azimuth;
+  state_data[5] = target_heading;
+  state_data[6] = src.target_speed();
 
   return state;
 }

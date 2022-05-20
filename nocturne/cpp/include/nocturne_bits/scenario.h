@@ -68,9 +68,9 @@ constexpr int64_t kTrafficLightFeatureSize = 12;
 constexpr int64_t kStopSignsFeatureSize = 3;
 
 // Ego features are:
-// [ ego speed, distance to goal position, relative angle to goal position,
-// length, width ]
-constexpr int64_t kEgoFeatureSize = 5;
+// [ length, width, speed, target distance, target relative azimuth,
+//   target relative heading, target speed ]
+constexpr int64_t kEgoFeatureSize = 7;
 
 class Scenario : public sf::Drawable {
  public:
