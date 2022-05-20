@@ -17,6 +17,9 @@ namespace nocturne {
 // Add a dummy radius here for AABB.
 constexpr float kRoadPointRadius = 1e-3;
 
+// Default sampling rate for RoadPoints.
+constexpr int64_t kSampleEveryN = 10;
+
 enum class RoadType {
   kNone = 0,
   kLane = 1,
@@ -25,6 +28,7 @@ enum class RoadType {
   kStopSign = 4,
   kCrosswalk = 5,
   kSpeedBump = 6,
+  kOthers = 7,
 };
 
 sf::Color RoadTypeColor(const RoadType& road_type);
@@ -39,8 +43,8 @@ class RoadPoint : public StaticObject {
                      /*can_be_collided=*/false, /*check_collision=*/false),
         neighbor_position_(neighbor_position),
         road_type_(road_type),
-        drawable_(
-            utils::MakeCircleShape(position, 0.5, RoadTypeColor(road_type), true)) {}
+        drawable_(utils::MakeCircleShape(position, 0.5,
+                                         RoadTypeColor(road_type), true)) {}
 
   StaticObjectType Type() const override {
     return StaticObjectType::kRoadPoint;
@@ -75,10 +79,10 @@ class RoadLine : public sf::Drawable {
 
   RoadLine(RoadType road_type,
            const std::initializer_list<geometry::Vector2D>& geometry_points,
-           int64_t num_road_points, bool check_collision)
+           int64_t sample_every_n = 1, bool check_collision = false)
       : road_type_(road_type),
         geometry_points_(geometry_points),
-        num_road_points_(num_road_points),
+        sample_every_n_(sample_every_n),
         check_collision_(check_collision) {
     InitRoadPoints();
     InitRoadLineGraphics();
@@ -86,10 +90,10 @@ class RoadLine : public sf::Drawable {
 
   RoadLine(RoadType road_type,
            const std::vector<geometry::Vector2D>& geometry_points,
-           int64_t num_road_points, bool check_collision)
+           int64_t sample_every_n = 1, bool check_collision = false)
       : road_type_(road_type),
         geometry_points_(geometry_points),
-        num_road_points_(num_road_points),
+        sample_every_n_(sample_every_n),
         check_collision_(check_collision) {
     InitRoadPoints();
     InitRoadLineGraphics();
@@ -97,10 +101,10 @@ class RoadLine : public sf::Drawable {
 
   RoadLine(RoadType road_type,
            std::vector<geometry::Vector2D>&& geometry_points,
-           int64_t num_road_points, bool check_collision)
+           int64_t sample_every_n = 1, bool check_collision = false)
       : road_type_(road_type),
         geometry_points_(std::move(geometry_points)),
-        num_road_points_(num_road_points),
+        sample_every_n_(sample_every_n),
         check_collision_(check_collision) {
     InitRoadPoints();
     InitRoadLineGraphics();
@@ -108,8 +112,10 @@ class RoadLine : public sf::Drawable {
 
   RoadType road_type() const { return road_type_; }
 
-  int64_t num_road_points() const { return num_road_points_; }
+  int64_t sample_every_n() const { return sample_every_n_; }
+
   const std::vector<RoadPoint>& road_points() const { return road_points_; }
+
   const std::vector<geometry::Vector2D>& geometry_points() const {
     return geometry_points_;
   }
@@ -127,8 +133,8 @@ class RoadLine : public sf::Drawable {
   const RoadType road_type_ = RoadType::kNone;
   std::vector<geometry::Vector2D> geometry_points_;
 
-  // Number of RoadPoints for RoadLine representation.
-  const int64_t num_road_points_ = 0;
+  // Sample rate from geometry points.
+  const int64_t sample_every_n_ = 1;
   std::vector<RoadPoint> road_points_;
 
   const bool check_collision_ = false;
@@ -137,7 +143,9 @@ class RoadLine : public sf::Drawable {
 };
 
 inline RoadType ParseRoadType(const std::string& s) {
-  if (s == "lane") {
+  if (s == "none") {
+    return RoadType::kNone;
+  } else if (s == "lane") {
     return RoadType::kLane;
   } else if (s == "road_line") {
     return RoadType::kRoadLine;
@@ -150,7 +158,7 @@ inline RoadType ParseRoadType(const std::string& s) {
   } else if (s == "speed_bump") {
     return RoadType::kSpeedBump;
   } else {
-    return RoadType::kNone;
+    return RoadType::kOthers;
   }
 }
 

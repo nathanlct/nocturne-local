@@ -10,7 +10,19 @@ namespace py = pybind11;
 namespace nocturne {
 
 void DefineRoadLine(py::module& m) {
+  py::enum_<RoadType>(m, "RoadType")
+      .value("NONE", RoadType::kNone)
+      .value("LANE", RoadType::kLane)
+      .value("ROAD_LINE", RoadType::kRoadLine)
+      .value("ROAD_EDGE", RoadType::kRoadEdge)
+      .value("STOP_SIGN", RoadType::kStopSign)
+      .value("CROSSWALK", RoadType::kCrosswalk)
+      .value("SPEED_BUMP", RoadType::kSpeedBump)
+      .value("OTHERS", RoadType::kOthers)
+      .export_values();
+
   py::class_<RoadLine, std::shared_ptr<RoadLine>>(m, "RoadLine")
+      .def_property_readonly("road_type", &RoadLine::road_type)
       .def_property_readonly("check_collision", &RoadLine::check_collision)
       .def("geometry_points", &RoadLine::geometry_points)
 
