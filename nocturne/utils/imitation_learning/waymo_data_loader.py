@@ -2,6 +2,8 @@
 import argparse
 from pathlib import Path
 import os
+import multiprocessing
+from multiprocessing import Process
 
 import numpy as np
 import torch
@@ -16,30 +18,20 @@ from cfgs.config import PROCESSED_TRAIN_NO_TL
 from nocturne import Simulation
 
 
-def precompute_dataset(from_path, to_path, samples_per_file=5000):
+def precompute_dataset(scenario_paths, to_path, start_index):
     """Construct a precomputed dataset for fast sampling."""
-    # get dataset files
-    dataset_path = Path(from_path)
-    scenario_paths = list(dataset_path.iterdir())[:1000]
-    scenario_paths = [
-        file for file in scenario_paths if 'tfrecord' in str(file)
-    ]
 
     # min and max timesteps (max included) that should be used in dataset trajectories
     tmin = 1
     tmax = 90
 
-    # create folder for precomputed dataset
-    precomputed_dataset_path = Path(to_path)
-    os.makedirs(str(precomputed_dataset_path), exist_ok=True)
-
     # delete files if folder exists already contains some of the form name.dataset.json
-    existing_files = list(precomputed_dataset_path.iterdir())
-    if (len(existing_files)) > 0:
-        for path in existing_files:
-            if path.suffixes == ['.dataset', '.txt']:
-                print(f'Deleting {path}')
-                path.unlink()
+    # existing_files = list(precomputed_dataset_path.iterdir())
+    # if (len(existing_files)) > 0:
+    #     for path in existing_files:
+    #         if path.suffixes == ['.dataset', '.txt']:
+    #             print(f'Deleting {path}')
+    #             path.unlink()
 
     # go through dataset
     i = 0
@@ -48,9 +40,8 @@ def precompute_dataset(from_path, to_path, samples_per_file=5000):
     sample_count = 0
     total_sample_count = 0
     for path in tqdm(scenario_paths, unit='file'):
-        print(path)
-        # create file
-        f = open(precomputed_dataset_path / f'{i}.dataset.txt', 'w')
+        output_strs = []
+        f = open(to_path / f'{i + start_index}.dataset.txt', 'w')
 
         # create simulation
         sim = Simulation(str(path), start_time=tmin)
@@ -94,14 +85,14 @@ def precompute_dataset(from_path, to_path, samples_per_file=5000):
                         map(str, expert_action))
 
                     # pick a file where to save it (pre-shuffle the dataset for faster loading of consecutive chunks)
+                    f.write(sa_str + '\n')
 
                     # append (state, action) string to file
-                    f.write(sa_str + '\n')
+                    output_strs.append(sa_str)
                     sample_count += 1
 
             # step the simulation
             sim.step(0.1)
-
         f.close()
         i += 1
 
@@ -242,10 +233,51 @@ if __name__ == '__main__':
     parser.add_argument(
         '--precompute', action='store_true'
     )  # Setting this will erase the whole content of the --to folder!
+    parser.add_argument('--parallel',
+                        action='store_true',
+                        help='If true, the precomputation is done in parallel')
+    parser.add_argument(
+        "--n_processes",
+        type=int,
+        default=40,
+        help="Number of processes over which to split file generation")
     args = parser.parse_args()
 
     if args.precompute:
-        precompute_dataset(from_path=data_path, to_path=data_precomputed_path)
+        # create folder for precomputed dataset
+        precomputed_dataset_path = Path(data_precomputed_path)
+        if not os.path.exists(precomputed_dataset_path):
+            os.makedirs(str(data_precomputed_path), exist_ok=True)
+        # get dataset files
+        dataset_path = Path(data_path)
+        scenario_paths = list(dataset_path.iterdir())[:1000]
+        scenario_paths = [
+            file for file in scenario_paths if 'tfrecord' in str(file)
+        ]
+        if args.parallel:
+            # leave some cpus free but have at least one and don't use more than n_processes
+            num_cpus = min(max(multiprocessing.cpu_count() - 2, 1),
+                           args.n_processes)
+            num_files = len(scenario_paths)
+            process_list = []
+            for i in range(num_cpus):
+                p = Process(
+                    target=precompute_dataset,
+                    args=[
+                        scenario_paths[i * num_files // num_cpus:(i + 1) *
+                                       num_files // num_cpus],
+                        data_precomputed_path, i * num_files // num_cpus
+                    ])
+                p.start()
+                process_list.append(p)
+
+            for process in process_list:
+                process.join()
+        else:
+            precompute_dataset(scenario_paths,
+                               data_precomputed_path,
+                               start_index=0)
+
     print(f"Using {device} device")
 
     print('Initializing dataset...')
