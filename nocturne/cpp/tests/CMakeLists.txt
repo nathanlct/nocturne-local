@@ -38,6 +38,7 @@ add_executable(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/line_segment_test.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry/polygon_test.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/object_test.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/road_test.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/view_field_test.cc
 )
 target_include_directories(
