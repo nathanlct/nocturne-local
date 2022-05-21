@@ -1,3 +1,4 @@
+"""Set path to all the Waymo data and the parsed Waymo files."""
 import os
 from pathlib import Path
 
@@ -20,3 +21,5 @@ PROCESSED_VALID = os.path.join(DATA_FOLDER,
                                f'formatted_json_v{VERSION_NUMBER}_valid')
 PROCESSED_TEST = os.path.join(DATA_FOLDER,
                               f'formatted_json_v{VERSION_NUMBER}_test')
+
+ERR_VAL = -1e4

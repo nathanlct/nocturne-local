@@ -1,0 +1,82 @@
+#include "road.h"
+
+#include "geometry/vector_2d.h"
+#include "utils/sf_utils.h"
+
+namespace nocturne {
+
+sf::Color RoadTypeColor(const RoadType& road_type) {
+  switch (road_type) {
+    case RoadType::kLane: {
+      return sf::Color::Yellow;
+    }
+    case RoadType::kRoadLine: {
+      return sf::Color::Blue;
+    }
+    case RoadType::kRoadEdge: {
+      return sf::Color::Green;
+    }
+    case RoadType::kStopSign: {
+      return sf::Color::Red;
+    }
+    case RoadType::kCrosswalk: {
+      return sf::Color::Magenta;
+    }
+    case RoadType::kSpeedBump: {
+      return sf::Color::Cyan;
+    }
+    default: {
+      return sf::Color::Transparent;
+    }
+  };
+}
+
+geometry::ConvexPolygon RoadPoint::BoundingPolygon() const {
+  const geometry::Vector2D p0 =
+      position_ + geometry::Vector2D(kRoadPointRadius, kRoadPointRadius);
+  const geometry::Vector2D p1 =
+      position_ + geometry::Vector2D(-kRoadPointRadius, kRoadPointRadius);
+  const geometry::Vector2D p2 =
+      position_ + geometry::Vector2D(-kRoadPointRadius, -kRoadPointRadius);
+  const geometry::Vector2D p3 =
+      position_ + geometry::Vector2D(kRoadPointRadius, -kRoadPointRadius);
+  return geometry::ConvexPolygon({p0, p1, p2, p3});
+}
+
+void RoadPoint::draw(sf::RenderTarget& target, sf::RenderStates states) const {
+  target.draw(*drawable_, states);
+}
+
+sf::Color RoadLine::Color() const { return RoadTypeColor(road_type_); }
+
+void RoadLine::draw(sf::RenderTarget& target, sf::RenderStates states) const {
+  target.draw(graphic_points_.data(), graphic_points_.size(), sf::LineStrip,
+              states);
+}
+
+void RoadLine::InitRoadPoints() {
+  const int64_t num_possible_points =
+      std::min(num_road_points_, int64_t(geometry_points_.size()));
+  road_points_.reserve(num_possible_points);
+  const int64_t n = geometry_points_.size();
+  const int64_t step = n / num_road_points_;
+  for (int64_t i = 0; i < num_possible_points - 1; ++i) {
+    road_points_.emplace_back(geometry_points_[i * step],
+                              geometry_points_[(i + 1) * step], road_type_);
+  }
+  // we want to ensure that the last and the first points are always placed
+  // for the neighbor coordinates for the last point we just return
+  // it own coordinates
+  road_points_.emplace_back(geometry_points_.back(), geometry_points_.back(),
+                            road_type_);
+}
+
+void RoadLine::InitRoadLineGraphics() {
+  const int64_t n = geometry_points_.size();
+  graphic_points_.reserve(n);
+  for (const geometry::Vector2D& p : geometry_points_) {
+    graphic_points_.emplace_back(sf::Vertex(utils::ToVector2f(p), Color()));
+  }
+}
+
+}  // namespace nocturne

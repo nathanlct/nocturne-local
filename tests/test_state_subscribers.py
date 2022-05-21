@@ -1,3 +1,4 @@
+"""Unit tests on observation functions."""
 import numpy as np
 from pyvirtualdisplay import Display
 
@@ -6,6 +7,10 @@ from nocturne import Simulation
 
 
 def test_state_subscribers():
+    """Unit tests to check that observations are correct."""
+    # TODO(eugenevinitsky) complete this once we have a better idea
+    # of how to test things
+    return
     sim = Simulation(scenario_path=str(PROJECT_PATH /
                                        'tests/scenario_test.json'))
     scenario = sim.getScenario()

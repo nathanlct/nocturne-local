@@ -33,9 +33,10 @@ accel_upper_bound: 2
 steering_lower_bound: -0.7 # corresponds to about 40 degrees of max steering angle
 steering_upper_bound: 0.7 # corresponds to about 40 degrees of max steering angle
 steering_discretization: 9
-max_num_vehicles: 15 # we want to upper bound how many agents there can be in the scene
+max_num_vehicles: 20 # we want to upper bound how many agents there can be in the scene
+                     # this is mostly useful because RL libraries expect it
 # TODO(eugenevinitsky) actually implement this
-randomize_goals: True
+randomize_goals: False
 rew_cfg:
   shared_reward: False # agents get the collective reward instead of individual rewards
   goal_tolerance: 0.5
@@ -45,6 +46,15 @@ rew_cfg:
   goal_distance_penalty: False # if shaped_goal_distance is true, then when this is True the goal distance is a penalty for being far from 
                                # goal instead of a reward for being close
   goal_achieved_bonus: ${episode_length}
+  # goal is only achieved if you're within this tolerance on distance from goal
+  position_target: True
+  position_target_tolerance: 1.0
+  # goal is only achieved if you're within this tolerance on final agent speed at goal position
+  speed_target: True
+  speed_target_tolerance: 0.5
+  # goal is only achieved if you're within this tolerance on final agent heading at goal position
+  heading_target: False
+  heading_target_tolerance: 0.3
 subscriber:
   view_angle: 3.14
   # the distance which the cone extends before agents are not visible
@@ -64,7 +74,7 @@ hydra:
     dir: /checkpoint/eugenevinitsky/nocturne/sweep/${now:%Y.%m.%d}/${experiment}/${now:%H.%M.%S}
     subdir: ${hydra.job.num}
   launcher:
-    timeout_min: 1440
+    timeout_min: 2880
     cpus_per_task: 80
     gpus_per_node: 1
     tasks_per_node: 1

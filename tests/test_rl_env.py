@@ -1,26 +1,28 @@
+"""Test step and rendering functions."""
 import os
 
 from hydra import compose, initialize
 from pyvirtualdisplay import Display
 
 from cfgs.config import PROJECT_PATH
-from nocturne_utils.wrappers import create_env
-
-os.environ["DISPLAY"] = ":0.0"
+from nocturne import Action
+from nocturne.envs.wrappers import create_env
 
 
 def test_rl_env():
+    """Test step and rendering functions."""
     disp = Display()
     disp.start()
     initialize(config_path="../cfgs/")
     cfg = compose(config_name="config")
+    cfg.scenario_path = os.path.join(PROJECT_PATH, 'tests')
     cfg.max_num_vehicles = 50
     env = create_env(cfg)
     env.files = [str(PROJECT_PATH / "tests/large_file.json")]
     _ = env.reset()
     # quick check that rendering works
-    _ = env.scenario.getCone(env.scenario.getVehicles()[0], 120.0, 1.99 * 3.14,
-                             0.0, False)
+    _ = env.scenario.getConeImage(env.scenario.getVehicles()[0], 120.0,
+                                  1.99 * 3.14, 0.0, False)
     for _ in range(90):
         vehs = env.scenario.getObjectsThatMoved()
         prev_position = {
@@ -28,10 +30,7 @@ def test_rl_env():
             for veh in vehs
         }
         obs, rew, done, info = env.step(
-            {veh.getID(): {
-                'accel': 2.0,
-                'turn': 1.0
-            }
+            {veh.id: Action(acceleration=2.0, steering=1.0)
              for veh in vehs})
         for veh in vehs:
             if veh in env.scenario.getObjectsThatMoved():
