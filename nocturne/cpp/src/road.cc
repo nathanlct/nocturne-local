@@ -55,18 +55,19 @@ void RoadLine::draw(sf::RenderTarget& target, sf::RenderStates states) const {
 }
 
 void RoadLine::InitRoadPoints() {
-  const int64_t num_possible_points =
-      std::min(num_road_points_, int64_t(geometry_points_.size()));
-  road_points_.reserve(num_possible_points);
-  const int64_t n = geometry_points_.size();
-  const int64_t step = n / num_road_points_;
-  for (int64_t i = 0; i < num_possible_points - 1; ++i) {
-    road_points_.emplace_back(geometry_points_[i * step],
-                              geometry_points_[(i + 1) * step], road_type_);
+  const int64_t num_segments = geometry_points_.size() - 1;
+  const int64_t num_sampled_points =
+      (num_segments + sample_every_n_ - 1) / sample_every_n_ + 1;
+  road_points_.reserve(num_sampled_points);
+  for (int64_t i = 0; i < num_sampled_points - 2; ++i) {
+    road_points_.emplace_back(geometry_points_[i * sample_every_n_],
+                              geometry_points_[(i + 1) * sample_every_n_],
+                              road_type_);
   }
-  // we want to ensure that the last and the first points are always placed
-  // for the neighbor coordinates for the last point we just return
-  // it own coordinates
+  const int64_t p = (num_sampled_points - 2) * sample_every_n_;
+  road_points_.emplace_back(geometry_points_[p], geometry_points_.back(),
+                            road_type_);
+  // Use itself as neighbor for the last point.
   road_points_.emplace_back(geometry_points_.back(), geometry_points_.back(),
                             road_type_);
 }

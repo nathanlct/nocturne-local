@@ -49,15 +49,15 @@ constexpr int64_t kMaxVisibleTrafficLights = 20;
 constexpr int64_t kMaxVisibleStopSigns = 4;
 
 // Object features are:
-// [ valid, distance, azimuth, length, witdh, relative_heading,
-//   relative_velocity_speed, relative_velocity_direction,
+// [ valid, distance, azimuth, length, witdh, relative_object_heading,
+//   relative_velocity_heading, relative_velocity_speed, 
 //   object_type (one_hot of 5) ]
 constexpr int64_t kObjectFeatureSize = 13;
 
 // RoadPoint features are:
 // [ valid, distance, azimuth, distance to the next point, relative azimuth to
-//   the next point, road_type (one_hot of 7) ]
-constexpr int64_t kRoadPointFeatureSize = 12;
+//   the next point, road_type (one_hot of 8) ]
+constexpr int64_t kRoadPointFeatureSize = 13;
 
 // TrafficLight features are:
 // [ valid, distance, azimuth, current_state (one_hot of 9) ]
@@ -68,9 +68,9 @@ constexpr int64_t kTrafficLightFeatureSize = 12;
 constexpr int64_t kStopSignsFeatureSize = 3;
 
 // Ego features are:
-// [ ego speed, distance to goal position, relative angle to goal position,
-// length, width ]
-constexpr int64_t kEgoFeatureSize = 5;
+// [ length, width, speed, target distance, relative_target_azimuth,
+//   relative_target_heading, relative_target_speed ]
+constexpr int64_t kEgoFeatureSize = 7;
 
 class Scenario : public sf::Drawable {
  public:

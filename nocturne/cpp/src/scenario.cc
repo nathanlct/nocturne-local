@@ -107,9 +107,9 @@ void ExtractObjectFeature(const Object& src, const Object& obj, float dis,
   feature[3] = obj.length();
   feature[4] = obj.width();
   feature[5] = relative_heading;
-  feature[6] = relative_velocity.Norm();
-  feature[7] =
+  feature[6] =
       geometry::utils::AngleSub(relative_velocity.Angle(), src.heading());
+  feature[7] = relative_velocity.Norm();
   // One-hot vector for object_type, assume feature is initially 0.
   feature[8 + obj_type] = 1.0f;
 }
@@ -339,17 +339,21 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
 
   const float src_heading = src.heading();
   const geometry::Vector2D d = src.target_position() - src.position();
-  const float dist = d.Norm();
-  const float dst_heading = d.Angle();
-  const float heading_diff =
-      geometry::utils::AngleSub(dst_heading, src_heading);
+  const float target_dist = d.Norm();
+  const float target_azimuth =
+      geometry::utils::AngleSub(d.Angle(), src_heading);
+  const float target_heading =
+      geometry::utils::AngleSub(src.target_heading(), src_heading);
+  const float target_speed = src.target_speed() - src.speed();
 
   float* state_data = state.DataPtr();
-  state_data[0] = src.speed();
-  state_data[1] = dist;
-  state_data[2] = heading_diff;
-  state_data[3] = src.length();
-  state_data[4] = src.width();
+  state_data[0] = src.length();
+  state_data[1] = src.width();
+  state_data[2] = src.speed();
+  state_data[3] = target_dist;
+  state_data[4] = target_azimuth;
+  state_data[5] = target_heading;
+  state_data[6] = target_speed;
 
   return state;
 }
@@ -919,10 +923,10 @@ void Scenario::LoadRoads(const json& roads_json) {
               std::make_shared<geometry::LineSegment>(cur_pos, nxt_pos));
         }
       }
-      // TODO(ev) 8 is a hardcoding
+      // TODO: Try different sample rate.
       std::shared_ptr<RoadLine> road_line =
           std::make_shared<RoadLine>(road_type, std::move(geometry),
-                                     /*num_road_points=*/8, check_collision);
+                                     /*sample_every_n=*/1, check_collision);
       road_lines_.push_back(road_line);
     }
   }
