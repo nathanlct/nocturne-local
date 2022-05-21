@@ -51,7 +51,7 @@ rew_cfg:
   position_target_tolerance: 1.0
   # goal is only achieved if you're within this tolerance on final agent speed at goal position
   speed_target: True
-  speed_target_tolerance: 0.5
+  speed_target_tolerance: 1.0
   # goal is only achieved if you're within this tolerance on final agent heading at goal position
   heading_target: False
   heading_target_tolerance: 0.3
@@ -75,7 +75,7 @@ hydra:
     subdir: ${hydra.job.num}
   launcher:
     timeout_min: 2880
-    cpus_per_task: 80
+    cpus_per_task: 10
     gpus_per_node: 1
     tasks_per_node: 1
     mem_gb: 160

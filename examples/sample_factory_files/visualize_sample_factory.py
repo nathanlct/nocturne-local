@@ -221,7 +221,8 @@ def main():
     disp.start()
     register_custom_components()
     # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.04/s_kl_control/06.47.53/9/s_kl_control/cfg.json'
-    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.19/srt_v2/11.54.35/2/srt_v2/cfg.json'
+    # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/srt_v3/11.15.20/8/srt_v3/cfg.json'
+    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/srt_v3/11.15.20/2/srt_v3/cfg.json'
     with open(file_path, 'r') as file:
         cfg_dict = json.load(file)
 
@@ -232,7 +233,7 @@ def main():
     cfg_dict['policy_index'] = 0
     cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
     cfg_dict['continuous_actions_sample'] = True
-    cfg_dict['discrete_actions_sample'] = False
+    cfg_dict['discrete_actions_sample'] = True
     cfg_dict['scenario_path'] = PROCESSED_TRAIN_NO_TL
 
     class Bunch(object):
