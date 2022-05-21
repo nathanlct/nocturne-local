@@ -44,13 +44,13 @@ constexpr float kSpeedThreshold = 0.05;
 // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
 // returned in the state
 constexpr int64_t kMaxVisibleObjects = 20;
-constexpr int64_t kMaxVisibleRoadPoints = 300;
+constexpr int64_t kMaxVisibleRoadPoints = 1000;
 constexpr int64_t kMaxVisibleTrafficLights = 20;
 constexpr int64_t kMaxVisibleStopSigns = 4;
 
 // Object features are:
 // [ valid, distance, azimuth, length, witdh, relative_object_heading,
-//   relative_velocity_heading, relative_velocity_speed, 
+//   relative_velocity_heading, relative_velocity_speed,
 //   object_type (one_hot of 5) ]
 constexpr int64_t kObjectFeatureSize = 13;
 
