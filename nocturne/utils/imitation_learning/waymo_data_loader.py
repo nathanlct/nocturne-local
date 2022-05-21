@@ -20,7 +20,7 @@ def precompute_dataset(from_path, to_path, samples_per_file=5000):
     """Construct a precomputed dataset for fast sampling."""
     # get dataset files
     dataset_path = Path(from_path)
-    scenario_paths = list(dataset_path.iterdir())[:10]
+    scenario_paths = list(dataset_path.iterdir())[:1000]
     scenario_paths = [
         file for file in scenario_paths if 'tfrecord' in str(file)
     ]
