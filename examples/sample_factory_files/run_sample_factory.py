@@ -4,12 +4,12 @@ Runner script for sample factory.
 To run in single agent mode on one file for testing.
 python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True \
     ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME \
-    ++single_agent_mode=True ++num_files=1
+    ++max_num_vehicles=1 ++num_files=1
 
 To run in multiagent mode on one file for testing
 python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True \
     ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME \
-        ++single_agent_mode=False ++num_files=1
+    ++num_files=1
 
 To run on all files set ++num_files=-1
 
@@ -44,10 +44,7 @@ class SampleFactoryEnv():
             env (BaseEnv): Base environment that we are wrapping.
         """
         self.env = env
-        if self.env.single_agent_mode:
-            self.num_agents = 1
-        else:
-            self.num_agents = self.env.cfg['max_num_vehicles']
+        self.num_agents = self.env.cfg['max_num_vehicles']
         self.agent_ids = [i for i in range(self.num_agents)]
         self.is_multiagent = True
         _ = self.env.reset()
@@ -290,8 +287,7 @@ def main(cfg):
     # recommendation from Aleksei to keep horizon length fixed
     # and number of agents fixed and just pad missing / exited
     # agents with a vector of -1s
-    if not cfg_dict['single_agent_mode']:
-        cfg_dict['subscriber']['keep_inactive_agents'] = True
+    cfg_dict['subscriber']['keep_inactive_agents'] = True
 
     # put it into a namespace so sample factory code runs correctly
     class Bunch(object):
