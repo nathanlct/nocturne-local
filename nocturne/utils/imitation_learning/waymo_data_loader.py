@@ -38,9 +38,10 @@ def precompute_dataset(scenario_paths, to_path, start_index):
     a_nan_count = 0
     sample_count = 0
     total_sample_count = 0
-    for path in tqdm(scenario_paths, unit='file'):
+    for path in scenario_paths:
+        print(path)
         output_strs = []
-        f = open(to_path / f'{i + start_index}.dataset.txt', 'w')
+        f = open(Path(to_path) / f'{i + start_index}.dataset.txt', 'w')
 
         # create simulation
         sim = Simulation(str(path), start_time=tmin)
@@ -113,8 +114,10 @@ class WaymoDataset(Dataset):
         self.cached_data = None
         self.dataset_path = Path(cfg['dataset_path'])
 
-        self.file_paths = sorted(list(self.dataset_path.iterdir()))
+        self.file_paths = list(self.dataset_path.iterdir())
         self.sample_limit = cfg['sample_limit']
+        # sort file names
+        self.file_paths.sort(key=lambda fp: int(fp.stem.split('.')[0]))
 
         self.samples_per_file = []
 
@@ -162,7 +165,7 @@ class WaymoDataset(Dataset):
         while idx >= (n := self.samples_per_file[i]):
             idx -= n
             i += 1
-        file_path = self.dataset_path / f'{i}.dataset.txt'
+        file_path = self.file_paths[i]
 
         # load that file in cache (using cache because dataset is pre-shuffled
         # so getitems should be consecutive, ie dont shuffle dataloader)
@@ -220,13 +223,13 @@ class ImitationAgent(nn.Module):
 if __name__ == '__main__':
     print('\n\nDONT FORGET python setup.py develop\n\n')
 
-    data_path = PROCESSED_TRAIN_NO_TL
+    data_path = './dataset/json_files'  # PROCESSED_TRAIN_NO_TL
     data_precomputed_path = './dataset/json_files_precomputed'
     lr = 3e-4
     batch_size = 4096
     n_epochs = 200
     n_workers_dataloader = 8
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cpu"  # "cuda" if torch.cuda.is_available() else "cpu"
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
