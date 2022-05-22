@@ -365,6 +365,16 @@ class BaseEnv(Env):
                 self.cfg['subscriber']['view_angle'])
         return obs
 
+    def make_all_vehicles_experts(self):
+        for veh in self.scenario.getVehicles():
+            veh.expert_control = True
+
+    def get_vehicles(self):
+        return self.scenario.getVehicles()
+
+    def get_objects_that_moved(self):
+        return self.scenario.getVehicles()
+
     def render(self, mode=None):
         """See superclass."""
         return self.scenario.getImage(
