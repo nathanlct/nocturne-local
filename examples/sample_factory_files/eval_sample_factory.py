@@ -4,7 +4,7 @@ TODO(ev) refactor, this is wildly similar to visualize_sample_factory
 """
 
 from copy import deepcopy
-from collections import deque
+from collections import deque, defaultdict
 import itertools
 import json
 import sys
@@ -91,8 +91,8 @@ def run_eval(cfgs):
     success_rate_by_distance = np.zeros(
         (len(actor_critics), len(actor_critics), distance_bins.shape[-1], 3))
     f_path = PROCESSED_VALID_NO_TL
-    with open(os.path.join(f_path, 'valid_files.txt')) as file:
-        files = [line.strip() for line in file]
+    files = os.listdir(PROCESSED_VALID_NO_TL)
+    files = [file for file in files if 'tfrecord' in file]
 
     for (index_1, actor_1), (index_2, actor_2) in itertools.product(
             actor_critics, actor_critics):
@@ -107,6 +107,15 @@ def run_eval(cfgs):
 
             num_frames = 0
             env.unwrapped.files = [os.path.join(f_path, file)]
+
+            # step the env to its conclusion to generate the expert trajectories we compare against
+            env.reset()
+            trajectory_dict = defaultdict(lambda: np.zeros((80, 2)))
+            env.unwrapped.make_all_vehicles_experts()
+            for i in range(80):
+                for veh in env.unwrapped.get_vehicles:
+                    trajectory_dict[veh.id] = veh.position.numpy()
+                env.step()
             obs = env.reset()
             # some key information for tracking statistics
             goal_dist = env.goal_dist_normalizers
@@ -297,11 +306,15 @@ def main():
     disp = Display()
     disp.start()
     register_custom_components()
+    # file_paths = [
+    #     # '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/0/seed_sweepv2/cfg.json',
+    #     '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.10/new_features/15.10.09/2/new_features/cfg.json',
+    #     '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.10/new_features/15.10.09/4/new_features/cfg.json',
+    #     # '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/2/seed_sweepv2/cfg.json',
+    # ]
     file_paths = [
-        # '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/0/seed_sweepv2/cfg.json',
-        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.10/new_features/15.10.09/2/new_features/cfg.json',
-        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.10/new_features/15.10.09/4/new_features/cfg.json',
-        # '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/2/seed_sweepv2/cfg.json',
+        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35/13/new_road_sample/cfg.json',
+        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35/14/new_road_sample/cfg.json'
     ]
     cfg_dicts = []
     for file in file_paths:
