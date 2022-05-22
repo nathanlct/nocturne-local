@@ -20,7 +20,6 @@ from nocturne import Simulation
 
 def precompute_dataset(scenario_paths, to_path, start_index):
     """Construct a precomputed dataset for fast sampling."""
-
     # min and max timesteps (max included) that should be used in dataset trajectories
     tmin = 1
     tmax = 90
