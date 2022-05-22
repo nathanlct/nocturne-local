@@ -102,6 +102,7 @@ def run_eval(cfgs):
         true_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
         goal_frac = 0
         collision_frac = 0
+        average_displacement_error = 0
         for file_num, file in enumerate(files[0:200]):
             # for i, file in enumerate(os.listdir(files)[0:100]):
 
@@ -113,10 +114,13 @@ def run_eval(cfgs):
             trajectory_dict = defaultdict(lambda: np.zeros((80, 2)))
             env.unwrapped.make_all_vehicles_experts()
             for i in range(80):
-                for veh in env.unwrapped.get_vehicles:
+                for veh in env.unwrapped.get_objects_that_moved:
                     trajectory_dict[veh.id] = veh.position.numpy()
                 env.step()
+
             obs = env.reset()
+
+            rollout_traj_dict = defaultdict(lambda: np.zeros((80, 2)))
             # some key information for tracking statistics
             goal_dist = env.goal_dist_normalizers
             valid_indices = env.valid_indices
@@ -180,6 +184,11 @@ def run_eval(cfgs):
                                 'action_logits'].argmax(axis=1)[indices_2]
 
                     actions = actions.cpu().numpy()
+
+                    for veh in env.unwrapped.get_objects_that_moved:
+                        # only check vehicles we are actually controlling
+                        if veh.expert_control == False:
+                            rollout_traj_dict[veh.id] = veh.position.numpy()
 
                     rnn_states = policy_outputs.rnn_states
                     rnn_states_2 = policy_outputs_2.rnn_states
