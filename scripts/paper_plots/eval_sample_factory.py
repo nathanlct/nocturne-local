@@ -25,9 +25,9 @@ from sample_factory.algorithms.utils.arguments import load_from_checkpoint
 from sample_factory.algorithms.utils.multi_agent_wrapper import MultiAgentWrapper, is_multiagent_env
 from sample_factory.envs.create_env import create_env
 from sample_factory.utils.utils import log, AttrDict
-from run_sample_factory import register_custom_components
+from examples.sample_factory_files.run_sample_factory import register_custom_components
 
-from cfgs.config import PROCESSED_VALID_NO_TL
+from cfgs.config import PROCESSED_VALID_NO_TL, ERR_VAL
 
 
 def run_eval(cfgs):
@@ -83,6 +83,7 @@ def run_eval(cfgs):
 
     goal_array = np.zeros((len(actor_critics), len(actor_critics)))
     collision_array = np.zeros((len(actor_critics), len(actor_critics)))
+    ade_array = np.zeros(len(actor_critics))
     success_rate_by_num_agents = np.zeros(
         (len(actor_critics), len(actor_critics), cfg.max_num_vehicles, 3))
     # we bin the success rate into bins of 10 meters between 0 and 400
@@ -103,20 +104,20 @@ def run_eval(cfgs):
         goal_frac = 0
         collision_frac = 0
         average_displacement_error = 0
-        for file_num, file in enumerate(files[0:200]):
-            # for i, file in enumerate(os.listdir(files)[0:100]):
+        veh_counter = 0
+        for file_num, file in enumerate(files[0:cfg['num_eval_files']]):
 
             num_frames = 0
             env.unwrapped.files = [os.path.join(f_path, file)]
 
             # step the env to its conclusion to generate the expert trajectories we compare against
             env.reset()
-            trajectory_dict = defaultdict(lambda: np.zeros((80, 2)))
+            expert_trajectory_dict = defaultdict(lambda: np.zeros((80, 2)))
             env.unwrapped.make_all_vehicles_experts()
             for i in range(80):
-                for veh in env.unwrapped.get_objects_that_moved:
-                    trajectory_dict[veh.id] = veh.position.numpy()
-                env.step()
+                for veh in env.unwrapped.get_objects_that_moved():
+                    expert_trajectory_dict[veh.id][i] = veh.position.numpy()
+                env.unwrapped.simulation.step(0.1)
 
             obs = env.reset()
 
@@ -185,10 +186,11 @@ def run_eval(cfgs):
 
                     actions = actions.cpu().numpy()
 
-                    for veh in env.unwrapped.get_objects_that_moved:
+                    for veh in env.unwrapped.get_objects_that_moved():
                         # only check vehicles we are actually controlling
                         if veh.expert_control == False:
-                            rollout_traj_dict[veh.id] = veh.position.numpy()
+                            rollout_traj_dict[veh.id][
+                                env.step_num] = veh.position.numpy()
 
                     rnn_states = policy_outputs.rnn_states
                     rnn_states_2 = policy_outputs_2.rnn_states
@@ -268,6 +270,23 @@ def run_eval(cfgs):
                                     1] += collision_observed[i]
                                 success_rate_by_distance[index_1, index_2,
                                                          bin - 1, 2] += 1
+                            # compute ADE
+                            for agent_id, traj in rollout_traj_dict.items():
+                                masking_arr = traj.sum(axis=1)
+                                mask = (masking_arr != 0.0) * (
+                                    masking_arr != traj.shape[1] * ERR_VAL)
+                                expert_mask_arr = expert_trajectory_dict[
+                                    agent_id].sum(axis=1)
+                                expert_mask = (expert_mask_arr != 0.0) * (
+                                    expert_mask_arr != traj.shape[1] * ERR_VAL)
+                                ade = np.linalg.norm(
+                                    traj - expert_trajectory_dict[agent_id],
+                                    axis=-1)[mask * expert_mask]
+                                average_displacement_error = (
+                                    veh_counter * average_displacement_error +
+                                    np.mean(ade)) / (veh_counter + 1)
+                                veh_counter += 1
+
                             # do some logging
                             log.info(f'Avg goal achieved, {goal_frac}')
                             log.info(f'Avg num collisions, {collision_frac}')
@@ -290,9 +309,12 @@ def run_eval(cfgs):
         #     os.listdir(PROCESSED_TEST_NO_TL))
         goal_array[index_1, index_2] = goal_frac
         collision_array[index_1, index_2] = collision_frac
+        if index_1 == index_2:
+            ade_array[index_1] = average_displacement_error
 
     np.savetxt('results/zsc_goal.txt', goal_array, delimiter=',')
     np.savetxt('results/zsc_collision.txt', collision_array, delimiter=',')
+    np.savetxt('results/ade.txt', ade_array, delimiter=',')
     with open('results/success_by_veh_number.npy', 'wb') as f:
         success_ratio = np.nan_to_num(
             success_rate_by_num_agents[:, :, :, 0:2] /
@@ -323,7 +345,7 @@ def main():
     # ]
     file_paths = [
         '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35/13/new_road_sample/cfg.json',
-        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35/14/new_road_sample/cfg.json'
+        # '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35/14/new_road_sample/cfg.json'
     ]
     cfg_dicts = []
     for file in file_paths:
@@ -338,6 +360,7 @@ def main():
         cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
         cfg_dict['continuous_actions_sample'] = True
         cfg_dict['discrete_actions_sample'] = True
+        cfg_dict['num_eval_files'] = 2
         cfg_dicts.append(cfg_dict)
 
     class Bunch(object):
