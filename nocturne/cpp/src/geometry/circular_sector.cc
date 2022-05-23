@@ -59,13 +59,7 @@ std::vector<int32_t> CircularSector::BatchContains(
     const std::vector<const PointLike*>& points) const {
   const int64_t n = points.size();
   std::vector<int32_t> mask(n);
-  std::vector<float> x(n);
-  std::vector<float> y(n);
-  for (int64_t i = 0; i < n; ++i) {
-    const Vector2D p = points[i]->Coordinate();
-    x[i] = p.x();
-    y[i] = p.y();
-  }
+  const auto [x, y] = utils::PackCoordinates(points);
   const Vector2D r0 = Radius0();
   const Vector2D r1 = Radius1();
   const float ox = center_.x();

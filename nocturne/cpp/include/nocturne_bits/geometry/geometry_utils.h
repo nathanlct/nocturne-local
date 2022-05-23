@@ -2,9 +2,15 @@
 
 #include <cmath>
 #include <limits>
+#include <utility>
+#include <vector>
 
 namespace nocturne {
 namespace geometry {
+
+class Vector2D;
+class PointLike;
+
 namespace utils {
 
 constexpr double kEps = 1e-8;
@@ -49,6 +55,11 @@ template <typename T>
 inline T AngleSub(T lhs, T rhs) {
   return NormalizeAngle<T>(lhs - rhs);
 }
+
+std::pair<std::vector<float>, std::vector<float>> PackCoordinates(
+    const std::vector<Vector2D>& points);
+std::pair<std::vector<float>, std::vector<float>> PackCoordinates(
+    const std::vector<const PointLike*>& points);
 
 }  // namespace utils
 }  // namespace geometry

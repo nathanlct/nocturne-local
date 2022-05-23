@@ -31,6 +31,11 @@ bool Intersects(const LineSegment& segment, const ConvexPolygon& polygon);
 
 std::vector<int32_t> BatchIntersects(const ConvexPolygon& polygon,
                                      const Vector2D& o,
+                                     const std::vector<float>& x,
+                                     const std::vector<float>& y);
+
+std::vector<int32_t> BatchIntersects(const ConvexPolygon& polygon,
+                                     const Vector2D& o,
                                      const std::vector<Vector2D>& points);
 
 std::vector<int32_t> BatchIntersects(
@@ -52,6 +57,12 @@ inline std::optional<float> ParametricIntersection(const LineSegment& lhs,
 }
 
 // Batch version of ParametricIntersection.
+// If there is no intersection, result will be inf.
+std::vector<float> BatchParametricIntersection(const Vector2D& o,
+                                               const std::vector<float>& x,
+                                               const std::vector<float>& y,
+                                               const LineSegment segment);
+
 std::vector<float> BatchParametricIntersection(
     const Vector2D& o, const std::vector<Vector2D>& points,
     const LineSegment segment);

@@ -36,9 +36,10 @@ Vector2D MakeSightEndpoint(const CircleLike& vision,
 
 std::vector<int32_t> VisibleObjectsImpl(
     const std::vector<const ObjectBase*>& objects, const Vector2D& o,
-    std::vector<Vector2D>& points) {
+    const std::vector<Vector2D>& points) {
   const int64_t n = objects.size();
   const int64_t m = points.size();
+  auto [x, y] = geometry::utils::PackCoordinates(points);
 
   std::vector<float> dis(m, 1.0f);
   std::vector<int64_t> idx(m, -1);
@@ -49,9 +50,9 @@ std::vector<int32_t> VisibleObjectsImpl(
     const auto edges = objects[i]->BoundingPolygon().Edges();
     for (const LineSegment& edge : edges) {
       const std::vector<float> cur_dis =
-          geometry::BatchParametricIntersection(o, points, edge);
+          geometry::BatchParametricIntersection(o, x, y, edge);
       for (int64_t j = 0; j < m; ++j) {
-        if (cur_dis[j] != -1.0 && cur_dis[j] < dis[j]) {
+        if (cur_dis[j] < dis[j]) {
           dis[j] = cur_dis[j];
           idx[j] = i;
         }
@@ -61,14 +62,16 @@ std::vector<int32_t> VisibleObjectsImpl(
 
   std::vector<int32_t> mask(n, 0);
   for (int64_t i = 0; i < m; ++i) {
-    points[i] = LineSegment(o, points[i]).Point(dis[i]);
+    const geometry::Vector2D p = LineSegment(o, points[i]).Point(dis[i]);
+    x[i] = p.x();
+    y[i] = p.y();
     if (idx[i] != -1) {
       mask[idx[i]] = 1;
     }
   }
   for (int64_t i = 0; i < n; ++i) {
     const std::vector<int32_t> cur_mask =
-        BatchIntersects(objects[i]->BoundingPolygon(), o, points);
+        BatchIntersects(objects[i]->BoundingPolygon(), o, x, y);
     mask[i] |= std::accumulate(cur_mask.cbegin(), cur_mask.cend(), int32_t(0),
                                std::bit_or<int32_t>());
   }

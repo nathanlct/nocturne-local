@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <limits>
 
@@ -193,32 +194,84 @@ bool Intersects(const LineSegment& segment, const ConvexPolygon& polygon) {
   return Intersects(polygon, segment);
 }
 
+// void BatchIntersects(const ConvexPolygon& polygon, const Vector2D& o,
+//                      const std::vector<float>& x, const std::vector<float>&
+//                      y, std::vector<int32_t>& mask) {
+std::vector<int32_t> BatchIntersects(const ConvexPolygon& polygon,
+                                     const Vector2D& o,
+                                     const std::vector<float>& x,
+                                     const std::vector<float>& y) {
+  assert(x.size() == y.size());
+  const int64_t n = x.size();
+  std::vector<int32_t> mask(n, 1);
+  // std::fill(mask.begin(), mask.end(), 1);
+  std::vector<float> min_v(n, std::numeric_limits<float>::max());
+  std::vector<float> max_v(n, std::numeric_limits<float>::lowest());
+  const float ox = o.x();
+  const float oy = o.y();
+
+  for (const Vector2D& v : polygon.vertices()) {
+    const float vx = v.x() - ox;
+    const float vy = v.y() - oy;
+    for (int64_t i = 0; i < n; ++i) {
+      const float dx = x[i] - ox;
+      const float dy = y[i] - oy;
+      const float cur = vx * dy - dx * vy;
+      // std::min and std::max are slow, use conditional operator here.
+      min_v[i] = min_v[i] < cur ? min_v[i] : cur;
+      max_v[i] = max_v[i] > cur ? max_v[i] : cur;
+    }
+  }
+  for (int64_t i = 0; i < n; ++i) {
+    mask[i] &= ((((min_v[i] < 0.0f) & (max_v[i] < 0.0f)) |
+                 ((min_v[i] > 0.0f) & (max_v[i] > 0.0f))) ^
+                1);
+  }
+
+  const std::vector<LineSegment> edges = polygon.Edges();
+  for (const LineSegment& edge : edges) {
+    const float p0x = edge.Endpoint0().x();
+    const float p0y = edge.Endpoint0().y();
+    const float p1x = edge.Endpoint1().x();
+    const float p1y = edge.Endpoint1().y();
+    const float dx = p1x - p0x;
+    const float dy = p1y - p0y;
+    const float v0x = ox - p0x;
+    const float v0y = oy - p0y;
+    for (int64_t i = 0; i < n; ++i) {
+      const float v1x = x[i] - p0x;
+      const float v1y = y[i] - p0y;
+      const float v0 = v0x * dy - dx * v0y;
+      const float v1 = v1x * dy - dx * v1y;
+      mask[i] &= (((v0 > 0.0f) & (v1 > 0.0f)) ^ 1);
+    }
+  }
+
+  return mask;
+}
+
 std::vector<int32_t> BatchIntersects(const ConvexPolygon& polygon,
                                      const Vector2D& o,
                                      const std::vector<Vector2D>& points) {
-  return BatchIntersectsImpl(polygon, o, points,
-                             [](const Vector2D& p) { return p; });
+  const auto [x, y] = utils::PackCoordinates(points);
+  return BatchIntersects(polygon, o, x, y);
 }
 
 std::vector<int32_t> BatchIntersects(
     const ConvexPolygon& polygon, const Vector2D& o,
     const std::vector<const PointLike*>& points) {
-  return BatchIntersectsImpl(
-      polygon, o, points, [](const PointLike* p) { return p->Coordinate(); });
+  const auto [x, y] = utils::PackCoordinates(points);
+  return BatchIntersects(polygon, o, x, y);
 }
 
-std::vector<float> BatchParametricIntersection(
-    const Vector2D& o, const std::vector<Vector2D>& points,
-    const LineSegment segment) {
-  const int64_t n = points.size();
+std::vector<float> BatchParametricIntersection(const Vector2D& o,
+                                               const std::vector<float>& x,
+                                               const std::vector<float>& y,
+                                               const LineSegment segment) {
+  assert(x.size() == y.size());
+  const int64_t n = x.size();
   std::vector<float> ret(n, -1.0f);
 
-  std::vector<float> x(n);
-  std::vector<float> y(n);
-  for (int64_t i = 0; i < n; ++i) {
-    x[i] = points[i].x();
-    y[i] = points[i].y();
-  }
   const float p0x = o.x();
   const float p0y = o.y();
   const float p1x = segment.Endpoint0().x();
@@ -256,9 +309,17 @@ std::vector<float> BatchParametricIntersection(
     const float c1 = p1x * p1q1y - p1q1x * p1y;
     const float cd = p0q0x * p1q1y - p1q1x * p0q0y;
 
-    ret[i] = intersects ? (c1 - c0) / cd : -1.0f;
+    ret[i] =
+        intersects ? (c1 - c0) / cd : std::numeric_limits<float>::infinity();
   }
   return ret;
+}
+
+std::vector<float> BatchParametricIntersection(
+    const Vector2D& o, const std::vector<Vector2D>& points,
+    const LineSegment segment) {
+  const auto [x, y] = utils::PackCoordinates(points);
+  return BatchParametricIntersection(o, x, y, segment);
 }
 
 }  // namespace geometry
