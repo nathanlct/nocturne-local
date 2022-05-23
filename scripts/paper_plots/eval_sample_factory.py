@@ -84,6 +84,7 @@ def run_eval(cfgs):
     goal_array = np.zeros((len(actor_critics), len(actor_critics)))
     collision_array = np.zeros((len(actor_critics), len(actor_critics)))
     ade_array = np.zeros(len(actor_critics))
+    fde_array = np.zeros(len(actor_critics))
     success_rate_by_num_agents = np.zeros(
         (len(actor_critics), len(actor_critics), cfg.max_num_vehicles, 3))
     # we bin the success rate into bins of 10 meters between 0 and 400
@@ -104,6 +105,7 @@ def run_eval(cfgs):
         goal_frac = 0
         collision_frac = 0
         average_displacement_error = 0
+        final_displacement_error = 0
         veh_counter = 0
         for file_num, file in enumerate(files[0:cfg['num_eval_files']]):
 
@@ -285,6 +287,13 @@ def run_eval(cfgs):
                                 average_displacement_error = (
                                     veh_counter * average_displacement_error +
                                     np.mean(ade)) / (veh_counter + 1)
+                                fde = np.linalg.norm(
+                                    traj - expert_trajectory_dict[agent_id],
+                                    axis=-1)[np.max(
+                                        np.argwhere(mask * expert_mask))]
+                                final_displacement_error = (
+                                    veh_counter * final_displacement_error +
+                                    fde) / (veh_counter + 1)
                                 veh_counter += 1
 
                             # do some logging
@@ -311,10 +320,13 @@ def run_eval(cfgs):
         collision_array[index_1, index_2] = collision_frac
         if index_1 == index_2:
             ade_array[index_1] = average_displacement_error
+        if index_1 == index_2:
+            fde_array[index_1] = final_displacement_error
 
     np.savetxt('results/zsc_goal.txt', goal_array, delimiter=',')
     np.savetxt('results/zsc_collision.txt', collision_array, delimiter=',')
     np.savetxt('results/ade.txt', ade_array, delimiter=',')
+    np.savetxt('results/fde.txt', fde_array, delimiter=',')
     with open('results/success_by_veh_number.npy', 'wb') as f:
         success_ratio = np.nan_to_num(
             success_rate_by_num_agents[:, :, :, 0:2] /
