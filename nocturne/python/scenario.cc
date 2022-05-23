@@ -125,7 +125,6 @@ void DefineScenario(py::module& m) {
           py::arg("img_width") = 1000, py::arg("padding") = 0.0f,
           py::arg("draw_target_position") = true)
       .def("removeVehicle", &Scenario::RemoveObject)
-      // .def("hasExpertAction", &Scenario::hasExpertAction)
       .def("getExpertAction", &Scenario::ExpertAction)
       .def("getExpertSpeeds", &Scenario::ExpertVelocity)
       .def("getMaxNumVisibleObjects", &Scenario::getMaxNumVisibleObjects)
