@@ -56,8 +56,8 @@ constexpr int64_t kObjectFeatureSize = 13;
 
 // RoadPoint features are:
 // [ valid, distance, azimuth, distance to the next point, relative azimuth to
-//   the next point, road_type (one_hot of 7) ]
-constexpr int64_t kRoadPointFeatureSize = 12;
+//   the next point, road_type (one_hot of 8) ]
+constexpr int64_t kRoadPointFeatureSize = 13;
 
 // TrafficLight features are:
 // [ valid, distance, azimuth, current_state (one_hot of 9) ]
