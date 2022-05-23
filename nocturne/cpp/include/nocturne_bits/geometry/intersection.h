@@ -52,6 +52,7 @@ inline std::optional<float> ParametricIntersection(const LineSegment& lhs,
 }
 
 // Batch version of ParametricIntersection.
+// If there is no intersection, result will be inf.
 std::vector<float> BatchParametricIntersection(
     const Vector2D& o, const std::vector<Vector2D>& points,
     const LineSegment segment);

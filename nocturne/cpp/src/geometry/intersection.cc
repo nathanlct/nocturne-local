@@ -256,7 +256,8 @@ std::vector<float> BatchParametricIntersection(
     const float c1 = p1x * p1q1y - p1q1x * p1y;
     const float cd = p0q0x * p1q1y - p1q1x * p0q0y;
 
-    ret[i] = intersects ? (c1 - c0) / cd : -1.0f;
+    ret[i] =
+        intersects ? (c1 - c0) / cd : std::numeric_limits<float>::infinity();
   }
   return ret;
 }

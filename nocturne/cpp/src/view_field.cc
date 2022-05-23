@@ -51,7 +51,7 @@ std::vector<int32_t> VisibleObjectsImpl(
       const std::vector<float> cur_dis =
           geometry::BatchParametricIntersection(o, points, edge);
       for (int64_t j = 0; j < m; ++j) {
-        if (cur_dis[j] != -1.0 && cur_dis[j] < dis[j]) {
+        if (cur_dis[j] < dis[j]) {
           dis[j] = cur_dis[j];
           idx[j] = i;
         }
