@@ -108,8 +108,10 @@ class BVH {
   std::vector<const ObjectType*> IntersectionCandidates(
       const AABBInterface& object) const {
     std::vector<const ObjectType*> candidates;
-    IntersectionCandidatesImpl<AABB, ObjectType>(object.GetAABB(), root_,
-                                                 candidates);
+    if (root_ != nullptr) {
+      IntersectionCandidatesImpl<AABB, ObjectType>(object.GetAABB(), root_,
+                                                   candidates);
+    }
     return candidates;
   }
 
@@ -117,8 +119,10 @@ class BVH {
   std::vector<const ObjectType*> IntersectionCandidates(
       const LineSegment& segment) const {
     std::vector<const ObjectType*> candidates;
-    IntersectionCandidatesImpl<LineSegment, ObjectType>(segment, root_,
-                                                        candidates);
+    if (root_ != nullptr) {
+      IntersectionCandidatesImpl<LineSegment, ObjectType>(segment, root_,
+                                                          candidates);
+    }
     return candidates;
   }
 
