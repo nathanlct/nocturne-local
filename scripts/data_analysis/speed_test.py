@@ -27,9 +27,9 @@ def run_speed_test(files):
         vehs = sim.scenario().getObjectsThatMoved()
         scenario = sim.getScenario()
         for veh in vehs:
-            t = time.time()
+            t = time.perf_counter()
             obs = scenario.flattened_visible_state(veh, 120, np.pi)
-            times_list.append(time.time() - t)
+            times_list.append(time.perf_counter() - t)
     print('avg, std. time to get obs is {}, {}'.format(np.mean(times_list),
                                                        np.std(times_list)))
 
