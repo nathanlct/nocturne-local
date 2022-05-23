@@ -2,6 +2,7 @@
 import os
 
 from hydra import compose, initialize
+import numpy as np
 from pyvirtualdisplay import Display
 
 from cfgs.config import PROJECT_PATH
@@ -21,8 +22,16 @@ def test_rl_env():
     env.files = [str(PROJECT_PATH / "tests/large_file.json")]
     _ = env.reset()
     # quick check that rendering works
-    _ = env.scenario.getConeImage(env.scenario.getVehicles()[0], 120.0,
-                                  1.99 * 3.14, 0.0, False)
+    _ = env.scenario.getConeImage(
+        source=env.scenario.getObjectsThatMoved()[0],
+        view_dist=120.0,
+        view_angle=np.pi * 0.8,
+        head_tilt=0.0,
+        img_width=1600,
+        img_height=1600,
+        padding=50.0,
+        draw_target_position=True,
+    )
     for _ in range(90):
         vehs = env.scenario.getObjectsThatMoved()
         prev_position = {
