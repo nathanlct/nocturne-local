@@ -175,12 +175,7 @@ void ViewField::FilterVisibleNonblockingObjects(
 std::vector<const geometry::PointLike*> ViewField::VisiblePoints(
     const std::vector<const geometry::PointLike*>& objects) const {
   std::vector<const geometry::PointLike*> ret;
-  const CircleLike* vptr = vision_.get();
-  // std::copy_if(objects.cbegin(), objects.cend(), std::back_inserter(ret),
-  //              [vptr](const geometry::PointLike* obj) {
-  //                return vptr->Contains(obj->Coordinate());
-  //              });
-  const std::vector<int32_t> mask = vptr->BatchContains(objects);
+  const std::vector<int32_t> mask = vision_->BatchContains(objects);
   const int64_t n = objects.size();
   for (int64_t i = 0; i < n; ++i) {
     if (mask[i]) {
@@ -192,13 +187,7 @@ std::vector<const geometry::PointLike*> ViewField::VisiblePoints(
 
 void ViewField::FilterVisiblePoints(
     std::vector<const geometry::PointLike*>& objects) const {
-  const CircleLike* vptr = vision_.get();
-  // auto pivot = std::partition(objects.begin(), objects.end(),
-  //                             [vptr](const geometry::PointLike* obj) {
-  //                               return vptr->Contains(obj->Coordinate());
-  //                             });
-  // objects.resize(std::distance(objects.begin(), pivot));
-  const std::vector<int32_t> mask = vptr->BatchContains(objects);
+  const std::vector<int32_t> mask = vision_->BatchContains(objects);
   const int64_t pivot = utils::MaskedPartition(mask, objects);
   objects.resize(pivot);
 }
