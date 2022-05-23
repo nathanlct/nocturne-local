@@ -1,5 +1,7 @@
+"""Average displacement error computation."""
 from pathlib import Path
 import numpy as np
+import torch
 
 from nocturne import Simulation
 from cfgs.config import ERR_VAL as INVALID_POSITION
@@ -78,12 +80,19 @@ def _average_displacement_impl(trajectory_path, model, sim_allow_non_vehicles=Tr
     return avg_displacement
 
 
-def compute_average_displacement(trajectories_dir, model):
+def compute_average_displacement(trajectories_dir, model, **kwargs):
+    """Compute average displacement error between a model and the ground truth."""
+    # get trajectories paths
+    if isinstance(trajectories_dir, str):
+        # if trajectories_dir is a string, treat it as the path to a directory of trajectories
+        trajectories_dir = Path(trajectories_dir)
+        trajectories_paths = list(trajectories_dir.glob('*tfrecord*.json'))
+    elif isinstance(trajectories_dir, list):
+        # if trajectories_dir is a list, treat it as a list of paths to trajectory files
+        trajectories_paths = [Path(path) for path in trajectories_dir]
     # compute average displacement over each individual trajectory file
-    trajectories_dir = Path(trajectories_dir)
-    trajectories_paths = list(trajectories_dir.glob('*tfrecord*.json'))
     average_displacements = list(map(
-        lambda path: _average_displacement_impl(path, model),
+        lambda path: _average_displacement_impl(path, model, **kwargs),
         trajectories_paths
     ))
 
@@ -91,7 +100,6 @@ def compute_average_displacement(trajectories_dir, model):
 
 
 if __name__ == '__main__':
-    import torch
     from nocturne.utils.imitation_learning.waymo_data_loader import ImitationAgent  # noqa: F401
     model = torch.load('model.pth')
     ade = compute_average_displacement('dataset/json_files', model=model)
