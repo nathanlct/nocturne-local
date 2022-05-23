@@ -67,6 +67,8 @@ def precompute_dataset(scenario_paths, to_path, start_index):
                          scenario.flattened_visible_state(veh,
                                                           view_dist=120,
                                                           view_angle=3.14)))
+                    # normalize state
+                    veh_state /= 100.0
 
                     if np.isnan(veh_state).any():
                         s_nan_count += 1
