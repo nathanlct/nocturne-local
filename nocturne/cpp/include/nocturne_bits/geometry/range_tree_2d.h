@@ -69,6 +69,9 @@ class RangeTree2d {
     const auto r_ptr = std::upper_bound(
         points_.cbegin(), points_.cend(), aabb.MaxX(),
         [](float a, const PointLike* b) { return a < b->Coordinate().x(); });
+    if (l_ptr == points_.end()) {
+      return ret;
+    }
     int64_t l = (std::distance(points_.cbegin(), l_ptr) | capacity_);
     int64_t r = (std::distance(points_.cbegin(), r_ptr) | capacity_);
     while (l < r) {
@@ -92,6 +95,7 @@ class RangeTree2d {
  protected:
   template <class PointType, class PtrFunc>
   void ResetImpl(const std::vector<PointType>& points, PtrFunc ptr_func) {
+    Clear();
     size_ = points.size();
     points_.reserve(size_);
     for (const auto& point : points) {
