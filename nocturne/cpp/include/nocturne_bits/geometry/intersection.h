@@ -29,10 +29,6 @@ bool Intersects(const LineSegment& segment, const AABB& aabb);
 bool Intersects(const ConvexPolygon& polygon, const LineSegment& segment);
 bool Intersects(const LineSegment& segment, const ConvexPolygon& polygon);
 
-// void BatchIntersects(const ConvexPolygon& polygon, const Vector2D& o,
-//                      const std::vector<float>& x, const std::vector<float>&
-//                      y, std::vector<int32_t>& mask);
-
 std::vector<int32_t> BatchIntersects(const ConvexPolygon& polygon,
                                      const Vector2D& o,
                                      const std::vector<float>& x,
