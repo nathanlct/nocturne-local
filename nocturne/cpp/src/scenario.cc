@@ -289,7 +289,7 @@ Scenario::VisibleObjects(const Object& src, float view_dist, float view_angle,
   std::vector<const ObjectBase*> objects =
       VisibleCandidates(object_bvh_, src, vf);
   std::vector<const geometry::PointLike*> road_points =
-      road_point_tree_.Query<geometry::PointLike>(vf.GetAABB());
+      road_point_tree_.RangeSearch<geometry::PointLike>(vf);
   const std::vector<const ObjectBase*> static_candidates =
       VisibleCandidates(static_bvh_, src, vf);
 

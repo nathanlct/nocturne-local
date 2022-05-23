@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "geometry/aabb.h"
+#include "geometry/aabb_interface.h"
 #include "geometry/point_like.h"
 #include "geometry/vector_2d.h"
 
@@ -60,7 +61,7 @@ class RangeTree2d {
 
   // Time complexity: O(Log^2(N) + K)
   template <class PointType>
-  std::vector<const PointType*> Query(const AABB& aabb) const {
+  std::vector<const PointType*> RangeSearch(const AABB& aabb) const {
     std::vector<const PointType*> ret;
     const auto l_ptr = std::lower_bound(
         points_.cbegin(), points_.cend(), aabb.MinX(),
@@ -72,15 +73,20 @@ class RangeTree2d {
     int64_t r = (std::distance(points_.cbegin(), r_ptr) | capacity_);
     while (l < r) {
       if (l & 1) {
-        QueryNode<PointType>(aabb, nodes_[l++], ret);
+        NodeRangeSearch<PointType>(aabb, nodes_[l++], ret);
       }
       if (r & 1) {
-        QueryNode<PointType>(aabb, nodes_[--r], ret);
+        NodeRangeSearch<PointType>(aabb, nodes_[--r], ret);
       }
       l >>= 1;
       r >>= 1;
     }
     return ret;
+  }
+
+  template <class PointType>
+  std::vector<const PointType*> RangeSearch(const AABBInterface& object) const {
+    return RangeSearch<PointType>(object.GetAABB());
   }
 
  protected:
@@ -119,8 +125,9 @@ class RangeTree2d {
   }
 
   template <class PointType>
-  void QueryNode(const AABB& aabb, const std::vector<const PointLike*>& node,
-                 std::vector<const PointType*>& ret) const {
+  void NodeRangeSearch(const AABB& aabb,
+                       const std::vector<const PointLike*>& node,
+                       std::vector<const PointType*>& ret) const {
     const auto l = std::lower_bound(
         node.cbegin(), node.cend(), aabb.MinY(),
         [](const PointLike* a, float b) { return a->Coordinate().y() < b; });

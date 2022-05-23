@@ -37,8 +37,8 @@ std::vector<MockPoint> MakeRandomPoinst(int64_t n, float l, float r) {
   return points;
 }
 
-std::vector<const MockPoint*> Query(const std::vector<MockPoint>& points,
-                                    const AABB& aabb) {
+std::vector<const MockPoint*> RangeSearch(const std::vector<MockPoint>& points,
+                                          const AABB& aabb) {
   std::vector<const MockPoint*> ret;
   for (const auto& p : points) {
     if (aabb.Contains(p.Coordinate())) {
@@ -51,7 +51,7 @@ std::vector<const MockPoint*> Query(const std::vector<MockPoint>& points,
   return ret;
 }
 
-TEST(RangeTree2dTest, RangeQueryTest) {
+TEST(RangeTree2dTest, RangeSearchTest) {
   const int64_t n = 1000;
   const int64_t cap = 1024;
   const float l = -20.0;
@@ -63,11 +63,11 @@ TEST(RangeTree2dTest, RangeQueryTest) {
   ASSERT_EQ(tree.capacity(), cap);
 
   const AABB aabb1(-10.0, -10.0, 10.0, 10.0);
-  std::vector<const MockPoint*> ret = tree.Query<MockPoint>(aabb1);
+  std::vector<const MockPoint*> ret = tree.RangeSearch<MockPoint>(aabb1);
   std::sort(ret.begin(), ret.end(), [](const MockPoint* a, const MockPoint* b) {
     return a->Coordinate() < b->Coordinate();
   });
-  std::vector<const MockPoint*> ans = Query(points, aabb1);
+  std::vector<const MockPoint*> ans = RangeSearch(points, aabb1);
   ASSERT_EQ(ret.size(), ans.size());
   for (size_t i = 0; i < ret.size(); ++i) {
     EXPECT_EQ(ret[i], ans[i]);
