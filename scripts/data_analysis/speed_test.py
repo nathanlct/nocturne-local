@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH
-from nocturne import Simulation
+from nocturne import Simulation, Action
 
 
 def run_speed_test(files):
@@ -28,7 +28,11 @@ def run_speed_test(files):
         scenario = sim.getScenario()
         for veh in vehs:
             t = time.perf_counter()
-            obs = scenario.flattened_visible_state(veh, 120, np.pi)
+            obs = scenario.flattened_visible_state(veh, 120,
+                                                   (180 / 180) * np.pi)
+            #           veh.apply_action(Action(1.0, 1.0))
+
+            #            sim.step(0.1)
             times_list.append(time.perf_counter() - t)
     print('avg, std. time to get obs is {}, {}'.format(np.mean(times_list),
                                                        np.std(times_list)))

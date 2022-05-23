@@ -11,6 +11,7 @@ import sys
 import os
 
 import numpy as np
+import pandas as pd
 from pyvirtualdisplay import Display
 import torch
 
@@ -30,11 +31,12 @@ from examples.sample_factory_files.run_sample_factory import register_custom_com
 from cfgs.config import PROCESSED_VALID_NO_TL, ERR_VAL
 
 
-def run_eval(cfgs):
+def run_eval(cfgs, test_zsc, output_path):
     """Eval a stored agent over all files in validation set.
 
     Args:
         cfg (dict): configuration file for instantiating the agents and environment.
+        test_zsc (bool): if true, we play all agents against all agents
 
     Returns
     -------
@@ -81,23 +83,40 @@ def run_eval(cfgs):
         actor_critic.load_state_dict(checkpoint_dict['model'])
         actor_critics.append([i, actor_critic])
 
-    goal_array = np.zeros((len(actor_critics), len(actor_critics)))
-    collision_array = np.zeros((len(actor_critics), len(actor_critics)))
-    ade_array = np.zeros(len(actor_critics))
-    fde_array = np.zeros(len(actor_critics))
-    success_rate_by_num_agents = np.zeros(
-        (len(actor_critics), len(actor_critics), cfg.max_num_vehicles, 3))
     # we bin the success rate into bins of 10 meters between 0 and 400
     # the second dimension is the counts
     distance_bins = np.linspace(0, 400, 40)
-    success_rate_by_distance = np.zeros(
-        (len(actor_critics), len(actor_critics), distance_bins.shape[-1], 3))
+    if test_zsc:
+        goal_array = np.zeros((len(actor_critics), len(actor_critics)))
+        collision_array = np.zeros((len(actor_critics), len(actor_critics)))
+        success_rate_by_num_agents = np.zeros(
+            (len(actor_critics), len(actor_critics), cfg.max_num_vehicles, 3))
+        success_rate_by_distance = np.zeros(
+            (len(actor_critics), len(actor_critics), distance_bins.shape[-1],
+             3))
+    else:
+        goal_array = np.zeros(len(actor_critics))
+        collision_array = np.zeros(len(actor_critics))
+        success_rate_by_num_agents = np.zeros(
+            (len(actor_critics), cfg.max_num_vehicles, 3))
+        success_rate_by_distance = np.zeros(
+            (len(actor_critics), distance_bins.shape[-1], 3))
+    ade_array = np.zeros(len(actor_critics))
+    fde_array = np.zeros(len(actor_critics))
     f_path = PROCESSED_VALID_NO_TL
     files = os.listdir(PROCESSED_VALID_NO_TL)
     files = [file for file in files if 'tfrecord' in file]
 
-    for (index_1, actor_1), (index_2, actor_2) in itertools.product(
-            actor_critics, actor_critics):
+    if test_zsc:
+        output_generator = itertools.product(actor_critics, actor_critics)
+    else:
+        output_generator = actor_critics
+
+    for output in output_generator:
+        if test_zsc:
+            (index_1, actor_1), (index_2, actor_2) = output
+        else:
+            (index_1, actor_1) = output
         episode_rewards = [
             deque([], maxlen=100) for _ in range(env.num_agents)
         ]
@@ -128,23 +147,31 @@ def run_eval(cfgs):
             goal_dist = env.goal_dist_normalizers
             valid_indices = env.valid_indices
             agent_id_to_env_id_map = env.agent_id_to_env_id_map
-            # pick which valid indices go to which policy
-            val = np.random.uniform()
-            if val < 0.5:
-                num_choice = int(np.floor(len(valid_indices) / 2.0))
+            if test_zsc:
+                # pick which valid indices go to which policy
+                val = np.random.uniform()
+                if val < 0.5:
+                    num_choice = int(np.floor(len(valid_indices) / 2.0))
+                else:
+                    num_choice = int(np.ceil(len(valid_indices) / 2.0))
+                indices_1 = list(
+                    np.random.choice(valid_indices, num_choice, replace=False))
+                indices_2 = [
+                    val for val in valid_indices if val not in indices_1
+                ]
+                rnn_states = torch.zeros(
+                    [env.num_agents, get_hidden_size(cfg)],
+                    dtype=torch.float32,
+                    device=device)
+                rnn_states_2 = torch.zeros(
+                    [env.num_agents, get_hidden_size(cfg)],
+                    dtype=torch.float32,
+                    device=device)
             else:
-                num_choice = int(np.ceil(len(valid_indices) / 2.0))
-            indices_1 = list(
-                np.random.choice(valid_indices, num_choice, replace=False))
-            indices_2 = [val for val in valid_indices if val not in indices_1]
-            rnn_states = torch.zeros(
-                [env.num_agents, get_hidden_size(cfg)],
-                dtype=torch.float32,
-                device=device)
-            rnn_states_2 = torch.zeros(
-                [env.num_agents, get_hidden_size(cfg)],
-                dtype=torch.float32,
-                device=device)
+                rnn_states = torch.zeros(
+                    [env.num_agents, get_hidden_size(cfg)],
+                    dtype=torch.float32,
+                    device=device)
             episode_reward = np.zeros(env.num_agents)
             finished_episode = [False] * env.num_agents
             goal_achieved = [False] * len(valid_indices)
@@ -156,35 +183,41 @@ def run_eval(cfgs):
                     for key, x in obs_torch.items():
                         obs_torch[key] = torch.from_numpy(x).to(device).float()
 
-                    obs_torch_2 = deepcopy(obs_torch)
                     policy_outputs = actor_1(obs_torch,
                                              rnn_states,
                                              with_action_distribution=True)
-                    policy_outputs_2 = actor_2(obs_torch_2,
-                                               rnn_states_2,
-                                               with_action_distribution=True)
+                    if test_zsc:
+                        obs_torch_2 = deepcopy(obs_torch)
+                        policy_outputs_2 = actor_2(
+                            obs_torch_2,
+                            rnn_states_2,
+                            with_action_distribution=True)
 
                     # sample actions from the distribution by default
                     # also update the indices that should be drawn from the second policy
                     # with its outputs
                     actions = policy_outputs.actions
-                    actions[indices_2] = policy_outputs_2.actions[indices_2]
+                    if test_zsc:
+                        actions[indices_2] = policy_outputs_2.actions[
+                            indices_2]
 
                     action_distribution = policy_outputs.action_distribution
                     if isinstance(action_distribution,
                                   ContinuousActionDistribution):
                         if not cfg.continuous_actions_sample:  # TODO: add similar option for discrete actions
                             actions = action_distribution.means
-                            actions[
-                                indices_2] = policy_outputs_2.action_distribution.means[
-                                    indices_2]
+                            if test_zsc:
+                                actions[
+                                    indices_2] = policy_outputs_2.action_distribution.means[
+                                        indices_2]
                     if isinstance(action_distribution,
                                   CategoricalActionDistribution):
                         if not cfg.discrete_actions_sample:
                             actions = policy_outputs['action_logits'].argmax(
                                 axis=1)
-                            actions[indices_2] = policy_outputs_2[
-                                'action_logits'].argmax(axis=1)[indices_2]
+                            if test_zsc:
+                                actions[indices_2] = policy_outputs_2[
+                                    'action_logits'].argmax(axis=1)[indices_2]
 
                     actions = actions.cpu().numpy()
 
@@ -195,7 +228,8 @@ def run_eval(cfgs):
                                 env.step_num] = veh.position.numpy()
 
                     rnn_states = policy_outputs.rnn_states
-                    rnn_states_2 = policy_outputs_2.rnn_states
+                    if test_zsc:
+                        rnn_states_2 = policy_outputs_2.rnn_states
 
                     for _ in range(render_action_repeat):
 
@@ -250,28 +284,51 @@ def run_eval(cfgs):
                                          avg_goal) / (file_num + 1)
                             collision_frac = (file_num * collision_frac +
                                               avg_collisions) / (file_num + 1)
-                            success_rate_by_num_agents[index_1, index_2,
-                                                       len(valid_indices) - 1,
-                                                       0] += avg_goal
-                            success_rate_by_num_agents[index_1, index_2,
-                                                       len(valid_indices) - 1,
-                                                       1] += avg_collisions
-                            success_rate_by_num_agents[index_1, index_2,
-                                                       len(valid_indices) - 1,
-                                                       2] += 1
+                            if test_zsc:
+                                success_rate_by_num_agents[index_1, index_2,
+                                                           len(valid_indices) -
+                                                           1, 0] += avg_goal
+                                success_rate_by_num_agents[index_1, index_2,
+                                                           len(valid_indices) -
+                                                           1,
+                                                           1] += avg_collisions
+                                success_rate_by_num_agents[index_1, index_2,
+                                                           len(valid_indices) -
+                                                           1, 2] += 1
+                            else:
+                                success_rate_by_num_agents[index_1,
+                                                           len(valid_indices) -
+                                                           1, 0] += avg_goal
+                                success_rate_by_num_agents[index_1,
+                                                           len(valid_indices) -
+                                                           1,
+                                                           1] += avg_collisions
+                                success_rate_by_num_agents[index_1,
+                                                           len(valid_indices) -
+                                                           1, 2] += 1
                             # track how well we do as a function of distance
                             for i, index in enumerate(valid_indices):
                                 env_id = agent_id_to_env_id_map[index]
                                 bin = np.searchsorted(distance_bins,
                                                       goal_dist[env_id])
-                                success_rate_by_distance[index_1, index_2,
-                                                         bin - 1,
-                                                         0] += goal_achieved[i]
-                                success_rate_by_distance[
-                                    index_1, index_2, bin - 1,
-                                    1] += collision_observed[i]
-                                success_rate_by_distance[index_1, index_2,
-                                                         bin - 1, 2] += 1
+                                if test_zsc:
+                                    success_rate_by_distance[
+                                        index_1, index_2, bin - 1,
+                                        0] += goal_achieved[i]
+                                    success_rate_by_distance[
+                                        index_1, index_2, bin - 1,
+                                        1] += collision_observed[i]
+                                    success_rate_by_distance[index_1, index_2,
+                                                             bin - 1, 2] += 1
+                                else:
+                                    success_rate_by_distance[
+                                        index_1, bin - 1,
+                                        0] += goal_achieved[i]
+                                    success_rate_by_distance[
+                                        index_1, bin - 1,
+                                        1] += collision_observed[i]
+                                    success_rate_by_distance[index_1, bin - 1,
+                                                             2] += 1
                             # compute ADE
                             for agent_id, traj in rollout_traj_dict.items():
                                 masking_arr = traj.sum(axis=1)
@@ -316,26 +373,46 @@ def run_eval(cfgs):
         #            index_2] = goal_frac / len(os.listdir(PROCESSED_TEST_NO_TL))
         # collision_array[index_1, index_2] = collision_frac / len(
         #     os.listdir(PROCESSED_TEST_NO_TL))
-        goal_array[index_1, index_2] = goal_frac
-        collision_array[index_1, index_2] = collision_frac
-        if index_1 == index_2:
+        if test_zsc:
+            goal_array[index_1, index_2] = goal_frac
+            collision_array[index_1, index_2] = collision_frac
+            if index_1 == index_2:
+                ade_array[index_1] = average_displacement_error
+            if index_1 == index_2:
+                fde_array[index_1] = final_displacement_error
+        else:
+            goal_array[index_1] = goal_frac
+            collision_array[index_1] = collision_frac
             ade_array[index_1] = average_displacement_error
-        if index_1 == index_2:
             fde_array[index_1] = final_displacement_error
 
-    np.savetxt('results/zsc_goal.txt', goal_array, delimiter=',')
-    np.savetxt('results/zsc_collision.txt', collision_array, delimiter=',')
-    np.savetxt('results/ade.txt', ade_array, delimiter=',')
-    np.savetxt('results/fde.txt', fde_array, delimiter=',')
-    with open('results/success_by_veh_number.npy', 'wb') as f:
-        success_ratio = np.nan_to_num(
-            success_rate_by_num_agents[:, :, :, 0:2] /
-            success_rate_by_num_agents[:, :, :, [2]])
+    np.savetxt(os.path.join(output_path, 'zsc_goal.txt'),
+               goal_array,
+               delimiter=',')
+    np.savetxt(os.path.join(output_path, 'zsc_collision.txt'),
+               collision_array,
+               delimiter=',')
+    np.savetxt(os.path.join(output_path, 'ade.txt'), ade_array, delimiter=',')
+    np.savetxt(os.path.join(output_path, 'fde.txt'), fde_array, delimiter=',')
+    with open(os.path.join(output_path, 'success_by_veh_number.npy'),
+              'wb') as f:
+        if test_zsc:
+            success_ratio = np.nan_to_num(
+                success_rate_by_num_agents[:, :, :, 0:2] /
+                success_rate_by_num_agents[:, :, :, [2]])
+        else:
+            success_ratio = np.nan_to_num(
+                success_rate_by_num_agents[:, :, 0:2] /
+                success_rate_by_num_agents[:, :, [2]])
         print(success_ratio)
         np.save(f, success_ratio)
-    with open('results/success_by_dist.npy', 'wb') as f:
-        dist_ratio = np.nan_to_num(success_rate_by_distance[:, :, :, 0:2] /
-                                   success_rate_by_distance[:, :, :, [2]])
+    with open(os.path.join('success_by_dist.npy'), 'wb') as f:
+        if test_zsc:
+            dist_ratio = np.nan_to_num(success_rate_by_distance[:, :, :, 0:2] /
+                                       success_rate_by_distance[:, :, :, [2]])
+        else:
+            dist_ratio = np.nan_to_num(success_rate_by_distance[:, :, 0:2] /
+                                       success_rate_by_distance[:, :, [2]])
         print(dist_ratio)
         np.save(f, dist_ratio)
 
@@ -349,43 +426,123 @@ def main():
     disp = Display()
     disp.start()
     register_custom_components()
-    # file_paths = [
-    #     # '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/0/seed_sweepv2/cfg.json',
-    #     '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.10/new_features/15.10.09/2/new_features/cfg.json',
-    #     '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.10/new_features/15.10.09/4/new_features/cfg.json',
-    #     # '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.09/seed_sweepv2/11.38.50/2/seed_sweepv2/cfg.json',
-    # ]
-    file_paths = [
-        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35/13/new_road_sample/cfg.json',
-        # '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35/14/new_road_sample/cfg.json'
-    ]
-    cfg_dicts = []
-    for file in file_paths:
-        with open(file, 'r') as file:
-            cfg_dict = json.load(file)
+    # output_folder = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35'
+    output_folder = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v9/05.46.08'
 
-        cfg_dict['cli_args'] = {}
-        cfg_dict['fps'] = 0
-        cfg_dict['render_action_repeat'] = None
-        cfg_dict['no_render'] = None
-        cfg_dict['policy_index'] = 0
-        cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
-        cfg_dict['continuous_actions_sample'] = True
-        cfg_dict['discrete_actions_sample'] = True
-        cfg_dict['num_eval_files'] = 2
-        cfg_dicts.append(cfg_dict)
+    # class Bunch(object):
 
-    class Bunch(object):
+    #     def __init__(self, adict):
+    #         self.__dict__.update(adict)
 
-        def __init__(self, adict):
-            self.__dict__.update(adict)
+    # file_paths = []
+    # cfg_dicts = []
+    # for (dirpath, dirnames, filenames) in os.walk(output_folder):
+    #     if 'cfg.json' in filenames:
+    #         file_paths.append(dirpath)
+    #         with open(os.path.join(dirpath, 'cfg.json'), 'r') as file:
+    #             cfg_dict = json.load(file)
 
-    cfgs = []
-    for cfg in cfg_dicts:
-        cfg = Bunch(cfg_dict)
-        cfgs.append(cfg)
-    status, avg_reward = run_eval(cfgs)
-    return status
+    #         cfg_dict['cli_args'] = {}
+    #         cfg_dict['fps'] = 0
+    #         cfg_dict['render_action_repeat'] = None
+    #         cfg_dict['no_render'] = None
+    #         cfg_dict['policy_index'] = 0
+    #         cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
+    #         cfg_dict['continuous_actions_sample'] = True
+    #         cfg_dict['discrete_actions_sample'] = True
+    #         cfg_dict['num_eval_files'] = 2
+    #         cfg_dicts.append(cfg_dict)
+
+    # for file_path, cfg_dict in zip(file_paths, cfg_dicts):
+    #     status, avg_reward = run_eval([Bunch(cfg_dict)],
+    #                                   test_zsc=False,
+    #                                   output_path=file_path)
+
+    # okay, now build a pandas dataframe of the results that we will use for plotting
+    # file_paths = []
+    # data_dicts = []
+    # for (dirpath, dirnames, filenames) in os.walk(output_folder):
+    #     if 'cfg.json' in filenames:
+    #         file_paths.append(dirpath)
+    #         with open(os.path.join(dirpath, 'cfg.json'), 'r') as file:
+    #             cfg_dict = json.load(file)
+    #         goal = float(np.loadtxt(os.path.join(dirpath, 'zsc_goal.txt')))
+    #         collide = float(
+    #             np.loadtxt(os.path.join(dirpath, 'zsc_collision.txt')))
+    #         data_dicts.append({
+    #             'num_files': cfg_dict['num_files'],
+    #             'goal_rate': goal,
+    #             'collide_rate': collide
+    #         })
+    # df = pd.DataFrame(data_dicts)
+    # means = df.groupby(['num_files'])['goal_rate'].mean()
+
+    # load the wandb file
+    # wandb_file = 'wandb_export_2022-05-23T15_44_41.104-04_00.csv'
+    # with open(wandb_file, 'r') as f:
+    #     wandb_df = pd.read_csv(f)
+    # wandb_df['identifier'] = wandb_df['seed'].astype(
+    #     str) + wandb_df['num_files'].astype(str)
+    # import ipdb
+    # ipdb.set_trace()
+    # one_run = wandb_df[(wandb_df['seed'] == 0) & (wandb_df['num_files'] == 10)]
+    # import seaborn as sns
+    # import matplotlib.pyplot as plt
+    # print(one_run)
+    # sns.lineplot(data=one_run,
+    #              x='global_step',
+    #              y='0_aux/avg_goal_achieved',
+    #              hue='num_files')
+    # plt.savefig('test.png')
+    #style='num_files')
+    if not os.path.exists('wandb.csv'):
+        import wandb
+
+        api = wandb.Api()
+        entity, project = "eugenevinitsky", "nocturne4"  # set to your entity and project
+        runs = api.runs(entity + "/" + project)
+
+        history_list = []
+        for run in runs:
+            if run.name == 'srt_v9':
+                # # .summary contains the output keys/values for metrics like accuracy.
+                # #  We call ._json_dict to omit large files
+                # summary_list.append(run.summary._json_dict)
+
+                # # .config contains the hyperparameters.
+                # #  We remove special values that start with _.
+                config = {
+                    k: v
+                    for k, v in run.config.items() if not k.startswith('_')
+                }
+                history_df = run.history()
+                history_df['seed'] = config['seed']
+                history_df['num_files'] = config['num_files']
+                history_list.append(history_df)
+
+            # # .name is the human-readable name of the run.
+            # name_list.append(run.name)
+
+        # runs_df = pd.DataFrame({
+        #     "summary": summary_list,
+        #     "config": config_list,
+        #     "name": name_list
+        # })
+        runs_df = pd.concat(history_list)
+        runs_df.to_csv('wandb.csv')
+
+    wandb_df = pd.read_csv('wandb.csv')
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    # print(one_run)
+    sns.set_palette("PuBuGn_d")
+    sns.lineplot(data=wandb_df,
+                 x='global_step',
+                 y='0_aux/avg_goal_achieved',
+                 hue=wandb_df.num_files,
+                 ci='sd',
+                 palette=['r', 'g', 'b', 'm', 'k', 'c'])
+    plt.savefig('test.png')
 
 
 if __name__ == '__main__':

@@ -50,46 +50,54 @@ def precompute_dataset(scenario_paths, to_path, start_index):
         # for each time and valid vehicle at that time
         for obj in scenario.getObjectsThatMoved():
             obj.expert_control = True
+        veh_ids = [veh.id for veh in scenario.getVehicles()]
         for time in range(tmin, tmax):
-            for veh in scenario.getVehicles():
+            vehs = [
+                obj for obj in scenario.getObjectsThatMoved()
+                if obj.id in veh_ids
+            ]
+            for veh in vehs:
                 expert_action = scenario.expert_action(veh, time)
                 if expert_action is not None:
                     expert_action = expert_action.numpy()
-                    sa_nan = False
+                    if expert_action[0] > -2 and expert_action[
+                            0] < 3 and expert_action[
+                                1] > -0.8 and expert_action[1] < 0.8:
+                        sa_nan = False
 
-                    if np.isnan(expert_action).any():
-                        a_nan_count += 1
-                        sa_nan = True
+                        if np.isnan(expert_action).any():
+                            a_nan_count += 1
+                            sa_nan = True
 
-                    # get state
-                    veh_state = np.concatenate(
-                        (scenario.ego_state(veh),
-                         scenario.flattened_visible_state(veh,
-                                                          view_dist=120,
-                                                          view_angle=3.14)))
+                        # get state
+                        veh_state = np.concatenate(
+                            (scenario.ego_state(veh),
+                             scenario.flattened_visible_state(
+                                 veh, view_dist=120, view_angle=3.14)))
 
-                    if np.isnan(veh_state).any():
-                        s_nan_count += 1
-                        sa_nan = True
+                        if np.isnan(veh_state).any():
+                            s_nan_count += 1
+                            sa_nan = True
 
-                    total_sample_count += 1
-                    if sa_nan:
-                        continue
+                        total_sample_count += 1
+                        if sa_nan:
+                            continue
 
-                    # make sure state and action are 1D arrays
-                    assert (len(veh_state.shape) == 1
-                            and len(expert_action.shape) == 1)
+                        # make sure state and action are 1D arrays
+                        assert (len(veh_state.shape) == 1
+                                and len(expert_action.shape) == 1)
 
-                    # generate (state, action) string
-                    sa_str = ','.join(map(str, veh_state)) + ';' + ','.join(
-                        map(str, expert_action))
+                        # generate (state, action) string
+                        sa_str = ','.join(map(str,
+                                              veh_state)) + ';' + ','.join(
+                                                  map(str, expert_action))
 
-                    # pick a file where to save it (pre-shuffle the dataset for faster loading of consecutive chunks)
-                    f.write(sa_str + '\n')
+                        # pick a file where to save it (pre-shuffle the dataset for faster loading of consecutive chunks)
+                        f.write(sa_str + '\n')
 
-                    # append (state, action) string to file
-                    output_strs.append(sa_str)
-                    sample_count += 1
+                        # append (state, action) string to file
+                        output_strs.append(sa_str)
+                        sample_count += 1
 
             # step the simulation
             sim.step(0.1)
@@ -223,13 +231,13 @@ class ImitationAgent(nn.Module):
 if __name__ == '__main__':
     print('\n\nDONT FORGET python setup.py develop\n\n')
 
-    data_path = './dataset/json_files'  # PROCESSED_TRAIN_NO_TL
+    data_path = PROCESSED_TRAIN_NO_TL
     data_precomputed_path = './dataset/json_files_precomputed'
     lr = 3e-4
-    batch_size = 4096
+    batch_size = 256
     n_epochs = 200
-    n_workers_dataloader = 8
-    device = "cpu"  # "cuda" if torch.cuda.is_available() else "cpu"
+    n_workers_dataloader = 16
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -252,7 +260,7 @@ if __name__ == '__main__':
             os.makedirs(str(data_precomputed_path), exist_ok=True)
         # get dataset files
         dataset_path = Path(data_path)
-        scenario_paths = list(dataset_path.iterdir())[:1000]
+        scenario_paths = list(dataset_path.iterdir())[:100]
         scenario_paths = [
             file for file in scenario_paths if 'tfrecord' in str(file)
         ]
@@ -283,6 +291,7 @@ if __name__ == '__main__':
     print(f"Using {device} device")
 
     print('Initializing dataset...')
+    print('This can take a minute or two.')
     dataset = WaymoDataset({
         'dataset_path': data_precomputed_path,
         'sample_limit': None,  # 100,
@@ -316,12 +325,13 @@ if __name__ == '__main__':
         losses = []
         for batch, (states, expert_actions) in enumerate(
                 tqdm(train_dataloader, unit='batch')):
-            states = states.to(device)
+            states = states.to(device) / 10.0
             expert_actions = expert_actions.to(device)
             dist = model.dist(states)
             # print(dist.mean, dist.variance, expert_actions)
             loss = -dist.log_prob(expert_actions).mean()
             losses.append(loss.item())
+            print(np.mean(losses))
 
             optimizer.zero_grad()
             loss.backward()
