@@ -491,21 +491,29 @@ std::optional<Action> Scenario::ExpertAction(const Object& obj,
   const std::vector<bool>& valid_mask = expert_valid_masks_.at(obj.id());
   const int64_t trajectory_length = valid_mask.size();
 
-  if (timestamp < 1 || timestamp > trajectory_length - 1) {
+  if (timestamp < 0 || timestamp > trajectory_length - 1) {
     return std::nullopt;
   }
-  if (!valid_mask[timestamp - 1] || !valid_mask[timestamp + 1]) {
+  if (!valid_mask[timestamp] || !valid_mask[timestamp + 1]) {
     return std::nullopt;
   }
 
-  const float speed = cur_speeds[timestamp];
+  // compute acceleration
+  // a_t = (v_{t+1} - v_t) / dt
   const float acceleration =
-      (cur_speeds[timestamp + 1] - cur_speeds[timestamp - 1]) /
-      (2.0f * expert_dt_);
+      (cur_speeds[timestamp + 1] - cur_speeds[timestamp]) / expert_dt_;
+
+  // compute steering
+  // cf Object::KinematicBicycleStep
+  // w = (h_{t+1} - h_t) / dt = v * tan(steering) * cos(beta) / length
+  // -> solve for steering s_t, we get s_t = atan(2C / sqrt(4 - C^2)) + k * pi
+  // with C = 2 * length * (h_{t+1} - h_t) / (dt * (v_t + v_{t+1}))
   const float w = geometry::utils::AngleSub(cur_headings[timestamp + 1],
-                                            cur_headings[timestamp - 1]) /
-                  (2.0 * expert_dt_);
-  const float steering = speed > 0 ? std::asin(w / speed * obj.length()) : 0.0f;
+                                            cur_headings[timestamp]) / expert_dt_;
+  const float C = 2.0f * obj.length() * w / (cur_speeds[timestamp + 1] + cur_speeds[timestamp]);
+  const float steering = std::atan(2.0f * C / std::sqrt(4 - C * C));
+
+  // return action
   return std::make_optional<Action>(acceleration, steering);
 }
 
