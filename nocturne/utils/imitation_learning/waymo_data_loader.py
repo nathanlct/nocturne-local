@@ -223,7 +223,7 @@ class ImitationAgent(nn.Module):
 if __name__ == '__main__':
     print('\n\nDONT FORGET python setup.py develop\n\n')
 
-    data_path = './dataset/json_files'  # PROCESSED_TRAIN_NO_TL
+    data_path = PROCESSED_TRAIN_NO_TL  # './dataset/json_files'
     data_precomputed_path = './dataset/json_files_precomputed'
     lr = 3e-4
     batch_size = 4096
