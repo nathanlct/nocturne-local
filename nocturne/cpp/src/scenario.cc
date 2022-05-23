@@ -5,6 +5,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <type_traits>
 
 #include "geometry/aabb_interface.h"
 #include "geometry/geometry_utils.h"
@@ -12,6 +13,7 @@
 #include "geometry/line_segment.h"
 #include "geometry/polygon.h"
 #include "geometry/vector_2d.h"
+#include "utils/data_utils.h"
 #include "utils/sf_utils.h"
 #include "view_field.h"
 
@@ -46,42 +48,41 @@ std::vector<const ObjectBase*> VisibleCandidates(const geometry::BVH& bvh,
   return objects;
 }
 
-bool IsVisibleRoadPoint(const Object& src, const ObjectBase& road_point,
-                        const std::vector<const ObjectBase*>& objects) {
-  // Assume road_point is a point with nearly 0 radius.
-  const geometry::LineSegment seg(src.position(), road_point.position());
-  for (const ObjectBase* obj : objects) {
-    if (obj->can_block_sight() &&
-        geometry::Intersects(seg, obj->BoundingPolygon())) {
-      return false;
-    }
-  }
-  return true;
-}
-
 void VisibleRoadPoints(const Object& src,
                        const std::vector<const ObjectBase*>& objects,
-                       std::vector<const ObjectBase*>& road_points) {
-  auto pivot =
-      std::partition(road_points.begin(), road_points.end(),
-                     [&src, &objects](const ObjectBase* road_point) {
-                       return IsVisibleRoadPoint(src, *road_point, objects);
-                     });
-  road_points.resize(std::distance(road_points.begin(), pivot));
+                       std::vector<const geometry::PointLike*>& road_points) {
+  const int64_t n = road_points.size();
+  std::vector<int32_t> mask(n, 1);
+  for (const ObjectBase* obj : objects) {
+    if (!obj->can_block_sight()) {
+      continue;
+    }
+    const std::vector<int32_t> block_mask = geometry::BatchIntersects(
+        obj->BoundingPolygon(), src.position(), road_points);
+    for (int64_t i = 0; i < n; ++i) {
+      mask[i] &= (block_mask[i] ^ 1);
+    }
+  }
+  const int64_t pivot = utils::MaskedPartition(mask, road_points);
+  road_points.resize(pivot);
 }
 
-std::vector<std::pair<const ObjectBase*, float>> NearestK(
-    const Object& src, const std::vector<const ObjectBase*>& objects,
-    int64_t k) {
+template <class ObjType>
+std::vector<std::pair<const ObjType*, float>> NearestK(
+    const Object& src, const std::vector<const ObjType*>& objects, int64_t k) {
   const geometry::Vector2D& src_pos = src.position();
   const int64_t n = objects.size();
-  std::vector<std::pair<const ObjectBase*, float>> ret;
+  std::vector<std::pair<const ObjType*, float>> ret;
   ret.reserve(n);
-  for (const ObjectBase* obj : objects) {
-    ret.emplace_back(obj, geometry::Distance(src_pos, obj->position()));
+  for (const ObjType* obj : objects) {
+    if constexpr (std::is_same<ObjType, geometry::PointLike>::value) {
+      ret.emplace_back(obj, geometry::Distance(src_pos, obj->Coordinate()));
+    } else {
+      ret.emplace_back(obj, geometry::Distance(src_pos, obj->position()));
+    }
   }
-  const auto cmp = [](const std::pair<const ObjectBase*, float>& lhs,
-                      const std::pair<const ObjectBase*, float>& rhs) {
+  const auto cmp = [](const std::pair<const ObjType*, float>& lhs,
+                      const std::pair<const ObjType*, float>& rhs) {
     return lhs.second < rhs.second;
   };
   if (n <= k) {
@@ -193,13 +194,15 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
     traffic_lights_.push_back(traffic_light);
   }
 
-  std::vector<const geometry::AABBInterface*> static_objects;
+  std::vector<const RoadPoint*> road_points;
   for (const auto& road_line : road_lines_) {
     for (const auto& road_point : road_line->road_points()) {
-      static_objects.push_back(
-          dynamic_cast<const geometry::AABBInterface*>(&road_point));
+      road_points.push_back(&road_point);
     }
   }
+  road_point_tree_.Reset(road_points);
+
+  std::vector<const geometry::AABBInterface*> static_objects;
   for (const auto& obj : stop_signs_) {
     static_objects.push_back(
         dynamic_cast<const geometry::AABBInterface*>(obj.get()));
@@ -274,7 +277,8 @@ void Scenario::UpdateCollision() {
   }
 }
 
-std::tuple<std::vector<const ObjectBase*>, std::vector<const ObjectBase*>,
+std::tuple<std::vector<const ObjectBase*>,
+           std::vector<const geometry::PointLike*>,
            std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
 Scenario::VisibleObjects(const Object& src, float view_dist, float view_angle,
                          float head_tilt) const {
@@ -284,16 +288,16 @@ Scenario::VisibleObjects(const Object& src, float view_dist, float view_angle,
 
   std::vector<const ObjectBase*> objects =
       VisibleCandidates(object_bvh_, src, vf);
+  std::vector<const geometry::PointLike*> road_points =
+      road_point_tree_.Query<geometry::PointLike>(vf.GetAABB());
   const std::vector<const ObjectBase*> static_candidates =
       VisibleCandidates(static_bvh_, src, vf);
-  std::vector<const ObjectBase*> road_points;
+
   std::vector<const ObjectBase*> traffic_lights;
   std::vector<const ObjectBase*> stop_signs;
   for (const ObjectBase* obj : static_candidates) {
     const StaticObject* obj_ptr = dynamic_cast<const StaticObject*>(obj);
-    if (obj_ptr->Type() == StaticObjectType::kRoadPoint) {
-      road_points.push_back(dynamic_cast<const ObjectBase*>(obj));
-    } else if (obj_ptr->Type() == StaticObjectType::kTrafficLight) {
+    if (obj_ptr->Type() == StaticObjectType::kTrafficLight) {
       traffic_lights.push_back(dynamic_cast<const ObjectBase*>(obj));
     } else if (obj_ptr->Type() == StaticObjectType::kStopSign) {
       stop_signs.push_back(dynamic_cast<const ObjectBase*>(obj));
@@ -745,11 +749,15 @@ NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
   // TODO(nl) remove code duplication and linear overhead
   const auto [kinetic_objects, road_points, traffic_lights, stop_signs] =
       VisibleObjects(source, view_dist, view_angle, head_tilt);
-  std::vector<const ObjectBase*> drawables;
+  std::vector<const sf::Drawable*> drawables;
 
+  for (const auto [obj, dist] :
+       NearestK(source, road_points, kMaxVisibleRoadPoints)) {
+    drawables.emplace_back(dynamic_cast<const RoadPoint*>(obj));
+  }
   for (const auto [objects, kMaxObjects] :
        std::vector<std::pair<std::vector<const ObjectBase*>, int64_t>>{
-           {road_points, kMaxVisibleRoadPoints},
+           // {road_points, kMaxVisibleRoadPoints},
            {kinetic_objects, kMaxVisibleObjects},
            {traffic_lights, kMaxVisibleStopSigns},
            {stop_signs, kMaxVisibleTrafficLights},

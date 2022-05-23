@@ -113,11 +113,11 @@ bool Intersects(const ConvexPolygon& polygon, const LineSegment& segment) {
   const std::vector<LineSegment> edges = polygon.Edges();
   for (const LineSegment& edge : edges) {
     const Vector2D cur_d = edge.Endpoint1() - edge.Endpoint0();
-    const float v1 =
+    const float v0 =
         CrossProduct(segment.Endpoint0() - edge.Endpoint0(), cur_d);
-    const float v2 =
+    const float v1 =
         CrossProduct(segment.Endpoint1() - edge.Endpoint0(), cur_d);
-    if (v1 > 0.0f && v2 > 0.0f) {
+    if (v0 > 0.0f && v1 > 0.0f) {
       return false;
     }
   }
@@ -127,6 +127,64 @@ bool Intersects(const ConvexPolygon& polygon, const LineSegment& segment) {
 
 bool Intersects(const LineSegment& segment, const ConvexPolygon& polygon) {
   return Intersects(polygon, segment);
+}
+
+std::vector<int32_t> BatchIntersects(
+    const ConvexPolygon& polygon, const Vector2D& o,
+    const std::vector<const PointLike*>& points) {
+  const int64_t n = points.size();
+  std::vector<float> x(n);
+  std::vector<float> y(n);
+  for (int64_t i = 0; i < n; ++i) {
+    const Vector2D p = points[i]->Coordinate();
+    x[i] = p.x();
+    y[i] = p.y();
+  }
+
+  std::vector<int32_t> mask(n, 1);
+  std::vector<float> min_v(n, std::numeric_limits<float>::max());
+  std::vector<float> max_v(n, std::numeric_limits<float>::lowest());
+  const float ox = o.x();
+  const float oy = o.y();
+
+  for (const Vector2D& v : polygon.vertices()) {
+    const float vx = v.x() - ox;
+    const float vy = v.y() - oy;
+    for (int64_t i = 0; i < n; ++i) {
+      const float dx = x[i] - ox;
+      const float dy = y[i] - oy;
+      const float cur = vx * dy - dx * vy;
+      // std::min and std::max are slow, use conditional operator here.
+      min_v[i] = min_v[i] < cur ? min_v[i] : cur;
+      max_v[i] = max_v[i] > cur ? max_v[i] : cur;
+    }
+  }
+  for (int64_t i = 0; i < n; ++i) {
+    mask[i] &= ((((min_v[i] < 0.0f) & (max_v[i] < 0.0f)) |
+                 ((min_v[i] > 0.0f) & (max_v[i] > 0.0f))) ^
+                1);
+  }
+
+  const std::vector<LineSegment> edges = polygon.Edges();
+  for (const LineSegment& edge : edges) {
+    const float p0x = edge.Endpoint0().x();
+    const float p0y = edge.Endpoint0().y();
+    const float p1x = edge.Endpoint1().x();
+    const float p1y = edge.Endpoint1().y();
+    const float dx = p1x - p0x;
+    const float dy = p1y - p0y;
+    const float v0x = ox - p0x;
+    const float v0y = oy - p0y;
+    for (int64_t i = 0; i < n; ++i) {
+      const float v1x = x[i] - p0x;
+      const float v1y = y[i] - p0y;
+      const float v0 = v0x * dy - dx * v0y;
+      const float v1 = v1x * dy - dx * v1y;
+      mask[i] &= (((v0 > 0.0f) & (v1 > 0.0f)) ^ 1);
+    }
+  }
+
+  return mask;
 }
 
 }  // namespace geometry

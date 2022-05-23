@@ -7,10 +7,9 @@ namespace nocturne {
 
 enum class StaticObjectType {
   kUnset = 0,
-  kRoadPoint = 1,
-  kTrafficLight = 2,
-  kStopSign = 3,
-  kOther = 4,
+  kTrafficLight = 1,
+  kStopSign = 2,
+  kOther = 3,
 };
 
 class StaticObject : public ObjectBase {
@@ -29,8 +28,6 @@ class StaticObject : public ObjectBase {
 inline StaticObjectType ParseStaticObjectType(const std::string& type) {
   if (type == "unset") {
     return StaticObjectType::kUnset;
-  } else if (type == "road_point") {
-    return StaticObjectType::kRoadPoint;
   } else if (type == "traffic_light") {
     return StaticObjectType::kTrafficLight;
   } else if (type == "stop_sign") {
