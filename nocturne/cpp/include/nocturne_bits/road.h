@@ -7,15 +7,12 @@
 
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
+#include "geometry/point_like.h"
 #include "geometry/vector_2d.h"
 #include "static_object.h"
 #include "utils/sf_utils.h"
 
 namespace nocturne {
-
-// RoadPoint should be treated as a single point.
-// Add a dummy radius here for AABB.
-constexpr float kRoadPointRadius = 1e-3;
 
 enum class RoadType {
   kNone = 0,
@@ -25,48 +22,42 @@ enum class RoadType {
   kStopSign = 4,
   kCrosswalk = 5,
   kSpeedBump = 6,
-  kOthers = 7,
+  kOther = 7,
 };
 
 sf::Color RoadTypeColor(const RoadType& road_type);
 
-class RoadPoint : public StaticObject {
+class RoadPoint : public sf::Drawable, public geometry::PointLike {
  public:
   RoadPoint() = default;
   RoadPoint(const geometry::Vector2D& position,
             const geometry::Vector2D& neighbor_position, RoadType road_type)
-      : StaticObject(position,
-                     /*can_block_sight=*/false,
-                     /*can_be_collided=*/false, /*check_collision=*/false),
+      : position_(position),
         neighbor_position_(neighbor_position),
         road_type_(road_type),
         drawable_(utils::MakeCircleShape(position, 0.5,
                                          RoadTypeColor(road_type), true)) {}
 
-  StaticObjectType Type() const override {
-    return StaticObjectType::kRoadPoint;
-  }
   RoadType road_type() const { return road_type_; }
 
-  geometry::Vector2D neighbor_position() const { return neighbor_position_; }
-
-  float Radius() const { return kRoadPointRadius; }
-
-  geometry::ConvexPolygon BoundingPolygon() const override;
-
-  geometry::AABB GetAABB() const override {
-    return geometry::AABB(position_ - kRoadPointRadius,
-                          position_ + kRoadPointRadius);
+  const geometry::Vector2D& position() const { return position_; }
+  const geometry::Vector2D& neighbor_position() const {
+    return neighbor_position_;
   }
 
- protected:
-  void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
+  geometry::Vector2D Coordinate() const override { return position_; }
 
+ protected:
+  void draw(sf::RenderTarget& target, sf::RenderStates states) const override {
+    target.draw(*drawable_, states);
+  }
+
+  const geometry::Vector2D position_;
   // coordinates of the next point in the roadline
   const geometry::Vector2D neighbor_position_;
 
   const RoadType road_type_ = RoadType::kNone;
-  std::unique_ptr<sf::CircleShape> drawable_;
+  std::unique_ptr<sf::CircleShape> drawable_ = nullptr;
 };
 
 // RoadLine is not an Object now.
@@ -155,7 +146,7 @@ inline RoadType ParseRoadType(const std::string& s) {
   } else if (s == "speed_bump") {
     return RoadType::kSpeedBump;
   } else {
-    return RoadType::kOthers;
+    return RoadType::kOther;
   }
 }
 

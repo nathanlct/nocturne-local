@@ -17,6 +17,8 @@
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
+#include "geometry/point_like.h"
+#include "geometry/range_tree_2d.h"
 #include "geometry/vector_2d.h"
 #include "ndarray.h"
 #include "object.h"
@@ -244,7 +246,8 @@ class Scenario : public sf::Drawable {
   // Update the collision status of all objects
   void UpdateCollision();
 
-  std::tuple<std::vector<const ObjectBase*>, std::vector<const ObjectBase*>,
+  std::tuple<std::vector<const ObjectBase*>,
+             std::vector<const geometry::PointLike*>,
              std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
   VisibleObjects(const Object& src, float view_dist, float view_angle,
                  float head_tilt = 0.0f) const;
@@ -293,7 +296,8 @@ class Scenario : public sf::Drawable {
 
   geometry::BVH object_bvh_;        // track objects for collisions
   geometry::BVH line_segment_bvh_;  // track line segments for collisions
-  geometry::BVH static_bvh_;        // static objects
+  geometry::BVH static_bvh_;        // static objects other than road points
+  geometry::RangeTree2d road_point_tree_;  // track road points
 
   // expert data
   const float expert_dt_ = 0.1f;

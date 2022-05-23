@@ -2,11 +2,13 @@
 
 #include <optional>
 #include <utility>
+#include <vector>
 
 #include "geometry/aabb.h"
 #include "geometry/circle.h"
 #include "geometry/circular_sector.h"
 #include "geometry/line_segment.h"
+#include "geometry/point_like.h"
 #include "geometry/polygon.h"
 #include "geometry/vector_2d.h"
 
@@ -22,6 +24,10 @@ bool Intersects(const LineSegment& segment, const AABB& aabb);
 
 bool Intersects(const ConvexPolygon& polygon, const LineSegment& segment);
 bool Intersects(const LineSegment& segment, const ConvexPolygon& polygon);
+
+std::vector<int32_t> BatchIntersects(
+    const ConvexPolygon& polygon, const Vector2D& o,
+    const std::vector<const PointLike*>& points);
 
 inline bool Intersects(const ConvexPolygon& lhs, const ConvexPolygon& rhs) {
   return lhs.Intersects(rhs);

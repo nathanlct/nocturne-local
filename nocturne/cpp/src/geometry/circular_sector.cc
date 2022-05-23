@@ -49,16 +49,42 @@ AABB CircularSector::GetAABB() const {
 }
 
 bool CircularSector::Contains(const Vector2D& p) const {
-  return Distance(p, center_) <= radius_ && CenterAngleContains(p);
+  const Vector2D d = p - center_;
+  const float dx = d.x();
+  const float dy = d.y();
+  return dx * dx + dy * dy <= radius_ * radius_ && CenterAngleContains(p);
 }
 
-bool CircularSector::CenterAngleContains(const Vector2D& p) const {
-  const Vector2D d = p - center_;
+std::vector<int32_t> CircularSector::BatchContains(
+    const std::vector<const PointLike*>& points) const {
+  const int64_t n = points.size();
+  std::vector<int32_t> mask(n);
+  std::vector<float> x(n);
+  std::vector<float> y(n);
+  for (int64_t i = 0; i < n; ++i) {
+    const Vector2D p = points[i]->Coordinate();
+    x[i] = p.x();
+    y[i] = p.y();
+  }
   const Vector2D r0 = Radius0();
   const Vector2D r1 = Radius1();
-  return theta_ < 0.0f
-             ? (CrossProduct(d, r0) <= 0.0f || CrossProduct(d, r1) >= 0.0f)
-             : (CrossProduct(d, r0) <= 0.0f && CrossProduct(d, r1) >= 0.0f);
+  const float ox = center_.x();
+  const float oy = center_.y();
+  const float r0x = r0.x();
+  const float r0y = r0.y();
+  const float r1x = r1.x();
+  const float r1y = r1.y();
+  for (int64_t i = 0; i < n; ++i) {
+    const float dx = x[i] - ox;
+    const float dy = y[i] - oy;
+    const float r2 = dx * dx + dy * dy;
+    const float c0 = dx * r0y - r0x * dy;
+    const float c1 = dx * r1y - r1x * dy;
+    const int32_t m = theta_ < 0.0f ? ((c0 <= 0.0f) | (c1 >= 0.0f))
+                                    : ((c0 <= 0.0f) & (c1 >= 0.0f));
+    mask[i] = ((r2 <= radius_ * radius_) & m);
+  }
+  return mask;
 }
 
 std::pair<std::optional<Vector2D>, std::optional<Vector2D>>
@@ -100,6 +126,15 @@ CircularSector::Intersection(const LineSegment& segment) const {
     return std::make_pair<std::optional<Vector2D>, std::optional<Vector2D>>(
         std::make_optional(ret[0]), std::make_optional(ret[1]));
   }
+}
+
+bool CircularSector::CenterAngleContains(const Vector2D& p) const {
+  const Vector2D d = p - center_;
+  const Vector2D r0 = Radius0();
+  const Vector2D r1 = Radius1();
+  return theta_ < 0.0f
+             ? (CrossProduct(d, r0) <= 0.0f || CrossProduct(d, r1) >= 0.0f)
+             : (CrossProduct(d, r0) <= 0.0f && CrossProduct(d, r1) >= 0.0f);
 }
 
 }  // namespace geometry

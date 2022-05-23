@@ -10,6 +10,7 @@
 #include "geometry/intersection.h"
 #include "geometry/line_segment.h"
 #include "geometry/polygon.h"
+#include "utils/data_utils.h"
 
 namespace nocturne {
 
@@ -146,15 +147,7 @@ void ViewField::FilterVisibleObjects(
   for (const Vector2D& p : sight_endpoints) {
     VisibleObjectsImpl(LineSegment(o, p), objects, mask);
   }
-  int64_t pivot = 0;
-  for (; pivot < n && mask[pivot]; ++pivot)
-    ;
-  for (int64_t i = pivot + 1; i < n; ++i) {
-    if (mask[i]) {
-      std::swap(objects[pivot], objects[i]);
-      ++pivot;
-    }
-  }
+  const int64_t pivot = utils::MaskedPartition(mask, objects);
   objects.resize(pivot);
 }
 
@@ -179,25 +172,35 @@ void ViewField::FilterVisibleNonblockingObjects(
   objects.resize(std::distance(objects.begin(), pivot));
 }
 
-std::vector<const ObjectBase*> ViewField::VisiblePoints(
-    const std::vector<const ObjectBase*>& objects) const {
-  std::vector<const ObjectBase*> ret;
+std::vector<const geometry::PointLike*> ViewField::VisiblePoints(
+    const std::vector<const geometry::PointLike*>& objects) const {
+  std::vector<const geometry::PointLike*> ret;
   const CircleLike* vptr = vision_.get();
-  std::copy_if(objects.cbegin(), objects.cend(), std::back_inserter(ret),
-               [vptr](const ObjectBase* obj) {
-                 return vptr->Contains(obj->position());
-               });
+  // std::copy_if(objects.cbegin(), objects.cend(), std::back_inserter(ret),
+  //              [vptr](const geometry::PointLike* obj) {
+  //                return vptr->Contains(obj->Coordinate());
+  //              });
+  const std::vector<int32_t> mask = vptr->BatchContains(objects);
+  const int64_t n = objects.size();
+  for (int64_t i = 0; i < n; ++i) {
+    if (mask[i]) {
+      ret.push_back(objects[i]);
+    }
+  }
   return ret;
 }
 
 void ViewField::FilterVisiblePoints(
-    std::vector<const ObjectBase*>& objects) const {
+    std::vector<const geometry::PointLike*>& objects) const {
   const CircleLike* vptr = vision_.get();
-  auto pivot = std::partition(objects.begin(), objects.end(),
-                              [vptr](const ObjectBase* obj) {
-                                return vptr->Contains(obj->position());
-                              });
-  objects.resize(std::distance(objects.begin(), pivot));
+  // auto pivot = std::partition(objects.begin(), objects.end(),
+  //                             [vptr](const geometry::PointLike* obj) {
+  //                               return vptr->Contains(obj->Coordinate());
+  //                             });
+  // objects.resize(std::distance(objects.begin(), pivot));
+  const std::vector<int32_t> mask = vptr->BatchContains(objects);
+  const int64_t pivot = utils::MaskedPartition(mask, objects);
+  objects.resize(pivot);
 }
 
 std::vector<Vector2D> ViewField::ComputeSightEndpoints(
