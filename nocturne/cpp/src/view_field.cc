@@ -1,8 +1,10 @@
 #include "view_field.h"
 
 #include <algorithm>
+#include <functional>
 #include <iterator>
 #include <limits>
+#include <numeric>
 #include <optional>
 #include <type_traits>
 #include <utility>
@@ -32,60 +34,46 @@ Vector2D MakeSightEndpoint(const CircleLike& vision,
   return o + d / d.Norm() * r;
 }
 
-void VisibleObjectsImpl(const LineSegment& sight,
-                        const std::vector<const ObjectBase*>& objects,
-                        std::vector<bool>& mask) {
+std::vector<int32_t> VisibleObjectsImpl(
+    const std::vector<const ObjectBase*>& objects, const Vector2D& o,
+    std::vector<Vector2D>& points) {
   const int64_t n = objects.size();
+  const int64_t m = points.size();
 
-  // Compute relative distance from center to each object.
-  std::vector<float> dis(n, std::numeric_limits<float>::max());
-  float min_dis = std::numeric_limits<float>::max();
-  int64_t min_idx = -1;
+  std::vector<float> dis(m, 1.0f);
+  std::vector<int64_t> idx(m, -1);
   for (int64_t i = 0; i < n; ++i) {
-    const ObjectBase* obj = objects[i];
-    const auto edges = obj->BoundingPolygon().Edges();
+    if (!objects[i]->can_block_sight()) {
+      continue;
+    }
+    const auto edges = objects[i]->BoundingPolygon().Edges();
     for (const LineSegment& edge : edges) {
-      const auto t = sight.ParametricIntersection(edge);
-      if (!t.has_value()) {
-        continue;
-      }
-      dis[i] = std::min(dis[i], *t);
-      if (obj->can_block_sight() && *t < min_dis) {
-        min_dis = *t;
-        min_idx = i;
+      const std::vector<float> cur_dis =
+          geometry::BatchParametricIntersection(o, points, edge);
+      for (int64_t j = 0; j < m; ++j) {
+        if (cur_dis[j] != -1.0 && cur_dis[j] < dis[j]) {
+          dis[j] = cur_dis[j];
+          idx[j] = i;
+        }
       }
     }
   }
 
-  // Blocking object is visible.
-  if (min_idx >= 0) {
-    mask[min_idx] = true;
+  std::vector<int32_t> mask(n, 0);
+  for (int64_t i = 0; i < m; ++i) {
+    points[i] = LineSegment(o, points[i]).Point(dis[i]);
+    if (idx[i] != -1) {
+      mask[idx[i]] = 1;
+    }
   }
-
-  const Vector2D& o = sight.Endpoint0();
-  const Vector2D p = min_idx < 0 ? sight.Endpoint1() : sight.Point(min_dis);
-  const LineSegment seg(o, p);
   for (int64_t i = 0; i < n; ++i) {
-    // Already visible.
-    if (mask[i]) {
-      continue;
-    }
-    const ObjectBase* obj = objects[i];
-    // Non blocking nearby objects are visible.
-    if (!obj->can_block_sight() && dis[i] < min_dis) {
-      mask[i] = true;
-      continue;
-    }
-    const ConvexPolygon polygon = obj->BoundingPolygon();
-    const auto& vertices = polygon.vertices();
-    for (const Vector2D& p : vertices) {
-      // Corners of objects are visible.
-      if (seg.Contains(p)) {
-        mask[i] = true;
-        break;
-      }
-    }
+    const std::vector<int32_t> cur_mask =
+        BatchIntersects(objects[i]->BoundingPolygon(), o, points);
+    mask[i] |= std::accumulate(cur_mask.cbegin(), cur_mask.cend(), int32_t(0),
+                               std::bit_or<int32_t>());
   }
+
+  return mask;
 }
 
 bool IsVisibleNonblockingObject(const CircleLike& vision,
@@ -124,11 +112,9 @@ std::vector<const ObjectBase*> ViewField::VisibleObjects(
     const std::vector<const ObjectBase*>& objects) const {
   const int64_t n = objects.size();
   const Vector2D& o = vision_->center();
-  const std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
-  std::vector<bool> mask(n, false);
-  for (const Vector2D& p : sight_endpoints) {
-    VisibleObjectsImpl(LineSegment(o, p), objects, mask);
-  }
+  std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
+  const std::vector<int32_t> mask =
+      VisibleObjectsImpl(objects, o, sight_endpoints);
   std::vector<const ObjectBase*> ret;
   for (int64_t i = 0; i < n; ++i) {
     if (mask[i]) {
@@ -140,13 +126,10 @@ std::vector<const ObjectBase*> ViewField::VisibleObjects(
 
 void ViewField::FilterVisibleObjects(
     std::vector<const ObjectBase*>& objects) const {
-  const int64_t n = objects.size();
   const Vector2D& o = vision_->center();
-  const std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
-  std::vector<bool> mask(n, false);
-  for (const Vector2D& p : sight_endpoints) {
-    VisibleObjectsImpl(LineSegment(o, p), objects, mask);
-  }
+  std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
+  const std::vector<int32_t> mask =
+      VisibleObjectsImpl(objects, o, sight_endpoints);
   const int64_t pivot = utils::MaskedPartition(mask, objects);
   objects.resize(pivot);
 }

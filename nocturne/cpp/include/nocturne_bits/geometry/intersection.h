@@ -19,11 +19,19 @@ inline bool Intersects(const AABB& lhs, const AABB& rhs) {
   return lhs.Intersects(rhs);
 }
 
+inline bool Intersects(const LineSegment& lhs, const LineSegment& rhs) {
+  return lhs.Intersects(rhs);
+}
+
 bool Intersects(const AABB& aabb, const LineSegment& segment);
 bool Intersects(const LineSegment& segment, const AABB& aabb);
 
 bool Intersects(const ConvexPolygon& polygon, const LineSegment& segment);
 bool Intersects(const LineSegment& segment, const ConvexPolygon& polygon);
+
+std::vector<int32_t> BatchIntersects(const ConvexPolygon& polygon,
+                                     const Vector2D& o,
+                                     const std::vector<Vector2D>& points);
 
 std::vector<int32_t> BatchIntersects(
     const ConvexPolygon& polygon, const Vector2D& o,
@@ -32,6 +40,21 @@ std::vector<int32_t> BatchIntersects(
 inline bool Intersects(const ConvexPolygon& lhs, const ConvexPolygon& rhs) {
   return lhs.Intersects(rhs);
 }
+
+inline std::optional<Vector2D> Intersection(const LineSegment& lhs,
+                                            const LineSegment& rhs) {
+  return lhs.Intersection(rhs);
+}
+
+inline std::optional<float> ParametricIntersection(const LineSegment& lhs,
+                                                   const LineSegment& rhs) {
+  return lhs.ParametricIntersection(rhs);
+}
+
+// Batch version of ParametricIntersection.
+std::vector<float> BatchParametricIntersection(
+    const Vector2D& o, const std::vector<Vector2D>& points,
+    const LineSegment segment);
 
 inline std::pair<std::optional<Vector2D>, std::optional<Vector2D>> Intersection(
     const Circle& circle, const LineSegment& segment) {
