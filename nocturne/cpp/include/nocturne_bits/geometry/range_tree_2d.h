@@ -104,7 +104,7 @@ class RangeTree2d {
               });
     for (capacity_ = 1; capacity_ < size_; capacity_ <<= 1)
       ;
-    nodes_.resize(2 * capacity_);
+    nodes_.assign(2 * capacity_, std::vector<const PointLike*>());
     for (int64_t i = 0; i < size_; ++i) {
       nodes_[i | capacity_].push_back(points_[i]);
     }
