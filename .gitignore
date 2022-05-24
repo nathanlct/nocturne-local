@@ -34,3 +34,6 @@ checkpoint/
 
 # waymo dataset
 dataset/
+
+# trained models
+*.pth
