@@ -27,6 +27,7 @@ class WaymoDataset(torch.utils.data.Dataset):
         self.n_cpus = cfg.get('n_cpus', 4)
         self.file_limit = cfg.get('file_limit', None)
         self.sample_limit = cfg.get('sample_limit', None)
+        self.shuffle = cfg.get('shuffle', True)
 
         # get precomputed dataset
         self.precomputed_data_path = Path(str(self.data_path) + '_precomputed')
@@ -36,8 +37,8 @@ class WaymoDataset(torch.utils.data.Dataset):
             self._precompute_dataset()
 
         # get json file paths (sorted by name)
-        self.file_paths = list(self.precomputed_data_path.iterdir())[:self.file_limit]
-        self.file_paths.sort(key=lambda fp: int(fp.stem.split('.')[0]))
+        self.file_paths = list(self.precomputed_data_path.glob('*.shuffled.dataset.txt'))[:self.file_limit]
+        self.file_paths.sort(key=lambda fp: list(map(int, fp.stem.split('.')[:2])))
 
         # initialize cache
         self.cached_data = None
@@ -109,7 +110,7 @@ class WaymoDataset(torch.utils.data.Dataset):
             files_to_delete = []
             if self.precomputed_data_path.is_dir():
                 for file in self.precomputed_data_path.iterdir():
-                    if file.suffixes == ['.dataset', '.txt']:
+                    if '.dataset' in file.suffixes and '.txt' in file.suffixes:
                         files_to_delete.append(file)
             else:
                 files_to_delete.append(self.precomputed_data_path)
@@ -146,7 +147,7 @@ class WaymoDataset(torch.utils.data.Dataset):
                    'because file_limit has been set.')
 
         # distribute dataset precomputation
-        n_cpus = min(self.n_data_cpus, len(scenario_paths))
+        n_cpus = min(self.n_cpus, len(scenario_paths))
         print(f'Precomputing data using {n_cpus} parallel processes.\n')
 
         def process_idx(process):
@@ -171,6 +172,47 @@ class WaymoDataset(torch.utils.data.Dataset):
             process.join()
         print(f'\nDataset precomputation done. Files are written at {self.precomputed_data_path}.\n')
 
+        # now pre-shuffle the data
+        print('Now shuffling the data...')
+        print('...this will take a few minutes but will save a lot of time during training!\n')
+
+        # get list of all samples (file, line) and shuffle it
+        samples = []
+        for file in self.precomputed_data_path.iterdir():
+            if file.suffixes == ['.dataset', '.txt']:
+                with open(file, 'r') as f:
+                    lines = f.readlines()
+                    file_idx = int(file.stem.split('.')[0])
+                    for i in range(len(lines)):
+                        samples.append((file_idx, i))
+        np.random.shuffle(samples)
+
+        # assign chunks of samples to shuffled output files
+        n_samples = len(samples)
+        samples_per_file = 10000
+
+        def sample_idx(process):
+            return process * n_samples // n_cpus
+
+        process_list = []
+        for i in range(n_cpus):
+            p = Process(
+                target=_shuffle_data_impl,
+                args=[
+                    samples[sample_idx(i):sample_idx(i+1)],
+                    self.precomputed_data_path,
+                    samples_per_file,
+                    i + 1,
+                ]
+            )
+            p.start()
+            process_list.append(p)
+
+        # wait for precomputation to be done
+        for process in process_list:
+            process.join()
+        print(f'\nShuffling done!\n')
+
 
 def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
     """Construct a precomputed dataset for fast sampling."""
@@ -189,7 +231,7 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
         f = open(output_path, 'w')
 
         # create simulation
-        sim = Simulation(str(path), start_time=TMIN, allow_non_vehicles=True) #, spawn_invalid_objects=True)
+        sim = Simulation(str(path), start_time=TMIN, allow_non_vehicles=True, spawn_invalid_objects=True)
         scenario = sim.getScenario()
 
         # set objects to be expert-controlled
@@ -261,11 +303,34 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
           f'values.\n\t{a_nan_count} samples were ignored because their action contained invalid values.',
         flush=True)
 
+def _shuffle_data_impl(samples, data_path, samples_per_file, process_idx):
+    current_file_count = 0
+    current_file_id = 0
+    current_file = open(data_path / f'{current_file_id}.{process_idx}.shuffled.dataset.txt', 'w')
+    for i, (sample_file, sample_line) in enumerate(samples):
+        if i % 1000 == 0:
+            print(f'({process_idx}) {i+1}/{len(samples)}')
+        # read sample line
+        with open(data_path / f'{sample_file}.dataset.txt', 'r') as f:
+            sample_str = f.readlines()[sample_line]
+        # write sample line in output file
+        current_file.write(sample_str)
+        current_file_count += 1
+        if current_file_count >= samples_per_file:
+            # open output file
+            current_file.close()
+            current_file_id += 1
+            current_file = open(data_path / f'{current_file_id}.{process_idx}.shuffled.dataset.txt', 'w')
+            current_file_count = 0
+    current_file.close()
+
 
 if __name__ == '__main__':
     dataset = WaymoDataset({
-        'data_path': './dataset/json_files',
+        'data_path': './dataset/tf_records',
         'sample_limit': None,  # 100,
         'precompute_dataset': True,
         'n_data_cpus': 4,
+        'shuffle': True,
+        'file_limit': None,
     })

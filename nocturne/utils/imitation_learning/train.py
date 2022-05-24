@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument(
         '--path',
         type=str,
-        default='dataset/json_files',
+        default='dataset/tf_records',
         help='Path to the training data (directory containing .json scenario '
              'files).',
     )
@@ -55,13 +55,14 @@ if __name__ == '__main__':
         'n_cpus': args.n_cpus,
         'file_limit': args.file_limit,
         'sample_limit': args.sample_limit,
+        'shuffle': True,
     })
 
     # create dataloader
     train_dataloader = DataLoader(
         dataset,
         pin_memory=True,
-        shuffle=False,  # DO NOT set shuffle=True as shuffling is already done in the dataloader
+        shuffle=False,  # shuffling is done in the dataloader for faster sampling
         batch_size=args.batch_size,
         num_workers=args.n_cpus,
     )
@@ -71,6 +72,7 @@ if __name__ == '__main__':
     n_actions = len(dataset[0][1])
     model = ImitationAgent(n_states, n_actions).to(args.device)
     model.train()
+    print(model)
 
     # create optimizer
     optimizer = Adam(model.parameters(), lr=args.lr)
