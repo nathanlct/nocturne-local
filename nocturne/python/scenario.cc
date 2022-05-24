@@ -17,7 +17,7 @@ using geometry::utils::kHalfPi;
 
 void DefineScenario(py::module& m) {
   py::class_<Scenario, std::shared_ptr<Scenario>>(m, "Scenario")
-      .def(py::init<const std::string&, int64_t, bool>(),
+      .def(py::init<const std::string&, int64_t, bool, bool>(),
            "Constructor for Scenario", py::arg("path") = "",
            py::arg("start_time") = 0, py::arg("allow_non_vehicles") = true,
            py::arg("spawn_invalid_objects") = false)
