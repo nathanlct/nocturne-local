@@ -509,8 +509,10 @@ std::optional<Action> Scenario::ExpertAction(const Object& obj,
   // -> solve for steering s_t, we get s_t = atan(2C / sqrt(4 - C^2)) + k * pi
   // with C = 2 * length * (h_{t+1} - h_t) / (dt * (v_t + v_{t+1}))
   const float w = geometry::utils::AngleSub(cur_headings[timestamp + 1],
-                                            cur_headings[timestamp]) / expert_dt_;
-  const float C = 2.0f * obj.length() * w / (cur_speeds[timestamp + 1] + cur_speeds[timestamp]);
+                                            cur_headings[timestamp]) /
+                  expert_dt_;
+  const float C = 2.0f * obj.length() * w /
+                  (cur_speeds[timestamp + 1] + cur_speeds[timestamp]);
   const float steering = std::atan(2.0f * C / std::sqrt(4 - C * C));
 
   // return action

@@ -50,7 +50,7 @@ constexpr int64_t kMaxVisibleStopSigns = 4;
 
 // Object features are:
 // [ valid, distance, azimuth, length, witdh, relative_object_heading,
-//   relative_velocity_heading, relative_velocity_speed, 
+//   relative_velocity_heading, relative_velocity_speed,
 //   object_type (one_hot of 5) ]
 constexpr int64_t kObjectFeatureSize = 13;
 
