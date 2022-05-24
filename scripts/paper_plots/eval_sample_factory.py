@@ -10,10 +10,12 @@ import json
 import sys
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from pyvirtualdisplay import Display
 import torch
+import seaborn as sns
 
 from sample_factory.algorithms.appo.actor_worker import transform_dict_observations
 from sample_factory.algorithms.appo.learner import LearnerWorker
@@ -421,81 +423,8 @@ def run_eval(cfgs, test_zsc, output_path):
     return ExperimentStatus.SUCCESS, np.mean(episode_rewards)
 
 
-def main():
-    """Script entry point."""
-    disp = Display()
-    disp.start()
-    register_custom_components()
-    # output_folder = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35'
-    output_folder = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v9/05.46.08'
-
-    # class Bunch(object):
-
-    #     def __init__(self, adict):
-    #         self.__dict__.update(adict)
-
-    # file_paths = []
-    # cfg_dicts = []
-    # for (dirpath, dirnames, filenames) in os.walk(output_folder):
-    #     if 'cfg.json' in filenames:
-    #         file_paths.append(dirpath)
-    #         with open(os.path.join(dirpath, 'cfg.json'), 'r') as file:
-    #             cfg_dict = json.load(file)
-
-    #         cfg_dict['cli_args'] = {}
-    #         cfg_dict['fps'] = 0
-    #         cfg_dict['render_action_repeat'] = None
-    #         cfg_dict['no_render'] = None
-    #         cfg_dict['policy_index'] = 0
-    #         cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
-    #         cfg_dict['continuous_actions_sample'] = True
-    #         cfg_dict['discrete_actions_sample'] = True
-    #         cfg_dict['num_eval_files'] = 2
-    #         cfg_dicts.append(cfg_dict)
-
-    # for file_path, cfg_dict in zip(file_paths, cfg_dicts):
-    #     status, avg_reward = run_eval([Bunch(cfg_dict)],
-    #                                   test_zsc=False,
-    #                                   output_path=file_path)
-
-    # okay, now build a pandas dataframe of the results that we will use for plotting
-    # file_paths = []
-    # data_dicts = []
-    # for (dirpath, dirnames, filenames) in os.walk(output_folder):
-    #     if 'cfg.json' in filenames:
-    #         file_paths.append(dirpath)
-    #         with open(os.path.join(dirpath, 'cfg.json'), 'r') as file:
-    #             cfg_dict = json.load(file)
-    #         goal = float(np.loadtxt(os.path.join(dirpath, 'zsc_goal.txt')))
-    #         collide = float(
-    #             np.loadtxt(os.path.join(dirpath, 'zsc_collision.txt')))
-    #         data_dicts.append({
-    #             'num_files': cfg_dict['num_files'],
-    #             'goal_rate': goal,
-    #             'collide_rate': collide
-    #         })
-    # df = pd.DataFrame(data_dicts)
-    # means = df.groupby(['num_files'])['goal_rate'].mean()
-
-    # load the wandb file
-    # wandb_file = 'wandb_export_2022-05-23T15_44_41.104-04_00.csv'
-    # with open(wandb_file, 'r') as f:
-    #     wandb_df = pd.read_csv(f)
-    # wandb_df['identifier'] = wandb_df['seed'].astype(
-    #     str) + wandb_df['num_files'].astype(str)
-    # import ipdb
-    # ipdb.set_trace()
-    # one_run = wandb_df[(wandb_df['seed'] == 0) & (wandb_df['num_files'] == 10)]
-    # import seaborn as sns
-    # import matplotlib.pyplot as plt
-    # print(one_run)
-    # sns.lineplot(data=one_run,
-    #              x='global_step',
-    #              y='0_aux/avg_goal_achieved',
-    #              hue='num_files')
-    # plt.savefig('test.png')
-    #style='num_files')
-    if not os.path.exists('wandb.csv'):
+def load_wandb(experiment_name, force_reload=False):
+    if not os.path.exists('wandb_{}.csv'.format(experiment_name)):
         import wandb
 
         api = wandb.Api()
@@ -504,10 +433,7 @@ def main():
 
         history_list = []
         for run in runs:
-            if run.name == 'srt_v9':
-                # # .summary contains the output keys/values for metrics like accuracy.
-                # #  We call ._json_dict to omit large files
-                # summary_list.append(run.summary._json_dict)
+            if run.name == experiment_name:
 
                 # # .config contains the hyperparameters.
                 # #  We remove special values that start with _.
@@ -520,29 +446,159 @@ def main():
                 history_df['num_files'] = config['num_files']
                 history_list.append(history_df)
 
-            # # .name is the human-readable name of the run.
-            # name_list.append(run.name)
-
-        # runs_df = pd.DataFrame({
-        #     "summary": summary_list,
-        #     "config": config_list,
-        #     "name": name_list
-        # })
         runs_df = pd.concat(history_list)
-        runs_df.to_csv('wandb.csv')
+        runs_df.to_csv('wandb_{}.csv'.format(experiment_name))
 
-    wandb_df = pd.read_csv('wandb.csv')
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-    # print(one_run)
-    sns.set_palette("PuBuGn_d")
-    sns.lineplot(data=wandb_df,
-                 x='global_step',
-                 y='0_aux/avg_goal_achieved',
-                 hue=wandb_df.num_files,
-                 ci='sd',
-                 palette=['r', 'g', 'b', 'm', 'k', 'c'])
-    plt.savefig('test.png')
+
+def plot_df(experiment_name):
+    from matplotlib import pyplot as plt
+    plt.rcParams['figure.dpi'] = 150
+    plt.rcParams['figure.figsize'] = (6, 4)
+
+    df = pd.read_csv("wandb_{}.csv".format(experiment_name))
+    df["timestamp"] = pd.to_datetime(df["_timestamp"] * 1e9)
+    all_timestamps = np.sort(np.unique(df.timestamp.values))
+
+    # technically not correct if the number of seeds varies by num_files
+    num_seeds = len(np.unique(df.seed.values))
+
+    values_num_files = np.unique(df.num_files.values)
+    column = "0_aux/avg_goal_achieved"
+    dfs = []
+    stdevs = []
+    for num_files in values_num_files:
+        df_n = df[df.num_files == num_files].set_index('_step').sort_index()
+        dfs.append(df_n[column].ewm(
+            halflife=500,
+            min_periods=10).mean().rename(f"num_files={num_files}"))
+        stdevs.append(df_n[column].ewm(halflife=500, min_periods=10).std())
+
+    ax = plt.gca()
+    for i in range(len(dfs)):
+        x = dfs[i].index.values
+        y = dfs[i].values
+        yerr = stdevs[i].replace(np.nan, 0) / np.sqrt(num_seeds)
+        p = ax.plot(x, y, label=dfs[i].name)
+        color = p[0].get_color()
+        ax.fill_between(x, y - 2 * yerr, y + 2 * yerr, color=color, alpha=0.3)
+    plt.grid(ls='--', color='#ccc')
+    plt.legend()
+    plt.xlabel("_step")
+    plt.ylabel(column)
+
+
+def eval_generalization(output_folder, num_eval_files):
+
+    class Bunch(object):
+
+        def __init__(self, adict):
+            self.__dict__.update(adict)
+
+    file_paths = []
+    cfg_dicts = []
+    for (dirpath, dirnames, filenames) in os.walk(output_folder):
+        if 'cfg.json' in filenames:
+            file_paths.append(dirpath)
+            with open(os.path.join(dirpath, 'cfg.json'), 'r') as file:
+                cfg_dict = json.load(file)
+
+            cfg_dict['cli_args'] = {}
+            cfg_dict['fps'] = 0
+            cfg_dict['render_action_repeat'] = None
+            cfg_dict['no_render'] = None
+            cfg_dict['policy_index'] = 0
+            cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
+            cfg_dict['continuous_actions_sample'] = True
+            cfg_dict['discrete_actions_sample'] = True
+            cfg_dict['num_eval_files'] = num_eval_files
+            cfg_dicts.append(cfg_dict)
+    for file_path, cfg_dict in zip(file_paths, cfg_dicts):
+        status, avg_reward = run_eval([Bunch(cfg_dict)],
+                                      test_zsc=False,
+                                      output_path=file_path)
+
+
+def main():
+    """Script entry point."""
+    disp = Display()
+    disp.start()
+    register_custom_components()
+    RUN_EVAL = True
+    RELOAD_WANDB = False
+    NUM_EVAL_FILES = 10
+    experiment_names = ['srt_v9']
+    # output_folder = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35'
+    output_folder = [
+        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v9/05.46.08'
+    ]
+    generalization_dfs = []
+    '''
+    ###############################################################################
+    #########           Build the generalization dataframes ######################
+    ##############################################################################
+    '''
+    if RUN_EVAL:
+        for folder in output_folder:
+            eval_generalization(folder, NUM_EVAL_FILES)
+
+    # okay, now build a pandas dataframe of the results that we will use for plotting
+    # the generalization results
+    for folder in output_folder:
+        file_paths = []
+        data_dicts = []
+        for (dirpath, dirnames, filenames) in os.walk(folder):
+            if 'cfg.json' in filenames:
+                file_paths.append(dirpath)
+                with open(os.path.join(dirpath, 'cfg.json'), 'r') as file:
+                    cfg_dict = json.load(file)
+                goal = float(np.loadtxt(os.path.join(dirpath, 'zsc_goal.txt')))
+                collide = float(
+                    np.loadtxt(os.path.join(dirpath, 'zsc_collision.txt')))
+                num_files = cfg_dict['num_files']
+                if int(num_files) == -1:
+                    num_files = 134453
+                data_dicts.append({
+                    'num_files': num_files,
+                    'goal_rate': goal,
+                    'collide_rate': collide
+                })
+        df = pd.DataFrame(data_dicts)
+        means = df.groupby(['num_files'])['goal_rate'].mean().reset_index()
+        generalization_dfs.append(means)
+        '''
+    ###############################################################################
+    #########  load the training dataframes from wandb ######################
+    ##############################################################################
+    '''
+    training_dfs = []
+    for experiment_name in experiment_names:
+        if not os.path.exists('wandb_{}.csv'.format(experiment_name)):
+            load_wandb(experiment_name, force_reload=RELOAD_WANDB)
+        training_dfs.append(pd.read_csv(
+            'wandb_{}.csv'.format(experiment_name)))
+
+    plt.figure()
+    for df in generalization_dfs:
+        sns.lineplot(x=np.log(df.num_files), y=df.goal_rate)
+
+    for df in training_dfs:
+        values_num_files = np.unique(df.num_files.values)
+        column = "0_aux/avg_goal_achieved"
+        dfs = []
+        y_vals = []
+        for num_files in values_num_files:
+            df_n = df[df.num_files == num_files].set_index(
+                '_step').sort_index()
+            dfs.append(df_n[column].ewm(
+                halflife=500,
+                min_periods=10).mean().rename(f"num_files={num_files}"))
+            y_vals.append(dfs[-1].iloc[-1])
+        values_num_files[np.argwhere(values_num_files == -1)] = 134453
+        sns.lineplot(x=np.log(values_num_files), y=y_vals)
+    plt.xlabel('log(number training files)')
+    plt.ylabel('% goals achieved')
+    plt.legend(['test', 'train'])
+    plt.savefig('temp.png')
 
 
 if __name__ == '__main__':
