@@ -12,8 +12,6 @@ SIM_STEP_TIME = 0.1  # dt (in seconds)
 
 
 def _average_displacement_impl(trajectory_path, model, sim_allow_non_vehicles=True):
-    print(trajectory_path)
-
     # create expert simulation
     sim_expert = Simulation(scenario_path=str(trajectory_path), start_time=0, allow_non_vehicles=sim_allow_non_vehicles)
     scenario_expert = sim_expert.getScenario()

@@ -1,6 +1,7 @@
 """Goal reaching rate computation."""
 from pathlib import Path
 import numpy as np
+import torch
 
 from nocturne import Simulation
 
@@ -10,8 +11,6 @@ SIM_STEP_TIME = 0.1  # dt (in seconds)
 
 
 def _goal_reaching_rate_impl(trajectory_path, model=None, sim_allow_non_vehicles=True, check_vehicles_only=True):
-    print(trajectory_path)
-
     # create expert simulation
     sim = Simulation(scenario_path=str(trajectory_path), start_time=0, allow_non_vehicles=sim_allow_non_vehicles)
     scenario = sim.getScenario()

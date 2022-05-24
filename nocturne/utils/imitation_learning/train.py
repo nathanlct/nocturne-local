@@ -1,5 +1,6 @@
 import argparse
 import numpy as np
+from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import Adam
@@ -11,6 +12,9 @@ from cfgs.config import PROCESSED_TRAIN_NO_TL
 
 from nocturne.utils.imitation_learning.model import ImitationAgent
 from nocturne.utils.imitation_learning.waymo_data_loader import WaymoDataset
+from nocturne.utils.eval.average_displacement import compute_average_displacement
+from nocturne.utils.eval.collision_rate import compute_average_collision_rate
+from nocturne.utils.eval.goal_reaching_rate import compute_average_goal_reaching_rate
 
 
 def parse_args():
@@ -25,6 +29,7 @@ def parse_args():
     parser.add_argument(
         '--precompute',
         action='store_true',
+        default=False,
         help='Whether or not to precompute the dataset. This should be run '
              'before the first training or everytime changes in the states '
              'or actions getters are made.'
@@ -84,8 +89,11 @@ if __name__ == '__main__':
                          total_iters=args.epochs,
                          verbose=True)
 
+    # eval trajectories
+    eval_trajs = list(Path(args.path).glob('*tfrecord*.json'))[:5]
+
     # train loop
-    avg_losses = []
+    metrics = []
     for epoch in range(args.epochs):
         print(f'\nepoch {epoch+1}/{args.epochs}')
 
@@ -105,18 +113,17 @@ if __name__ == '__main__':
             optimizer.step()
         scheduler.step()
 
-        avg_losses.append(np.mean(losses))
         print(f'avg training loss this epoch: {np.mean(losses):.3f}')
+
+        cr = compute_average_collision_rate(eval_trajs, model)
+        ade = compute_average_displacement(eval_trajs, model)
+        grr = compute_average_goal_reaching_rate(eval_trajs, model)
+        print('cr', cr, 'ade', ade, 'grr', grr)
+
+        metrics.append((np.mean(losses), cr, ade, grr))
 
         model_path = 'model.pth'
         torch.save(model, model_path)
         print(f'\nSaved model at {model_path}')
 
-    print('Average losses', avg_losses)
-
-    import matplotlib.pyplot as plt
-    plt.figure()
-    plt.plot(avg_losses)
-    plt.xlabel('iter')
-    plt.ylabel('loss')
-    plt.show()
+    print('metrics', metrics)
