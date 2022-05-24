@@ -67,6 +67,8 @@ def precompute_dataset(scenario_paths, to_path, start_index):
                          scenario.flattened_visible_state(veh,
                                                           view_dist=120,
                                                           view_angle=3.14)))
+                    # normalize state
+                    veh_state /= 100.0
 
                     if np.isnan(veh_state).any():
                         s_nan_count += 1
@@ -223,7 +225,7 @@ class ImitationAgent(nn.Module):
 if __name__ == '__main__':
     print('\n\nDONT FORGET python setup.py develop\n\n')
 
-    data_path = './dataset/json_files'  # PROCESSED_TRAIN_NO_TL
+    data_path = PROCESSED_TRAIN_NO_TL  # './dataset/json_files'
     data_precomputed_path = './dataset/json_files_precomputed'
     lr = 3e-4
     batch_size = 4096
