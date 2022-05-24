@@ -8,8 +8,8 @@ from nocturne import Simulation
 
 
 # min and max timesteps (max included) that should be used in dataset trajectories
-TMIN = 1
-TMAX = 90
+TMIN = 0
+TMAX = 89
 
 # view distance and angle used to compute the observations of the agents
 VIEW_DIST = 120
@@ -144,8 +144,7 @@ class WaymoDataset(torch.utils.data.Dataset):
             scenario_paths = scenario_paths[:self.file_limit]
             print(f'Only precomputing the first {self.file_limit} files '
                    'because file_limit has been set.')
-        scenario_paths = ['dataset/json_files/tfrecord-00358-of-01000_46.json']
-        _precompute_dataset_impl(scenario_paths, self.precomputed_data_path, 0 , 0)
+
         # distribute dataset precomputation
         n_cpus = min(self.n_data_cpus, len(scenario_paths))
         print(f'Precomputing data using {n_cpus} parallel processes.\n')
@@ -190,7 +189,7 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
         f = open(output_path, 'w')
 
         # create simulation
-        sim = Simulation(str(path), start_time=TMIN)
+        sim = Simulation(str(path), start_time=TMIN, allow_non_vehicles=True) #, spawn_invalid_objects=True)
         scenario = sim.getScenario()
 
         # set objects to be expert-controlled
@@ -206,7 +205,6 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
         # save (state, action) pairs for all objects of interests at all time steps
         for time in range(TMIN, TMAX):
             for obj in objects_of_interest:
-                print(time, obj)
                 expert_action = scenario.expert_action(obj, time)
                 if expert_action is not None:
                     expert_action = expert_action.numpy()
@@ -252,9 +250,7 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
                     sample_count += 1
 
             # step the simulation
-            print('pre step')
             sim.step(0.1)
-            print('post step')
         
         # close output file
         f.close()
