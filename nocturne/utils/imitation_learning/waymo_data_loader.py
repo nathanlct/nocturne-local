@@ -1,125 +1,46 @@
 """Dataloader for imitation learning in Nocturne."""
-import argparse
-from pathlib import Path
-import os
-import multiprocessing
 from multiprocessing import Process
-
 import numpy as np
+from pathlib import Path
 import torch
-from torch.utils.data import Dataset, DataLoader
-from torch import nn
-from torch.distributions.multivariate_normal import MultivariateNormal
-from torch.optim import Adam
-from torch.optim.lr_scheduler import LinearLR  # , ExponentialLR
-from tqdm import tqdm
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL
 from nocturne import Simulation
 
 
-def precompute_dataset(scenario_paths, to_path, start_index):
-    """Construct a precomputed dataset for fast sampling."""
-    # min and max timesteps (max included) that should be used in dataset trajectories
-    tmin = 1
-    tmax = 90
+# min and max timesteps (max included) that should be used in dataset trajectories
+TMIN = 1
+TMAX = 90
 
-    # delete files if folder exists already contains some of the form name.dataset.json
-    # existing_files = list(precomputed_dataset_path.iterdir())
-    # if (len(existing_files)) > 0:
-    #     for path in existing_files:
-    #         if path.suffixes == ['.dataset', '.txt']:
-    #             print(f'Deleting {path}')
-    #             path.unlink()
-
-    # go through dataset
-    i = 0
-    s_nan_count = 0
-    a_nan_count = 0
-    sample_count = 0
-    total_sample_count = 0
-    for path in scenario_paths:
-        print(path)
-        output_strs = []
-        f = open(Path(to_path) / f'{i + start_index}.dataset.txt', 'w')
-
-        # create simulation
-        sim = Simulation(str(path), start_time=tmin)
-        scenario = sim.getScenario()
-
-        # for each time and valid vehicle at that time
-        for obj in scenario.getObjectsThatMoved():
-            obj.expert_control = True
-        for time in range(tmin, tmax):
-            for veh in scenario.getVehicles():
-                expert_action = scenario.expert_action(veh, time)
-                if expert_action is not None:
-                    expert_action = expert_action.numpy()
-                    sa_nan = False
-
-                    if np.isnan(expert_action).any():
-                        a_nan_count += 1
-                        sa_nan = True
-
-                    # get state
-                    veh_state = np.concatenate(
-                        (scenario.ego_state(veh),
-                         scenario.flattened_visible_state(veh,
-                                                          view_dist=120,
-                                                          view_angle=3.14)))
-                    # normalize state
-                    veh_state /= 100.0
-
-                    if np.isnan(veh_state).any():
-                        s_nan_count += 1
-                        sa_nan = True
-
-                    total_sample_count += 1
-                    if sa_nan:
-                        continue
-
-                    # make sure state and action are 1D arrays
-                    assert (len(veh_state.shape) == 1
-                            and len(expert_action.shape) == 1)
-
-                    # generate (state, action) string
-                    sa_str = ','.join(map(str, veh_state)) + ';' + ','.join(
-                        map(str, expert_action))
-
-                    # pick a file where to save it (pre-shuffle the dataset for faster loading of consecutive chunks)
-                    f.write(sa_str + '\n')
-
-                    # append (state, action) string to file
-                    output_strs.append(sa_str)
-                    sample_count += 1
-
-            # step the simulation
-            sim.step(0.1)
-        f.close()
-        i += 1
-
-    print(f'Finished precomputing dataset, yielding {sample_count} \
-            (out of {total_sample_count}) samples.')
-    print(
-        f'{s_nan_count} samples ({round(100 * s_nan_count / (s_nan_count + sample_count), 1)}%)\
-             were ignored because their state contained NaN.')
-    print(
-        f'{a_nan_count} samples ({round(100 * a_nan_count / (a_nan_count + sample_count), 1)}%)\
-             were ignored because their action contained NaN.')
+# view distance and angle used to compute the observations of the agents
+VIEW_DIST = 120
+VIEW_ANGLE = 3.14
 
 
-class WaymoDataset(Dataset):
+class WaymoDataset(torch.utils.data.Dataset):
     """Pytorch Dataset for the Waymo data."""
 
     def __init__(self, cfg):
         """Initialize Dataset."""
-        self.cached_data = None
-        self.dataset_path = Path(cfg['dataset_path'])
+        # load config
+        self.data_path = Path(cfg['data_path'])
+        self.sample_limit = cfg.get('sample_limit', None)
+        self.precompute_dataset = cfg.get('precompute_dataset', False)
+        self.n_data_cpus = cfg.get('n_data_cpus', 4)
+        self.file_limit = None
 
-        self.file_paths = list(self.dataset_path.iterdir())
-        self.sample_limit = cfg['sample_limit']
-        # sort file names
+        # get precomputed dataset
+        self.precomputed_data_path = Path(str(self.data_path) + '_precomputed')
+        if not self.precomputed_data_path.exists() \
+                or not self.precomputed_data_path.is_dir() \
+                or self.precompute_dataset:
+            self._precompute_dataset()
+
+        # get json file paths (sorted by name)
+        self.file_paths = list(self.precomputed_data_path.iterdir())[:self.file_limit]
         self.file_paths.sort(key=lambda fp: int(fp.stem.split('.')[0]))
+
+        # initialize cache
+        self.cached_data = None
 
         self.samples_per_file = []
 
@@ -139,14 +60,10 @@ class WaymoDataset(Dataset):
                     assert state_example.shape == s0.shape
                     assert action_example.shape == a0.shape
 
-        print(
-            f'Found {len(self.file_paths)} files for a total of {len(self)} samples.'
-        )
-        print(
-            f'Observation shape is {state_example.shape}, eg: {state_example}')
-        print(
-            f'Expert action shape is {action_example.shape}, eg: {action_example}'
-        )
+        print(f'Loaded data at {self.data_path}.')
+        print(f'Found {len(self.file_paths)} files, {len(self)} samples.')
+        print(f'Observation shape is {state_example.shape}')
+        print(f'Expert action shape is {action_example.shape}')
 
     def _parse_state_action(self, sa_str):
         """Convert string from precomputed dataset into state, action pair."""
@@ -183,166 +100,176 @@ class WaymoDataset(Dataset):
                                dtype=torch.float32), torch.as_tensor(
                                    expert_action, dtype=torch.float32)
 
+    def _precompute_dataset(self):
+        print(f'Precomputing data from {self.data_path} to {self.precomputed_data_path}.')
 
-class ImitationAgent(nn.Module):
-    """Pytorch Module for imitation. Output is a Multivariable Gaussian."""
+        # if precomputed dataset already exists or contains files of the
+        # form name.dataset.txt, delete them after user confirmation
+        if self.precomputed_data_path.exists():
+            files_to_delete = []
+            if self.precomputed_data_path.is_dir():
+                for file in self.precomputed_data_path.iterdir():
+                    if file.suffixes == ['.dataset', '.txt']:
+                        files_to_delete.append(file)
+            else:
+                files_to_delete.append(self.precomputed_data_path)
+            if len(files_to_delete) > 0:
+                print('The output path for the precomputed dataset '
+                      f'({self.precomputed_data_path}) is not empty '
+                      'and contains the following files:\n')
+                for file in files_to_delete:
+                    print(f'\t{file}')
+                print(f'\nThe {len(files_to_delete)} files above will be deleted.')
+                print('Proceed with the deletion? (yes/no)')
+                answer = None
+                while answer not in ['yes', 'no']:
+                    answer = input()
+                if answer == 'no':
+                    import sys
+                    sys.exit(0)
+                for file in files_to_delete:
+                    file.unlink()
+                print(f'{len(files_to_delete)} files have been deleted.\n')
 
-    def __init__(self, n_states, n_actions, n_hidden=256):
-        """Initialize."""
-        super(ImitationAgent, self).__init__()
+        # create folder for precomputed dataset
+        self.precomputed_data_path.mkdir(exist_ok=True)
 
-        self.n_states = n_states
-        self.n_actions = n_actions
+        # get dataset files
+        scenario_paths = [
+            file for file in self.data_path.iterdir()
+            if 'tfrecord' in file.stem
+        ]
+        print(f'Found {len(scenario_paths)} scenario files at {self.data_path}.')
+        if self.file_limit is not None and self.file_limit < len(scenario_paths):
+            scenario_paths = scenario_paths[:self.file_limit]
+            print(f'Only precomputing the first {self.file_limit} files '
+                   'because file_limit has been set.')
+        scenario_paths = ['dataset/json_files/tfrecord-00358-of-01000_46.json']
+        _precompute_dataset_impl(scenario_paths, self.precomputed_data_path, 0 , 0)
+        # distribute dataset precomputation
+        n_cpus = min(self.n_data_cpus, len(scenario_paths))
+        print(f'Precomputing data using {n_cpus} parallel processes.\n')
 
-        self.deterministic = False
+        def process_idx(process):
+            return process * len(scenario_paths) // n_cpus
 
-        self.nn = nn.Sequential(
-            nn.Linear(in_features=n_states, out_features=n_hidden, bias=True),
-            nn.Tanh(),
-            nn.Linear(in_features=n_hidden, out_features=n_hidden, bias=True),
-            nn.Tanh(),
-            nn.Linear(in_features=n_hidden, out_features=n_hidden, bias=True),
-            nn.Tanh(),
-            nn.Linear(in_features=n_hidden, out_features=n_actions, bias=True),
-        )
+        process_list = []
+        for i in range(n_cpus):
+            p = Process(
+                target=_precompute_dataset_impl,
+                args=[
+                    scenario_paths[process_idx(i):process_idx(i+1)],
+                    self.precomputed_data_path,
+                    process_idx(i),
+                    i + 1,
+                ]
+            )
+            p.start()
+            process_list.append(p)
 
-    def dist(self, x):
-        """Construct a distirbution from tensor x."""
-        x_out = self.nn(x)
-        m = MultivariateNormal(x_out[:, 0:2],
-                               torch.diag_embed(torch.exp(x_out[:, 2:4])))
-        return m
+        # wait for precomputation to be done
+        for process in process_list:
+            process.join()
+        print(f'\nDataset precomputation done. Files are written at {self.precomputed_data_path}.\n')
 
-    def forward(self, x):
-        """Generate an output from tensor x."""
-        m = self.dist(x)
-        if self.deterministic:
-            return m.mean
-        else:
-            return m.sample()
+
+def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
+    """Construct a precomputed dataset for fast sampling."""
+    # initializer counters
+    s_nan_count = 0
+    a_nan_count = 0
+    sample_count = 0
+    total_sample_count = 0
+
+    # go through scenario paths
+    for i, path in enumerate(scenario_paths):
+        print(f'({process_idx}) Parsing {path} ({i + 1}/{len(scenario_paths)})')
+
+        # create output file
+        output_path = Path(to_path) / f'{start_index + i}.dataset.txt'
+        f = open(output_path, 'w')
+
+        # create simulation
+        sim = Simulation(str(path), start_time=TMIN)
+        scenario = sim.getScenario()
+
+        # set objects to be expert-controlled
+        for obj in scenario.getObjectsThatMoved():
+            obj.expert_control = True
+        # for obj in scenario.getVehicles():
+        #     obj.expert_control = True
+
+        # we're interested in vehicles that moved
+        objects_of_interest = [obj for obj in scenario.getVehicles()
+                               if obj in scenario.getObjectsThatMoved()]
+
+        # save (state, action) pairs for all objects of interests at all time steps
+        for time in range(TMIN, TMAX):
+            for obj in objects_of_interest:
+                print(time, obj)
+                expert_action = scenario.expert_action(obj, time)
+                if expert_action is not None:
+                    expert_action = expert_action.numpy()
+                    sa_nan = False
+
+                    # throw out actions containing nan or too large values
+                    if np.isnan(expert_action).any() \
+                            or expert_action[0] < -2 or expert_action[0] > 3 \
+                            or expert_action[1] < -0.8 or expert_action[1] > 0.8:
+                        a_nan_count += 1
+                        sa_nan = True
+
+                    # get state
+                    veh_state = np.concatenate(
+                        (scenario.ego_state(obj),
+                         scenario.flattened_visible_state(obj,
+                                                          view_dist=VIEW_DIST,
+                                                          view_angle=VIEW_ANGLE)))
+
+                    # normalize state
+                    veh_state /= 100.0
+
+                    # throw out states containing nan
+                    if np.isnan(veh_state).any():
+                        s_nan_count += 1
+                        sa_nan = True
+
+                    total_sample_count += 1
+                    if sa_nan:
+                        continue
+
+                    # make sure state and action are 1D arrays
+                    assert (len(veh_state.shape) == 1
+                            and len(expert_action.shape) == 1)
+
+                    # generate (state, action) string
+                    sa_str = ','.join(map(str, veh_state)) + ';' + ','.join(
+                        map(str, expert_action))
+
+                    # append (state, action) string to file
+                    f.write(sa_str + '\n')
+
+                    sample_count += 1
+
+            # step the simulation
+            print('pre step')
+            sim.step(0.1)
+            print('post step')
+        
+        # close output file
+        f.close()
+        print(f'({process_idx}) Wrote {output_path} ({i + 1}/{len(scenario_paths)})')
+
+    print(f'({process_idx}) Done, precomputed {sample_count} samples out of {total_sample_count} possible '
+          f'samples.\n\t{s_nan_count} samples were ignored because their state contained invalid '
+          f'values.\n\t{a_nan_count} samples were ignored because their action contained invalid values.',
+        flush=True)
 
 
 if __name__ == '__main__':
-    print('\n\nDONT FORGET python setup.py develop\n\n')
-
-    data_path = PROCESSED_TRAIN_NO_TL  # './dataset/json_files'
-    data_precomputed_path = './dataset/json_files_precomputed'
-    lr = 3e-4
-    batch_size = 4096
-    n_epochs = 200
-    n_workers_dataloader = 8
-    device = "cpu"  # "cuda" if torch.cuda.is_available() else "cpu"
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--precompute', action='store_true'
-    )  # Setting this will erase the whole content of the --to folder!
-    parser.add_argument('--parallel',
-                        action='store_true',
-                        help='If true, the precomputation is done in parallel')
-    parser.add_argument(
-        "--n_processes",
-        type=int,
-        default=40,
-        help="Number of processes over which to split file generation")
-    args = parser.parse_args()
-
-    if args.precompute:
-        # create folder for precomputed dataset
-        precomputed_dataset_path = Path(data_precomputed_path)
-        if not os.path.exists(precomputed_dataset_path):
-            os.makedirs(str(data_precomputed_path), exist_ok=True)
-        # get dataset files
-        dataset_path = Path(data_path)
-        scenario_paths = list(dataset_path.iterdir())[:1000]
-        scenario_paths = [
-            file for file in scenario_paths if 'tfrecord' in str(file)
-        ]
-        if args.parallel:
-            # leave some cpus free but have at least one and don't use more than n_processes
-            num_cpus = min(max(multiprocessing.cpu_count() - 2, 1),
-                           args.n_processes)
-            num_files = len(scenario_paths)
-            process_list = []
-            for i in range(num_cpus):
-                p = Process(
-                    target=precompute_dataset,
-                    args=[
-                        scenario_paths[i * num_files // num_cpus:(i + 1) *
-                                       num_files // num_cpus],
-                        data_precomputed_path, i * num_files // num_cpus
-                    ])
-                p.start()
-                process_list.append(p)
-
-            for process in process_list:
-                process.join()
-        else:
-            precompute_dataset(scenario_paths,
-                               data_precomputed_path,
-                               start_index=0)
-
-    print(f"Using {device} device")
-
-    print('Initializing dataset...')
     dataset = WaymoDataset({
-        'dataset_path': data_precomputed_path,
+        'data_path': './dataset/json_files',
         'sample_limit': None,  # 100,
+        'precompute_dataset': True,
+        'n_data_cpus': 4,
     })
-
-    train_dataloader = DataLoader(
-        dataset,
-        pin_memory=True,
-        shuffle=False,
-        batch_size=batch_size,
-        num_workers=n_workers_dataloader,
-    )
-
-    n_states = len(dataset[0][0])
-    n_actions = 2 * len(dataset[0][1])
-    model = ImitationAgent(n_states, n_actions).to(device)
-    print(model)
-
-    optimizer = Adam(model.parameters(), lr=lr)
-    scheduler = LinearLR(optimizer,
-                         start_factor=1.0,
-                         end_factor=0.1,
-                         total_iters=n_epochs,
-                         verbose=True)
-
-    # train loop
-    avg_losses = []
-    for epoch in range(n_epochs):
-        print(f'\nepoch {epoch+1}/{n_epochs}')
-
-        losses = []
-        for batch, (states, expert_actions) in enumerate(
-                tqdm(train_dataloader, unit='batch')):
-            states = states.to(device)
-            expert_actions = expert_actions.to(device)
-            dist = model.dist(states)
-            # print(dist.mean, dist.variance, expert_actions)
-            loss = -dist.log_prob(expert_actions).mean()
-            losses.append(loss.item())
-
-            optimizer.zero_grad()
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
-        scheduler.step()
-
-        avg_losses.append(np.mean(losses))
-        print(f'avg training loss this epoch: {np.mean(losses):.3f}')
-
-        model_path = 'model.pth'
-        torch.save(model, model_path)
-        print(f'\nSaved model at {model_path}')
-
-    print('Average losses', avg_losses)
-
-    import matplotlib.pyplot as plt
-    plt.figure()
-    plt.plot(avg_losses)
-    plt.xlabel('iter')
-    plt.ylabel('loss')
-    plt.show()
