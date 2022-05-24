@@ -19,7 +19,8 @@ void DefineScenario(py::module& m) {
   py::class_<Scenario, std::shared_ptr<Scenario>>(m, "Scenario")
       .def(py::init<const std::string&, int64_t, bool>(),
            "Constructor for Scenario", py::arg("path") = "",
-           py::arg("start_time") = 0, py::arg("allow_non_vehicles") = true)
+           py::arg("start_time") = 0, py::arg("allow_non_vehicles") = true,
+           py::arg("spawn_invalid_objects") = false)
 
       // Properties
       .def_property_readonly("name", &Scenario::name)
@@ -72,8 +73,7 @@ void DefineScenario(py::module& m) {
            py::return_value_policy::reference)
       .def("getObjectsThatMoved", &Scenario::moving_objects,
            py::return_value_policy::reference)
-      .def("getObjects", &Scenario::objects,
-           py::return_value_policy::reference)
+      .def("getObjects", &Scenario::objects, py::return_value_policy::reference)
       .def("getMaxEnvTime", &Scenario::max_env_time)
       .def("getRoadLines", &Scenario::road_lines)
       .def(

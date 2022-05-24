@@ -837,12 +837,9 @@ void Scenario::LoadObjects(const json& objects_json) {
       }
     }
 
-    // TODO(ev) make it a flag whether all vehicles are added or just the
-    // vehicles that are valid
     // we only want to store and load vehicles that are valid at this
-    // initialization time
-
-    if (!valid_mask[current_time_]) {
+    // initialization time, unless spawn_invalid_objects_ is set
+    if (!valid_mask[current_time_] && !spawn_invalid_objects_) {
       continue;
     }
 

@@ -75,8 +75,10 @@ constexpr int64_t kEgoFeatureSize = 7;
 class Scenario : public sf::Drawable {
  public:
   Scenario(const std::string& scenario_path, int64_t start_time,
-           bool allow_non_vehicles)
-      : current_time_(start_time), allow_non_vehicles_(allow_non_vehicles) {
+           bool allow_non_vehicles, bool spawn_invalid_objects)
+      : current_time_(start_time),
+        allow_non_vehicles_(allow_non_vehicles),
+        spawn_invalid_objects_(spawn_invalid_objects) {
     if (!scenario_path.empty()) {
       LoadScenario(scenario_path);
     } else {
@@ -276,7 +278,12 @@ class Scenario : public sf::Drawable {
 
   int64_t current_time_;
   int64_t max_env_time_ = kMaxEnvTime;
-  const bool allow_non_vehicles_ = true;  // Whether to use non vehicle objects.
+
+  // Whether to use non vehicle objects.
+  const bool allow_non_vehicles_ = true;
+  // Whether to spawn vehicles that are invalid in the first time
+  // step
+  const bool spawn_invalid_objects_ = false;
 
   std::vector<std::shared_ptr<Vehicle>> vehicles_;
   std::vector<std::shared_ptr<Pedestrian>> pedestrians_;
