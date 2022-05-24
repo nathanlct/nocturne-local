@@ -29,49 +29,48 @@ if __name__ == '__main__':
 
         model = torch.load(MODEL_PATH)
         model.eval()
-        model.deterministic = True
 
         def policy(state):
             """Get model output."""
-            with torch.no_grad():
-                state = torch.as_tensor(np.array([state]), dtype=torch.float32)
-                return model(state)
+            state = torch.as_tensor(np.array([state]), dtype=torch.float32)
+            return model(state, deterministic=True)
 
         frames = []
 
-        for expert_control_vehicles, mp4_name in [
-            (False, f'{traj_path.stem}_policy_rollout.mp4'),
-            (True, f'{traj_path.stem}_true_rollout.mp4')
-        ]:
+        with torch.no_grad():
+            for expert_control_vehicles, mp4_name in [
+                (False, f'{traj_path.stem}_policy_rollout.mp4'),
+                (True, f'{traj_path.stem}_true_rollout.mp4')
+            ]:
 
-            sim.reset()
-            scenario = sim.getScenario()
+                sim.reset()
+                scenario = sim.getScenario()
 
-            for obj in scenario.getObjectsThatMoved():
-                obj.expert_control = True
-            for veh in scenario.getVehicles():
-                veh.expert_control = expert_control_vehicles
-            for i in range(90):
-                print(f'...{i+1}/90 ({traj_path} ; {mp4_name})')
-                img = np.array(scenario.getImage(None, render_goals=True),
-                               copy=False)
-                frames.append(img)
+                for obj in scenario.getObjectsThatMoved():
+                    obj.expert_control = True
                 for veh in scenario.getVehicles():
-                    veh_state = np.concatenate(
-                        (np.array(scenario.ego_state(veh), copy=False),
-                         np.array(scenario.flattened_visible_state(
-                             veh, view_dist=120, view_angle=3.14),
-                                  copy=False)))
-                    action = policy(veh_state)[0]
-                    veh.acceleration = action[0]
-                    veh.steering = action[1]
-                sim.step(0.1)
-                for veh in scenario.getVehicles():
-                    if (veh.position -
-                            veh.destination).norm() < GOAL_TOLERANCE:
-                        scenario.removeVehicle(veh)
-            imageio.mimsave(mp4_name, np.stack(frames, axis=0), fps=30)
-            print(f'> {mp4_name}')
+                    veh.expert_control = expert_control_vehicles
+                for i in range(90):
+                    print(f'...{i+1}/90 ({traj_path} ; {mp4_name})')
+                    img = np.array(scenario.getImage(None, render_goals=True),
+                                copy=False)
+                    frames.append(img)
+                    for veh in scenario.getVehicles():
+                        veh_state = np.concatenate(
+                            (np.array(scenario.ego_state(veh), copy=False),
+                            np.array(scenario.flattened_visible_state(
+                                veh, view_dist=120, view_angle=3.14),
+                                    copy=False)))
+                        action = policy(veh_state)[0]
+                        veh.acceleration = action[0]
+                        veh.steering = action[1]
+                    sim.step(0.1)
+                    for veh in scenario.getVehicles():
+                        if (veh.position -
+                                veh.destination).norm() < GOAL_TOLERANCE:
+                            scenario.removeVehicle(veh)
+                imageio.mimsave(mp4_name, np.stack(frames, axis=0), fps=30)
+                print(f'> {mp4_name}')
 
         # stack the movies side by side
         output_path = f'{traj_path.stem}_output.mp4'
