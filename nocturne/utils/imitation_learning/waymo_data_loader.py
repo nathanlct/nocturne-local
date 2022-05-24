@@ -309,7 +309,7 @@ def _shuffle_data_impl(samples, data_path, samples_per_file, process_idx):
     current_file = open(data_path / f'{current_file_id}.{process_idx}.shuffled.dataset.txt', 'w')
     for i, (sample_file, sample_line) in enumerate(samples):
         if i % 1000 == 0:
-            print(f'({process_idx}) {i+1}/{len(samples)}')
+            print(f'({process_idx}) {i}/{len(samples)}')
         # read sample line
         with open(data_path / f'{sample_file}.dataset.txt', 'r') as f:
             sample_str = f.readlines()[sample_line]
