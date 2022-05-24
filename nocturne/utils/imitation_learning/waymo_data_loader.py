@@ -23,10 +23,10 @@ class WaymoDataset(torch.utils.data.Dataset):
         """Initialize Dataset."""
         # load config
         self.data_path = Path(cfg['data_path'])
-        self.sample_limit = cfg.get('sample_limit', None)
         self.precompute_dataset = cfg.get('precompute_dataset', False)
-        self.n_data_cpus = cfg.get('n_data_cpus', 4)
-        self.file_limit = None
+        self.n_cpus = cfg.get('n_cpus', 4)
+        self.file_limit = cfg.get('file_limit', None)
+        self.sample_limit = cfg.get('sample_limit', None)
 
         # get precomputed dataset
         self.precomputed_data_path = Path(str(self.data_path) + '_precomputed')
