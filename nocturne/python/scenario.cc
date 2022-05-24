@@ -72,6 +72,8 @@ void DefineScenario(py::module& m) {
            py::return_value_policy::reference)
       .def("getObjectsThatMoved", &Scenario::moving_objects,
            py::return_value_policy::reference)
+      .def("getObjects", &Scenario::objects,
+           py::return_value_policy::reference)
       .def("getMaxEnvTime", &Scenario::max_env_time)
       .def("getRoadLines", &Scenario::road_lines)
       .def(
