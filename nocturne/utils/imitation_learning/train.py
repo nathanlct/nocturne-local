@@ -1,3 +1,4 @@
+"""Imitation learning training script (behavioral cloning)."""
 import argparse
 import numpy as np
 from pathlib import Path
@@ -18,6 +19,7 @@ from nocturne.utils.eval.goal_reaching_rate import compute_average_goal_reaching
 
 
 def parse_args():
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--path',
