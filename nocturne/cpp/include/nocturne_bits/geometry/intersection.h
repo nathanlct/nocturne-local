@@ -57,15 +57,16 @@ inline std::optional<float> ParametricIntersection(const LineSegment& lhs,
 }
 
 // Batch version of ParametricIntersection.
+// Computes the parametric intersection of (ox_i, oy_i) and segment.
 // If there is no intersection, result will be inf.
 std::vector<float> BatchParametricIntersection(const Vector2D& o,
                                                const std::vector<float>& x,
                                                const std::vector<float>& y,
-                                               const LineSegment segment);
+                                               const LineSegment& segment);
 
 std::vector<float> BatchParametricIntersection(
     const Vector2D& o, const std::vector<Vector2D>& points,
-    const LineSegment segment);
+    const LineSegment& segment);
 
 inline std::pair<std::optional<Vector2D>, std::optional<Vector2D>> Intersection(
     const Circle& circle, const LineSegment& segment) {

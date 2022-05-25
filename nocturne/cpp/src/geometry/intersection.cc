@@ -203,7 +203,7 @@ std::vector<int32_t> BatchIntersects(
 std::vector<float> BatchParametricIntersection(const Vector2D& o,
                                                const std::vector<float>& x,
                                                const std::vector<float>& y,
-                                               const LineSegment segment) {
+                                               const LineSegment& segment) {
   assert(x.size() == y.size());
   const int64_t n = x.size();
   std::vector<float> ret(n, -1.0f);
@@ -253,7 +253,7 @@ std::vector<float> BatchParametricIntersection(const Vector2D& o,
 
 std::vector<float> BatchParametricIntersection(
     const Vector2D& o, const std::vector<Vector2D>& points,
-    const LineSegment segment) {
+    const LineSegment& segment) {
   const auto [x, y] = utils::PackCoordinates(points);
   return BatchParametricIntersection(o, x, y, segment);
 }
