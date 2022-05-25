@@ -235,10 +235,8 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
         scenario = sim.getScenario()
 
         # set objects to be expert-controlled
-        for obj in scenario.getObjectsThatMoved():
+        for obj in scenario.getObjects():
             obj.expert_control = True
-        # for obj in scenario.getVehicles():
-        #     obj.expert_control = True
 
         # we're interested in vehicles that moved
         objects_of_interest = [obj for obj in scenario.getVehicles()

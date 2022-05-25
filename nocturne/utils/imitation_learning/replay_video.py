@@ -65,7 +65,7 @@ if __name__ == '__main__':
                         veh.acceleration = action[0]
                         veh.steering = action[1]
                     sim.step(0.1)
-                    for veh in scenario.getVehicles():
+                    for veh in scenario.getObjectsThatMoved():
                         if (veh.position -
                                 veh.destination).norm() < GOAL_TOLERANCE:
                             scenario.removeVehicle(veh)
