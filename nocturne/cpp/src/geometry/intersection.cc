@@ -157,6 +157,8 @@ std::vector<utils::MaskType> BatchIntersects(const ConvexPolygon& polygon,
     }
   }
   for (int64_t i = 0; i < n; ++i) {
+    // Use bitwise operation to get better performance.
+    // Use (^1) for not operation.
     mask[i] &= ((((min_v[i] < 0.0f) & (max_v[i] < 0.0f)) |
                  ((min_v[i] > 0.0f) & (max_v[i] > 0.0f))) ^
                 1);
@@ -177,6 +179,8 @@ std::vector<utils::MaskType> BatchIntersects(const ConvexPolygon& polygon,
       const float v1y = y[i] - p0y;
       const float v0 = v0x * dy - dx * v0y;
       const float v1 = v1x * dy - dx * v1y;
+      // Use bitwise operation to get better performance.
+      // Use (^1) for not operation.
       mask[i] &= (((v0 > 0.0f) & (v1 > 0.0f)) ^ 1);
     }
   }
@@ -235,6 +239,7 @@ std::vector<float> BatchParametricIntersection(const Vector2D& o,
     const float p1q0x = q0x - p1x;
     const float p1q0y = q0y - p1y;
 
+    // Use bitwise operation to get better performance.
     const utils::MaskType intersects =
         ((CCW(p0q0x, p0q0y, p0p1x, p0p1y) != CCW(p0q0x, p0q0y, p0q1x, p0q1y)) &
          (CCW(p1q1x, p1q1y, p1p0x, p1p0y) != CCW(p1q1x, p1q1y, p1q0x, p1q0y)));

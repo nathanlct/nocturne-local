@@ -61,6 +61,8 @@ void VisibleRoadPoints(const Object& src,
     const std::vector<geometry::utils::MaskType> block_mask =
         geometry::BatchIntersects(obj->BoundingPolygon(), src.position(), x, y);
     for (int64_t i = 0; i < n; ++i) {
+      // Use bitwise operation to get better performance.
+      // Use (^1) for not operation.
       mask[i] &= (block_mask[i] ^ 1);
     }
   }

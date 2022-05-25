@@ -73,6 +73,7 @@ std::vector<geometry::utils::MaskType> VisibleObjectsImpl(
   for (int64_t i = 0; i < n; ++i) {
     const std::vector<geometry::utils::MaskType> cur_mask =
         BatchIntersects(objects[i]->BoundingPolygon(), o, x, y);
+    // Use bitwise operation to get better performance.
     mask[i] |= std::accumulate(cur_mask.cbegin(), cur_mask.cend(),
                                geometry::utils::MaskType(0),
                                std::bit_or<geometry::utils::MaskType>());

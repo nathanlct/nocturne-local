@@ -12,6 +12,20 @@
 namespace nocturne {
 namespace geometry {
 
+// 2d Range Tree for efficient range search operations.
+// https://en.wikipedia.org/wiki/Range_tree
+//
+// The Outer Tree (X-Tree) is implemented by a non-recursive segment tree.
+// The Inner Tree (Y-Tree) is an std::vector sorted by y-coordinate where we
+// can do binary search for lower_bound an upper_bound.
+//
+// The non-recursive segment tree implementaion is adapted from the link blow.
+// https://codeforces.com/blog/entry/18051
+//
+// Time complexity for Reset operation: O(NlogN).
+// Time complexity for RangeSearch operation: O(log^2N + K).
+// Space complexity: O(NlogN).
+
 class RangeTree2d {
  public:
   RangeTree2d() = default;
