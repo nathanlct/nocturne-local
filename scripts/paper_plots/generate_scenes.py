@@ -5,7 +5,7 @@ import numpy as np
 import os
 from pyvirtualdisplay import Display
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH, get_default_config
 from nocturne import Simulation
 
 
@@ -13,7 +13,7 @@ def get_sim(scenario_file):
     """Initialize the scenario."""
     # load scenario, set vehicles to be expert-controlled
     sim = Simulation(scenario_path=str(scenario_file),
-                     allow_non_vehicles=False)
+        get_default_config({'allow_non_vehicles': False}))
     for obj in sim.getScenario().getObjectsThatMoved():
         obj.expert_control = True
     return sim

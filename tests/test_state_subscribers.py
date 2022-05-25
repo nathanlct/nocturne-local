@@ -2,7 +2,7 @@
 import numpy as np
 from pyvirtualdisplay import Display
 
-from cfgs.config import PROJECT_PATH
+from cfgs.config import PROJECT_PATH, get_default_config
 from nocturne import Simulation
 
 
@@ -12,7 +12,8 @@ def test_state_subscribers():
     # of how to test things
     return
     sim = Simulation(scenario_path=str(PROJECT_PATH /
-                                       'tests/scenario_test.json'))
+                                       'tests/scenario_test.json'),
+                     config=get_default_config())
     scenario = sim.getScenario()
     vehs = scenario.getVehicles()
 

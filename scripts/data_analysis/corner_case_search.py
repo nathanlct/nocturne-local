@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pyvirtualdisplay import Display
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH, get_default_config
 from nocturne import Simulation
 
 if __name__ == '__main__':
@@ -33,7 +33,8 @@ if __name__ == '__main__':
     for file_idx, file in enumerate(files):
         found_collision = False
         edge_collision = False
-        sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file), 0, False)
+        sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file), 
+            get_default_config({'start_time': 0, 'allow_non_vehicles': False}))
         vehs = sim.getScenario().getObjectsThatMoved()
         # this checks if the vehicles has actually moved any distance at all
         valid_vehs = []
@@ -90,8 +91,8 @@ if __name__ == '__main__':
         if found_collision and edge_collision:
             movie_frames = []
             fig = plt.figure()
-            sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file), 0,
-                             False)
+            sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file), 
+                get_default_config({'start_time': 0, 'allow_non_vehicles': False}))
             vehs = sim.getScenario().getObjectsThatMoved()
             for veh in vehs:
                 veh.expert_control = True

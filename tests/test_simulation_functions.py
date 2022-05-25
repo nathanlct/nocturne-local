@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from cfgs.config import PROJECT_PATH
+from cfgs.config import PROJECT_PATH, get_default_config
 from nocturne import Simulation
 
 
@@ -17,7 +17,7 @@ def test_scenario_functions():
     ################################
     # now lets test for collisions
     # grab a vehicle and place it on top of another vehicle
-    sim = Simulation(scenario_path=file_path)
+    sim = Simulation(scenario_path=file_path, config=get_default_config())
     scenario = sim.getScenario()
     veh0 = scenario.getVehicles()[0]
     veh1 = scenario.getVehicles()[1]
@@ -40,7 +40,7 @@ def test_scenario_functions():
     assert not veh2.getCollided(), 'vehicle2 should not have collided'
 
     # now offset them slightly and do the same thing again
-    sim = Simulation(scenario_path=file_path)
+    sim = Simulation(scenario_path=file_path, config=get_default_config())
     scenario = sim.getScenario()
     veh0 = scenario.getVehicles()[0]
     veh1 = scenario.getVehicles()[1]
@@ -104,7 +104,7 @@ def test_scenario_functions():
     ######################
     # check that initializing things to a different time leads to a different
     # image
-    sim = Simulation(scenario_path=file_path, start_time=20)
+    sim = Simulation(scenario_path=file_path, config=get_default_config({'start_time': 20}))
     scenario = sim.getScenario()
 
     img1 = scenario.getConeImage(scenario.getVehicles()[4], 120.0, 2 * np.pi,
@@ -112,9 +112,8 @@ def test_scenario_functions():
 
     # check that initializing things with and without pedestrians leads to a different
     # image
-    sim = Simulation(scenario_path=file_path,
-                     start_time=20,
-                     allow_non_vehicles=False)
+    sim = Simulation(scenario_path=file_path, 
+        config=get_default_config({'start_time': 20, 'allow_non_vehicles': False}))
     scenario = sim.getScenario()
 
     img2 = scenario.getConeImage(scenario.getVehicles()[4], 120.0, 2 * np.pi,

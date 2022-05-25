@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pyvirtualdisplay import Display
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL
+from cfgs.config import PROCESSED_TRAIN_NO_TL, get_default_config
 from nocturne import Simulation
 
 disp = Display()
@@ -15,7 +15,7 @@ fig = plt.figure()
 files = os.listdir(PROCESSED_TRAIN_NO_TL)
 file = os.path.join(PROCESSED_TRAIN_NO_TL,
                     files[np.random.randint(len(files))])
-sim = Simulation(file, start_time=0)
+sim = Simulation(file, get_default_config({'start_time': 0}))
 frames = []
 scenario = sim.getScenario()
 for veh in scenario.getVehicles():

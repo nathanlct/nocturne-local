@@ -1,11 +1,11 @@
 """Test configurations passed to the scenario."""
-from cfgs.config import PROJECT_PATH, DEFAULT_SCENARIO_CONFIG
+from cfgs.config import PROJECT_PATH, get_default_config
 from nocturne import Simulation
 
 
 def test_config_values():
     """Test that there are no invalid values in the default config."""
-    config = DEFAULT_SCENARIO_CONFIG
+    config = get_default_config()
 
     # None in the config would cause a bug
     assert None not in list(config.values())
@@ -13,8 +13,7 @@ def test_config_values():
 
 def test_custom_config():
     """Test that changes in the config are propagated to the scenario."""
-    config = DEFAULT_SCENARIO_CONFIG
-    config.update({
+    config = get_default_config({
         'max_visible_objects': 3,
         'max_visible_road_points': 14,
         'max_visible_traffic_lights': 15,

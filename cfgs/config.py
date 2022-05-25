@@ -40,3 +40,9 @@ DEFAULT_SCENARIO_CONFIG = {
     'max_visible_traffic_lights': 20,
     'max_visible_stop_signs': 4,
 }
+
+
+def get_default_config(new_config={}):
+    config = dict(DEFAULT_SCENARIO_CONFIG)
+    config.update(new_config)
+    return config

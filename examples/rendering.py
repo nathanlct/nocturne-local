@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pyvirtualdisplay import Display
 
-from cfgs.config import PROJECT_PATH
+from cfgs.config import PROJECT_PATH, get_default_config
 from nocturne import Simulation
 
 
@@ -12,7 +12,8 @@ def get_sim():
     """Initialize the scenario."""
     # load scenario, set vehicles to be expert-controlled
     sim = Simulation(scenario_path=str(PROJECT_PATH / 'examples' /
-                                       'example_scenario.json'))
+                                       'example_scenario.json'),
+                     config=get_default_config())
     for obj in sim.getScenario().getObjectsThatMoved():
         obj.expert_control = True
     return sim

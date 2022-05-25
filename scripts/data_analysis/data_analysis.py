@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH, get_default_config
 from nocturne import Simulation
 
 
@@ -22,7 +22,8 @@ def run_analysis(files):
     observed_accels = []
     num_vehicles = []
     for file_idx, file in enumerate(files):
-        sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file), 0, False)
+        sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file), 
+            get_default_config({'start_time': 0, 'allow_non_vehicles': False}))
         vehs = sim.scenario().getObjectsThatMoved()
         # this checks if the vehicles has actually moved any distance at all
         valid_vehs = []

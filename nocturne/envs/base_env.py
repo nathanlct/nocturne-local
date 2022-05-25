@@ -11,7 +11,7 @@ from gym.spaces import Box, Discrete
 import numpy as np
 import torch
 
-from cfgs.config import ERR_VAL as INVALID_POSITION
+from cfgs.config import get_default_config, ERR_VAL as INVALID_POSITION
 from nocturne import Action, Simulation
 
 
@@ -39,7 +39,9 @@ class BaseEnv(Env):
         self.file = self.files[np.random.randint(len(self.files))]
         self.simulation = Simulation(os.path.join(cfg['scenario_path'],
                                                   self.file),
-                                     allow_non_vehicles=False)
+                                     config=get_default_config({
+                                        'allow_non_vehicles': False
+                                     }))
 
         self.scenario = self.simulation.getScenario()
         self.controlled_vehicles = self.scenario.getObjectsThatMoved()
@@ -225,7 +227,9 @@ class BaseEnv(Env):
             self.file = self.files[np.random.randint(len(self.files))]
             self.simulation = Simulation(os.path.join(
                 self.cfg['scenario_path'], self.file),
-                                         allow_non_vehicles=False)
+                                         config=get_default_config({
+                                            'allow_non_vehicles': False
+                                         }))
             self.scenario = self.simulation.getScenario()
 
             # declare the single agent if needed

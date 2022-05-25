@@ -12,7 +12,7 @@ import os
 import numpy as np
 from pyvirtualdisplay import Display
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL, get_default_config
 from nocturne import Simulation
 
 
@@ -38,7 +38,8 @@ def is_file_valid(file_list, output_file, output_file_invalid, lock=None):
     file_valid_dict = {}
     file_invalid_dict = {}
     for i, file in enumerate(file_list):
-        sim = Simulation(str(file), 0, False)
+        sim = Simulation(str(file), 
+            get_default_config({'start_time': 0, 'allow_non_vehicles': False}))
         vehs = sim.scenario().getObjectsThatMoved()
         for veh in vehs:
             # we shrink the vehicle width and length to tiny values.
