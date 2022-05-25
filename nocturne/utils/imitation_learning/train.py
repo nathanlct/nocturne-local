@@ -75,7 +75,7 @@ if __name__ == '__main__':
     # create model
     n_states = len(dataset[0][0])
     n_actions = len(dataset[0][1])
-    model = ImitationAgent(n_states, n_actions).to(args.device)
+    model = ImitationAgent(n_states, n_actions, hidden_layers=[512]*4).to(args.device)
     model.train()
     print(model)
 
