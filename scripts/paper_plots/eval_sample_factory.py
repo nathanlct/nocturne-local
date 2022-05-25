@@ -424,7 +424,8 @@ def run_eval(cfgs, test_zsc, output_path):
 
 
 def load_wandb(experiment_name, force_reload=False):
-    if not os.path.exists('wandb_{}.csv'.format(experiment_name)):
+    if not os.path.exists(
+            'wandb_{}.csv'.format(experiment_name)) or force_reload:
         import wandb
 
         api = wandb.Api()
@@ -452,6 +453,7 @@ def load_wandb(experiment_name, force_reload=False):
 
 def plot_df(experiment_name):
     from matplotlib import pyplot as plt
+    plt.figure()
     plt.rcParams['figure.dpi'] = 150
     plt.rcParams['figure.figsize'] = (6, 4)
 
@@ -483,8 +485,9 @@ def plot_df(experiment_name):
         ax.fill_between(x, y - 2 * yerr, y + 2 * yerr, color=color, alpha=0.3)
     plt.grid(ls='--', color='#ccc')
     plt.legend()
-    plt.xlabel("_step")
+    plt.xlabel("gradient step")
     plt.ylabel(column)
+    plt.savefig('goal_achieved_v_gradient')
 
 
 def eval_generalization(output_folder, num_eval_files):
@@ -508,8 +511,8 @@ def eval_generalization(output_folder, num_eval_files):
             cfg_dict['no_render'] = None
             cfg_dict['policy_index'] = 0
             cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
-            cfg_dict['continuous_actions_sample'] = True
-            cfg_dict['discrete_actions_sample'] = True
+            cfg_dict['continuous_actions_sample'] = False
+            cfg_dict['discrete_actions_sample'] = False
             cfg_dict['num_eval_files'] = num_eval_files
             cfg_dicts.append(cfg_dict)
     for file_path, cfg_dict in zip(file_paths, cfg_dicts):
@@ -524,12 +527,12 @@ def main():
     disp.start()
     register_custom_components()
     RUN_EVAL = True
-    RELOAD_WANDB = False
-    NUM_EVAL_FILES = 10
-    experiment_names = ['srt_v9']
+    RELOAD_WANDB = True
+    NUM_EVAL_FILES = 50
+    experiment_names = ['srt_v10']
     # output_folder = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35'
     output_folder = [
-        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v9/05.46.08'
+        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v10/17.02.40/'
     ]
     generalization_dfs = []
     '''
@@ -554,17 +557,28 @@ def main():
                 goal = float(np.loadtxt(os.path.join(dirpath, 'zsc_goal.txt')))
                 collide = float(
                     np.loadtxt(os.path.join(dirpath, 'zsc_collision.txt')))
+                ade = float(np.loadtxt(os.path.join(dirpath, 'ade.txt')))
+                fde = float(np.loadtxt(os.path.join(dirpath, 'fde.txt')))
                 num_files = cfg_dict['num_files']
                 if int(num_files) == -1:
                     num_files = 134453
                 data_dicts.append({
                     'num_files': num_files,
                     'goal_rate': goal,
-                    'collide_rate': collide
+                    'collide_rate': collide,
+                    'ade': ade,
+                    'fde': fde
                 })
         df = pd.DataFrame(data_dicts)
-        means = df.groupby(['num_files'])['goal_rate'].mean().reset_index()
-        generalization_dfs.append(means)
+        goals = df.groupby(['num_files'])['goal_rate'].mean().reset_index()
+        ade = df.groupby(['num_files'])['ade'].mean().reset_index()
+        fde = df.groupby(['num_files'])['fde'].mean().reset_index()
+        collide = df.groupby(['num_files'
+                              ])['collide_rate'].mean().reset_index()
+        goals = goals.merge(ade, how='inner', on='num_files')
+        goals = goals.merge(fde, how='inner', on='num_files')
+        goals = goals.merge(collide, how='inner', on='num_files')
+        generalization_dfs.append(goals)
         '''
     ###############################################################################
     #########  load the training dataframes from wandb ######################
@@ -572,11 +586,11 @@ def main():
     '''
     training_dfs = []
     for experiment_name in experiment_names:
-        if not os.path.exists('wandb_{}.csv'.format(experiment_name)):
-            load_wandb(experiment_name, force_reload=RELOAD_WANDB)
+        load_wandb(experiment_name, force_reload=RELOAD_WANDB)
         training_dfs.append(pd.read_csv(
             'wandb_{}.csv'.format(experiment_name)))
 
+    # create the goal plot
     plt.figure()
     for df in generalization_dfs:
         sns.lineplot(x=np.log(df.num_files), y=df.goal_rate)
@@ -598,7 +612,51 @@ def main():
     plt.xlabel('log(number training files)')
     plt.ylabel('% goals achieved')
     plt.legend(['test', 'train'])
-    plt.savefig('temp.png')
+    plt.savefig('goal_achieved.png')
+
+    # create the collide plot
+    plt.figure()
+    for df in generalization_dfs:
+        sns.lineplot(x=np.log(df.num_files), y=df.collide_rate)
+
+    for df in training_dfs:
+        values_num_files = np.unique(df.num_files.values)
+        column = "0_aux/avg_collided"
+        dfs = []
+        y_vals = []
+        for num_files in values_num_files:
+            df_n = df[df.num_files == num_files].set_index(
+                '_step').sort_index()
+            dfs.append(df_n[column].ewm(
+                halflife=500,
+                min_periods=10).mean().rename(f"num_files={num_files}"))
+            y_vals.append(dfs[-1].iloc[-1])
+        values_num_files[np.argwhere(values_num_files == -1)] = 134453
+        sns.lineplot(x=np.log(values_num_files), y=y_vals)
+    plt.xlabel('log(number training files)')
+    plt.ylabel('% vehicles collided')
+    plt.legend(['test', 'train'])
+    plt.savefig('collide_rate.png')
+
+    # create ADE and FDE plots
+
+    plt.figure()
+    for df in generalization_dfs:
+        sns.lineplot(x=np.log(df.num_files), y=df.ade)
+    plt.xlabel('log(number training files)')
+    plt.ylabel('average displacement error')
+    # plt.legend(['test', 'train'])
+    plt.savefig('ade.png')
+
+    plt.figure()
+    for df in generalization_dfs:
+        sns.lineplot(x=np.log(df.num_files), y=df.ade)
+    plt.xlabel('log(number training files)')
+    plt.ylabel('final displacement error')
+    # plt.legend(['test', 'train'])
+    plt.savefig('fde.png')
+
+    plot_df(experiment_names[0])
 
 
 if __name__ == '__main__':

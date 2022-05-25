@@ -28,7 +28,7 @@ from run_sample_factory import register_custom_components
 from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL, PROJECT_PATH
 
 
-def run_eval(cfg, max_num_frames=1e9):
+def run_eval(cfg_dict, max_num_frames=1e9):
     """Run evaluation over a single file. Exits when one episode finishes.
 
     Args:
@@ -40,7 +40,7 @@ def run_eval(cfg, max_num_frames=1e9):
         None: None
 
     """
-    cfg = load_from_checkpoint(cfg)
+    cfg = load_from_checkpoint(cfg_dict)
 
     render_action_repeat = cfg.render_action_repeat if cfg.render_action_repeat is not None else cfg.env_frameskip
     if render_action_repeat is None:
@@ -51,6 +51,7 @@ def run_eval(cfg, max_num_frames=1e9):
     cfg.env_frameskip = 1  # for evaluation
     cfg.num_envs = 1
     cfg.seed = np.random.randint(10000)
+    cfg.scenario_path = cfg_dict.scenario_path
 
     def make_env_func(env_config):
         return create_env(cfg.env, cfg=cfg, env_config=env_config)
@@ -87,6 +88,7 @@ def run_eval(cfg, max_num_frames=1e9):
         return max_num_frames is not None and frames > max_num_frames
 
     obs = env.reset()
+    print(os.path.join(env.cfg['scenario_path'], env.unwrapped.file))
     rnn_states = torch.zeros(
         [env.num_agents, get_hidden_size(cfg)],
         dtype=torch.float32,
@@ -202,7 +204,7 @@ def run_eval(cfg, max_num_frames=1e9):
                             np.mean(true_rewards[i])
                             for i in range(env.num_agents)
                         ]))
-                    sys.exit()
+                    return avg_goal
 
                 # VizDoom multiplayer stuff
                 # for player in [1, 2, 3, 4, 5, 6, 7, 8]:
@@ -211,8 +213,6 @@ def run_eval(cfg, max_num_frames=1e9):
                 #         log.debug('Score for player %d: %r', player, infos[0][key])
 
     env.close()
-
-    return ExperimentStatus.SUCCESS, np.mean(episode_rewards)
 
 
 def main():
@@ -223,7 +223,7 @@ def main():
     # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.04/s_kl_control/06.47.53/9/s_kl_control/cfg.json'
     # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/srt_v3/11.15.20/8/srt_v3/cfg.json'
     # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/srt_v3/11.15.20/2/srt_v3/cfg.json'
-    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35/13/new_road_sample/cfg.json'
+    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v10/17.02.40/14/srt_v10/cfg.json'
     with open(file_path, 'r') as file:
         cfg_dict = json.load(file)
 
@@ -235,7 +235,7 @@ def main():
     cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
     cfg_dict['continuous_actions_sample'] = True
     cfg_dict['discrete_actions_sample'] = False
-    cfg_dict['scenario_path'] = PROCESSED_TRAIN_NO_TL
+    cfg_dict['scenario_path'] = PROCESSED_VALID_NO_TL
 
     class Bunch(object):
 
@@ -243,8 +243,12 @@ def main():
             self.__dict__.update(adict)
 
     cfg = Bunch(cfg_dict)
-    status, avg_reward = run_eval(cfg)
-    return status
+    avg_goals = []
+    for _ in range(1):
+        avg_goal = run_eval(cfg)
+        avg_goals.append(avg_goal)
+    print(avg_goals)
+    print('the total average goal achieved is {}'.format(np.mean(avg_goals)))
 
 
 if __name__ == '__main__':

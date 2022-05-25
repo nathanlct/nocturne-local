@@ -15,6 +15,7 @@ fig = plt.figure()
 files = os.listdir(PROCESSED_TRAIN_NO_TL)
 file = os.path.join(PROCESSED_TRAIN_NO_TL,
                     files[np.random.randint(len(files))])
+# file = os.path.join(PROCESSED_TRAIN_NO_TL, 'tfrecord-00905-of-01000_216.json')
 sim = Simulation(file, start_time=0)
 frames = []
 scenario = sim.getScenario()
