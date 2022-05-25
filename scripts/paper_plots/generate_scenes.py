@@ -13,7 +13,7 @@ def get_sim(scenario_file):
     """Initialize the scenario."""
     # load scenario, set vehicles to be expert-controlled
     sim = Simulation(scenario_path=str(scenario_file),
-        get_default_config({'allow_non_vehicles': False}))
+                     config=get_default_config({'allow_non_vehicles': False}))
     for obj in sim.getScenario().getObjectsThatMoved():
         obj.expert_control = True
     return sim

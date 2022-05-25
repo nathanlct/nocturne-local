@@ -112,7 +112,8 @@ def test_scenario_functions():
 
     # check that initializing things with and without pedestrians leads to a different
     # image
-    sim = Simulation(scenario_path=file_path, 
+    sim = Simulation(
+        scenario_path=file_path,
         config=get_default_config({'start_time': 20, 'allow_non_vehicles': False}))
     scenario = sim.getScenario()
 

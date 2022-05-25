@@ -22,8 +22,8 @@ def run_analysis(files):
     observed_accels = []
     num_vehicles = []
     for file_idx, file in enumerate(files):
-        sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file), 
-            get_default_config({'start_time': 0, 'allow_non_vehicles': False}))
+        sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file),
+                         get_default_config({'start_time': 0, 'allow_non_vehicles': False}))
         vehs = sim.scenario().getObjectsThatMoved()
         # this checks if the vehicles has actually moved any distance at all
         valid_vehs = []

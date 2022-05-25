@@ -43,6 +43,7 @@ DEFAULT_SCENARIO_CONFIG = {
 
 
 def get_default_config(new_config={}):
+    """Get the default scenario config with optional changes."""
     config = dict(DEFAULT_SCENARIO_CONFIG)
     config.update(new_config)
     return config
