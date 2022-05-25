@@ -8,7 +8,7 @@ from torch.optim.lr_scheduler import LinearLR  # , ExponentialLR
 from tqdm import tqdm
 import multiprocessing
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL
+# from cfgs.config import PROCESSED_TRAIN_NO_TL  # TODO make this work
 
 from nocturne.utils.imitation_learning.model import ImitationAgent
 from nocturne.utils.imitation_learning.waymo_data_loader import WaymoDataset
@@ -45,7 +45,8 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=200, help='Number of training iterations')
     parser.add_argument('--device', type=str, default='cpu', help='Device (cpu or cuda)')
     parser.add_argument('--file_limit', type=int, default=None, help='Limit on the number of files to use/precompute')
-    parser.add_argument('--sample_limit', type=int, default=None, help='Limit on the number of samples to use during training')
+    parser.add_argument('--sample_limit', type=int, default=None,
+                        help='Limit on the number of samples to use during training')
     args = parser.parse_args()
     return args
 

@@ -53,12 +53,12 @@ if __name__ == '__main__':
                 for i in range(90):
                     print(f'...{i+1}/90 ({traj_path} ; {mp4_name})')
                     img = np.array(scenario.getImage(None, render_goals=True),
-                                copy=False)
+                                   copy=False)
                     frames.append(img)
                     for veh in scenario.getVehicles():
                         veh_state = np.concatenate(
                             (np.array(scenario.ego_state(veh), copy=False),
-                            np.array(scenario.flattened_visible_state(
+                             np.array(scenario.flattened_visible_state(
                                 veh, view_dist=120, view_angle=3.14),
                                     copy=False)))
                         action = policy(veh_state)[0]

@@ -144,7 +144,7 @@ class WaymoDataset(torch.utils.data.Dataset):
         if self.file_limit is not None and self.file_limit < len(scenario_paths):
             scenario_paths = scenario_paths[:self.file_limit]
             print(f'Only precomputing the first {self.file_limit} files '
-                   'because file_limit has been set.')
+                  'because file_limit has been set.')
 
         # distribute dataset precomputation
         n_cpus = min(self.n_cpus, len(scenario_paths))
@@ -211,7 +211,7 @@ class WaymoDataset(torch.utils.data.Dataset):
         # wait for precomputation to be done
         for process in process_list:
             process.join()
-        print(f'\nShuffling done!\n')
+        print('\nShuffling done!\n')
 
 
 def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
@@ -291,7 +291,7 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
 
             # step the simulation
             sim.step(0.1)
-        
+
         # close output file
         f.close()
         print(f'({process_idx}) Wrote {output_path} ({i + 1}/{len(scenario_paths)})')
@@ -299,7 +299,8 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
     print(f'({process_idx}) Done, precomputed {sample_count} samples out of {total_sample_count} possible '
           f'samples.\n\t{s_nan_count} samples were ignored because their state contained invalid '
           f'values.\n\t{a_nan_count} samples were ignored because their action contained invalid values.',
-        flush=True)
+          flush=True)
+
 
 def _shuffle_data_impl(samples, data_path, samples_per_file, process_idx):
     current_file_count = 0

@@ -96,7 +96,6 @@ def compute_average_collision_rate(trajectories_dir, model=None, **kwargs):
 
 
 if __name__ == '__main__':
-    import torch
     from nocturne.utils.imitation_learning.waymo_data_loader import ImitationAgent  # noqa: F401
     model = torch.load('model.pth')
     collisions_with_vehicles, collisions_with_road_lines = \
