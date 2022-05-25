@@ -23,7 +23,7 @@ namespace geometry {
 // https://codeforces.com/blog/entry/18051
 //
 // Time complexity for Reset operation: O(NlogN).
-// Time complexity for RangeSearch operation: O(log^2N + K).
+// Time complexity for RangeSearch operation: O(log^2(N) + K).
 // Space complexity: O(NlogN).
 
 class RangeTree2d {
@@ -104,6 +104,7 @@ class RangeTree2d {
   }
 
  protected:
+  // Time complexity: O(NlogN)
   template <class PointType, class PtrFunc>
   void ResetImpl(const std::vector<PointType>& points, PtrFunc ptr_func) {
     Clear();
