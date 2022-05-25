@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <utility>
 #include <vector>
@@ -12,6 +13,8 @@ class Vector2D;
 class PointLike;
 
 namespace utils {
+
+using MaskType = uint32_t;
 
 constexpr double kEps = 1e-8;
 constexpr double kPi = M_PI;

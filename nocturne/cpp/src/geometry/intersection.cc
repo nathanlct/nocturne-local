@@ -6,8 +6,6 @@
 #include <cmath>
 #include <limits>
 
-#include "geometry/geometry_utils.h"
-
 namespace nocturne {
 namespace geometry {
 
@@ -134,13 +132,13 @@ bool Intersects(const LineSegment& segment, const ConvexPolygon& polygon) {
   return Intersects(polygon, segment);
 }
 
-std::vector<int32_t> BatchIntersects(const ConvexPolygon& polygon,
-                                     const Vector2D& o,
-                                     const std::vector<float>& x,
-                                     const std::vector<float>& y) {
+std::vector<utils::MaskType> BatchIntersects(const ConvexPolygon& polygon,
+                                             const Vector2D& o,
+                                             const std::vector<float>& x,
+                                             const std::vector<float>& y) {
   assert(x.size() == y.size());
   const int64_t n = x.size();
-  std::vector<int32_t> mask(n, 1);
+  std::vector<utils::MaskType> mask(n, 1);
   std::vector<float> min_v(n, std::numeric_limits<float>::max());
   std::vector<float> max_v(n, std::numeric_limits<float>::lowest());
   const float ox = o.x();
@@ -186,14 +184,14 @@ std::vector<int32_t> BatchIntersects(const ConvexPolygon& polygon,
   return mask;
 }
 
-std::vector<int32_t> BatchIntersects(const ConvexPolygon& polygon,
-                                     const Vector2D& o,
-                                     const std::vector<Vector2D>& points) {
+std::vector<utils::MaskType> BatchIntersects(
+    const ConvexPolygon& polygon, const Vector2D& o,
+    const std::vector<Vector2D>& points) {
   const auto [x, y] = utils::PackCoordinates(points);
   return BatchIntersects(polygon, o, x, y);
 }
 
-std::vector<int32_t> BatchIntersects(
+std::vector<utils::MaskType> BatchIntersects(
     const ConvexPolygon& polygon, const Vector2D& o,
     const std::vector<const PointLike*>& points) {
   const auto [x, y] = utils::PackCoordinates(points);
@@ -237,7 +235,7 @@ std::vector<float> BatchParametricIntersection(const Vector2D& o,
     const float p1q0x = q0x - p1x;
     const float p1q0y = q0y - p1y;
 
-    const int32_t intersects =
+    const utils::MaskType intersects =
         ((CCW(p0q0x, p0q0y, p0p1x, p0p1y) != CCW(p0q0x, p0q0y, p0q1x, p0q1y)) &
          (CCW(p1q1x, p1q1y, p1p0x, p1p0y) != CCW(p1q1x, p1q1y, p1q0x, p1q0y)));
 

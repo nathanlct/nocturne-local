@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "geometry/geometry_utils.h"
 #include "geometry/intersection.h"
 #include "geometry/line_segment.h"
 #include "geometry/polygon.h"
@@ -34,7 +35,7 @@ Vector2D MakeSightEndpoint(const CircleLike& vision,
   return o + d / d.Norm() * r;
 }
 
-std::vector<int32_t> VisibleObjectsImpl(
+std::vector<geometry::utils::MaskType> VisibleObjectsImpl(
     const std::vector<const ObjectBase*>& objects, const Vector2D& o,
     const std::vector<Vector2D>& points) {
   const int64_t n = objects.size();
@@ -60,7 +61,7 @@ std::vector<int32_t> VisibleObjectsImpl(
     }
   }
 
-  std::vector<int32_t> mask(n, 0);
+  std::vector<geometry::utils::MaskType> mask(n, 0);
   for (int64_t i = 0; i < m; ++i) {
     const geometry::Vector2D p = LineSegment(o, points[i]).Point(dis[i]);
     x[i] = p.x();
@@ -70,10 +71,11 @@ std::vector<int32_t> VisibleObjectsImpl(
     }
   }
   for (int64_t i = 0; i < n; ++i) {
-    const std::vector<int32_t> cur_mask =
+    const std::vector<geometry::utils::MaskType> cur_mask =
         BatchIntersects(objects[i]->BoundingPolygon(), o, x, y);
-    mask[i] |= std::accumulate(cur_mask.cbegin(), cur_mask.cend(), int32_t(0),
-                               std::bit_or<int32_t>());
+    mask[i] |= std::accumulate(cur_mask.cbegin(), cur_mask.cend(),
+                               geometry::utils::MaskType(0),
+                               std::bit_or<geometry::utils::MaskType>());
   }
 
   return mask;
@@ -116,7 +118,7 @@ std::vector<const ObjectBase*> ViewField::VisibleObjects(
   const int64_t n = objects.size();
   const Vector2D& o = vision_->center();
   std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
-  const std::vector<int32_t> mask =
+  const std::vector<geometry::utils::MaskType> mask =
       VisibleObjectsImpl(objects, o, sight_endpoints);
   std::vector<const ObjectBase*> ret;
   for (int64_t i = 0; i < n; ++i) {
@@ -131,7 +133,7 @@ void ViewField::FilterVisibleObjects(
     std::vector<const ObjectBase*>& objects) const {
   const Vector2D& o = vision_->center();
   std::vector<Vector2D> sight_endpoints = ComputeSightEndpoints(objects);
-  const std::vector<int32_t> mask =
+  const std::vector<geometry::utils::MaskType> mask =
       VisibleObjectsImpl(objects, o, sight_endpoints);
   const int64_t pivot = utils::MaskedPartition(mask, objects);
   objects.resize(pivot);
@@ -161,7 +163,8 @@ void ViewField::FilterVisibleNonblockingObjects(
 std::vector<const geometry::PointLike*> ViewField::VisiblePoints(
     const std::vector<const geometry::PointLike*>& objects) const {
   std::vector<const geometry::PointLike*> ret;
-  const std::vector<int32_t> mask = vision_->BatchContains(objects);
+  const std::vector<geometry::utils::MaskType> mask =
+      vision_->BatchContains(objects);
   const int64_t n = objects.size();
   for (int64_t i = 0; i < n; ++i) {
     if (mask[i]) {
@@ -173,7 +176,8 @@ std::vector<const geometry::PointLike*> ViewField::VisiblePoints(
 
 void ViewField::FilterVisiblePoints(
     std::vector<const geometry::PointLike*>& objects) const {
-  const std::vector<int32_t> mask = vision_->BatchContains(objects);
+  const std::vector<geometry::utils::MaskType> mask =
+      vision_->BatchContains(objects);
   const int64_t pivot = utils::MaskedPartition(mask, objects);
   objects.resize(pivot);
 }
