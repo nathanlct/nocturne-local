@@ -22,7 +22,7 @@ def test_rl_env():
     _ = env.reset()
     # quick check that rendering works
     _ = env.scenario.getConeImage(env.scenario.getVehicles()[0], 120.0,
-                                  1.99 * 3.14, 0.0, False)
+                                  1.99 * 3.14, 0.0, draw_target_position=False)
     for _ in range(90):
         vehs = env.scenario.getObjectsThatMoved()
         prev_position = {
