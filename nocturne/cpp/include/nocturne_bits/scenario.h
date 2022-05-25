@@ -34,23 +34,9 @@ using json = nlohmann::json;
 
 constexpr int64_t kMaxEnvTime = 100000;
 
-// The distance to goal must be greater than this
-// for a vehicle to be included in ObjectsThatMoved
-constexpr float kMovingThreshold = 0.2;
-// The vehicle speed at some point must be greater than this
-// for a vehicle to be included in ObjectsThatMoved
-constexpr float kSpeedThreshold = 0.05;
-
-// TODO(ev) hardcoding, this is the maximum number of vehicles that can be
-// returned in the state
-constexpr int64_t kMaxVisibleObjects = 20;
-constexpr int64_t kMaxVisibleRoadPoints = 300;
-constexpr int64_t kMaxVisibleTrafficLights = 20;
-constexpr int64_t kMaxVisibleStopSigns = 4;
-
 // Object features are:
 // [ valid, distance, azimuth, length, witdh, relative_object_heading,
-//   relative_velocity_heading, relative_velocity_speed, 
+//   relative_velocity_heading, relative_velocity_speed,
 //   object_type (one_hot of 5) ]
 constexpr int64_t kObjectFeatureSize = 13;
 
@@ -74,9 +60,17 @@ constexpr int64_t kEgoFeatureSize = 7;
 
 class Scenario : public sf::Drawable {
  public:
-  Scenario(const std::string& scenario_path, int64_t start_time,
-           bool allow_non_vehicles)
-      : current_time_(start_time), allow_non_vehicles_(allow_non_vehicles) {
+  Scenario(const std::string& scenario_path,
+           const std::unordered_map<std::string, std::string>& config)
+      : current_time_(std::stoi(config.at("start_time"))),
+        allow_non_vehicles_(config.at("allow_non_vehicles") == "True"),
+        kMaxVisibleObjects(std::stoi(config.at("max_visible_objects"))),
+        kMaxVisibleRoadPoints(std::stoi(config.at("max_visible_road_points"))),
+        kMaxVisibleTrafficLights(
+            std::stoi(config.at("max_visible_traffic_lights"))),
+        kMaxVisibleStopSigns(std::stoi(config.at("max_visible_stop_signs"))),
+        kMovingThreshold(std::stof(config.at("moving_threshold"))),
+        kSpeedThreshold(std::stof(config.at("speed_threshold"))) {
     if (!scenario_path.empty()) {
       LoadScenario(scenario_path);
     } else {
@@ -87,6 +81,7 @@ class Scenario : public sf::Drawable {
     }
   }
 
+  void LoadConfig(const std::unordered_map<std::string, std::string>& config);
   void LoadScenario(const std::string& scenario_path);
 
   const std::string& name() const { return name_; }
@@ -276,7 +271,25 @@ class Scenario : public sf::Drawable {
 
   int64_t current_time_;
   int64_t max_env_time_ = kMaxEnvTime;
-  const bool allow_non_vehicles_ = true;  // Whether to use non vehicle objects.
+
+  // Config
+
+  // The distance to goal must be greater than this
+  // for a vehicle to be included in ObjectsThatMoved
+  const float kMovingThreshold = 0.2;
+  // The vehicle speed at some point must be greater than this
+  // for a vehicle to be included in ObjectsThatMoved
+  const float kSpeedThreshold = 0.05;
+
+  // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
+  // returned in the state
+  const int64_t kMaxVisibleObjects = 20;
+  const int64_t kMaxVisibleRoadPoints = 300;
+  const int64_t kMaxVisibleTrafficLights = 20;
+  const int64_t kMaxVisibleStopSigns = 4;
+
+  // Whether to use non vehicle objects.
+  const bool allow_non_vehicles_ = true;
 
   std::vector<std::shared_ptr<Vehicle>> vehicles_;
   std::vector<std::shared_ptr<Pedestrian>> pedestrians_;

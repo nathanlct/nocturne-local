@@ -427,15 +427,15 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
                                                float view_dist,
                                                float view_angle,
                                                float head_tilt) const {
-  constexpr int64_t kObjectFeatureStride = 0;
-  constexpr int64_t kRoadPointFeatureStride =
+  const int64_t kObjectFeatureStride = 0;
+  const int64_t kRoadPointFeatureStride =
       kObjectFeatureStride + kMaxVisibleObjects * kObjectFeatureSize;
-  constexpr int64_t kTrafficLightFeatureStride =
+  const int64_t kTrafficLightFeatureStride =
       kRoadPointFeatureStride + kMaxVisibleRoadPoints * kRoadPointFeatureSize;
-  constexpr int64_t kStopSignFeatureStride =
+  const int64_t kStopSignFeatureStride =
       kTrafficLightFeatureStride +
       kMaxVisibleTrafficLights * kTrafficLightFeatureSize;
-  constexpr int64_t kFeatureSize =
+  const int64_t kFeatureSize =
       kStopSignFeatureStride + kMaxVisibleStopSigns * kStopSignsFeatureSize;
 
   const auto [objects, road_points, traffic_lights, stop_signs] =
