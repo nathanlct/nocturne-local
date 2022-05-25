@@ -930,10 +930,10 @@ void Scenario::LoadRoads(const json& roads_json) {
               std::make_shared<geometry::LineSegment>(cur_pos, nxt_pos));
         }
       }
-      // TODO(ev) 8 is a hardcoding
+      // TODO: Try different sample rate.
       std::shared_ptr<RoadLine> road_line =
           std::make_shared<RoadLine>(road_type, std::move(geometry),
-                                     /*num_road_points=*/8, check_collision);
+                                     /*sample_every_n=*/1, check_collision);
       road_lines_.push_back(road_line);
     }
   }

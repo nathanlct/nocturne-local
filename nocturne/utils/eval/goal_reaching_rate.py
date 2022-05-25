@@ -86,7 +86,6 @@ def compute_average_goal_reaching_rate(trajectories_dir, model=None, **kwargs):
 
 
 if __name__ == '__main__':
-    import torch
     from nocturne.utils.imitation_learning.waymo_data_loader import ImitationAgent  # noqa: F401
     model = torch.load('model.pth')
     goal_reaching_rate = compute_average_goal_reaching_rate('dataset/json_files', model=None)

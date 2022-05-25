@@ -1,3 +1,4 @@
+"""Model for an imitation learning agent."""
 import torch
 from torch import nn
 from torch.distributions.multivariate_normal import MultivariateNormal
