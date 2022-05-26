@@ -55,10 +55,10 @@ bool CircularSector::Contains(const Vector2D& p) const {
   return dx * dx + dy * dy <= radius_ * radius_ && CenterAngleContains(p);
 }
 
-std::vector<int32_t> CircularSector::BatchContains(
+std::vector<utils::MaskType> CircularSector::BatchContains(
     const std::vector<const PointLike*>& points) const {
   const int64_t n = points.size();
-  std::vector<int32_t> mask(n);
+  std::vector<utils::MaskType> mask(n);
   const auto [x, y] = utils::PackCoordinates(points);
   const Vector2D r0 = Radius0();
   const Vector2D r1 = Radius1();
@@ -74,8 +74,9 @@ std::vector<int32_t> CircularSector::BatchContains(
     const float r2 = dx * dx + dy * dy;
     const float c0 = dx * r0y - r0x * dy;
     const float c1 = dx * r1y - r1x * dy;
-    const int32_t m = theta_ < 0.0f ? ((c0 <= 0.0f) | (c1 >= 0.0f))
-                                    : ((c0 <= 0.0f) & (c1 >= 0.0f));
+    // Use bitwise operation to get better performance.
+    const utils::MaskType m = theta_ < 0.0f ? ((c0 <= 0.0f) | (c1 >= 0.0f))
+                                            : ((c0 <= 0.0f) & (c1 >= 0.0f));
     mask[i] = ((r2 <= radius_ * radius_) & m);
   }
   return mask;

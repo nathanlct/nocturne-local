@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <utility>
 #include <vector>
@@ -12,6 +13,10 @@ class Vector2D;
 class PointLike;
 
 namespace utils {
+
+// Use uint32_t instead of bool for MaskType to avoid API limits of
+// std::vector<bool> and also reach better performance.
+using MaskType = uint32_t;
 
 constexpr double kEps = 1e-8;
 constexpr double kPi = M_PI;
@@ -56,6 +61,7 @@ inline T AngleSub(T lhs, T rhs) {
   return NormalizeAngle<T>(lhs - rhs);
 }
 
+// Pack the coordinates of points into x and y.
 std::pair<std::vector<float>, std::vector<float>> PackCoordinates(
     const std::vector<Vector2D>& points);
 std::pair<std::vector<float>, std::vector<float>> PackCoordinates(

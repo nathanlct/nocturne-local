@@ -46,10 +46,10 @@ CircleLike::Intersection(const LineSegment& segment) const {
   }
 }
 
-std::vector<int32_t> Circle::BatchContains(
+std::vector<utils::MaskType> Circle::BatchContains(
     const std::vector<const PointLike*>& points) const {
   const int64_t n = points.size();
-  std::vector<int32_t> mask(n);
+  std::vector<utils::MaskType> mask(n);
   const auto [x, y] = utils::PackCoordinates(points);
   const float ox = center_.x();
   const float oy = center_.y();

@@ -50,7 +50,7 @@ class CircularSector : public CircleLike {
 
   bool Contains(const Vector2D& p) const override;
 
-  std::vector<int32_t> BatchContains(
+  std::vector<utils::MaskType> BatchContains(
       const std::vector<const PointLike*>& points) const override;
 
   std::pair<std::optional<Vector2D>, std::optional<Vector2D>> Intersection(

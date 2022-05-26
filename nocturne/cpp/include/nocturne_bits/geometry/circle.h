@@ -6,6 +6,7 @@
 
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
+#include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
 #include "geometry/point_like.h"
 #include "geometry/vector_2d.h"
@@ -27,7 +28,7 @@ class CircleLike : public AABBInterface {
   virtual std::pair<std::optional<Vector2D>, std::optional<Vector2D>>
   Intersection(const LineSegment& segment) const;
 
-  virtual std::vector<int32_t> BatchContains(
+  virtual std::vector<utils::MaskType> BatchContains(
       const std::vector<const PointLike*>& points) const = 0;
 
  protected:
@@ -53,7 +54,7 @@ class Circle : public CircleLike {
     return dx * dx + dy * dy <= radius_ * radius_;
   }
 
-  std::vector<int32_t> BatchContains(
+  std::vector<utils::MaskType> BatchContains(
       const std::vector<const PointLike*>& points) const override;
 };
 

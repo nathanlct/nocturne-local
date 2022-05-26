@@ -53,14 +53,16 @@ void VisibleRoadPoints(const Object& src,
                        std::vector<const geometry::PointLike*>& road_points) {
   const int64_t n = road_points.size();
   const auto [x, y] = geometry::utils::PackCoordinates(road_points);
-  std::vector<int32_t> mask(n, 1);
+  std::vector<geometry::utils::MaskType> mask(n, 1);
   for (const ObjectBase* obj : objects) {
     if (!obj->can_block_sight()) {
       continue;
     }
-    const std::vector<int32_t> block_mask =
+    const std::vector<geometry::utils::MaskType> block_mask =
         geometry::BatchIntersects(obj->BoundingPolygon(), src.position(), x, y);
     for (int64_t i = 0; i < n; ++i) {
+      // Use bitwise operation to get better performance.
+      // Use (^1) for not operation.
       mask[i] &= (block_mask[i] ^ 1);
     }
   }
