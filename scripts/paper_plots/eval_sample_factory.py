@@ -469,6 +469,9 @@ def plot_df(experiment_name):
     dfs = []
     stdevs = []
     for num_files in values_num_files:
+        if num_files == 1:
+            continue
+
         df_n = df[df.num_files == num_files].set_index('_step').sort_index()
         dfs.append(df_n[column].ewm(
             halflife=500,
@@ -526,8 +529,8 @@ def main():
     disp = Display()
     disp.start()
     register_custom_components()
-    RUN_EVAL = True
-    RELOAD_WANDB = True
+    RUN_EVAL = False
+    RELOAD_WANDB = False
     NUM_EVAL_FILES = 50
     experiment_names = ['srt_v10']
     # output_folder = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35'
@@ -562,6 +565,8 @@ def main():
                 num_files = cfg_dict['num_files']
                 if int(num_files) == -1:
                     num_files = 134453
+                if int(num_files) == 1:
+                    continue
                 data_dicts.append({
                     'num_files': num_files,
                     'goal_rate': goal,
@@ -600,7 +605,10 @@ def main():
         column = "0_aux/avg_goal_achieved"
         dfs = []
         y_vals = []
+        x_vals = []
         for num_files in values_num_files:
+            if num_files == 1:
+                continue
             df_n = df[df.num_files == num_files].set_index(
                 '_step').sort_index()
             dfs.append(df_n[column].ewm(
@@ -608,7 +616,9 @@ def main():
                 min_periods=10).mean().rename(f"num_files={num_files}"))
             y_vals.append(dfs[-1].iloc[-1])
         values_num_files[np.argwhere(values_num_files == -1)] = 134453
-        sns.lineplot(x=np.log(values_num_files), y=y_vals)
+        sns.lineplot(x=np.log(
+            [value for value in values_num_files if value != 1]),
+                     y=y_vals)
     plt.xlabel('log(number training files)')
     plt.ylabel('% goals achieved')
     plt.legend(['test', 'train'])
