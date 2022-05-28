@@ -48,15 +48,13 @@ std::vector<geometry::utils::MaskType> VisibleObjectsImpl(
     if (!objects[i]->can_block_sight()) {
       continue;
     }
-    const auto edges = objects[i]->BoundingPolygon().Edges();
-    for (const LineSegment& edge : edges) {
-      const std::vector<float> cur_dis =
-          geometry::BatchParametricIntersection(o, x, y, edge);
-      for (int64_t j = 0; j < m; ++j) {
-        if (cur_dis[j] < dis[j]) {
-          dis[j] = cur_dis[j];
-          idx[j] = i;
-        }
+
+    const std::vector<float> cur_dis = geometry::BatchParametricIntersection(
+        o, x, y, objects[i]->BoundingPolygon());
+    for (int64_t j = 0; j < m; ++j) {
+      if (cur_dis[j] < dis[j]) {
+        dis[j] = cur_dis[j];
+        idx[j] = i;
       }
     }
   }

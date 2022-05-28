@@ -75,8 +75,8 @@ std::vector<utils::MaskType> CircularSector::BatchContains(
     const float c0 = dx * r0y - r0x * dy;
     const float c1 = dx * r1y - r1x * dy;
     // Use bitwise operation to get better performance.
-    const utils::MaskType m = theta_ < 0.0f ? ((c0 <= 0.0f) | (c1 >= 0.0f))
-                                            : ((c0 <= 0.0f) & (c1 >= 0.0f));
+    const utils::MaskType m = theta_ < 0.0f ? (utils::MaskType(c0 <= 0.0f) | utils::MaskType(c1 >= 0.0f))
+                                            : (utils::MaskType(c0 <= 0.0f) & utils::MaskType(c1 >= 0.0f));
     mask[i] = ((r2 <= radius_ * radius_) & m);
   }
   return mask;

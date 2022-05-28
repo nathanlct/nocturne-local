@@ -32,8 +32,107 @@ int ComputeOutCode(const AABB& aabb, const Vector2D& p) {
   return code;
 }
 
-bool CCW(float abx, float aby, float acx, float acy) {
-  return abx * acy - acx * aby > 0.0f;
+template <int64_t N>
+std::vector<utils::MaskType> SmallPolygonBatchIntersects(
+    const ConvexPolygon& polygon, const Vector2D& o,
+    const std::vector<float>& x, const std::vector<float>& y) {
+  assert(x.size() == y.size());
+  const int64_t n = x.size();
+  std::vector<utils::MaskType> mask(n, 1);
+
+  const auto [pvx, pvy] = utils::PackSmallPolygon<N>(polygon);
+  const float ox = o.x();
+  const float oy = o.y();
+
+  for (int64_t i = 0; i < n; ++i) {
+    const float dx = x[i] - ox;
+    const float dy = y[i] - oy;
+    float min_v = std::numeric_limits<float>::max();
+    float max_v = std::numeric_limits<float>::lowest();
+    for (int64_t i = 0; i < N; ++i) {
+      const float vx = pvx[i] - ox;
+      const float vy = pvy[i] - oy;
+      const float cur = vx * dy - dx * vy;
+      // std::min and std::max are slow, use conditional operator here.
+      min_v = min_v < cur ? min_v : cur;
+      max_v = max_v > cur ? max_v : cur;
+    }
+    // Use bitwise operation to get better performance.
+    // Use (^1) for not operation.
+    mask[i] &=
+        ((utils::MaskType(max_v < 0.0f) | utils::MaskType(min_v > 0.0f)) ^ 1);
+  }
+
+  for (int64_t i = 0; i < n; ++i) {
+    float cur_v = std::numeric_limits<float>::lowest();
+    for (int64_t j = 0; j < N; ++j) {
+      const float p0x = pvx[j];
+      const float p0y = pvy[j];
+      const float p1x = pvx[(j + 1) % N];
+      const float p1y = pvy[(j + 1) % N];
+      const float dx = p1x - p0x;
+      const float dy = p1y - p0y;
+      const float v0x = ox - p0x;
+      const float v0y = oy - p0y;
+      const float v1x = x[i] - p0x;
+      const float v1y = y[i] - p0y;
+      const float v0 = v0x * dy - dx * v0y;
+      const float v1 = v1x * dy - dx * v1y;
+      const float v = v0 < v1 ? v0 : v1;
+      cur_v = cur_v > v ? cur_v : v;
+    }
+    // Use bitwise operation to get better performance.
+    // Use (^1) for not operation.
+    mask[i] &= (utils::MaskType(cur_v > 0.0f) ^ 1);
+  }
+
+  return mask;
+}
+
+template <int64_t N>
+std::vector<float> SmallPolygonBatchParametricIntersection(
+    const Vector2D& o, const std::vector<float>& x, const std::vector<float>& y,
+    const ConvexPolygon& polygon) {
+  assert(x.size() == y.size());
+  const int64_t n = x.size();
+  std::vector<float> ret(n, std::numeric_limits<float>::infinity());
+
+  const auto [pvx, pvy] = utils::PackSmallPolygon<N>(polygon);
+  const float p0x = o.x();
+  const float p0y = o.y();
+
+  for (int64_t i = 0; i < n; ++i) {
+    const float q0x = x[i];
+    const float q0y = y[i];
+    const float p0q0x = q0x - p0x;
+    const float p0q0y = q0y - p0y;
+
+    for (int64_t j = 0; j < N; ++j) {
+      const float p1x = pvx[j];
+      const float p1y = pvy[j];
+      const float q1x = pvx[(j + 1) % N];
+      const float q1y = pvy[(j + 1) % N];
+      const float p1q1x = q1x - p1x;
+      const float p1q1y = q1y - p1y;
+
+      // Use bitwise operation to get better performance.
+      const utils::MaskType intersects =
+          (utils::MaskType(CCW(p0x, p0y, q0x, q0y, p1x, p1y) !=
+                           CCW(p0x, p0y, q0x, q0y, q1x, q1y)) &
+           utils::MaskType(CCW(p1x, p1y, q1x, q1y, p0x, p0y) !=
+                           CCW(p1x, p1y, q1x, q1y, q0x, q0y)));
+
+      const float c0 = p0x * p1q1y - p1q1x * p0y;
+      const float c1 = p1x * p1q1y - p1q1x * p1y;
+      const float cd = p0q0x * p1q1y - p1q1x * p0q0y;
+      const float cur =
+          intersects ? (c1 - c0) / cd : std::numeric_limits<float>::infinity();
+
+      ret[i] = cur < ret[i] ? cur : ret[i];
+    }
+  }
+
+  return ret;
 }
 
 }  // namespace
@@ -108,7 +207,7 @@ bool Intersects(const ConvexPolygon& polygon, const LineSegment& segment) {
     min_v = std::min(min_v, cur);
     max_v = std::max(max_v, cur);
   }
-  if ((min_v < 0.0f && max_v < 0.0f) || (min_v > 0.0f && max_v > 0.0f)) {
+  if (max_v < 0.0f || min_v > 0.0f) {
     return false;
   }
 
@@ -136,11 +235,26 @@ std::vector<utils::MaskType> BatchIntersects(const ConvexPolygon& polygon,
                                              const Vector2D& o,
                                              const std::vector<float>& x,
                                              const std::vector<float>& y) {
+  const int64_t m = polygon.NumEdges();
+  if (m == 3) {
+    return SmallPolygonBatchIntersects<3>(polygon, o, x, y);
+  }
+  if (m == 4) {
+    return SmallPolygonBatchIntersects<4>(polygon, o, x, y);
+  }
+  if (m == 5) {
+    return SmallPolygonBatchIntersects<5>(polygon, o, x, y);
+  }
+  if (m == 6) {
+    return SmallPolygonBatchIntersects<6>(polygon, o, x, y);
+  }
+
   assert(x.size() == y.size());
   const int64_t n = x.size();
   std::vector<utils::MaskType> mask(n, 1);
   std::vector<float> min_v(n, std::numeric_limits<float>::max());
   std::vector<float> max_v(n, std::numeric_limits<float>::lowest());
+
   const float ox = o.x();
   const float oy = o.y();
 
@@ -159,9 +273,9 @@ std::vector<utils::MaskType> BatchIntersects(const ConvexPolygon& polygon,
   for (int64_t i = 0; i < n; ++i) {
     // Use bitwise operation to get better performance.
     // Use (^1) for not operation.
-    mask[i] &= ((((min_v[i] < 0.0f) & (max_v[i] < 0.0f)) |
-                 ((min_v[i] > 0.0f) & (max_v[i] > 0.0f))) ^
-                1);
+    mask[i] &=
+        ((utils::MaskType(max_v[i] < 0.0f) | utils::MaskType(min_v[i] > 0.0f)) ^
+         1);
   }
 
   const std::vector<LineSegment> edges = polygon.Edges();
@@ -181,7 +295,8 @@ std::vector<utils::MaskType> BatchIntersects(const ConvexPolygon& polygon,
       const float v1 = v1x * dy - dx * v1y;
       // Use bitwise operation to get better performance.
       // Use (^1) for not operation.
-      mask[i] &= (((v0 > 0.0f) & (v1 > 0.0f)) ^ 1);
+      mask[i] &=
+          ((utils::MaskType(v0 > 0.0f) & utils::MaskType(v1 > 0.0f)) ^ 1);
     }
   }
 
@@ -205,60 +320,70 @@ std::vector<utils::MaskType> BatchIntersects(
 std::vector<float> BatchParametricIntersection(const Vector2D& o,
                                                const std::vector<float>& x,
                                                const std::vector<float>& y,
-                                               const LineSegment& segment) {
+                                               const ConvexPolygon& polygon) {
+  const int64_t m = polygon.NumEdges();
+  if (m == 3) {
+    return SmallPolygonBatchParametricIntersection<3>(o, x, y, polygon);
+  }
+  if (m == 4) {
+    return SmallPolygonBatchParametricIntersection<4>(o, x, y, polygon);
+  }
+  if (m == 5) {
+    return SmallPolygonBatchParametricIntersection<5>(o, x, y, polygon);
+  }
+  if (m == 6) {
+    return SmallPolygonBatchParametricIntersection<6>(o, x, y, polygon);
+  }
+
   assert(x.size() == y.size());
   const int64_t n = x.size();
-  std::vector<float> ret(n, -1.0f);
+  std::vector<float> ret(n, std::numeric_limits<float>::infinity());
 
   const float p0x = o.x();
   const float p0y = o.y();
-  const float p1x = segment.Endpoint0().x();
-  const float p1y = segment.Endpoint0().y();
-  const float q1x = segment.Endpoint1().x();
-  const float q1y = segment.Endpoint1().y();
 
-  const float p0p1x = p1x - p0x;
-  const float p0p1y = p1y - p0y;
+  const auto edges = polygon.Edges();
+  for (const auto& e : edges) {
+    const float p1x = e.Endpoint0().x();
+    const float p1y = e.Endpoint0().y();
+    const float q1x = e.Endpoint1().x();
+    const float q1y = e.Endpoint1().y();
 
-  const float p0q1x = q1x - p0x;
-  const float p0q1y = q1y - p0y;
+    const float p1q1x = q1x - p1x;
+    const float p1q1y = q1y - p1y;
 
-  const float p1p0x = p0x - p1x;
-  const float p1p0y = p0y - p1y;
+    for (int64_t i = 0; i < n; ++i) {
+      const float q0x = x[i];
+      const float q0y = y[i];
 
-  const float p1q1x = q1x - p1x;
-  const float p1q1y = q1y - p1y;
+      const float p0q0x = q0x - p0x;
+      const float p0q0y = q0y - p0y;
 
-  for (int64_t i = 0; i < n; ++i) {
-    const float q0x = x[i];
-    const float q0y = y[i];
+      // Use bitwise operation to get better performance.
+      const utils::MaskType intersects =
+          (utils::MaskType(CCW(p0x, p0y, q0x, q0y, p1x, p1y) !=
+                           CCW(p0x, p0y, q0x, q0y, q1x, q1y)) &
+           utils::MaskType(CCW(p1x, p1y, q1x, q1y, p0x, p0y) !=
+                           CCW(p1x, p1y, q1x, q1y, q0x, q0y)));
 
-    const float p0q0x = q0x - p0x;
-    const float p0q0y = q0y - p0y;
+      const float c0 = p0x * p1q1y - p1q1x * p0y;
+      const float c1 = p1x * p1q1y - p1q1x * p1y;
+      const float cd = p0q0x * p1q1y - p1q1x * p0q0y;
+      const float cur =
+          intersects ? (c1 - c0) / cd : std::numeric_limits<float>::infinity();
 
-    const float p1q0x = q0x - p1x;
-    const float p1q0y = q0y - p1y;
-
-    // Use bitwise operation to get better performance.
-    const utils::MaskType intersects =
-        ((CCW(p0q0x, p0q0y, p0p1x, p0p1y) != CCW(p0q0x, p0q0y, p0q1x, p0q1y)) &
-         (CCW(p1q1x, p1q1y, p1p0x, p1p0y) != CCW(p1q1x, p1q1y, p1q0x, p1q0y)));
-
-    const float c0 = p0x * p1q1y - p1q1x * p0y;
-    const float c1 = p1x * p1q1y - p1q1x * p1y;
-    const float cd = p0q0x * p1q1y - p1q1x * p0q0y;
-
-    ret[i] =
-        intersects ? (c1 - c0) / cd : std::numeric_limits<float>::infinity();
+      ret[i] = cur < ret[i] ? cur : ret[i];
+    }
   }
+
   return ret;
 }
 
 std::vector<float> BatchParametricIntersection(
     const Vector2D& o, const std::vector<Vector2D>& points,
-    const LineSegment& segment) {
+    const ConvexPolygon& polygon) {
   const auto [x, y] = utils::PackCoordinates(points);
-  return BatchParametricIntersection(o, x, y, segment);
+  return BatchParametricIntersection(o, x, y, polygon);
 }
 
 }  // namespace geometry

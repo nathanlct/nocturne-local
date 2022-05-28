@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -9,8 +10,9 @@
 namespace nocturne {
 namespace geometry {
 
-class Vector2D;
 class PointLike;
+class Polygon;
+class Vector2D;
 
 namespace utils {
 
@@ -66,6 +68,10 @@ std::pair<std::vector<float>, std::vector<float>> PackCoordinates(
     const std::vector<Vector2D>& points);
 std::pair<std::vector<float>, std::vector<float>> PackCoordinates(
     const std::vector<const PointLike*>& points);
+
+template <int64_t N>
+std::pair<std::array<float, N>, std::array<float, N>> PackSmallPolygon(
+    const Polygon& polygon);
 
 }  // namespace utils
 }  // namespace geometry
