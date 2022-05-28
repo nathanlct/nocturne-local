@@ -103,6 +103,9 @@ class Object : public ObjectBase {
   float steering() const { return steering_; }
   void set_steering(float steering) { steering_ = steering; }
 
+  float head_angle() const { return head_angle_; }
+  void set_head_angle(float head_angle) { head_angle_ = head_angle; }
+
   bool manual_control() const { return manual_control_; }
   void set_manual_control(bool manual_control) {
     manual_control_ = manual_control;
@@ -149,6 +152,9 @@ class Object : public ObjectBase {
     if (action.steering().has_value()) {
       steering_ = action.steering().value();
     }
+    if (action.head_angle().has_value()) {
+      head_angle_ = action.head_angle().value();
+    }
   }
 
   void SetActionFromKeyboard();
@@ -187,6 +193,7 @@ class Object : public ObjectBase {
 
   float acceleration_ = 0.0f;
   float steering_ = 0.0f;
+  float head_angle_ = 0.0f;
 
   // If true the object is controlled by keyboard input.
   bool manual_control_ = false;

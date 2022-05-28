@@ -46,7 +46,7 @@ constexpr float kSpeedThreshold = 0.05;
 // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
 // returned in the state
 constexpr int64_t kMaxVisibleObjects = 20;
-constexpr int64_t kMaxVisibleRoadPoints = 1000;
+constexpr int64_t kMaxVisibleRoadPoints = 500;
 constexpr int64_t kMaxVisibleTrafficLights = 20;
 constexpr int64_t kMaxVisibleStopSigns = 4;
 
@@ -72,7 +72,7 @@ constexpr int64_t kStopSignsFeatureSize = 3;
 // Ego features are:
 // [ length, width, speed, target distance, relative_target_azimuth,
 //   relative_target_heading, relative_target_speed ]
-constexpr int64_t kEgoFeatureSize = 7;
+constexpr int64_t kEgoFeatureSize = 10;
 
 class Scenario : public sf::Drawable {
  public:

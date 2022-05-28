@@ -361,6 +361,9 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
   state_data[4] = target_azimuth;
   state_data[5] = target_heading;
   state_data[6] = target_speed;
+  state_data[7] = src.acceleration();
+  state_data[8] = src.steering();
+  state_data[9] = src.head_angle();
 
   return state;
 }
@@ -523,7 +526,7 @@ std::optional<Action> Scenario::ExpertAction(const Object& obj,
   const float steering = std::atan(2.0f * C / std::sqrt(4 - C * C));
 
   // return action
-  return std::make_optional<Action>(acceleration, steering);
+  return std::make_optional<Action>(acceleration, steering, 0.0);
 }
 
 // O(N) time remove.

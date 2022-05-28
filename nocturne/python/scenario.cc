@@ -52,12 +52,12 @@ void DefineScenario(py::module& m) {
       .def(
           "flattened_visible_state",
           [](const Scenario& scenario, const Object& src, float view_dist,
-             float view_angle) {
-            return utils::AsNumpyArray(
-                scenario.FlattenedVisibleState(src, view_dist, view_angle));
+             float view_angle, float head_tilt) {
+            return utils::AsNumpyArray(scenario.FlattenedVisibleState(
+                src, view_dist, view_angle, head_tilt));
           },
           py::arg("object"), py::arg("view_dist") = 60,
-          py::arg("view_angle") = kHalfPi)
+          py::arg("view_angle") = kHalfPi, py::arg("head_tilt") = 0.0)
       .def("expert_heading", &Scenario::ExpertHeading)
       .def("expert_speed", &Scenario::ExpertSpeed)
       .def("expert_velocity", &Scenario::ExpertVelocity)

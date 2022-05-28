@@ -127,8 +127,8 @@ if __name__ == '__main__':
                 file,
                 scenario_fn=lambda scenario: scenario.getFeaturesImage(
                     source=scenario.getVehicles()[veh_index],
-                    view_dist=120.0,
-                    view_angle=np.pi,
+                    view_dist=80,
+                    view_angle=(120 / 180) * np.pi,
                     head_tilt=0.0,
                     img_height=1600,
                     img_width=1600,

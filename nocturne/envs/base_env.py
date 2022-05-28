@@ -58,18 +58,42 @@ class BaseEnv(Env):
         if self.cfg['discretize_actions']:
             self.accel_discretization = self.cfg['accel_discretization']
             self.steering_discretization = self.cfg['steering_discretization']
+            self.head_angle_discretization = self.cfg[
+                'head_angle_discretization']
             self.action_space = Discrete(self.accel_discretization *
-                                         self.steering_discretization)
+                                         self.steering_discretization *
+                                         self.head_angle_discretization)
             self.accel_grid = np.linspace(
                 -np.abs(self.cfg['accel_lower_bound']),
                 self.cfg['accel_upper_bound'], self.accel_discretization)
             self.steering_grid = np.linspace(
                 -np.abs(self.cfg['steering_lower_bound']),
                 self.cfg['steering_upper_bound'], self.steering_discretization)
+            self.head_angle_grid = np.linspace(
+                -np.abs(self.cfg['head_angle_lower_bound']),
+                self.cfg['head_angle_upper_bound'],
+                self.head_angle_discretization)
+            # compute the indexing only once
+            self.idx_to_actions = {}
+            i = 0
+            for accel in self.accel_grid:
+                for steer in self.steering_grid:
+                    for head_angle in self.head_angle_grid:
+                        self.idx_to_actions[i] = [accel, steer, head_angle]
+                        i += 1
         else:
-            self.action_space = Box(low=-np.abs(self.cfg['accel_lower_bound']),
-                                    high=self.cfg['accel_upper_bound'],
-                                    shape=(2, ))
+            self.action_space = Box(
+                low=-np.array([
+                    np.abs(self.cfg['accel_lower_bound']),
+                    self.cfg['steering_lower_bound'],
+                    self.cfg['head_angle_lower_bound']
+                ]),
+                high=np.array([
+                    np.abs(self.cfg['accel_lower_bound']),
+                    self.cfg['steering_lower_bound'],
+                    self.cfg['head_angle_lower_bound']
+                ]),
+            )
 
     def apply_actions(
         self, action_dict: Dict[int, Union[Action, np.ndarray, Sequence[float],
@@ -89,13 +113,12 @@ class BaseEnv(Env):
             elif isinstance(action, (tuple, list)):
                 veh_obj.acceleration = action[0]
                 veh_obj.steering = action[1]
+                veh_obj.head_angle = action[2]
             else:
-                accel_action = self.accel_grid[action //
-                                               self.steering_discretization]
-                steering_action = self.steering_grid[action %
-                                                     self.accel_discretization]
-                veh_obj.acceleration = accel_action
-                veh_obj.steering = steering_action
+                accel, steer, head_angle = self.idx_to_actions[action]
+                veh_obj.acceleration = accel
+                veh_obj.steering = steer
+                veh_obj.head_angle = head_angle
 
     def step(
         self, action_dict: Dict[int, Union[Action, np.ndarray, Sequence[float],
@@ -354,15 +377,19 @@ class BaseEnv(Env):
             obs = np.concatenate(
                 (ego_obs,
                  self.scenario.flattened_visible_state(
-                     veh_obj, self.cfg['subscriber']['view_dist'],
-                     self.cfg['subscriber']['view_angle'])))
+                     veh_obj,
+                     view_dist=self.cfg['subscriber']['view_dist'],
+                     view_angle=self.cfg['subscriber']['view_angle'],
+                     head_tilt=veh_obj.head_angle)))
         elif self.cfg['subscriber']['use_ego_state'] and not self.cfg[
                 'subscriber']['use_observations']:
             obs = ego_obs
         else:
             obs = self.scenario.flattened_visible_state(
-                veh_obj, self.cfg['subscriber']['view_dist'],
-                self.cfg['subscriber']['view_angle'])
+                veh_obj,
+                view_dist=self.cfg['subscriber']['view_dist'],
+                view_angle=self.cfg['subscriber']['view_angle'],
+                head_tilt=veh_obj.head_angle)
         return obs
 
     def make_all_vehicles_experts(self):

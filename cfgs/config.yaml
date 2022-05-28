@@ -33,6 +33,9 @@ accel_upper_bound: 2
 steering_lower_bound: -0.7 # corresponds to about 40 degrees of max steering angle
 steering_upper_bound: 0.7 # corresponds to about 40 degrees of max steering angle
 steering_discretization: 9
+head_angle_lower_bound: -1.6
+head_angle_upper_bound: 1.6
+head_angle_discretization: 5
 max_num_vehicles: 20 # we want to upper bound how many agents there can be in the scene
                      # this is mostly useful because RL libraries expect it
 # TODO(eugenevinitsky) actually implement this
@@ -56,10 +59,10 @@ rew_cfg:
   heading_target: False
   heading_target_tolerance: 0.3
 subscriber:
-  view_angle: 3.14
+  view_angle: 2.10
   # the distance which the cone extends before agents are not visible
   # TODO(eugenevinitsky) pick the right number
-  view_dist: 120
+  view_dist: 80
   use_ego_state: True
   use_observations: True
   # if true, we return an observation for agents that have exited the system

@@ -48,6 +48,7 @@ void DefineObject(py::module& m) {
       .def_property("acceleration", &Object::acceleration,
                     &Object::set_acceleration)
       .def_property("steering", &Object::steering, &Object::set_steering)
+      .def_property("head_angle", &Object::head_angle, &Object::set_head_angle)
       .def_property("manual_control", &Object::manual_control,
                     &Object::set_manual_control)
       .def_property("expert_control", &Object::expert_control,
