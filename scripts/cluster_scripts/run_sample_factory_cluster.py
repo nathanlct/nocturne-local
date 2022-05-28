@@ -67,9 +67,8 @@ def main():
     overrides.add('hydra/launcher', ['submitit_slurm'])
     overrides.add('hydra.launcher.partition', ['learnlab'])
     overrides.add('experiment', [args.experiment])
-    overrides.add('num_files', [1, 10, 100, 1000, 10000, -1])
+    overrides.add('num_files', [10, 100, 1000, 10000, -1])
     overrides.add('seed', [0, 1, 2, 3, 4])
-    # overrides.add('max_num_vehicles', [1])
 
     cmd = [
         'python',

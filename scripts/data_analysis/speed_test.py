@@ -5,6 +5,7 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
+from pyvirtualdisplay import Display
 
 from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH
 from nocturne import Simulation, Action
@@ -28,8 +29,18 @@ def run_speed_test(files):
         scenario = sim.getScenario()
         for veh in vehs:
             t = time.perf_counter()
-            obs = scenario.flattened_visible_state(veh, 120,
-                                                   (180 / 180) * np.pi)
+            # obs = scenario.flattened_visible_state(veh, 120,
+            #                                        (180 / 180) * np.pi)
+            scenario.getConeImage(
+                source=veh,
+                view_dist=120.0,
+                view_angle=np.pi,
+                head_tilt=0.0,
+                img_width=400,
+                img_height=400,
+                padding=0.0,
+                draw_target_position=True,
+            )
             #           veh.apply_action(Action(1.0, 1.0))
 
             #            sim.step(0.1)
@@ -48,4 +59,6 @@ def analyze_accels():
 
 
 if __name__ == '__main__':
+    disp = Display()
+    disp.start()
     analyze_accels()

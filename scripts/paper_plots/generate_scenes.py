@@ -51,7 +51,7 @@ def make_image(sim, scenario_file, scenario_fn, output_path='./img.png'):
     plt.figure(figsize=figsize, dpi=dpi)
     plt.axis('off')
     plt.imshow(img)
-    plt.savefig(output_path)
+    plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
     print('>', output_path)
 
 
@@ -95,10 +95,10 @@ if __name__ == '__main__':
                     img_height=1600,
                     img_width=1600,
                     draw_target_positions=True,
-                    padding=50.0,
+                    padding=0.0,
                     source=scenario.getVehicles()[veh_index],
-                    view_height=120,
-                    view_width=120,
+                    view_height=80,
+                    view_width=80,
                     rotate_with_source=True,
                 ),
                 output_path=PROJECT_PATH /
@@ -110,12 +110,12 @@ if __name__ == '__main__':
                 file,
                 scenario_fn=lambda scenario: scenario.getConeImage(
                     source=scenario.getVehicles()[veh_index],
-                    view_dist=120.0,
-                    view_angle=np.pi,
+                    view_dist=80,
+                    view_angle=(120 / 180) * np.pi,
                     head_tilt=0.0,
                     img_height=1600,
                     img_width=1600,
-                    padding=50.0,
+                    padding=0.0,
                     draw_target_position=True,
                 ),
                 output_path=PROJECT_PATH /
@@ -132,7 +132,7 @@ if __name__ == '__main__':
                     head_tilt=0.0,
                     img_height=1600,
                     img_width=1600,
-                    padding=50.0,
+                    padding=0.0,
                     draw_target_position=True,
                 ),
                 output_path=PROJECT_PATH /
