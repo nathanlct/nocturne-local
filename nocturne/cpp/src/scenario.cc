@@ -172,7 +172,6 @@ void Scenario::LoadScenario(const std::string& scenario_path) {
 
   // Now handle the traffic light states
   for (const auto& tl : j["tl_states"]) {
-    max_env_time_ = 90;
     // Lane positions don't move so we can just use the first
     // element
     float x_pos = float(tl["x"][0]);

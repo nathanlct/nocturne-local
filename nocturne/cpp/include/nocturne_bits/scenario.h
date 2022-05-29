@@ -32,8 +32,6 @@ namespace nocturne {
 
 using json = nlohmann::json;
 
-constexpr int64_t kMaxEnvTime = 100000;
-
 // Object features are:
 // [ valid, distance, azimuth, length, witdh, relative_object_heading,
 //   relative_velocity_heading, relative_velocity_speed,
@@ -85,8 +83,6 @@ class Scenario : public sf::Drawable {
   void LoadScenario(const std::string& scenario_path);
 
   const std::string& name() const { return name_; }
-
-  int64_t max_env_time() const { return max_env_time_; }
 
   void Step(float dt);
 
@@ -270,7 +266,6 @@ class Scenario : public sf::Drawable {
   std::string name_;
 
   int64_t current_time_;
-  int64_t max_env_time_ = kMaxEnvTime;
 
   // Config
 

@@ -24,7 +24,6 @@ void DefineScenario(py::module& m) {
 
       // Properties
       .def_property_readonly("name", &Scenario::name)
-      .def_property_readonly("max_env_time", &Scenario::max_env_time)
 
       // Methods
       .def("vehicles", &Scenario::vehicles, py::return_value_policy::reference)
@@ -73,7 +72,6 @@ void DefineScenario(py::module& m) {
            py::return_value_policy::reference)
       .def("getObjectsThatMoved", &Scenario::moving_objects,
            py::return_value_policy::reference)
-      .def("getMaxEnvTime", &Scenario::max_env_time)
       .def("getRoadLines", &Scenario::road_lines)
       .def(
           "getImage",
