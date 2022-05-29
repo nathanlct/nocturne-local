@@ -9,6 +9,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include "action.h"
@@ -59,16 +60,19 @@ constexpr int64_t kEgoFeatureSize = 7;
 class Scenario : public sf::Drawable {
  public:
   Scenario(const std::string& scenario_path,
-           const std::unordered_map<std::string, std::string>& config)
-      : current_time_(std::stoi(config.at("start_time"))),
-        allow_non_vehicles_(config.at("allow_non_vehicles") == "True"),
-        max_visible_objects_(std::stoi(config.at("max_visible_objects"))),
-        max_visible_road_points_(std::stoi(config.at("max_visible_road_points"))),
+           const std::unordered_map<std::string,
+                                    std::variant<bool, int, float>>& config)
+      : current_time_(std::get<int>(config.at("start_time"))),
+        allow_non_vehicles_(std::get<bool>(config.at("allow_non_vehicles"))),
+        max_visible_objects_(std::get<int>(config.at("max_visible_objects"))),
+        max_visible_road_points_(
+            std::get<int>(config.at("max_visible_road_points"))),
         max_visible_traffic_lights_(
-            std::stoi(config.at("max_visible_traffic_lights"))),
-        max_visible_stop_signs_(std::stoi(config.at("max_visible_stop_signs"))),
-        moving_threshold_(std::stof(config.at("moving_threshold"))),
-        speed_threshold_(std::stof(config.at("speed_threshold"))) {
+            std::get<int>(config.at("max_visible_traffic_lights"))),
+        max_visible_stop_signs_(
+            std::get<int>(config.at("max_visible_stop_signs"))),
+        moving_threshold_(std::get<float>(config.at("moving_threshold"))),
+        speed_threshold_(std::get<float>(config.at("speed_threshold"))) {
     if (!scenario_path.empty()) {
       LoadScenario(scenario_path);
     } else {
@@ -79,7 +83,6 @@ class Scenario : public sf::Drawable {
     }
   }
 
-  void LoadConfig(const std::unordered_map<std::string, std::string>& config);
   void LoadScenario(const std::string& scenario_path);
 
   const std::string& name() const { return name_; }
@@ -215,7 +218,9 @@ class Scenario : public sf::Drawable {
                                        float head_tilt = 0.0f) const;
 
   int64_t getMaxNumVisibleObjects() const { return max_visible_objects_; }
-  int64_t getMaxNumVisibleRoadPoints() const { return max_visible_road_points_; }
+  int64_t getMaxNumVisibleRoadPoints() const {
+    return max_visible_road_points_;
+  }
   int64_t getMaxNumVisibleTrafficLights() const {
     return max_visible_traffic_lights_;
   }

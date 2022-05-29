@@ -19,7 +19,8 @@ namespace nocturne {
 class Simulation {
  public:
   Simulation(const std::string& scenario_path,
-             const std::unordered_map<std::string, std::string>& config)
+             const std::unordered_map<std::string,
+                                      std::variant<bool, int, float>>& config)
       : scenario_path_(scenario_path),
         scenario_(std::make_unique<Scenario>(scenario_path, config)),
         config_(config) {}
@@ -40,7 +41,7 @@ class Simulation {
   const std::string scenario_path_;
   std::unique_ptr<Scenario> scenario_ = nullptr;
 
-  const std::unordered_map<std::string, std::string> config_;
+  const std::unordered_map<std::string, std::variant<bool, int, float>> config_;
 
   std::unique_ptr<sf::RenderWindow> render_window_ = nullptr;
 

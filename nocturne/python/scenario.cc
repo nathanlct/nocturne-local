@@ -17,10 +17,12 @@ using geometry::utils::kHalfPi;
 
 void DefineScenario(py::module& m) {
   py::class_<Scenario, std::shared_ptr<Scenario>>(m, "Scenario")
-      .def(py::init<const std::string&,
-                    const std::unordered_map<std::string, std::string>&>(),
-           "Constructor for Scenario", py::arg("scenario_path"),
-           py::arg("config"))
+      .def(
+          py::init<const std::string&,
+                   const std::unordered_map<std::string,
+                                            std::variant<bool, int, float>>&>(),
+          "Constructor for Scenario", py::arg("scenario_path"),
+          py::arg("config"))
 
       // Properties
       .def_property_readonly("name", &Scenario::name)
