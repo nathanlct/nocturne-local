@@ -64,13 +64,13 @@ class Scenario : public sf::Drawable {
            const std::unordered_map<std::string, std::string>& config)
       : current_time_(std::stoi(config.at("start_time"))),
         allow_non_vehicles_(config.at("allow_non_vehicles") == "True"),
-        kMaxVisibleObjects(std::stoi(config.at("max_visible_objects"))),
-        kMaxVisibleRoadPoints(std::stoi(config.at("max_visible_road_points"))),
-        kMaxVisibleTrafficLights(
+        max_visible_objects_(std::stoi(config.at("max_visible_objects"))),
+        max_visible_road_points_(std::stoi(config.at("max_visible_road_points"))),
+        max_visible_traffic_lights_(
             std::stoi(config.at("max_visible_traffic_lights"))),
-        kMaxVisibleStopSigns(std::stoi(config.at("max_visible_stop_signs"))),
-        kMovingThreshold(std::stof(config.at("moving_threshold"))),
-        kSpeedThreshold(std::stof(config.at("speed_threshold"))) {
+        max_visible_stop_signs_(std::stoi(config.at("max_visible_stop_signs"))),
+        moving_threshold_(std::stof(config.at("moving_threshold"))),
+        speed_threshold_(std::stof(config.at("speed_threshold"))) {
     if (!scenario_path.empty()) {
       LoadScenario(scenario_path);
     } else {
@@ -218,12 +218,12 @@ class Scenario : public sf::Drawable {
                                        float view_angle,
                                        float head_tilt = 0.0f) const;
 
-  int64_t getMaxNumVisibleObjects() const { return kMaxVisibleObjects; }
-  int64_t getMaxNumVisibleRoadPoints() const { return kMaxVisibleRoadPoints; }
+  int64_t getMaxNumVisibleObjects() const { return max_visible_objects_; }
+  int64_t getMaxNumVisibleRoadPoints() const { return max_visible_road_points_; }
   int64_t getMaxNumVisibleTrafficLights() const {
-    return kMaxVisibleTrafficLights;
+    return max_visible_traffic_lights_;
   }
-  int64_t getMaxNumVisibleStopSigns() const { return kMaxVisibleStopSigns; }
+  int64_t getMaxNumVisibleStopSigns() const { return max_visible_stop_signs_; }
   int64_t getObjectFeatureSize() const { return kObjectFeatureSize; }
   int64_t getRoadPointFeatureSize() const { return kRoadPointFeatureSize; }
   int64_t getTrafficLightFeatureSize() const {
@@ -276,17 +276,17 @@ class Scenario : public sf::Drawable {
 
   // The distance to goal must be greater than this
   // for a vehicle to be included in ObjectsThatMoved
-  const float kMovingThreshold = 0.2;
+  const float moving_threshold_ = 0.2;
   // The vehicle speed at some point must be greater than this
   // for a vehicle to be included in ObjectsThatMoved
-  const float kSpeedThreshold = 0.05;
+  const float speed_threshold_ = 0.05;
 
   // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
   // returned in the state
-  const int64_t kMaxVisibleObjects = 20;
-  const int64_t kMaxVisibleRoadPoints = 300;
-  const int64_t kMaxVisibleTrafficLights = 20;
-  const int64_t kMaxVisibleStopSigns = 4;
+  const int64_t max_visible_objects_ = 20;
+  const int64_t max_visible_road_points_ = 300;
+  const int64_t max_visible_traffic_lights_ = 20;
+  const int64_t max_visible_stop_signs_ = 4;
 
   // Whether to use non vehicle objects.
   const bool allow_non_vehicles_ = true;

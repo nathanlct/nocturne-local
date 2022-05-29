@@ -363,21 +363,21 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
     bool padding) const {
   const auto [objects, road_points, traffic_lights, stop_signs] =
       VisibleObjects(src, view_dist, view_angle, head_tilt);
-  const auto o_targets = NearestK(src, objects, kMaxVisibleObjects);
-  const auto r_targets = NearestK(src, road_points, kMaxVisibleRoadPoints);
+  const auto o_targets = NearestK(src, objects, max_visible_objects_);
+  const auto r_targets = NearestK(src, road_points, max_visible_road_points_);
   const auto t_targets =
-      NearestK(src, traffic_lights, kMaxVisibleTrafficLights);
-  const auto s_targets = NearestK(src, stop_signs, kMaxVisibleStopSigns);
+      NearestK(src, traffic_lights, max_visible_traffic_lights_);
+  const auto s_targets = NearestK(src, stop_signs, max_visible_stop_signs_);
 
   const int64_t num_objects =
-      padding ? kMaxVisibleObjects : static_cast<int64_t>(o_targets.size());
+      padding ? max_visible_objects_ : static_cast<int64_t>(o_targets.size());
   const int64_t num_road_points =
-      padding ? kMaxVisibleRoadPoints : static_cast<int64_t>(r_targets.size());
+      padding ? max_visible_road_points_ : static_cast<int64_t>(r_targets.size());
   const int64_t num_traffic_lights =
-      padding ? kMaxVisibleTrafficLights
+      padding ? max_visible_traffic_lights_
               : static_cast<int64_t>(t_targets.size());
   const int64_t num_stop_signs =
-      padding ? kMaxVisibleStopSigns : static_cast<int64_t>(s_targets.size());
+      padding ? max_visible_stop_signs_ : static_cast<int64_t>(s_targets.size());
 
   NdArray<float> o_feature({num_objects, kObjectFeatureSize}, 0.0f);
   NdArray<float> r_feature({num_road_points, kRoadPointFeatureSize}, 0.0f);
@@ -429,23 +429,23 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
                                                float head_tilt) const {
   const int64_t kObjectFeatureStride = 0;
   const int64_t kRoadPointFeatureStride =
-      kObjectFeatureStride + kMaxVisibleObjects * kObjectFeatureSize;
+      kObjectFeatureStride + max_visible_objects_ * kObjectFeatureSize;
   const int64_t kTrafficLightFeatureStride =
-      kRoadPointFeatureStride + kMaxVisibleRoadPoints * kRoadPointFeatureSize;
+      kRoadPointFeatureStride + max_visible_road_points_ * kRoadPointFeatureSize;
   const int64_t kStopSignFeatureStride =
       kTrafficLightFeatureStride +
-      kMaxVisibleTrafficLights * kTrafficLightFeatureSize;
+      max_visible_traffic_lights_ * kTrafficLightFeatureSize;
   const int64_t kFeatureSize =
-      kStopSignFeatureStride + kMaxVisibleStopSigns * kStopSignsFeatureSize;
+      kStopSignFeatureStride + max_visible_stop_signs_ * kStopSignsFeatureSize;
 
   const auto [objects, road_points, traffic_lights, stop_signs] =
       VisibleObjects(src, view_dist, view_angle, head_tilt);
 
-  const auto o_targets = NearestK(src, objects, kMaxVisibleObjects);
-  const auto r_targets = NearestK(src, road_points, kMaxVisibleRoadPoints);
+  const auto o_targets = NearestK(src, objects, max_visible_objects_);
+  const auto r_targets = NearestK(src, road_points, max_visible_road_points_);
   const auto t_targets =
-      NearestK(src, traffic_lights, kMaxVisibleTrafficLights);
-  const auto s_targets = NearestK(src, stop_signs, kMaxVisibleStopSigns);
+      NearestK(src, traffic_lights, max_visible_traffic_lights_);
+  const auto s_targets = NearestK(src, stop_signs, max_visible_stop_signs_);
 
   NdArray<float> state({kFeatureSize}, 0.0f);
 
@@ -749,10 +749,10 @@ NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
 
   for (const auto [objects, kMaxObjects] :
        std::vector<std::pair<std::vector<const ObjectBase*>, int64_t>>{
-           {road_points, kMaxVisibleRoadPoints},
-           {kinetic_objects, kMaxVisibleObjects},
-           {traffic_lights, kMaxVisibleStopSigns},
-           {stop_signs, kMaxVisibleTrafficLights},
+           {road_points, max_visible_road_points_},
+           {kinetic_objects, max_visible_objects_},
+           {traffic_lights, max_visible_stop_signs_},
+           {stop_signs, max_visible_traffic_lights_},
        }) {
     for (const auto [obj, dist] : NearestK(source, objects, kMaxObjects)) {
       drawables.emplace_back(obj);
@@ -822,8 +822,8 @@ void Scenario::LoadObjects(const json& objects_json) {
         // TODO: Improve this later.
         target_heading = cur_heading;
         target_speed = cur_speed;
-        if (cur_speed > kSpeedThreshold &&
-            geometry::Distance(cur_pos, target_position) > kMovingThreshold) {
+        if (cur_speed > speed_threshold_ &&
+            geometry::Distance(cur_pos, target_position) > moving_threshold_) {
           is_moving = true;
         }
       }
