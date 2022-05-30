@@ -584,10 +584,18 @@ def main():
     RELOAD_WANDB = False
     NUM_EVAL_FILES = 10
     NUM_FILE_LOOPS = 3  # the number of times to loop over a fixed set of files
-    experiment_names = ['srt_v10']
+    experiment_names = ['srt_v12']
     # output_folder = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35'
+    # output_folder = [
+    #     '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v10/17.02.40/'
+    # ]
+    # 10 files
     output_folder = [
-        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v10/17.02.40/'
+        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/'
+    ]
+    # 100 files
+    output_folder = [
+        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/'
     ]
     generalization_dfs = []
 

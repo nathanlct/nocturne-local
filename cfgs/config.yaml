@@ -45,8 +45,10 @@ rew_cfg:
   goal_tolerance: 0.5
   reward_scaling: 10.0 # rescale all the rewards by this value. This can help w/ some learning algorithms
   collision_penalty: 0
+  shaped_goal_distance_scaling: 0.2
   shaped_goal_distance: True
-  goal_distance_penalty: False # if shaped_goal_distance is true, then when this is True the goal distance is a penalty for being far from 
+  goal_distance_penalty: False # if shaped_goal_distance is true, then when this is True the goal distance 
+                               # is a penalty for being far from 
                                # goal instead of a reward for being close
   goal_achieved_bonus: ${episode_length}
   # goal is only achieved if you're within this tolerance on distance from goal

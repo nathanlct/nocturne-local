@@ -103,8 +103,8 @@ if __name__ == '__main__':
     make_movie(
         scenario_fn=lambda scenario, _: scenario.getConeImage(
             source=scenario.getObjectsThatMoved()[6],
-            view_dist=120.0,
-            view_angle=np.pi * 0.8,
+            view_dist=80,
+            view_angle=np.pi * (120 / 180),
             head_tilt=0.0,
             img_width=1600,
             img_height=1600,
@@ -118,8 +118,8 @@ if __name__ == '__main__':
     make_movie(
         scenario_fn=lambda scenario, timestep: scenario.getConeImage(
             source=scenario.getVehicles()[6],
-            view_dist=120.0,
-            view_angle=np.pi * 0.8,
+            view_dist=80.0,
+            view_angle=np.pi * (120 / 180),
             head_tilt=0.8 * np.sin(timestep / 10),
             img_width=1600,
             img_height=1600,
@@ -144,8 +144,8 @@ if __name__ == '__main__':
     make_image(
         scenario_fn=lambda scenario: scenario.getConeImage(
             source=scenario.getVehicles()[9],
-            view_dist=120.0,
-            view_angle=np.pi * 0.8,
+            view_dist=80,
+            view_angle=np.pi * (120 / 180),
             head_tilt=np.pi / 8.0,
             img_width=2000,
             img_height=2000,

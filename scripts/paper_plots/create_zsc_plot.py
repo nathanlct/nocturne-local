@@ -43,20 +43,20 @@ def create_heat_map(file, title, save_path):
 def compute_average_change(file):
     np_arr = np.load(os.path.join(zsc_path, file))
     np_arr_mean = np.mean(np_arr, axis=-1)
-    np_arr_std = np.std(np_arr, axis=-1)
     self_play = np.mean(np.diag(np_arr_mean))
     cross_play = np.mean(
         np_arr_mean[np.where(~np.eye(np_arr_mean.shape[0], dtype=bool))])
-    self_play_std = np.mean(np.diag(np_arr_std))
-    cross_play_std = np.mean(
-        np_arr_std[np.where(~np.eye(np_arr_std.shape[0], dtype=bool))])
+    self_play_std = np.std(np.diag(np_arr_mean))
+    cross_play_std = np.std(
+        np_arr_mean[np.where(~np.eye(np_arr_mean.shape[0], dtype=bool))])
     print(
         f'self play: {self_play} ± {self_play_std}, cross play: {cross_play} ± {cross_play_std}'
     )
 
 
 if __name__ == '__main__':
-    zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v10/17.02.40/23/srt_v10'
+    # zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v10/17.02.40/23/srt_v10'
+    zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/4/srt_12'
     create_heat_map('zsc_goal.npy', "Cross-play Relative Goal Rate",
                     'cross_play_heat_map.png')
     create_heat_map('zsc_collision.npy', "Cross-play Relative Collision Rate",

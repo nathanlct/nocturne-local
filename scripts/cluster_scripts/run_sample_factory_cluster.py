@@ -69,6 +69,8 @@ def main():
     overrides.add('experiment', [args.experiment])
     overrides.add('num_files', [10, 100, 1000, 10000, -1])
     overrides.add('seed', [0, 1, 2, 3, 4])
+    # overrides.add('num_files', [10])
+    # overrides.add('seed', [i for i in range(30)])
 
     cmd = [
         'python',

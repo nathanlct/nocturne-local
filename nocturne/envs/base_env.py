@@ -173,9 +173,11 @@ class BaseEnv(Env):
                 # we scale by goal_dist_normalizers to ensure that this value is always less than the penalty for
                 # collision
                 if rew_cfg['goal_distance_penalty']:
-                    rew_dict[veh_id] -= ((goal_pos - obj_pos).norm() /
-                                         self.goal_dist_normalizers[veh_id]
-                                         ) / rew_cfg['reward_scaling']
+                    rew_dict[veh_id] -= rew_cfg.get(
+                        'shaped_goal_distance_scaling', 1.0) * (
+                            (goal_pos - obj_pos).norm() /
+                            self.goal_dist_normalizers[veh_id]
+                        ) / rew_cfg['reward_scaling']
                 else:
                     # the minus one is to ensure that it's not beneficial to collide
                     # we divide by goal_achieved_bonus / episode_length to ensure that
@@ -184,9 +186,11 @@ class BaseEnv(Env):
                     # we also assume that vehicles are never more than 400 meters from their goal
                     # which makes sense as the episodes are 9 seconds long i.e. we'd have to go more than
                     # 40 m/s to get there
-                    rew_dict[veh_id] += (1 - (goal_pos - obj_pos).norm() /
-                                         self.goal_dist_normalizers[veh_id]
-                                         ) / rew_cfg['reward_scaling']
+                    rew_dict[veh_id] += rew_cfg.get(
+                        'shaped_goal_distance_scaling',
+                        1.0) * (1 - (goal_pos - obj_pos).norm() /
+                                self.goal_dist_normalizers[veh_id]
+                                ) / rew_cfg['reward_scaling']
             '''############################################
                     Handle potential done conditions
             ############################################'''
