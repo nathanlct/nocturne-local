@@ -70,9 +70,10 @@ void VisibleRoadPoints(const Object& src,
   road_points.resize(pivot);
 }
 
-template <class ObjType>
+template <class ObjType, class CompareFunc>
 std::vector<std::pair<const ObjType*, float>> NearestK(
-    const Object& src, const std::vector<const ObjType*>& objects, int64_t k) {
+    const Object& src, const std::vector<const ObjType*>& objects, int64_t k,
+    CompareFunc cmp) {
   const geometry::Vector2D& src_pos = src.position();
   const int64_t n = objects.size();
   std::vector<std::pair<const ObjType*, float>> ret;
@@ -84,10 +85,6 @@ std::vector<std::pair<const ObjType*, float>> NearestK(
       ret.emplace_back(obj, geometry::Distance(src_pos, obj->position()));
     }
   }
-  const auto cmp = [](const std::pair<const ObjType*, float>& lhs,
-                      const std::pair<const ObjType*, float>& rhs) {
-    return lhs.second < rhs.second;
-  };
   if (n <= k) {
     std::sort(ret.begin(), ret.end(), cmp);
   } else {
@@ -95,6 +92,16 @@ std::vector<std::pair<const ObjType*, float>> NearestK(
     ret.resize(k);
   }
   return ret;
+}
+
+template <class ObjType>
+std::vector<std::pair<const ObjType*, float>> NearestK(
+    const Object& src, const std::vector<const ObjType*>& objects, int64_t k) {
+  return NearestK(src, objects, k,
+                  [](const std::pair<const ObjType*, float>& lhs,
+                     const std::pair<const ObjType*, float>& rhs) {
+                    return lhs.second < rhs.second;
+                  });
 }
 
 void ExtractObjectFeature(const Object& src, const Object& obj, float dis,
@@ -371,7 +378,27 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
   const auto [objects, road_points, traffic_lights, stop_signs] =
       VisibleObjects(src, view_dist, view_angle, head_tilt);
   const auto o_targets = NearestK(src, objects, kMaxVisibleObjects);
-  const auto r_targets = NearestK(src, road_points, kMaxVisibleRoadPoints);
+  // const auto r_targets = NearestK(src, road_points, kMaxVisibleRoadPoints);
+ 
+  // Get RoadEdge 1st, then other RoadTypes.
+  const auto r_targets =
+      NearestK(src, road_points, kMaxVisibleRoadPoints,
+               [](const std::pair<const geometry::PointLike*, float>& lhs,
+                  const std::pair<const geometry::PointLike*, float>& rhs) {
+                 const RoadPoint* p = dynamic_cast<const RoadPoint*>(lhs.first);
+                 const RoadPoint* q = dynamic_cast<const RoadPoint*>(rhs.first);
+                 if (p->road_type() == q->road_type()) {
+                   return lhs.second < rhs.second;
+                 }
+                 if (p->road_type() == RoadType::kRoadEdge) {
+                   return true;
+                 }
+                 if (q->road_type() == RoadType::kRoadEdge) {
+                   return false;
+                 }
+                 return lhs.second < rhs.second;
+               });
+
   const auto t_targets =
       NearestK(src, traffic_lights, kMaxVisibleTrafficLights);
   const auto s_targets = NearestK(src, stop_signs, kMaxVisibleStopSigns);
@@ -449,7 +476,27 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
       VisibleObjects(src, view_dist, view_angle, head_tilt);
 
   const auto o_targets = NearestK(src, objects, kMaxVisibleObjects);
-  const auto r_targets = NearestK(src, road_points, kMaxVisibleRoadPoints);
+  // const auto r_targets = NearestK(src, road_points, kMaxVisibleRoadPoints);
+
+  // Get RoadEdge 1st, then other RoadTypes.
+  const auto r_targets =
+      NearestK(src, road_points, kMaxVisibleRoadPoints,
+               [](const std::pair<const geometry::PointLike*, float>& lhs,
+                  const std::pair<const geometry::PointLike*, float>& rhs) {
+                 const RoadPoint* p = dynamic_cast<const RoadPoint*>(lhs.first);
+                 const RoadPoint* q = dynamic_cast<const RoadPoint*>(rhs.first);
+                 if (p->road_type() == q->road_type()) {
+                   return lhs.second < rhs.second;
+                 }
+                 if (p->road_type() == RoadType::kRoadEdge) {
+                   return true;
+                 }
+                 if (q->road_type() == RoadType::kRoadEdge) {
+                   return false;
+                 }
+                 return lhs.second < rhs.second;
+               });
+
   const auto t_targets =
       NearestK(src, traffic_lights, kMaxVisibleTrafficLights);
   const auto s_targets = NearestK(src, stop_signs, kMaxVisibleStopSigns);
