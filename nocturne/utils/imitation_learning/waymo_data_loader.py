@@ -3,6 +3,7 @@ from multiprocessing import Process
 import numpy as np
 from pathlib import Path
 import torch
+from collections import defaultdict
 
 from nocturne import Simulation
 
@@ -153,6 +154,8 @@ class WaymoDataset(torch.utils.data.Dataset):
         def process_idx(process):
             return process * len(scenario_paths) // n_cpus
 
+        # _precompute_dataset_impl(scenario_paths[:10], self.precomputed_data_path, start_index=0, process_idx=1)
+
         process_list = []
         for i in range(n_cpus):
             p = Process(
@@ -243,6 +246,7 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
                                if obj in scenario.getObjectsThatMoved()]
 
         # save (state, action) pairs for all objects of interests at all time steps
+        data = defaultdict(list)
         for time in range(TMIN, TMAX):
             for obj in objects_of_interest:
                 expert_action = scenario.expert_action(obj, time)
@@ -263,9 +267,10 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
                          scenario.flattened_visible_state(obj,
                                                           view_dist=VIEW_DIST,
                                                           view_angle=VIEW_ANGLE)))
-
                     # normalize state
                     veh_state /= 100.0
+
+                    data[obj.id].append((veh_state, np.array([obj.position.x, obj.position.y])))
 
                     # throw out states containing nan
                     if np.isnan(veh_state).any():
@@ -285,12 +290,31 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
                         map(str, expert_action))
 
                     # append (state, action) string to file
-                    f.write(sa_str + '\n')
+                    # f.write(sa_str + '\n')
 
                     sample_count += 1
 
             # step the simulation
             sim.step(0.1)
+
+        for vid in data:
+            v_data = data[vid]
+            n_stacked_input = 1
+            for k in range(len(v_data) - n_stacked_input - 1):
+                state = []
+                for j in range(n_stacked_input):
+                    state.append(v_data[k+j][0])
+                veh_state = np.concatenate(state)
+                if np.isnan(state).any():
+                    continue
+                pos = v_data[k+n_stacked_input-1][1]
+                next_pos = v_data[k+n_stacked_input][1]
+                if np.isclose(pos[0], -10000) or np.isclose(next_pos[0], -10000):
+                    continue
+                expert_action = next_pos - pos
+                sa_str = ','.join(map(str, veh_state)) + ';' + ','.join(
+                    map(str, expert_action))
+                f.write(sa_str + '\n')
 
         # close output file
         f.close()
