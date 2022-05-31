@@ -78,7 +78,7 @@ if __name__ == '__main__':
     # create model
     n_states = len(dataset[0][0])
     n_actions = len(dataset[0][1])
-    model = ImitationAgent(n_states, n_actions, hidden_layers=[512]*4).to(args.device)
+    model = ImitationAgent(n_states, n_actions, hidden_layers=[1024, 256, 128]).to(args.device)
     model.train()
     print(model)
 
@@ -101,6 +101,7 @@ if __name__ == '__main__':
         print(f'\nepoch {epoch+1}/{args.epochs}')
 
         losses = []
+        l2_norms = []
         for batch, (states, expert_actions) in enumerate(
                 tqdm(train_dataloader, unit='batch')):
             states = states.to(args.device)
@@ -108,22 +109,23 @@ if __name__ == '__main__':
             dist = model.dist(states)
             # print(dist.mean, dist.variance, expert_actions)
             loss = -dist.log_prob(expert_actions).mean()
-            losses.append(loss.item())
-
             optimizer.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
+            losses.append(loss.item())
+            l2_norms.append(np.mean(np.linalg.norm(expert_actions.detach().numpy() - dist.mean.detach().numpy(), axis=1)))
         scheduler.step()
 
         print(f'avg training loss this epoch: {np.mean(losses):.3f}')
+        print(f'avg action l2 norm: {np.mean(l2_norms):.3f}')
 
-        cr = compute_average_collision_rate(eval_trajs, model)
-        ade = compute_average_displacement(eval_trajs, model)
-        grr = compute_average_goal_reaching_rate(eval_trajs, model)
-        print('cr', cr, 'ade', ade, 'grr', grr)
+        # cr = compute_average_collision_rate(eval_trajs, model)
+        # ade = compute_average_displacement(eval_trajs, model)
+        # grr = compute_average_goal_reaching_rate(eval_trajs, model)
+        # print('cr', cr, 'ade', ade, 'grr', grr)
 
-        metrics.append((np.mean(losses), cr, ade, grr))
+        # metrics.append((np.mean(losses), cr, ade, grr))
 
         model_path = 'model.pth'
         torch.save(model, model_path)
