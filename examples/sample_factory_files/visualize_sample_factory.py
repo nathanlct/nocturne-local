@@ -99,6 +99,8 @@ def run_eval(cfg_dict, max_num_frames=1e9):
     if not cfg.no_render:
         fig = plt.figure()
         frames = []
+        ego_frames = []
+        feature_frames = []
 
     with torch.no_grad():
         while not max_frames_reached(num_frames):
@@ -138,6 +140,12 @@ def run_eval(cfg_dict, max_num_frames=1e9):
                     last_render_start = time.time()
                     img = env.render()
                     frames.append(img)
+                    ego_img = env.render_ego()
+                    if ego_img is not None:
+                        ego_frames.append(ego_img)
+                    feature_img = env.render_features()
+                    if feature_img is not None:
+                        feature_frames.append(feature_img)
 
                 obs, rew, done, infos = env.step(actions)
 
@@ -167,6 +175,16 @@ def run_eval(cfg_dict, max_num_frames=1e9):
                         imageio.mimsave(os.path.join(PROJECT_PATH,
                                                      'animation.mp4'),
                                         np.array(frames),
+                                        fps=30)
+                        plt.close(fig)
+                        imageio.mimsave(os.path.join(PROJECT_PATH,
+                                                     'animation_ego.mp4'),
+                                        np.array(ego_frames),
+                                        fps=30)
+                        plt.close(fig)
+                        imageio.mimsave(os.path.join(PROJECT_PATH,
+                                                     'animation_feature.mp4'),
+                                        np.array(feature_frames),
                                         fps=30)
                         plt.close(fig)
                     if not cfg.no_render:
@@ -223,14 +241,18 @@ def main():
     # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.04/s_kl_control/06.47.53/9/s_kl_control/cfg.json'
     # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/srt_v3/11.15.20/8/srt_v3/cfg.json'
     # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/srt_v3/11.15.20/2/srt_v3/cfg.json'
-    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v10/17.02.40/14/srt_v10/cfg.json'
+    # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v10/17.02.40/7/srt_v10/cfg.json'
+    # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/0/srt_12/cfg.json'
+    # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/8/srt_12/cfg.json'
+    # 10000 file run
+    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/17/srt_12/cfg.json'
     with open(file_path, 'r') as file:
         cfg_dict = json.load(file)
 
     cfg_dict['cli_args'] = {}
     cfg_dict['fps'] = 0
     cfg_dict['render_action_repeat'] = None
-    cfg_dict['no_render'] = None
+    cfg_dict['no_render'] = False
     cfg_dict['policy_index'] = 0
     cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
     cfg_dict['continuous_actions_sample'] = True

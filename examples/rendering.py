@@ -159,8 +159,8 @@ if __name__ == '__main__':
     make_image(
         scenario_fn=lambda scenario: scenario.getFeaturesImage(
             source=scenario.getVehicles()[9],
-            view_dist=120.0,
-            view_angle=np.pi * 0.8,
+            view_dist=80,
+            view_angle=np.pi * (120 / 180),
             head_tilt=np.pi / 8.0,
             img_width=2000,
             img_height=2000,

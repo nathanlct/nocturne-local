@@ -27,13 +27,12 @@ def create_heat_map(file, title, save_path):
     # Loop over data dimensions and create text annotations.
     for i in range(len(agent_indices)):
         for j in range(len(agent_indices)):
-            text = ax.text(
-                j,
-                i,
-                f'{np.round(np_arr_mean_centered[i, j], decimals=2)}',  #±{np.round(np_arr_std[i, j], decimals=2)}',
-                ha="center",
-                va="center",
-                color="w")
+            text = ax.text(j,
+                           i,
+                           f'{np.round(np_arr_mean[i, j], decimals=2)}',
+                           ha="center",
+                           va="center",
+                           color="w")
 
     ax.set_title(title)
     fig.tight_layout()
@@ -46,9 +45,11 @@ def compute_average_change(file):
     self_play = np.mean(np.diag(np_arr_mean))
     cross_play = np.mean(
         np_arr_mean[np.where(~np.eye(np_arr_mean.shape[0], dtype=bool))])
-    self_play_std = np.std(np.diag(np_arr_mean))
+    self_play_std = np.std(np.diag(np_arr_mean)) / np.sqrt(
+        np_arr_mean.shape[0])
     cross_play_std = np.std(
-        np_arr_mean[np.where(~np.eye(np_arr_mean.shape[0], dtype=bool))])
+        np_arr_mean[np.where(~np.eye(np_arr_mean.shape[0], dtype=bool))]
+    ) / np.sqrt(np_arr_mean.shape[0]**2 - np_arr_mean.shape[0])
     print(
         f'self play: {self_play} ± {self_play_std}, cross play: {cross_play} ± {cross_play_std}'
     )
@@ -56,6 +57,12 @@ def compute_average_change(file):
 
 if __name__ == '__main__':
     # zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v10/17.02.40/23/srt_v10'
+    # zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/4/srt_12'
+    # zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/4/srt_12'
+    # zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/4/srt_12'
+    # 10000 on valid
+    # zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/4/srt_12'
+    # 10000 on train
     zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/4/srt_12'
     create_heat_map('zsc_goal.npy', "Cross-play Relative Goal Rate",
                     'cross_play_heat_map.png')

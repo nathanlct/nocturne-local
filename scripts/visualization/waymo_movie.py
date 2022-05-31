@@ -6,16 +6,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pyvirtualdisplay import Display
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL
 from nocturne import Simulation
 
 disp = Display()
 disp.start()
 fig = plt.figure()
 files = os.listdir(PROCESSED_TRAIN_NO_TL)
-file = os.path.join(PROCESSED_TRAIN_NO_TL,
-                    files[np.random.randint(len(files))])
-# file = os.path.join(PROCESSED_TRAIN_NO_TL, 'tfrecord-00905-of-01000_216.json')
+# file = os.path.join(PROCESSED_TRAIN_NO_TL,
+#                     files[np.random.randint(len(files))])
+file = os.path.join(PROCESSED_VALID_NO_TL, 'tfrecord-00080-of-00150_60.json')
 sim = Simulation(file, start_time=0)
 frames = []
 scenario = sim.getScenario()

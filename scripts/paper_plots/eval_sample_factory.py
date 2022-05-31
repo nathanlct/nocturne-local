@@ -582,25 +582,28 @@ def main():
     TEST_ZSC = True
     PLOT_RESULTS = False
     RELOAD_WANDB = False
-    NUM_EVAL_FILES = 10
-    NUM_FILE_LOOPS = 3  # the number of times to loop over a fixed set of files
-    experiment_names = ['srt_v12']
+    FILES = PROCESSED_TRAIN_NO_TL
+    NUM_EVAL_FILES = 50
+    NUM_FILE_LOOPS = 1  # the number of times to loop over a fixed set of files
+    experiment_names = ['srt_12']
     # output_folder = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35'
     # output_folder = [
     #     '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v10/17.02.40/'
     # ]
     # 10 files
-    output_folder = [
-        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/'
-    ]
+    # output_folder = [
+    #     '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/'
+    # ]
     # 100 files
     output_folder = [
         '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/'
     ]
     generalization_dfs = []
 
+    cfg_filter = None
+
     def cfg_filter(cfg_dict):
-        if cfg_dict['num_files'] == 10:
+        if cfg_dict['num_files'] == 10000:
             return True
         else:
             return False

@@ -344,6 +344,7 @@ class BaseEnv(Env):
         # construct the observations and goal normalizers
         obs_dict = {}
         self.goal_dist_normalizers = {}
+        max_goal_dist = -100
         for veh_obj in self.controlled_vehicles:
             veh_id = veh_obj.getID()
             # store normalizers for each vehicle
@@ -355,6 +356,12 @@ class BaseEnv(Env):
             self.goal_dist_normalizers[veh_id] = dist
             # compute the obs
             obs_dict[veh_id] = self.get_observation(veh_obj)
+            # pick the vehicle that has to travel the furthest distance and use it for rendering
+            if dist > max_goal_dist:
+                # this attribute is just used for rendering of the view
+                # from the ego frame
+                self.render_vehicle = veh_obj
+                max_goal_dist = dist
 
         self.done_ids = []
         self.dead_feat = -np.ones_like(obs_dict[list(obs_dict.keys())[0]])
@@ -414,6 +421,38 @@ class BaseEnv(Env):
             draw_target_positions=True,
             padding=50.0,
         )
+
+    def render_ego(self, mode=None):
+        """See superclass."""
+        if self.render_vehicle.getID() in self.done_ids:
+            return None
+        else:
+            return self.scenario.getConeImage(
+                source=self.render_vehicle,
+                view_dist=self.cfg['subscriber']['view_dist'],
+                view_angle=self.cfg['subscriber']['view_angle'],
+                head_tilt=self.render_vehicle.head_angle,
+                img_width=1600,
+                img_height=1600,
+                padding=50.0,
+                draw_target_position=True,
+            )
+
+    def render_features(self, mode=None):
+        """See superclass."""
+        if self.render_vehicle.getID() in self.done_ids:
+            return None
+        else:
+            return self.scenario.getFeaturesImage(
+                source=self.render_vehicle,
+                view_dist=self.cfg['subscriber']['view_dist'],
+                view_angle=self.cfg['subscriber']['view_angle'],
+                head_tilt=self.render_vehicle.head_angle,
+                img_width=1600,
+                img_height=1600,
+                padding=50.0,
+                draw_target_position=True,
+            )
 
     def seed(self, seed=None):
         """Ensure determinism."""
