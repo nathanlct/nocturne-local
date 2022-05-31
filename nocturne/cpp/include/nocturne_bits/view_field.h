@@ -7,6 +7,7 @@
 #include "geometry/aabb_interface.h"
 #include "geometry/circle.h"
 #include "geometry/circular_sector.h"
+#include "geometry/point_like.h"
 #include "geometry/vector_2d.h"
 #include "object_base.h"
 
@@ -29,9 +30,10 @@ class ViewField : public geometry::AABBInterface {
   void FilterVisibleNonblockingObjects(
       std::vector<const ObjectBase*>& objects) const;
 
-  std::vector<const ObjectBase*> VisiblePoints(
-      const std::vector<const ObjectBase*>& objects) const;
-  void FilterVisiblePoints(std::vector<const ObjectBase*>& objects) const;
+  std::vector<const geometry::PointLike*> VisiblePoints(
+      const std::vector<const geometry::PointLike*>& objects) const;
+  void FilterVisiblePoints(
+      std::vector<const geometry::PointLike*>& objects) const;
 
  protected:
   std::vector<geometry::Vector2D> ComputeSightEndpoints(

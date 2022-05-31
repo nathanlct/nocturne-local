@@ -46,5 +46,20 @@ CircleLike::Intersection(const LineSegment& segment) const {
   }
 }
 
+std::vector<utils::MaskType> Circle::BatchContains(
+    const std::vector<const PointLike*>& points) const {
+  const int64_t n = points.size();
+  std::vector<utils::MaskType> mask(n);
+  const auto [x, y] = utils::PackCoordinates(points);
+  const float ox = center_.x();
+  const float oy = center_.y();
+  for (int64_t i = 0; i < n; ++i) {
+    const float dx = x[i] - ox;
+    const float dy = y[i] - oy;
+    mask[i] = (dx * dx + dy * dy <= radius_ * radius_);
+  }
+  return mask;
+}
+
 }  // namespace geometry
 }  // namespace nocturne
