@@ -1,14 +1,15 @@
 """Test that all available environment calls work + check collisions are recorded correctly."""
 import os
 
+import hydra
 import matplotlib.pyplot as plt
 import numpy as np
 
-from cfgs.config import PROJECT_PATH, get_default_config
+from cfgs.config import PROJECT_PATH, get_scenario_dict
 from nocturne import Simulation
 
 
-def test_scenario_functions():
+def test_scenario_functions(cfg):
     """Check that collisions are appropriately recorded and that functions don't error."""
     file_path = str(PROJECT_PATH / 'tests/large_file.json')
     os.environ["DISPLAY"] = ":0.0"
@@ -17,7 +18,7 @@ def test_scenario_functions():
     ################################
     # now lets test for collisions
     # grab a vehicle and place it on top of another vehicle
-    sim = Simulation(scenario_path=file_path, config=get_default_config())
+    sim = Simulation(scenario_path=file_path, config=get_scenario_dict(cfg))
     scenario = sim.getScenario()
     veh0 = scenario.getVehicles()[0]
     veh1 = scenario.getVehicles()[1]
@@ -40,7 +41,7 @@ def test_scenario_functions():
     assert not veh2.getCollided(), 'vehicle2 should not have collided'
 
     # now offset them slightly and do the same thing again
-    sim = Simulation(scenario_path=file_path, config=get_default_config())
+    sim = Simulation(scenario_path=file_path, config=get_scenario_dict(cfg))
     scenario = sim.getScenario()
     veh0 = scenario.getVehicles()[0]
     veh1 = scenario.getVehicles()[1]
@@ -104,7 +105,8 @@ def test_scenario_functions():
     ######################
     # check that initializing things to a different time leads to a different
     # image
-    sim = Simulation(scenario_path=file_path, config=get_default_config({'start_time': 20}))
+    cfg['scenario'].update({'start_time': 20})
+    sim = Simulation(scenario_path=file_path, config=get_scenario_dict(cfg))
     scenario = sim.getScenario()
 
     img1 = scenario.getConeImage(scenario.getVehicles()[4], 120.0, 2 * np.pi,
@@ -112,9 +114,8 @@ def test_scenario_functions():
 
     # check that initializing things with and without pedestrians leads to a different
     # image
-    sim = Simulation(
-        scenario_path=file_path,
-        config=get_default_config({'start_time': 20, 'allow_non_vehicles': False}))
+    cfg['scenario'].update({'start_time': 20, 'allow_non_vehicles': False})
+    sim = Simulation(scenario_path=file_path, config=get_scenario_dict(cfg))
     scenario = sim.getScenario()
 
     img2 = scenario.getConeImage(scenario.getVehicles()[4], 120.0, 2 * np.pi,
@@ -123,5 +124,11 @@ def test_scenario_functions():
                           0.0), 'adding pedestrians should change the image'
 
 
+@hydra.main(config_path="../cfgs/", config_name="config")
+def main(cfg):
+    """See file docstring."""
+    test_scenario_functions(cfg)
+
+
 if __name__ == '__main__':
-    test_scenario_functions()
+    main()

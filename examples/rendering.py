@@ -1,27 +1,33 @@
 """Example of how to make movies of Nocturne scenarios."""
+import hydra
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 from pyvirtualdisplay import Display
 
-from cfgs.config import PROJECT_PATH, get_default_config
+from cfgs.config import PROJECT_PATH, get_scenario_dict
 from nocturne import Simulation
 
 
-def get_sim():
+def get_sim(cfg):
     """Initialize the scenario."""
     # load scenario, set vehicles to be expert-controlled
     sim = Simulation(scenario_path=str(PROJECT_PATH / 'examples' /
                                        'example_scenario.json'),
-                     config=get_default_config())
+                     config=get_scenario_dict(cfg))
     for obj in sim.getScenario().getObjectsThatMoved():
         obj.expert_control = True
     return sim
 
 
-def make_movie(scenario_fn, output_path='./vid.mp4', dt=0.1, steps=90, fps=10):
+def make_movie(cfg,
+               scenario_fn,
+               output_path='./vid.mp4',
+               dt=0.1,
+               steps=90,
+               fps=10):
     """Make a movie from the scenario."""
-    sim = get_sim()
+    sim = get_sim(cfg)
     scenario = sim.getScenario()
     movie_frames = []
     timestep = 0
@@ -37,9 +43,9 @@ def make_movie(scenario_fn, output_path='./vid.mp4', dt=0.1, steps=90, fps=10):
     del movie_frames
 
 
-def make_image(scenario_fn, output_path='./img.png'):
+def make_image(cfg, scenario_fn, output_path='./img.png'):
     """Make a single image from the scenario."""
-    sim = get_sim()
+    sim = get_sim(cfg)
     scenario = sim.getScenario()
     img = scenario_fn(scenario)
     dpi = 100
@@ -52,7 +58,9 @@ def make_image(scenario_fn, output_path='./img.png'):
     print('>', output_path)
 
 
-if __name__ == '__main__':
+@hydra.main(config_path="../cfgs/", config_name="config")
+def main(cfg):
+    """See file docstring."""
     # NOTE: don't run this file all at once since the memory usage for
     # rendering all the videos will be dozens of gigabytes
     disp = Display()
@@ -60,6 +68,7 @@ if __name__ == '__main__':
 
     # movie of whole scenario
     make_movie(
+        cfg,
         scenario_fn=lambda scenario, _: scenario.getImage(
             img_width=1600,
             img_height=1600,
@@ -71,6 +80,7 @@ if __name__ == '__main__':
 
     # movie around a vehicle
     make_movie(
+        cfg,
         scenario_fn=lambda scenario, _: scenario.getImage(
             img_width=1600,
             img_height=1600,
@@ -86,6 +96,7 @@ if __name__ == '__main__':
 
     # movie around a vehicle (without rotating with source)
     make_movie(
+        cfg,
         scenario_fn=lambda scenario, _: scenario.getImage(
             img_width=1600,
             img_height=1600,
@@ -102,6 +113,7 @@ if __name__ == '__main__':
 
     # movie of cone around vehicle
     make_movie(
+        cfg,
         scenario_fn=lambda scenario, _: scenario.getConeImage(
             source=scenario.getObjectsThatMoved()[6],
             view_dist=120.0,
@@ -117,6 +129,7 @@ if __name__ == '__main__':
 
     # movie of cone around vehicle with varying head tilt
     make_movie(
+        cfg,
         scenario_fn=lambda scenario, timestep: scenario.getConeImage(
             source=scenario.getVehicles()[6],
             view_dist=120.0,
@@ -132,6 +145,7 @@ if __name__ == '__main__':
 
     # image of whole scenario
     make_image(
+        cfg,
         scenario_fn=lambda scenario: scenario.getImage(
             img_width=2000,
             img_height=2000,
@@ -143,6 +157,7 @@ if __name__ == '__main__':
 
     # image of cone
     make_image(
+        cfg,
         scenario_fn=lambda scenario: scenario.getConeImage(
             source=scenario.getVehicles()[9],
             view_dist=120.0,
@@ -158,6 +173,7 @@ if __name__ == '__main__':
 
     # image of visible state
     make_image(
+        cfg,
         scenario_fn=lambda scenario: scenario.getFeaturesImage(
             source=scenario.getVehicles()[9],
             view_dist=120.0,
@@ -170,3 +186,7 @@ if __name__ == '__main__':
         ),
         output_path=PROJECT_PATH / 'examples' / 'img_features_tilted.png',
     )
+
+
+if __name__ == '__main__':
+    main()

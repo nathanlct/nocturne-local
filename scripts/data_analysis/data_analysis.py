@@ -1,14 +1,15 @@
 """Utils that we use to understand the datasets we are working with."""
 import os
 
+import hydra
 import matplotlib.pyplot as plt
 import numpy as np
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH, get_default_config
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH, get_scenario_dict
 from nocturne import Simulation
 
 
-def run_analysis(files):
+def run_analysis(cfg, files):
     """Compute the expert accelerations and number of vehicles across the dataset.
 
     Args:
@@ -21,9 +22,11 @@ def run_analysis(files):
     """
     observed_accels = []
     num_vehicles = []
+    cfg['start_time'] = 0
+    cfg['allow_non_vehicles'] = False
     for file_idx, file in enumerate(files):
         sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file),
-                         get_default_config({'start_time': 0, 'allow_non_vehicles': False}))
+                         get_scenario_dict(cfg))
         vehs = sim.scenario().getObjectsThatMoved()
         # this checks if the vehicles has actually moved any distance at all
         valid_vehs = []
@@ -72,15 +75,16 @@ def run_analysis(files):
     return observed_accels, num_vehicles
 
 
-def analyze_accels():
+@hydra.main(config_path="../../cfgs/", config_name="config")
+def analyze_accels(cfg):
     """Plot the expert accels and number of observed moving vehicles."""
     f_path = PROCESSED_TRAIN_NO_TL
     with open(os.path.join(f_path, 'valid_files.txt')) as file:
         files = [line.strip() for line in file]
-    observed_accels_valid, num_vehicles_valid = run_analysis(files)
+    observed_accels_valid, num_vehicles_valid = run_analysis(cfg, files)
     with open(os.path.join(f_path, 'invalid_files.txt')) as file:
         files = [line.strip() for line in file]
-    _, num_vehicles_invalid = run_analysis(files)
+    _, num_vehicles_invalid = run_analysis(cfg, files)
 
     output_path = os.path.join(PROJECT_PATH, 'nocturne_utils/data_analysis')
     if not os.path.exists(output_path):
