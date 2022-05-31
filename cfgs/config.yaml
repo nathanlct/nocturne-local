@@ -52,6 +52,9 @@ scenario:
   max_visible_road_points: 200
   max_visible_traffic_lights: 20
   max_visible_stop_signs: 4
+  # from the set of road points that comprise each polyline, we take
+  # every n-th one of these
+  sample_every_n: 1
 
 rew_cfg:
   shared_reward: False # agents get the collective reward instead of individual rewards

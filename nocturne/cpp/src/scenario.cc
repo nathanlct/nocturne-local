@@ -937,9 +937,8 @@ void Scenario::LoadRoads(const json& roads_json) {
         }
       }
       // TODO: Try different sample rate.
-      std::shared_ptr<RoadLine> road_line =
-          std::make_shared<RoadLine>(road_type, std::move(geometry),
-                                     /*sample_every_n=*/1, check_collision);
+      std::shared_ptr<RoadLine> road_line = std::make_shared<RoadLine>(
+          road_type, std::move(geometry), sample_every_n_, check_collision);
       road_lines_.push_back(road_line);
     }
   }
