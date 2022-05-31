@@ -487,25 +487,6 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
   // Get RoadEdge 1st, then other RoadTypes.
   const auto r_targets =
       NearestKRoadPoints(src, road_points, kMaxVisibleRoadPoints);
-  // const auto r_targets =
-  //     NearestK(src, road_points, kMaxVisibleRoadPoints,
-  //              [](const std::pair<const geometry::PointLike*, float>& lhs,
-  //                 const std::pair<const geometry::PointLike*, float>& rhs) {
-  //                const RoadPoint* p = dynamic_cast<const
-  //                RoadPoint*>(lhs.first); const RoadPoint* q =
-  //                dynamic_cast<const RoadPoint*>(rhs.first); if
-  //                (p->road_type() == q->road_type()) {
-  //                  return lhs.second < rhs.second;
-  //                }
-  //                if (p->road_type() == RoadType::kRoadEdge) {
-  //                  return true;
-  //                }
-  //                if (q->road_type() == RoadType::kRoadEdge) {
-  //                  return false;
-  //                }
-  //                return lhs.second < rhs.second;
-  //              });
-
   const auto t_targets =
       NearestK(src, traffic_lights, kMaxVisibleTrafficLights);
   const auto s_targets = NearestK(src, stop_signs, kMaxVisibleStopSigns);
