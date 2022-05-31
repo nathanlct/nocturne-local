@@ -65,5 +65,13 @@ class LineSegment : public AABBInterface {
   const std::array<Vector2D, 2> endpoints_;
 };
 
+inline bool CCW(const Vector2D& a, const Vector2D& b, const Vector2D& c) {
+  return CrossProduct(b - a, c - a) > 0.0f;
+}
+
+constexpr bool CCW(float ax, float ay, float bx, float by, float cx, float cy) {
+  return (bx - ax) * (cy - ay) - (cx - ax) * (by - ay) > 0.0f;
+}
+
 }  // namespace geometry
 }  // namespace nocturne

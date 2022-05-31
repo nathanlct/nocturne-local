@@ -2,10 +2,13 @@
 
 #include <optional>
 #include <utility>
+#include <vector>
 
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
+#include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
+#include "geometry/point_like.h"
 #include "geometry/vector_2d.h"
 
 namespace nocturne {
@@ -25,6 +28,9 @@ class CircleLike : public AABBInterface {
   virtual std::pair<std::optional<Vector2D>, std::optional<Vector2D>>
   Intersection(const LineSegment& segment) const;
 
+  virtual std::vector<utils::MaskType> BatchContains(
+      const std::vector<const PointLike*>& points) const = 0;
+
  protected:
   const Vector2D center_;
   const float radius_;
@@ -42,8 +48,14 @@ class Circle : public CircleLike {
   float Area() const override { return utils::kPi * radius_ * radius_; }
 
   bool Contains(const Vector2D& p) const override {
-    return Distance(center_, p) <= radius_;
+    const Vector2D d = p - center_;
+    const float dx = d.x();
+    const float dy = d.y();
+    return dx * dx + dy * dy <= radius_ * radius_;
   }
+
+  std::vector<utils::MaskType> BatchContains(
+      const std::vector<const PointLike*>& points) const override;
 };
 
 }  // namespace geometry
