@@ -21,5 +21,14 @@ int64_t MaskedPartition(const std::vector<MaskType>& mask,
   return pivot;
 }
 
+// std::partial_sort use heap_sort which slower than std::sort especially when k
+// is large.
+template <class RandomIt, class CompareFunc>
+void PartialSort(RandomIt first, RandomIt middle, RandomIt last,
+                 CompareFunc cmp) {
+  std::nth_element(first, middle, last, cmp);
+  std::sort(first, middle, cmp);
+}
+
 }  // namespace utils
 }  // namespace nocturne
