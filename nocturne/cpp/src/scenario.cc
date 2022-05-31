@@ -89,6 +89,8 @@ std::vector<std::pair<const ObjType*, float>> NearestK(
     std::sort(ret.begin(), ret.end(), cmp);
   } else {
     std::partial_sort(ret.begin(), ret.begin() + k, ret.end(), cmp);
+    // Test this.
+    // std::nth_element(ret.begin(), ret.begin() + k, ret.end(), cmp);
     ret.resize(k);
   }
   return ret;
