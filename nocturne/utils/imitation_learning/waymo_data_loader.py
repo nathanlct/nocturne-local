@@ -13,8 +13,8 @@ TMIN = 0
 TMAX = 89
 
 # view distance and angle used to compute the observations of the agents
-VIEW_DIST = 120
-VIEW_ANGLE = 3.14
+VIEW_DIST = 80
+VIEW_ANGLE = 120 * 3.14 / 180
 
 
 class WaymoDataset(torch.utils.data.Dataset):
