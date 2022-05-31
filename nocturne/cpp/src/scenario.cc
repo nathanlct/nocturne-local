@@ -846,7 +846,7 @@ void Scenario::LoadObjects(const json& objects_json) {
         // TODO: Improve this later.
         target_heading = cur_heading;
         target_speed = cur_speed;
-        if (cur_speed > kSpeedThreshold &&
+        if (cur_speed > kSpeedThreshold ||
             geometry::Distance(cur_pos, target_position) > kMovingThreshold) {
           is_moving = true;
         }

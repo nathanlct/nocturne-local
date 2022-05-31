@@ -614,7 +614,7 @@ def main():
         for folder in output_folder:
             eval_generalization(folder,
                                 NUM_EVAL_FILES,
-                                PROCESSED_TRAIN_NO_TL,
+                                FILES,
                                 num_file_loops=NUM_FILE_LOOPS,
                                 test_zsc=TEST_ZSC,
                                 cfg_filter=cfg_filter)
@@ -630,12 +630,12 @@ def main():
                     file_paths.append(dirpath)
                     with open(os.path.join(dirpath, 'cfg.json'), 'r') as file:
                         cfg_dict = json.load(file)
-                    goal = float(
-                        np.loadtxt(os.path.join(dirpath, 'zsc_goal.txt')))
-                    collide = float(
-                        np.loadtxt(os.path.join(dirpath, 'zsc_collision.txt')))
-                    ade = float(np.loadtxt(os.path.join(dirpath, 'ade.txt')))
-                    fde = float(np.loadtxt(os.path.join(dirpath, 'fde.txt')))
+                    goal = np.mean(
+                        np.load(os.path.join(dirpath, 'zsc_goal.npy')))
+                    collide = np.mean(
+                        np.load(os.path.join(dirpath, 'zsc_collision.npy')))
+                    ade = np.mean(np.load(os.path.join(dirpath, 'ade.npy')))
+                    fde = np.mean(np.load(os.path.join(dirpath, 'fde.npy')))
                     num_files = cfg_dict['num_files']
                     if int(num_files) == -1:
                         num_files = 134453
