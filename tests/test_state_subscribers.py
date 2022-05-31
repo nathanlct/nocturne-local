@@ -1,17 +1,18 @@
 """Unit tests on observation functions."""
-import hydra
+from hydra import compose, initialize
 import numpy as np
-from pyvirtualdisplay import Display
 
 from cfgs.config import PROJECT_PATH, get_scenario_dict
 from nocturne import Simulation
 
 
-def test_state_subscribers(cfg):
+def test_state_subscribers():
     """Unit tests to check that observations are correct."""
     # TODO(eugenevinitsky) complete this once we have a better idea
     # of how to test things
     return
+    initialize(config_path="../cfgs/")
+    cfg = compose(config_name="config")
     sim = Simulation(scenario_path=str(PROJECT_PATH /
                                        'tests/scenario_test.json'),
                      config=get_scenario_dict(cfg))
@@ -117,12 +118,9 @@ def test_state_subscribers(cfg):
                                atol=1e-5)
 
 
-@hydra.main(config_path="../cfgs/", config_name="config")
-def main(cfg):
+def main():
     """See file docstring."""
-    disp = Display()
-    disp.start()
-    test_state_subscribers(cfg)
+    test_state_subscribers()
 
 
 if __name__ == '__main__':

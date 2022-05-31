@@ -1,18 +1,22 @@
 """Test configurations passed to the scenario."""
-import hydra
+from hydra import compose, initialize
 
 from cfgs.config import PROJECT_PATH, get_scenario_dict
 from nocturne import Simulation
 
 
-def test_config_values(cfg):
+def test_config_values():
     """Test that there are no invalid values in the default config."""
     # None in the config would cause a bug
+    initialize(config_path="../cfgs/")
+    cfg = compose(config_name="config")
     assert None not in list(get_scenario_dict(cfg).values())
 
 
-def test_custom_config(cfg):
+def test_custom_config():
     """Test that changes in the config are propagated to the scenario."""
+    initialize(config_path="../cfgs/")
+    cfg = compose(config_name="config")
     cfg['scenario'].update({
         'max_visible_objects': 3,
         'max_visible_road_points': 14,
@@ -29,11 +33,10 @@ def test_custom_config(cfg):
     assert scenario.getMaxNumVisibleStopSigns() == 92
 
 
-@hydra.main(config_path="../cfgs/", config_name="config")
-def main(cfg):
+def main():
     """See file docstring."""
-    test_config_values(cfg)
-    test_custom_config(cfg)
+    test_config_values()
+    test_custom_config()
 
 
 if __name__ == '__main__':

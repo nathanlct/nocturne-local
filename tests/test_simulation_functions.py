@@ -1,7 +1,7 @@
 """Test that all available environment calls work + check collisions are recorded correctly."""
 import os
 
-import hydra
+from hydra import initialize, compose
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,8 +9,10 @@ from cfgs.config import PROJECT_PATH, get_scenario_dict
 from nocturne import Simulation
 
 
-def test_scenario_functions(cfg):
+def test_scenario_functions():
     """Check that collisions are appropriately recorded and that functions don't error."""
+    initialize(config_path="../cfgs/")
+    cfg = compose(config_name="config")
     file_path = str(PROJECT_PATH / 'tests/large_file.json')
     os.environ["DISPLAY"] = ":0.0"
     ################################
@@ -124,10 +126,9 @@ def test_scenario_functions(cfg):
                           0.0), 'adding pedestrians should change the image'
 
 
-@hydra.main(config_path="../cfgs/", config_name="config")
-def main(cfg):
+def main():
     """See file docstring."""
-    test_scenario_functions(cfg)
+    test_scenario_functions()
 
 
 if __name__ == '__main__':

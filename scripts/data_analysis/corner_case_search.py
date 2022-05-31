@@ -88,15 +88,21 @@ def main(cfg):
         total_veh_counter += len(valid_vehs)
         total_edge_collision_counter += np.sum(veh_edge_collided)
         print(
-            f'at file {file_idx} we have {collide_counter} collisions for a ratio of {collide_counter / (file_idx + 1)}'
+            f'at file {file_idx} we have {collide_counter} collisions for a\
+                 ratio of {collide_counter / (file_idx + 1)}'
         )
         print(
-            f'the number of files that have a veh collision at all is {file_has_veh_collision_counter / (file_idx + 1)}'
+            f'the number of files that have a veh collision at all is\
+                 {file_has_veh_collision_counter / (file_idx + 1)}'
         )
-        print(f'the number of files that have a edge collision at all is \
-                 {file_has_edge_collision_counter / (file_idx + 1)}'                                                                    )
-        print(f'the fraction of vehicles that have had an edge collision \
-                is {total_edge_collision_counter / total_veh_counter}'                                                                      )
+        print(
+            f'the number of files that have a edge collision at all is\
+                 {file_has_edge_collision_counter / (file_idx + 1)}'
+        )
+        print(
+            f'the fraction of vehicles that have had an edge collision\
+                is {total_edge_collision_counter / total_veh_counter}'
+        )
         if found_collision and edge_collision:
             movie_frames = []
             fig = plt.figure()
