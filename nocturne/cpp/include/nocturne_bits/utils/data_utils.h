@@ -30,5 +30,24 @@ void PartialSort(RandomIt first, RandomIt middle, RandomIt last,
   std::sort(first, middle, cmp);
 }
 
+// The function FindWithDefault is adapted from protobuf's map_utils.h
+// implementation.
+//
+// That code is under the following copyright:
+// Copyright 2008 Google Inc.  All rights reserved.
+//
+// https://github.com/protocolbuffers/protobuf/blob/bd85edfbd9ba449f7a7bda61b8f7e7b9986c0dc1/src/google/protobuf/stubs/map_util.h#L123
+template <class Collection>
+const typename Collection::value_type::second_type& FindWithDefault(
+    const Collection& collection,
+    const typename Collection::value_type::first_type& key,
+    const typename Collection::value_type::second_type& value) {
+  typename Collection::const_iterator it = collection.find(key);
+  if (it == collection.end()) {
+    return value;
+  }
+  return it->second;
+}
+
 }  // namespace utils
 }  // namespace nocturne

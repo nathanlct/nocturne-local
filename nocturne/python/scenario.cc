@@ -4,6 +4,8 @@
 #include <pybind11/stl.h>
 
 #include <memory>
+#include <string>
+#include <variant>
 
 #include "geometry/geometry_utils.h"
 #include "numpy_utils.h"
@@ -17,12 +19,11 @@ using geometry::utils::kHalfPi;
 
 void DefineScenario(py::module& m) {
   py::class_<Scenario, std::shared_ptr<Scenario>>(m, "Scenario")
-      .def(
-          py::init<const std::string&,
-                   const std::unordered_map<std::string,
-                                            std::variant<bool, int, float>>&>(),
-          "Constructor for Scenario", py::arg("scenario_path"),
-          py::arg("config"))
+      .def(py::init<const std::string&,
+                    const std::unordered_map<
+                        std::string, std::variant<bool, int64_t, float>>&>(),
+           "Constructor for Scenario", py::arg("scenario_path"),
+           py::arg("config"))
 
       // Properties
       .def_property_readonly("name", &Scenario::name)
