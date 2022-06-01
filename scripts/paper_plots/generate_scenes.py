@@ -1,19 +1,21 @@
 """Example of how to make movies of Nocturne scenarios."""
+import hydra
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 from pyvirtualdisplay import Display
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH, get_default_config
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH, get_scenario_dict
 from nocturne import Simulation
 
 
-def get_sim(scenario_file):
+def get_sim(scenario_file, cfg):
     """Initialize the scenario."""
     # load scenario, set vehicles to be expert-controlled
+    cfg['allow_non_vehicles'] = False
     sim = Simulation(scenario_path=str(scenario_file),
-                     config=get_default_config({'allow_non_vehicles': False}))
+                     config=get_scenario_dict(cfg))
     for obj in sim.getScenario().getObjectsThatMoved():
         obj.expert_control = True
     return sim
@@ -55,7 +57,9 @@ def make_image(sim, scenario_file, scenario_fn, output_path='./img.png'):
     print('>', output_path)
 
 
-if __name__ == '__main__':
+@hydra.main(config_path="../../cfgs/", config_name="config")
+def main(cfg):
+    """See file docstring."""
     disp = Display()
     disp.start()
 
@@ -70,7 +74,7 @@ if __name__ == '__main__':
     ]
     for file in files:
         file = os.path.join(PROCESSED_TRAIN_NO_TL, file)
-        sim = get_sim(file)
+        sim = get_sim(file, cfg)
         if os.path.exists(file):
             # image of whole scenario
             # make_image(
@@ -138,3 +142,7 @@ if __name__ == '__main__':
                 'scripts/paper_plots/figs/feature_{}.png'.format(
                     os.path.basename(file)),
             )
+
+
+if __name__ == '__main__':
+    main()

@@ -4,19 +4,24 @@ The cases we currently check for are:
 1) is a vehicle initialized in a colliding state with another vehicle
 2) is a vehicle initialized in a colliding state with a road edge?
 """
+from copy import deepcopy
 from pathlib import Path
 import os
 import sys
 
+import hydra
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 from pyvirtualdisplay import Display
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH, get_default_config
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH, get_scenario_dict
 from nocturne import Simulation
 
-if __name__ == '__main__':
+
+@hydra.main(config_path="../../cfgs/", config_name="config")
+def main(cfg):
+    """See file docstring."""
     disp = Display()
     disp.start()
     SAVE_IMAGES = False
@@ -30,12 +35,15 @@ if __name__ == '__main__':
     file_has_edge_collision_counter = 0
     total_edge_collision_counter = 0
     total_veh_counter = 0
+
+    start_cfg = deepcopy(cfg)
+    start_cfg['start_time'] = 0
+    start_cfg['allow_non_vehicles'] = False
     for file_idx, file in enumerate(files):
         found_collision = False
         edge_collision = False
-        sim = Simulation(
-            os.path.join(PROCESSED_TRAIN_NO_TL, file),
-            get_default_config({'start_time': 0, 'allow_non_vehicles': False}))
+        sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file),
+                         get_scenario_dict(cfg))
         vehs = sim.getScenario().getObjectsThatMoved()
         # this checks if the vehicles has actually moved any distance at all
         valid_vehs = []
@@ -80,21 +88,26 @@ if __name__ == '__main__':
         total_veh_counter += len(valid_vehs)
         total_edge_collision_counter += np.sum(veh_edge_collided)
         print(
-            f'at file {file_idx} we have {collide_counter} collisions for a ratio of {collide_counter / (file_idx + 1)}'
+            f'at file {file_idx} we have {collide_counter} collisions for a\
+                 ratio of {collide_counter / (file_idx + 1)}'
         )
         print(
-            f'the number of files that have a veh collision at all is {file_has_veh_collision_counter / (file_idx + 1)}'
+            f'the number of files that have a veh collision at all is\
+                 {file_has_veh_collision_counter / (file_idx + 1)}'
         )
-        print(f'the number of files that have a edge collision at all is \
-                 {file_has_edge_collision_counter / (file_idx + 1)}')
-        print(f'the fraction of vehicles that have had an edge collision \
-                is {total_edge_collision_counter / total_veh_counter}')
+        print(
+            f'the number of files that have a edge collision at all is\
+                 {file_has_edge_collision_counter / (file_idx + 1)}'
+        )
+        print(
+            f'the fraction of vehicles that have had an edge collision\
+                is {total_edge_collision_counter / total_veh_counter}'
+        )
         if found_collision and edge_collision:
             movie_frames = []
             fig = plt.figure()
-            sim = Simulation(
-                os.path.join(PROCESSED_TRAIN_NO_TL, file),
-                get_default_config({'start_time': 0, 'allow_non_vehicles': False}))
+            sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file),
+                             get_scenario_dict(start_cfg))
             vehs = sim.getScenario().getObjectsThatMoved()
             for veh in vehs:
                 veh.expert_control = True
@@ -108,3 +121,7 @@ if __name__ == '__main__':
                              fps=10)
             if file_has_edge_collision_counter + file_has_veh_collision_counter > 10:
                 sys.exit()
+
+
+if __name__ == '__main__':
+    main()

@@ -73,6 +73,7 @@ class Scenario : public sf::Drawable {
             std::get<int>(config.at("max_visible_traffic_lights"))),
         max_visible_stop_signs_(
             std::get<int>(config.at("max_visible_stop_signs"))),
+        sample_every_n_(std::get<int>(config.at("sample_every_n"))),
         moving_threshold_(std::get<float>(config.at("moving_threshold"))),
         speed_threshold_(std::get<float>(config.at("speed_threshold"))) {
     if (!scenario_path.empty()) {
@@ -290,6 +291,10 @@ class Scenario : public sf::Drawable {
   const int64_t max_visible_road_points_ = 300;
   const int64_t max_visible_traffic_lights_ = 20;
   const int64_t max_visible_stop_signs_ = 4;
+
+  // from the set of road points that comprise each polyline, we take
+  // every n-th one
+  const int64_t sample_every_n_ = 1;
 
   // Whether to use non vehicle objects.
   const bool allow_non_vehicles_ = true;
