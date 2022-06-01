@@ -120,7 +120,7 @@ std::vector<std::pair<const PointType*, float>> NearestKRoadPoints(
   };
   const int64_t pivot = utils::MaskedPartition(mask, ret);
   if (pivot >= k) {
-    std::sort(ret.begin(), ret.begin() + k, cmp);
+    utils::PartialSort(ret.begin(), ret.begin() + k, ret.begin() + pivot, cmp);
   } else {
     std::sort(ret.begin(), ret.begin() + pivot, cmp);
     if (n <= k) {
