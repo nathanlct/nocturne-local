@@ -81,7 +81,7 @@ rew_cfg:
   speed_target: True
   speed_target_tolerance: 1.0
   # goal is only achieved if you're within this tolerance on final agent heading at goal position
-  heading_target: False
+  heading_target: True
   heading_target_tolerance: 0.3
 subscriber:
   view_angle: 2.1
