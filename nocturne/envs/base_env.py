@@ -169,7 +169,7 @@ class BaseEnv(Env):
                 info_dict[veh_id]['goal_achieved'] = True
                 rew_dict[veh_id] += rew_cfg['goal_achieved_bonus'] / rew_cfg[
                     'reward_scaling']
-            if rew_cfg['shaped_goal_distance']:
+            if rew_cfg['shaped_goal_distance'] and rew_cfg['position_target']:
                 # penalize the agent for its distance from goal
                 # we scale by goal_dist_normalizers to ensure that this value is always less than the penalty for
                 # collision
@@ -192,6 +192,33 @@ class BaseEnv(Env):
                         1.0) * (1 - (goal_pos - obj_pos).norm() /
                                 self.goal_dist_normalizers[veh_id]
                                 ) / rew_cfg['reward_scaling']
+                # repeat the same thing for speed and heading
+                if rew_cfg['shaped_goal_distance'] and rew_cfg['speed_target']:
+                    if rew_cfg['goal_distance_penalty']:
+                        rew_dict[veh_id] -= rew_cfg.get(
+                            'shaped_goal_distance_scaling', 1.0) * (
+                                np.abs(veh_obj.speed - veh_obj.target_speed) /
+                                40.0
+                            ) / rew_cfg['reward_scaling']
+                    else:
+                        rew_dict[veh_id] += rew_cfg.get(
+                            'shaped_goal_distance_scaling',
+                            1.0) * (1 - np.abs(veh_obj.speed - veh_obj.target_speed) /
+                                    40.0
+                                    ) / rew_cfg['reward_scaling']
+                if rew_cfg['shaped_goal_distance'] and rew_cfg['heading_target']:
+                    if rew_cfg['goal_distance_penalty']:
+                        rew_dict[veh_id] -= rew_cfg.get(
+                            'shaped_goal_distance_scaling', 1.0) * (
+                                np.abs(veh_obj.heading - veh_obj.target_heading) /
+                                (2 * np.pi)
+                            ) / rew_cfg['reward_scaling']
+                    else:
+                        rew_dict[veh_id] += rew_cfg.get(
+                            'shaped_goal_distance_scaling',
+                            1.0) * (1 - np.abs(veh_obj.heading - veh_obj.target_heading) /
+                                    (2 * np.pi)
+                                    ) / rew_cfg['reward_scaling']
             '''############################################
                     Handle potential done conditions
             ############################################'''
