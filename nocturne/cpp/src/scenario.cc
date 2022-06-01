@@ -97,8 +97,12 @@ std::vector<std::pair<const ObjType*, float>> NearestK(
 }
 
 template <class PointType>
-std::vector<std::pair<const PointType*, float>> NearestKRoadPointsEdgeFirst(
-    const Object& src, const std::vector<const PointType*>& points, int64_t k) {
+std::vector<std::pair<const PointType*, float>> NearestKRoadPoints(
+    const Object& src, const std::vector<const PointType*>& points, int64_t k,
+    bool road_edge_first) {
+  if (!road_edge_first) {
+    return NearestK(src, points, k);
+  }
   const geometry::Vector2D& src_pos = src.position();
   const int64_t n = points.size();
   std::vector<std::pair<const PointType*, float>> ret;
@@ -116,7 +120,7 @@ std::vector<std::pair<const PointType*, float>> NearestKRoadPointsEdgeFirst(
   };
   const int64_t pivot = utils::MaskedPartition(mask, ret);
   if (pivot >= k) {
-    std::sort(ret.begin(), ret.begin() + k, cmp);
+    utils::PartialSort(ret.begin(), ret.begin() + k, ret.begin() + pivot, cmp);
   } else {
     std::sort(ret.begin(), ret.begin() + pivot, cmp);
     if (n <= k) {
@@ -404,10 +408,8 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
   const auto [objects, road_points, traffic_lights, stop_signs] =
       VisibleObjects(src, view_dist, view_angle, head_tilt);
   const auto o_targets = NearestK(src, objects, max_visible_objects_);
-  const auto r_targets =
-      road_edge_first_ ? NearestKRoadPointsEdgeFirst(src, road_points,
-                                                     max_visible_road_points_)
-                       : NearestK(src, road_points, max_visible_road_points_);
+  const auto r_targets = NearestKRoadPoints(
+      src, road_points, max_visible_road_points_, road_edge_first_);
   const auto t_targets =
       NearestK(src, traffic_lights, max_visible_traffic_lights_);
   const auto s_targets = NearestK(src, stop_signs, max_visible_stop_signs_);
@@ -488,10 +490,8 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
       VisibleObjects(src, view_dist, view_angle, head_tilt);
 
   const auto o_targets = NearestK(src, objects, max_visible_objects_);
-  const auto r_targets =
-      road_edge_first_ ? NearestKRoadPointsEdgeFirst(src, road_points,
-                                                     max_visible_road_points_)
-                       : NearestK(src, road_points, max_visible_road_points_);
+  const auto r_targets = NearestKRoadPoints(
+      src, road_points, max_visible_road_points_, road_edge_first_);
   const auto t_targets =
       NearestK(src, traffic_lights, max_visible_traffic_lights_);
   const auto s_targets = NearestK(src, stop_signs, max_visible_stop_signs_);
@@ -796,12 +796,8 @@ NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
       VisibleObjects(source, view_dist, view_angle, head_tilt);
   std::vector<const sf::Drawable*> drawables;
 
-  const auto road_points_with_dist =
-      road_edge_first_
-          ? NearestKRoadPointsEdgeFirst(source, road_points,
-                                        max_visible_road_points_)
-          : NearestK(source, road_points, max_visible_road_points_);
-  for (const auto [obj, dist] : road_points_with_dist) {
+  for (const auto [obj, dist] : NearestKRoadPoints(
+           source, road_points, max_visible_road_points_, road_edge_first_)) {
     drawables.emplace_back(dynamic_cast<const RoadPoint*>(obj));
   }
   for (const auto& [objects, limit] :
