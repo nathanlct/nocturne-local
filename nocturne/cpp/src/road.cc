@@ -31,22 +31,6 @@ sf::Color RoadTypeColor(const RoadType& road_type) {
   };
 }
 
-geometry::ConvexPolygon RoadPoint::BoundingPolygon() const {
-  const geometry::Vector2D p0 =
-      position_ + geometry::Vector2D(kRoadPointRadius, kRoadPointRadius);
-  const geometry::Vector2D p1 =
-      position_ + geometry::Vector2D(-kRoadPointRadius, kRoadPointRadius);
-  const geometry::Vector2D p2 =
-      position_ + geometry::Vector2D(-kRoadPointRadius, -kRoadPointRadius);
-  const geometry::Vector2D p3 =
-      position_ + geometry::Vector2D(kRoadPointRadius, -kRoadPointRadius);
-  return geometry::ConvexPolygon({p0, p1, p2, p3});
-}
-
-void RoadPoint::draw(sf::RenderTarget& target, sf::RenderStates states) const {
-  target.draw(*drawable_, states);
-}
-
 sf::Color RoadLine::Color() const { return RoadTypeColor(road_type_); }
 
 void RoadLine::draw(sf::RenderTarget& target, sf::RenderStates states) const {

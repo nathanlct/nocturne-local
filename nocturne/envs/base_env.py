@@ -11,7 +11,7 @@ from gym.spaces import Box, Discrete
 import numpy as np
 import torch
 
-from cfgs.config import ERR_VAL as INVALID_POSITION
+from cfgs.config import ERR_VAL as INVALID_POSITION, get_scenario_dict
 from nocturne import Action, Simulation
 
 
@@ -27,7 +27,7 @@ class BaseEnv(Env):
             rank (int, optional): [description]. Defaults to 0.
         """
         super().__init__()
-
+        self.cfg = cfg
         with open(os.path.join(cfg['scenario_path'],
                                'valid_files.json')) as file:
             self.valid_veh_dict = json.load(file)
@@ -39,12 +39,11 @@ class BaseEnv(Env):
         self.file = self.files[np.random.randint(len(self.files))]
         self.simulation = Simulation(os.path.join(cfg['scenario_path'],
                                                   self.file),
-                                     allow_non_vehicles=False)
+                                     config=get_scenario_dict(cfg))
 
         self.scenario = self.simulation.getScenario()
         self.controlled_vehicles = self.scenario.getObjectsThatMoved()
         self.single_agent_mode = cfg['single_agent_mode']
-        self.cfg = cfg
         self.seed(cfg['seed'])
         self.episode_length = cfg['episode_length']
         self.t = 0
@@ -125,8 +124,8 @@ class BaseEnv(Env):
             done_dict[veh_id] = False
             info_dict[veh_id]['goal_achieved'] = False
             info_dict[veh_id]['collided'] = False
-            obj_pos = veh_obj.position.numpy()
-            goal_pos = veh_obj.target_position.numpy()
+            obj_pos = veh_obj.position
+            goal_pos = veh_obj.target_position
             '''############################################
                             Compute rewards
                ############################################'''
@@ -134,8 +133,9 @@ class BaseEnv(Env):
             speed_target_achieved = True
             heading_target_achieved = True
             if rew_cfg['position_target']:
-                position_target_achieved = np.linalg.norm(
-                    goal_pos - obj_pos) < rew_cfg['postion_target_tolerance']
+                position_target_achieved = (
+                    goal_pos -
+                    obj_pos).norm() < rew_cfg['position_target_tolerance']
             if rew_cfg['speed_target']:
                 speed_target_achieved = np.abs(
                     veh_obj.speed -
@@ -153,8 +153,7 @@ class BaseEnv(Env):
                 # we scale by goal_dist_normalizers to ensure that this value is always less than the penalty for
                 # collision
                 if rew_cfg['goal_distance_penalty']:
-                    rew_dict[veh_id] -= (np.linalg.norm(
-                        (goal_pos - obj_pos), ord=2) /
+                    rew_dict[veh_id] -= ((goal_pos - obj_pos).norm() /
                                          self.goal_dist_normalizers[veh_id]
                                          ) / rew_cfg['reward_scaling']
                 else:
@@ -165,8 +164,7 @@ class BaseEnv(Env):
                     # we also assume that vehicles are never more than 400 meters from their goal
                     # which makes sense as the episodes are 9 seconds long i.e. we'd have to go more than
                     # 40 m/s to get there
-                    rew_dict[veh_id] += (1 - np.linalg.norm(
-                        (goal_pos - obj_pos), ord=2) /
+                    rew_dict[veh_id] += (1 - (goal_pos - obj_pos).norm() /
                                          self.goal_dist_normalizers[veh_id]
                                          ) / rew_cfg['reward_scaling']
             '''############################################
@@ -226,7 +224,7 @@ class BaseEnv(Env):
             self.file = self.files[np.random.randint(len(self.files))]
             self.simulation = Simulation(os.path.join(
                 self.cfg['scenario_path'], self.file),
-                                         allow_non_vehicles=False)
+                                         config=get_scenario_dict(self.cfg))
             self.scenario = self.simulation.getScenario()
 
             # declare the single agent if needed
