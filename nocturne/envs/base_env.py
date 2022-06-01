@@ -11,7 +11,7 @@ from gym.spaces import Box, Discrete
 import numpy as np
 import torch
 
-from cfgs.config import ERR_VAL as INVALID_POSITION
+from cfgs.config import ERR_VAL as INVALID_POSITION, get_scenario_dict
 from nocturne import Action, Simulation
 
 
@@ -27,7 +27,7 @@ class BaseEnv(Env):
             rank (int, optional): [description]. Defaults to 0.
         """
         super().__init__()
-
+        self.cfg = cfg
         with open(os.path.join(cfg['scenario_path'],
                                'valid_files.json')) as file:
             self.valid_veh_dict = json.load(file)
@@ -39,12 +39,11 @@ class BaseEnv(Env):
         self.file = self.files[np.random.randint(len(self.files))]
         self.simulation = Simulation(os.path.join(cfg['scenario_path'],
                                                   self.file),
-                                     allow_non_vehicles=False)
+                                     config=get_scenario_dict(cfg))
 
         self.scenario = self.simulation.getScenario()
         self.controlled_vehicles = self.scenario.getObjectsThatMoved()
         self.single_agent_mode = cfg['single_agent_mode']
-        self.cfg = cfg
         self.seed(cfg['seed'])
         self.episode_length = cfg['episode_length']
         self.t = 0
@@ -225,7 +224,7 @@ class BaseEnv(Env):
             self.file = self.files[np.random.randint(len(self.files))]
             self.simulation = Simulation(os.path.join(
                 self.cfg['scenario_path'], self.file),
-                                         allow_non_vehicles=False)
+                                         config=get_scenario_dict(self.cfg))
             self.scenario = self.simulation.getScenario()
 
             # declare the single agent if needed

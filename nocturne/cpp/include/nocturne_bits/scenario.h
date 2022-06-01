@@ -9,6 +9,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include "action.h"
@@ -33,22 +34,6 @@
 namespace nocturne {
 
 using json = nlohmann::json;
-
-constexpr int64_t kMaxEnvTime = 100000;
-
-// The distance to goal must be greater than this
-// for a vehicle to be included in ObjectsThatMoved
-constexpr float kMovingThreshold = 0.2;
-// The vehicle speed at some point must be greater than this
-// for a vehicle to be included in ObjectsThatMoved
-constexpr float kSpeedThreshold = 0.05;
-
-// TODO(ev) hardcoding, this is the maximum number of vehicles that can be
-// returned in the state
-constexpr int64_t kMaxVisibleObjects = 20;
-constexpr int64_t kMaxVisibleRoadPoints = 300;
-constexpr int64_t kMaxVisibleTrafficLights = 20;
-constexpr int64_t kMaxVisibleStopSigns = 4;
 
 // Object features are:
 // [ valid, distance, azimuth, length, witdh, relative_object_heading,
@@ -76,9 +61,21 @@ constexpr int64_t kEgoFeatureSize = 7;
 
 class Scenario : public sf::Drawable {
  public:
-  Scenario(const std::string& scenario_path, int64_t start_time,
-           bool allow_non_vehicles)
-      : current_time_(start_time), allow_non_vehicles_(allow_non_vehicles) {
+  Scenario(const std::string& scenario_path,
+           const std::unordered_map<std::string,
+                                    std::variant<bool, int, float>>& config)
+      : current_time_(std::get<int>(config.at("start_time"))),
+        allow_non_vehicles_(std::get<bool>(config.at("allow_non_vehicles"))),
+        max_visible_objects_(std::get<int>(config.at("max_visible_objects"))),
+        max_visible_road_points_(
+            std::get<int>(config.at("max_visible_road_points"))),
+        max_visible_traffic_lights_(
+            std::get<int>(config.at("max_visible_traffic_lights"))),
+        max_visible_stop_signs_(
+            std::get<int>(config.at("max_visible_stop_signs"))),
+        sample_every_n_(std::get<int>(config.at("sample_every_n"))),
+        moving_threshold_(std::get<float>(config.at("moving_threshold"))),
+        speed_threshold_(std::get<float>(config.at("speed_threshold"))) {
     if (!scenario_path.empty()) {
       LoadScenario(scenario_path);
     } else {
@@ -92,8 +89,6 @@ class Scenario : public sf::Drawable {
   void LoadScenario(const std::string& scenario_path);
 
   const std::string& name() const { return name_; }
-
-  int64_t max_env_time() const { return max_env_time_; }
 
   void Step(float dt);
 
@@ -225,12 +220,14 @@ class Scenario : public sf::Drawable {
                                        float view_angle,
                                        float head_tilt = 0.0f) const;
 
-  int64_t getMaxNumVisibleObjects() const { return kMaxVisibleObjects; }
-  int64_t getMaxNumVisibleRoadPoints() const { return kMaxVisibleRoadPoints; }
-  int64_t getMaxNumVisibleTrafficLights() const {
-    return kMaxVisibleTrafficLights;
+  int64_t getMaxNumVisibleObjects() const { return max_visible_objects_; }
+  int64_t getMaxNumVisibleRoadPoints() const {
+    return max_visible_road_points_;
   }
-  int64_t getMaxNumVisibleStopSigns() const { return kMaxVisibleStopSigns; }
+  int64_t getMaxNumVisibleTrafficLights() const {
+    return max_visible_traffic_lights_;
+  }
+  int64_t getMaxNumVisibleStopSigns() const { return max_visible_stop_signs_; }
   int64_t getObjectFeatureSize() const { return kObjectFeatureSize; }
   int64_t getRoadPointFeatureSize() const { return kRoadPointFeatureSize; }
   int64_t getTrafficLightFeatureSize() const {
@@ -278,8 +275,29 @@ class Scenario : public sf::Drawable {
   std::string name_;
 
   int64_t current_time_;
-  int64_t max_env_time_ = kMaxEnvTime;
-  const bool allow_non_vehicles_ = true;  // Whether to use non vehicle objects.
+
+  // Config
+
+  // The distance to goal must be greater than this
+  // for a vehicle to be included in ObjectsThatMoved
+  const float moving_threshold_ = 0.2;
+  // The vehicle speed at some point must be greater than this
+  // for a vehicle to be included in ObjectsThatMoved
+  const float speed_threshold_ = 0.05;
+
+  // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
+  // returned in the state
+  const int64_t max_visible_objects_ = 20;
+  const int64_t max_visible_road_points_ = 300;
+  const int64_t max_visible_traffic_lights_ = 20;
+  const int64_t max_visible_stop_signs_ = 4;
+
+  // from the set of road points that comprise each polyline, we take
+  // every n-th one
+  const int64_t sample_every_n_ = 1;
+
+  // Whether to use non vehicle objects.
+  const bool allow_non_vehicles_ = true;
 
   std::vector<std::shared_ptr<Vehicle>> vehicles_;
   std::vector<std::shared_ptr<Pedestrian>> pedestrians_;
