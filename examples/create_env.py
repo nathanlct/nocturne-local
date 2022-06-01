@@ -1,11 +1,10 @@
 """Test step and rendering functions."""
-import os
-
 import hydra
 from pyvirtualdisplay import Display
 
 from nocturne import Action
 from nocturne.envs.wrappers import create_env
+
 
 @hydra.main(config_path="../cfgs/", config_name="config")
 def create_rl_env(cfg):
@@ -19,13 +18,15 @@ def create_rl_env(cfg):
                                   1.99 * 3.14, 0.0, draw_target_position=False)
     for _ in range(80):
         vehs = env.scenario.getObjectsThatMoved()
-        prev_position = {
+        _ = {
             veh.getID(): [veh.position.x, veh.position.y]
             for veh in vehs
         }
-        obs, rew, done, info = env.step(
+        # obs, rew, done, info
+        _, _, _, _ = env.step(
             {veh.id: Action(acceleration=2.0, steering=1.0)
              for veh in vehs})
+
 
 if __name__ == '__main__':
     create_rl_env()
