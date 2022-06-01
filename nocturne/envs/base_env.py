@@ -4,6 +4,7 @@ from typing import Any, Dict, Sequence, Union
 
 from collections import defaultdict
 import json
+from math import fmod
 import os
 
 from gym import Env
@@ -210,13 +211,13 @@ class BaseEnv(Env):
                     if rew_cfg['goal_distance_penalty']:
                         rew_dict[veh_id] -= rew_cfg.get(
                             'shaped_goal_distance_scaling', 1.0) * (
-                                np.abs(veh_obj.heading - veh_obj.target_heading) /
+                                np.abs(self.normalize_angle(veh_obj.heading - veh_obj.target_heading)) /
                                 (2 * np.pi)
                             ) / rew_cfg['reward_scaling']
                     else:
                         rew_dict[veh_id] += rew_cfg.get(
                             'shaped_goal_distance_scaling',
-                            1.0) * (1 - np.abs(veh_obj.heading - veh_obj.target_heading) /
+                            1.0) * (1 - np.abs(self.normalize_angle(veh_obj.heading - veh_obj.target_heading)) /
                                     (2 * np.pi)
                                     ) / rew_cfg['reward_scaling']
             '''############################################
@@ -490,3 +491,13 @@ class BaseEnv(Env):
             np.random.seed(seed)
             torch.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
+
+    def normalize_angle(self, angle):
+        ret = fmod(angle, 2 * np.pi)
+        if ret > np.pi:
+            return angle - 2 * np.pi
+        else:
+            if ret < - np.pi:
+                return ret + 2 * np.pi
+            else:
+                return ret
