@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include "geometry/vector_2d.h"
@@ -18,9 +19,10 @@ namespace nocturne {
 
 class Simulation {
  public:
-  Simulation(const std::string& scenario_path,
-             const std::unordered_map<std::string,
-                                      std::variant<bool, int, float>>& config)
+  Simulation(
+      const std::string& scenario_path,
+      const std::unordered_map<std::string, std::variant<bool, int64_t, float>>&
+          config)
       : scenario_path_(scenario_path),
         scenario_(std::make_unique<Scenario>(scenario_path, config)),
         config_(config) {}
@@ -41,7 +43,8 @@ class Simulation {
   const std::string scenario_path_;
   std::unique_ptr<Scenario> scenario_ = nullptr;
 
-  const std::unordered_map<std::string, std::variant<bool, int, float>> config_;
+  const std::unordered_map<std::string, std::variant<bool, int64_t, float>>
+      config_;
 
   std::unique_ptr<sf::RenderWindow> render_window_ = nullptr;
 

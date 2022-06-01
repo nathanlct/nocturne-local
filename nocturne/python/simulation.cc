@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <variant>
 
 namespace py = pybind11;
 
@@ -13,13 +14,13 @@ namespace nocturne {
 
 void DefineSimulation(py::module& m) {
   py::class_<Simulation, std::shared_ptr<Simulation>>(m, "Simulation")
-      .def(
-          py::init<const std::string&,
-                   const std::unordered_map<std::string,
-                                            std::variant<bool, int, float>>&>(),
-          "Constructor for Simulation", py::arg("scenario_path") = "",
-          py::arg("config") =
-              std::unordered_map<std::string, std::variant<bool, int, float>>())
+      .def(py::init<const std::string&,
+                    const std::unordered_map<
+                        std::string, std::variant<bool, int64_t, float>>&>(),
+           "Constructor for Simulation", py::arg("scenario_path") = "",
+           py::arg("config") =
+               std::unordered_map<std::string,
+                                  std::variant<bool, int64_t, float>>())
       .def("reset", &Simulation::Reset)
       .def("step", &Simulation::Step)
       .def("render", &Simulation::Render)

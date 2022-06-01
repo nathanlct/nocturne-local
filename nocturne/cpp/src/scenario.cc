@@ -13,7 +13,6 @@
 #include "geometry/line_segment.h"
 #include "geometry/polygon.h"
 #include "geometry/vector_2d.h"
-#include "utils/data_utils.h"
 #include "utils/sf_utils.h"
 #include "view_field.h"
 
@@ -91,7 +90,46 @@ std::vector<std::pair<const ObjType*, float>> NearestK(
   if (n <= k) {
     std::sort(ret.begin(), ret.end(), cmp);
   } else {
-    std::partial_sort(ret.begin(), ret.begin() + k, ret.end(), cmp);
+    utils::PartialSort(ret.begin(), ret.begin() + k, ret.end(), cmp);
+    ret.resize(k);
+  }
+  return ret;
+}
+
+template <class PointType>
+std::vector<std::pair<const PointType*, float>> NearestKRoadPoints(
+    const Object& src, const std::vector<const PointType*>& points, int64_t k,
+    bool road_edge_first) {
+  if (!road_edge_first) {
+    return NearestK(src, points, k);
+  }
+  const geometry::Vector2D& src_pos = src.position();
+  const int64_t n = points.size();
+  std::vector<std::pair<const PointType*, float>> ret;
+  std::vector<bool> mask(n);
+  ret.reserve(n);
+  for (int64_t i = 0; i < n; ++i) {
+    const PointType* p = points[i];
+    mask[i] =
+        (dynamic_cast<const RoadPoint*>(p))->road_type() == RoadType::kRoadEdge;
+    ret.emplace_back(p, geometry::Distance(src_pos, p->Coordinate()));
+  }
+  const auto cmp = [](const std::pair<const PointType*, float>& lhs,
+                      const std::pair<const PointType*, float>& rhs) {
+    return lhs.second < rhs.second;
+  };
+  const int64_t pivot = utils::MaskedPartition(mask, ret);
+  if (pivot >= k) {
+    utils::PartialSort(ret.begin(), ret.begin() + k, ret.begin() + pivot, cmp);
+  } else {
+    std::sort(ret.begin(), ret.begin() + pivot, cmp);
+    if (n <= k) {
+      std::sort(ret.begin() + pivot, ret.end(), cmp);
+    } else {
+      utils::PartialSort(ret.begin() + pivot, ret.begin() + k, ret.end(), cmp);
+    }
+  }
+  if (n > k) {
     ret.resize(k);
   }
   return ret;
@@ -373,7 +411,8 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
   const auto [objects, road_points, traffic_lights, stop_signs] =
       VisibleObjects(src, view_dist, view_angle, head_tilt);
   const auto o_targets = NearestK(src, objects, max_visible_objects_);
-  const auto r_targets = NearestK(src, road_points, max_visible_road_points_);
+  const auto r_targets = NearestKRoadPoints(
+      src, road_points, max_visible_road_points_, road_edge_first_);
   const auto t_targets =
       NearestK(src, traffic_lights, max_visible_traffic_lights_);
   const auto s_targets = NearestK(src, stop_signs, max_visible_stop_signs_);
@@ -454,7 +493,8 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
       VisibleObjects(src, view_dist, view_angle, head_tilt);
 
   const auto o_targets = NearestK(src, objects, max_visible_objects_);
-  const auto r_targets = NearestK(src, road_points, max_visible_road_points_);
+  const auto r_targets = NearestKRoadPoints(
+      src, road_points, max_visible_road_points_, road_edge_first_);
   const auto t_targets =
       NearestK(src, traffic_lights, max_visible_traffic_lights_);
   const auto s_targets = NearestK(src, stop_signs, max_visible_stop_signs_);
@@ -769,18 +809,18 @@ NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
       VisibleObjects(source, view_dist, view_angle, head_tilt);
   std::vector<const sf::Drawable*> drawables;
 
-  for (const auto [obj, dist] :
-       NearestK(source, road_points, max_visible_road_points_)) {
+  for (const auto [obj, dist] : NearestKRoadPoints(
+           source, road_points, max_visible_road_points_, road_edge_first_)) {
     drawables.emplace_back(dynamic_cast<const RoadPoint*>(obj));
   }
-  for (const auto [objects, kMaxObjects] :
+  for (const auto& [objects, limit] :
        std::vector<std::pair<std::vector<const ObjectBase*>, int64_t>>{
-           // {road_points, kMaxVisibleRoadPoints},
+           // {road_points, max_visible_road_points_},
            {kinetic_objects, max_visible_objects_},
            {traffic_lights, max_visible_stop_signs_},
            {stop_signs, max_visible_traffic_lights_},
        }) {
-    for (const auto [obj, dist] : NearestK(source, objects, kMaxObjects)) {
+    for (const auto [obj, dist] : NearestK(source, objects, limit)) {
       drawables.emplace_back(obj);
     }
   }

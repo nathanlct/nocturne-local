@@ -13,7 +13,7 @@ from nocturne import Simulation
 def get_sim(scenario_file, cfg):
     """Initialize the scenario."""
     # load scenario, set vehicles to be expert-controlled
-    cfg['allow_non_vehicles'] = False
+    cfg['scenario']['allow_non_vehicles'] = False
     sim = Simulation(scenario_path=str(scenario_file),
                      config=get_scenario_dict(cfg))
     for obj in sim.getScenario().getObjectsThatMoved():
@@ -114,8 +114,8 @@ def main(cfg):
                 file,
                 scenario_fn=lambda scenario: scenario.getConeImage(
                     source=scenario.getVehicles()[veh_index],
-                    view_dist=80,
-                    view_angle=(120 / 180) * np.pi,
+                    view_dist=cfg['subscriber']['view_dist'],
+                    view_angle=cfg['subscriber']['view_angle'],
                     head_tilt=0.0,
                     img_height=1600,
                     img_width=1600,
@@ -131,8 +131,8 @@ def main(cfg):
                 file,
                 scenario_fn=lambda scenario: scenario.getFeaturesImage(
                     source=scenario.getVehicles()[veh_index],
-                    view_dist=80,
-                    view_angle=(120 / 180) * np.pi,
+                    view_dist=cfg['subscriber']['view_dist'],
+                    view_angle=cfg['subscriber']['view_angle'],
                     head_tilt=0.0,
                     img_height=1600,
                     img_width=1600,
