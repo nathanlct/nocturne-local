@@ -299,7 +299,7 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
 
         for vid in data:
             v_data = data[vid]
-            n_stacked_input = 1
+            n_stacked_input = 10
             for k in range(len(v_data) - n_stacked_input - 1):
                 state = []
                 for j in range(n_stacked_input):

@@ -114,7 +114,7 @@ if __name__ == '__main__':
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             losses.append(loss.item())
-            l2_norms.append(np.mean(np.linalg.norm(expert_actions.detach().numpy() - dist.mean.detach().numpy(), axis=1)))
+            l2_norms.append(np.mean(np.linalg.norm(expert_actions.detach().cpu().numpy() - dist.mean.detach().cpu().numpy(), axis=1)))
         scheduler.step()
 
         print(f'avg training loss this epoch: {np.mean(losses):.3f}')
