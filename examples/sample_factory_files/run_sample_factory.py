@@ -29,6 +29,8 @@ from omegaconf import OmegaConf
 from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
 from sample_factory_examples.train_custom_env_custom_model import override_default_params_func
+from sample_factory.algorithms.appo.model_utils import get_obs_shape, EncoderBase, nonlinearity, register_custom_encoder
+from torch import nn
 
 from nocturne.envs.wrappers import create_env
 
@@ -241,6 +243,31 @@ class SampleFactoryEnv():
         return getattr(self.env, name)
 
 
+class CustomEncoder(EncoderBase):
+    def __init__(self, cfg, obs_space, timing):
+        super().__init__(cfg, timing)
+
+        obs_shape = get_obs_shape(obs_space)
+        assert len(obs_shape.obs) == 1
+
+        fc_encoder_layer = cfg.encoder_hidden_size
+        print(fc_encoder_layer)
+        encoder_layers = [
+            nn.Linear(obs_shape.obs[0], fc_encoder_layer),
+            nonlinearity(cfg),
+            nn.Linear(fc_encoder_layer, fc_encoder_layer),
+            nonlinearity(cfg),
+        ]
+
+        self.mlp_head = nn.Sequential(*encoder_layers)
+        self.init_fc_blocks(fc_encoder_layer)
+
+    def forward(self, obs_dict):
+        x = self.mlp_head(obs_dict['obs'])
+        x = self.forward_fc_blocks(x)
+        return x
+
+
 def make_custom_multi_env_func(full_env_name, cfg, env_config=None):
     """Return a wrapped base environment.
 
@@ -264,6 +291,7 @@ def register_custom_components():
         make_env_func=make_custom_multi_env_func,
         override_default_params_func=override_default_params_func,
     )
+    register_custom_encoder('custom_env_encoder', CustomEncoder)
 
 
 @hydra.main(config_path="../../cfgs/", config_name="config")

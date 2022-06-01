@@ -21,8 +21,9 @@ reward_scale: 1.0
 reward_clip: 10.0 # Clip rewards between [-c, c]. Default [-10, 10] virtually means no clipping for most envs (default: 10.0)
 encoder_type: mlp # Type of the encoder. Supported: conv, mlp, resnet (feel free to define more) (default: conv)
 encoder_subtype: mlp_mujoco # Specific encoder design (see model.py) (default: convnet_simple)
-encoder_custom: null # Use custom encoder class from the registry (see model_utils.py) (default: null, options {null, custom_env_encoder})
+encoder_custom: custom_env_encoder # Use custom encoder class from the registry (see model_utils.py) (default: null, options {null, custom_env_encoder})
 encoder_extra_fc_layers: 1 # Number of fully-connected layers of size "hidden size" to add after the basic encoder (e.g. convolutional) (default: 1)
+encoder_hidden_size: 256
 hidden_size: 256 # Size of hidden layer in the model, or the size of RNN hidden state in recurrent model (e.g. GRU) (default: 128)
 nonlinearity: tanh #  {elu,relu,tanh}
                   #      Type of nonlinearity to use (default: elu)
