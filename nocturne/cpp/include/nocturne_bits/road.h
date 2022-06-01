@@ -46,6 +46,8 @@ class RoadPoint : public sf::Drawable, public geometry::PointLike {
   }
 
   geometry::Vector2D Coordinate() const override { return position_; }
+  float X() const override { return position_.x(); }
+  float Y() const override { return position_.y(); }
 
  protected:
   void draw(sf::RenderTarget& target, sf::RenderStates states) const override {

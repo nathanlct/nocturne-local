@@ -40,6 +40,25 @@ max_num_vehicles: 20 # we want to upper bound how many agents there can be in th
                      # this is mostly useful because RL libraries expect it
 # TODO(eugenevinitsky) actually implement this
 randomize_goals: False
+scenario:
+  # initial timestep of the scenario (which ranges from timesteps 0 to 90)
+  start_time: 0
+  # if set to True, non-vehicle objects (eg. cyclists, pedestrians...) will be spawned
+  allow_non_vehicles: False
+  # for an object to be included into moving_objects
+  moving_threshold: 0.2  # its goal must be at least this distance from its initial position
+  speed_threshold: 0.05  # its speed must be superior to this value at some point
+  # maximum number of each objects visible in the object state
+  # if there are more objects, the closest ones are prioritized
+  # if there are less objects, the features vector is padded with zeros
+  max_visible_objects: 16
+  max_visible_road_points: 1000
+  max_visible_traffic_lights: 20
+  max_visible_stop_signs: 4
+  # from the set of road points that comprise each polyline, we take
+  # every n-th one of these
+  sample_every_n: 1
+
 rew_cfg:
   shared_reward: False # agents get the collective reward instead of individual rewards
   goal_tolerance: 0.5

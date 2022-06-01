@@ -79,10 +79,10 @@ class RangeTree2d {
     std::vector<const PointType*> ret;
     const auto l_ptr = std::lower_bound(
         points_.cbegin(), points_.cend(), aabb.MinX(),
-        [](const PointLike* a, float b) { return a->Coordinate().x() < b; });
+        [](const PointLike* a, float b) { return a->X() < b; });
     const auto r_ptr = std::upper_bound(
         points_.cbegin(), points_.cend(), aabb.MaxX(),
-        [](float a, const PointLike* b) { return a < b->Coordinate().x(); });
+        [](float a, const PointLike* b) { return a < b->X(); });
     int64_t l = (std::distance(points_.cbegin(), l_ptr) | capacity_);
     int64_t r = (std::distance(points_.cbegin(), r_ptr) | capacity_);
     while (l < r) {
@@ -114,10 +114,9 @@ class RangeTree2d {
       points_.push_back(dynamic_cast<const PointLike*>(ptr_func(point)));
     }
     // Sort points_ by x-coordinate.
-    std::sort(points_.begin(), points_.end(),
-              [](const PointLike* a, const PointLike* b) {
-                return a->Coordinate() < b->Coordinate();
-              });
+    std::sort(
+        points_.begin(), points_.end(),
+        [](const PointLike* a, const PointLike* b) { return a->X() < b->X(); });
     for (capacity_ = 1; capacity_ < size_; capacity_ <<= 1)
       ;
     nodes_.assign(2 * capacity_, std::vector<const PointLike*>());
@@ -134,10 +133,9 @@ class RangeTree2d {
                     const std::vector<const PointLike*>& rhs,
                     std::vector<const PointLike*>& ret) const {
     ret.assign(lhs.size() + rhs.size(), nullptr);
-    std::merge(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ret.begin(),
-               [](const PointLike* a, const PointLike* b) {
-                 return a->Coordinate().y() < b->Coordinate().y();
-               });
+    std::merge(
+        lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend(), ret.begin(),
+        [](const PointLike* a, const PointLike* b) { return a->Y() < b->Y(); });
   }
 
   template <class PointType>
@@ -146,10 +144,10 @@ class RangeTree2d {
                        std::vector<const PointType*>& ret) const {
     const auto l = std::lower_bound(
         node.cbegin(), node.cend(), aabb.MinY(),
-        [](const PointLike* a, float b) { return a->Coordinate().y() < b; });
+        [](const PointLike* a, float b) { return a->Y() < b; });
     const auto r = std::upper_bound(
         node.cbegin(), node.cend(), aabb.MaxY(),
-        [](float a, const PointLike* b) { return a < b->Coordinate().y(); });
+        [](float a, const PointLike* b) { return a < b->Y(); });
     for (auto it = l; it != r; ++it) {
       ret.push_back(dynamic_cast<const PointType*>(*it));
     }

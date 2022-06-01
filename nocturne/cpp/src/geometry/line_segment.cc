@@ -3,14 +3,6 @@
 namespace nocturne {
 namespace geometry {
 
-namespace {
-
-bool CCW(const Vector2D& a, const Vector2D& b, const Vector2D& c) {
-  return CrossProduct(b - a, c - a) > 0.0f;
-}
-
-}  // namespace
-
 bool LineSegment::Intersects(const LineSegment& seg) const {
   const Vector2D& p1 = endpoints_[0];
   const Vector2D& q1 = endpoints_[1];
