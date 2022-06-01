@@ -55,6 +55,10 @@ scenario:
   # from the set of road points that comprise each polyline, we take
   # every n-th one of these
   sample_every_n: 1
+  # if true we add all the road-edges (the edges you can collide with)
+  # to the visible road points first and only add the other points
+  # (road lines, lane lines) etc. if we have remaining states after
+  road_edge_first: False
 
 rew_cfg:
   shared_reward: False # agents get the collective reward instead of individual rewards
@@ -75,10 +79,10 @@ rew_cfg:
   heading_target: False
   heading_target_tolerance: 0.3
 subscriber:
-  view_angle: 3.14
+  view_angle: 2.1
   # the distance which the cone extends before agents are not visible
   # TODO(eugenevinitsky) pick the right number
-  view_dist: 120
+  view_dist: 80
   use_ego_state: True
   use_observations: True
   # if true, we return an observation for agents that have exited the system
