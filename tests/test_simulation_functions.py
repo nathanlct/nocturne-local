@@ -1,6 +1,7 @@
 """Test that all available environment calls work + check collisions are recorded correctly."""
 import os
 
+from hydra.core.global_hydra import GlobalHydra
 from hydra import initialize, compose
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,6 +12,7 @@ from nocturne import Simulation
 
 def test_scenario_functions():
     """Check that collisions are appropriately recorded and that functions don't error."""
+    GlobalHydra.instance().clear()
     initialize(config_path="../cfgs/")
     cfg = compose(config_name="config")
     file_path = str(PROJECT_PATH / 'tests/large_file.json')

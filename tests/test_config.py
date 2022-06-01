@@ -1,4 +1,5 @@
 """Test configurations passed to the scenario."""
+from hydra.core.global_hydra import GlobalHydra
 from hydra import compose, initialize
 
 from cfgs.config import PROJECT_PATH, get_scenario_dict
@@ -8,6 +9,7 @@ from nocturne import Simulation
 def test_config_values():
     """Test that there are no invalid values in the default config."""
     # None in the config would cause a bug
+    GlobalHydra.instance().clear()
     initialize(config_path="../cfgs/")
     cfg = compose(config_name="config")
     assert None not in list(get_scenario_dict(cfg).values())
@@ -15,6 +17,7 @@ def test_config_values():
 
 def test_custom_config():
     """Test that changes in the config are propagated to the scenario."""
+    GlobalHydra.instance().clear()
     initialize(config_path="../cfgs/")
     cfg = compose(config_name="config")
     cfg['scenario'].update({

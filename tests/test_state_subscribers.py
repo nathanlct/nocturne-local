@@ -1,4 +1,5 @@
 """Unit tests on observation functions."""
+from hydra.core.global_hydra import GlobalHydra
 from hydra import compose, initialize
 import numpy as np
 
@@ -11,6 +12,7 @@ def test_state_subscribers():
     # TODO(eugenevinitsky) complete this once we have a better idea
     # of how to test things
     return
+    GlobalHydra.instance().clear()
     initialize(config_path="../cfgs/")
     cfg = compose(config_name="config")
     sim = Simulation(scenario_path=str(PROJECT_PATH /
