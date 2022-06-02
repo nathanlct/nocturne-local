@@ -2,6 +2,7 @@
 from collections import deque, defaultdict
 import json
 import os
+from pathlib import Path
 import sys
 
 import imageio
@@ -11,7 +12,7 @@ from pyvirtualdisplay import Display
 import subprocess
 import torch
 
-from cfgs.config import PROCESSED_VALID_NO_TL
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL
 from nocturne import Simulation, Vector2D
 from nocturne.utils.imitation_learning.waymo_data_loader import VIEW_DIST, VIEW_ANGLE
 
@@ -26,12 +27,18 @@ if __name__ == '__main__':
     output_dir = Path(OUTPUT_PATH)
     output_dir.mkdir(exist_ok=True)
 
-    with open(os.path.join(PROCESSED_VALID_NO_TL, 'valid_files.json')) as file:
-        valid_veh_dict = json.load(file)
-        files = list(valid_veh_dict.keys())
+    # with open(os.path.join(PROCESSED_VALID_NO_TL, 'valid_files.json')) as file:
+    #     valid_veh_dict = json.load(file)
+    #     files = list(valid_veh_dict.keys())
+    data_path = PROCESSED_TRAIN_NO_TL
+    files = [
+            file for file in Path(data_path).iterdir()
+            if 'tfrecord' in file.stem
+        ]
     for traj_path in files:
-        sim = Simulation(scenario_path=os.path.join(PROCESSED_VALID_NO_TL, str(traj_path)))
-        output_str = traj_path.split('.')[0]
+        traj_path = str(traj_path)
+        sim = Simulation(scenario_path=os.path.join(data_path, str(traj_path)))
+        output_str = traj_path.split('.')[0].split('/')[-1]
         model = torch.load(MODEL_PATH).to('cpu')
         model.eval()
 
@@ -51,7 +58,9 @@ if __name__ == '__main__':
 
                 for obj in scenario.getObjectsThatMoved():
                     obj.expert_control = True
-                for veh in scenario.getVehicles():
+                objects_of_interest = [obj for obj in scenario.getVehicles()
+                        if obj in scenario.getObjectsThatMoved()]
+                for veh in objects_of_interest:
                     veh.expert_control = expert_control_vehicles
                 
                 state_size = model.n_states // model.n_stack
@@ -101,8 +110,7 @@ if __name__ == '__main__':
         # stack the movies side by side
         output_name = traj_path.split('.')[0]
         output_path = f'{output_name}_output.mp4'
-        ffmpeg_command = f'ffmpeg -y -i {output_str}_true_rollout.mp4 -i \
-                {output_str}_policy_rollout.mp4 -filter_complex hstack {output_path}'
+        ffmpeg_command = f'ffmpeg -y -i {output_str}_true_rollout.mp4 -i {output_str}_policy_rollout.mp4 -filter_complex hstack {output_path}'
         print(ffmpeg_command)
         subprocess.call(ffmpeg_command.split(' '))
         print(f'> {output_path}')
