@@ -7,12 +7,13 @@ from torch.distributions.multivariate_normal import MultivariateNormal
 class ImitationAgent(nn.Module):
     """Pytorch Module for imitation. Output is a Multivariable Gaussian."""
 
-    def __init__(self, n_states, n_actions, hidden_layers=[256, 256]):
+    def __init__(self, n_states, n_actions, hidden_layers=[256, 256], n_stack=1):
         """Initialize."""
         super(ImitationAgent, self).__init__()
 
         self.n_states = n_states
         self.n_actions = n_actions
+        self.n_stack = n_stack
         self.hidden_layers = hidden_layers
         self._build_model()
 
@@ -37,8 +38,8 @@ class ImitationAgent(nn.Module):
     def dist(self, x):
         """Construct a distirbution from tensor x."""
         x_out = self.nn(x)
-        m = MultivariateNormal(x_out[:, 0:2],
-                               torch.diag_embed(torch.exp(x_out[:, 2:4])))
+        m = MultivariateNormal(x_out[:, 0:self.n_actions],
+                               torch.diag_embed(torch.exp(x_out[:, self.n_actions:])))
         return m
 
     def forward(self, x, deterministic=False):

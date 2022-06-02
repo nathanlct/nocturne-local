@@ -49,6 +49,8 @@ def parse_args():
     parser.add_argument('--file_limit', type=int, default=None, help='Limit on the number of files to use/precompute')
     parser.add_argument('--sample_limit', type=int, default=None,
                         help='Limit on the number of samples to use during training')
+    parser.add_argument('--n_stack_input', type=int, default=10,
+                        help='How many states to stack as the input to the NN')
     args = parser.parse_args()
     return args
 
@@ -64,6 +66,7 @@ if __name__ == '__main__':
         'file_limit': args.file_limit,
         'sample_limit': args.sample_limit,
         'shuffle': True,
+        'n_stack_input': args.n_stack_input,
     })
 
     # create dataloader
@@ -78,7 +81,7 @@ if __name__ == '__main__':
     # create model
     n_states = len(dataset[0][0])
     n_actions = len(dataset[0][1])
-    model = ImitationAgent(n_states, n_actions, hidden_layers=[1024, 256, 128]).to(args.device)
+    model = ImitationAgent(n_states, n_actions, hidden_layers=[1024, 256, 128], n_stack=args.n_stack_input).to(args.device)
     model.train()
     print(model)
 

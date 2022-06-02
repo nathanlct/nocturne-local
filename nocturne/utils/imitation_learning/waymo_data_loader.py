@@ -29,6 +29,7 @@ class WaymoDataset(torch.utils.data.Dataset):
         self.file_limit = cfg.get('file_limit', None)
         self.sample_limit = cfg.get('sample_limit', None)
         self.shuffle = cfg.get('shuffle', True)
+        self.n_stack_input = cfg.get('n_stack_input', 1)
 
         # get precomputed dataset
         self.precomputed_data_path = Path(str(self.data_path) + '_precomputed')
@@ -165,6 +166,7 @@ class WaymoDataset(torch.utils.data.Dataset):
                     self.precomputed_data_path,
                     process_idx(i),
                     i + 1,
+                    self.n_stack_input
                 ]
             )
             p.start()
@@ -217,7 +219,7 @@ class WaymoDataset(torch.utils.data.Dataset):
         print('\nShuffling done!\n')
 
 
-def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
+def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx, n_stack_input):
     """Construct a precomputed dataset for fast sampling."""
     # initializer counters
     s_nan_count = 0
@@ -242,6 +244,8 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
             obj.expert_control = True
 
         # we're interested in vehicles that moved
+        # TODO(eugenevinitsky) in replay we don't condition on moving
+        # TODO(eugenevinitsky) so maybe we shouldn't here either
         objects_of_interest = [obj for obj in scenario.getVehicles()
                                if obj in scenario.getObjectsThatMoved()]
 
@@ -270,7 +274,7 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
                     # normalize state
                     veh_state /= 100.0
 
-                    data[obj.id].append((veh_state, np.array([obj.position.x, obj.position.y])))
+                    data[obj.id].append((veh_state, np.array([obj.position.x, obj.position.y, obj.heading])))
 
                     # throw out states containing nan
                     if np.isnan(veh_state).any():
@@ -299,16 +303,15 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx):
 
         for vid in data:
             v_data = data[vid]
-            n_stacked_input = 10
-            for k in range(len(v_data) - n_stacked_input - 1):
+            for k in range(len(v_data) - n_stack_input - 1):
                 state = []
-                for j in range(n_stacked_input):
+                for j in range(n_stack_input):
                     state.append(v_data[k+j][0])
                 veh_state = np.concatenate(state)
                 if np.isnan(state).any():
                     continue
-                pos = v_data[k+n_stacked_input-1][1]
-                next_pos = v_data[k+n_stacked_input][1]
+                pos = v_data[k+n_stack_input-1][1]
+                next_pos = v_data[k+n_stack_input][1]
                 if np.isclose(pos[0], -10000) or np.isclose(next_pos[0], -10000):
                     continue
                 expert_action = next_pos - pos
