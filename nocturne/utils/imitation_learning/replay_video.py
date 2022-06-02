@@ -58,12 +58,11 @@ if __name__ == '__main__':
                 sim.reset()
                 scenario = sim.getScenario()
 
-                for obj in scenario.getObjectsThatMoved():
-                    obj.expert_control = True
                 objects_of_interest = [obj for obj in scenario.getVehicles()
                         if obj in scenario.getObjectsThatMoved()]
-                for veh in objects_of_interest:
-                    veh.expert_control = expert_control_vehicles
+                
+                for obj in objects_of_interest:
+                    obj.expert_control=True
                 
                 state_size = model.n_states // model.n_stack
                 collections_dict = defaultdict(lambda: deque([np.zeros(state_size) for i in range(model.n_stack)], model.n_stack))
@@ -76,6 +75,11 @@ if __name__ == '__main__':
                                 veh, view_dist=VIEW_DIST, view_angle=VIEW_ANGLE),
                                     copy=False))) / 100.0)
                     sim.step(0.1)
+                
+                for obj in scenario.getObjectsThatMoved():
+                    obj.expert_control = True
+                for veh in objects_of_interest:
+                    veh.expert_control = expert_control_vehicles
 
                 for i in range(90 - model.n_stack):
                     print(f'...{i+1}/{90 - model.n_stack} ({traj_path} ; {mp4_name})')
