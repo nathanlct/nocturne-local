@@ -13,7 +13,7 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
     view_dist = dataloader_config.get('view_dist', 80)
     view_angle = dataloader_config.get('view_angle', 120 * 3.14 / 180)
     dt = dataloader_config.get('dt', 0.1)
-    expert_action_bounds = dataloader_config.get('expert_action_bounds', [[-2, 3], [-0.8, 0.8]])
+    expert_action_bounds = dataloader_config.get('expert_action_bounds', [[-3, 3], [-0.7, 0.7]])
     state_normalization = dataloader_config.get('state_normalization', 100)
     n_stacked_states = dataloader_config.get('n_stacked_states', 5)
     
