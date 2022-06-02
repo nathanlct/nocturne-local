@@ -8,6 +8,7 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import LinearLR  # , ExponentialLR
 from tqdm import tqdm
 import multiprocessing
+import os
 
 # from cfgs.config import PROCESSED_TRAIN_NO_TL  # TODO make this work
 
@@ -17,6 +18,7 @@ from nocturne.utils.eval.average_displacement import compute_average_displacemen
 from nocturne.utils.eval.collision_rate import compute_average_collision_rate
 from nocturne.utils.eval.goal_reaching_rate import compute_average_goal_reaching_rate
 
+MODEL_PATH = 'model.pth'
 
 def parse_args():
     """Parse command-line arguments."""
@@ -98,7 +100,11 @@ if __name__ == '__main__':
     # create model
     n_states = len(dataset[0][0])
     n_actions = len(dataset[0][1])
-    model = ImitationAgent(n_states, n_actions, hidden_layers=[1024, 256, 128], n_stack=args.n_stack_input).to(args.device)
+    if os.path.exists(MODEL_PATH):
+        model = torch.load(MODEL_PATH).to(args.device)
+    else:
+        model_cfg = {'n_stack': 10, 'pos_scaling': 3.0, 'heading_scaling': 0.07}
+        model = ImitationAgent(n_states, n_actions, model_cfg, hidden_layers=[1024, 256, 128]).to(args.device)
     model.train()
     print(model)
 
@@ -135,6 +141,9 @@ if __name__ == '__main__':
             optimizer.step()
             losses.append(loss.item())
             l2_norms.append(np.mean(np.linalg.norm(expert_actions.detach().cpu().numpy() - dist.mean.detach().cpu().numpy(), axis=1)))
+        print('expert', expert_actions[0:10])
+        print('agent', dist.mean[0:10])
+
         scheduler.step()
 
         print(f'avg training loss this epoch: {np.mean(losses):.3f}')
