@@ -35,6 +35,8 @@ if __name__ == '__main__':
             file for file in Path(data_path).iterdir()
             if 'tfrecord' in file.stem
         ]
+    files = files[:100]
+    np.random.shuffle(files)
     for traj_path in files:
         traj_path = str(traj_path)
         sim = Simulation(scenario_path=os.path.join(data_path, str(traj_path)))
@@ -66,7 +68,7 @@ if __name__ == '__main__':
                 state_size = model.n_states // model.n_stack
                 collections_dict = defaultdict(lambda: deque([np.zeros(state_size) for i in range(model.n_stack)], model.n_stack))
                 for i in range(model.n_stack):
-                    for veh in scenario.getVehicles():
+                    for veh in objects_of_interest:
                         # TODO(eugenevinitsky) remove the 100.0
                         collections_dict[veh.getID()].append(np.concatenate(
                             (np.array(scenario.ego_state(veh), copy=False),
@@ -84,7 +86,7 @@ if __name__ == '__main__':
                             padding=50.0,
                             )
                     frames.append(img)
-                    for veh in scenario.getVehicles():
+                    for veh in objects_of_interest:
                         veh_state = np.concatenate(
                             (np.array(scenario.ego_state(veh), copy=False),
                              np.array(scenario.flattened_visible_state(
@@ -108,7 +110,7 @@ if __name__ == '__main__':
                 print(f'> {mp4_name}')
 
         # stack the movies side by side
-        output_name = traj_path.split('.')[0]
+        output_name = traj_path.split('.')[0].split('/')[-1]
         output_path = f'{output_name}_output.mp4'
         ffmpeg_command = f'ffmpeg -y -i {output_str}_true_rollout.mp4 -i {output_str}_policy_rollout.mp4 -filter_complex hstack {output_path}'
         print(ffmpeg_command)

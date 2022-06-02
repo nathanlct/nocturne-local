@@ -59,6 +59,19 @@ if __name__ == '__main__':
     args = parse_args()
 
     # create dataset (and potentially precompute data)
+    cfg = {
+        'data_path': args.path,
+        'precompute_dataset': args.precompute,
+        'n_cpus': args.n_cpus,
+        'file_limit': args.file_limit,
+        'sample_limit': args.sample_limit,
+        'shuffle': True,
+        'n_stack_input': args.n_stack_input,
+        'pos_grid': [-0.5, 0.5],
+        'pos_grid_size': 25,
+        'heading_grid': [-0.3, 0.3],
+        'heading_grid_size': 25,
+    }
     dataset = WaymoDataset({
         'data_path': args.path,
         'precompute_dataset': args.precompute,
@@ -67,6 +80,10 @@ if __name__ == '__main__':
         'sample_limit': args.sample_limit,
         'shuffle': True,
         'n_stack_input': args.n_stack_input,
+        'pos_grid': [-0.5, 0.5],
+        'pos_grid_size': 25,
+        'heading_grid': [-0.3, 0.3],
+        'heading_grid_size': 25,
     })
 
     # create dataloader
@@ -114,7 +131,7 @@ if __name__ == '__main__':
             loss = -dist.log_prob(expert_actions).mean()
             optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
             optimizer.step()
             losses.append(loss.item())
             l2_norms.append(np.mean(np.linalg.norm(expert_actions.detach().cpu().numpy() - dist.mean.detach().cpu().numpy(), axis=1)))

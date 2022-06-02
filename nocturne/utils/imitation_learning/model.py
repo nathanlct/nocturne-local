@@ -20,7 +20,7 @@ class ImitationAgent(nn.Module):
     def _build_model(self):
         """Build agent MLP that outputs an action mean and variance from a state input."""
         if self.hidden_layers is None or len(self.hidden_layers) == 0:
-            self.nn = nn.Linear(self.n_states, 2 * self.n_actions)
+            self.nn = nn.Linear(self.n_states, self.n_actions)
         else:
             self.nn = nn.Sequential(
                 nn.Linear(self.n_states, self.hidden_layers[0]),
@@ -32,14 +32,15 @@ class ImitationAgent(nn.Module):
                     )
                     for i in range(len(self.hidden_layers) - 1)
                 ],
-                nn.Linear(self.hidden_layers[-1], 2 * self.n_actions),
+                nn.Linear(self.hidden_layers[-1], self.n_actions),
             )
 
     def dist(self, x):
         """Construct a distirbution from tensor x."""
         x_out = self.nn(x)
+        std = torch.ones_like(x_out) * 0.1
         m = MultivariateNormal(x_out[:, 0:self.n_actions],
-                               torch.diag_embed(torch.exp(x_out[:, self.n_actions:])))
+                               torch.diag_embed(std))
         return m
 
     def forward(self, x, deterministic=False):
