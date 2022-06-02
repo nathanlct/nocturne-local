@@ -107,22 +107,15 @@ class WaymoDataset(torch.utils.data.IterableDataset):
 if __name__ == '__main__':
     dataset = WaymoDataset(
         data_path='dataset/tf_records',
-        file_limit=1,
+        file_limit=20,
     )
 
     data_loader = torch.utils.data.DataLoader(
         dataset,
-        num_workers=0,
+        batch_size=32,
+        num_workers=4,
+        pin_memory=True,
     )
 
-    for x in data_loader:
-        print(x[0].shape, x[1].shape, np.count_nonzero(x[0]))
-
-    # # create dataloader
-    # train_dataloader = DataLoader(
-    #     dataset,
-    #     pin_memory=True,
-    #     shuffle=False,  # shuffling is done in the dataloader for faster sampling
-    #     batch_size=args.batch_size,
-    #     num_workers=args.n_cpus,
-    # )
+    for i, x in zip(range(100), data_loader):
+        print(i, x[0].shape, x[1].shape)
