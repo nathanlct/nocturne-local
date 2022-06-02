@@ -245,7 +245,8 @@ def main():
     # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/0/srt_12/cfg.json'
     # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/8/srt_12/cfg.json'
     # 10000 file run
-    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/17/srt_12/cfg.json'
+    # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/17/srt_12/cfg.json'
+    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.06.01/srt_v27/17.35.33/177/srt_v27/cfg.json'
     with open(file_path, 'r') as file:
         cfg_dict = json.load(file)
 
