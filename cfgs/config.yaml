@@ -94,6 +94,8 @@ subscriber:
   # as well as returning an observation for the extra agents if the number of
   # agents in the system is less than max_num_vehicles
   keep_inactive_agents: False
+  # for values greater than 1, we will stack inputs together
+  n_frames_stacked: 1
 
 hydra:
   run:

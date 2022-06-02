@@ -251,7 +251,6 @@ class CustomEncoder(EncoderBase):
         assert len(obs_shape.obs) == 1
 
         fc_encoder_layer = cfg.encoder_hidden_size
-        print(fc_encoder_layer)
         encoder_layers = [
             nn.Linear(obs_shape.obs[0], fc_encoder_layer),
             nonlinearity(cfg),

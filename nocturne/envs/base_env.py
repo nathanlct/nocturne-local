@@ -2,7 +2,8 @@
 
 from typing import Any, Dict, Sequence, Union
 
-from collections import defaultdict
+from collections import defaultdict, deque
+from itertools import islice
 import json
 from math import fmod
 import os
@@ -45,6 +46,10 @@ class BaseEnv(Env):
         self.scenario = self.simulation.getScenario()
         self.controlled_vehicles = self.scenario.getObjectsThatMoved()
         self.cfg = cfg
+        self.n_frames_stacked = self.cfg['subscriber'].get('n_frames_stacked', 1)
+        if self.n_frames_stacked > 1:
+            print('WARNING: you are frame stacking and may want to turn off recurrence if it is enabled\
+                  in your agent as frame-stacking may not be needed when using recurrent policies.')
         self.single_agent_mode = cfg['single_agent_mode']
         self.seed(cfg['seed'])
         self.episode_length = cfg['episode_length']
@@ -141,7 +146,13 @@ class BaseEnv(Env):
             veh_id = veh_obj.getID()
             if veh_id in self.done_ids:
                 continue
-            obs_dict[veh_id] = self.get_observation(veh_obj)
+            self.context_dict[veh_id].append(self.get_observation(veh_obj))
+            if self.n_frames_stacked > 1:
+                veh_deque = self.context_dict[veh_id]
+                context_list = list(islice(veh_deque, len(veh_deque) - self.n_frames_stacked, len(veh_deque)))
+                obs_dict[veh_id] = np.concatenate(context_list)
+            else:
+                obs_dict[veh_id] = self.context_dict[veh_id][-1]
             rew_dict[veh_id] = 0
             done_dict[veh_id] = False
             info_dict[veh_id]['goal_achieved'] = False
@@ -283,9 +294,12 @@ class BaseEnv(Env):
                 Construct context dictionary of observations that can be used to
                 warm up policies by stepping all vehicles as experts.
             #####################################################################'''
+            dead_obs = self.get_observation(self.scenario.getVehicles()[0])
+            self.dead_feat = -np.ones(dead_obs.shape[0] * self.n_frames_stacked)
             # step all the vehicles forward by one second and record their observations as context
+            context_len = max(10, self.n_frames_stacked)
             self.context_dict = {
-                veh.getID(): []
+                veh.getID(): deque([self.dead_feat for _ in range(context_len)], maxlen=context_len)
                 for veh in self.scenario.getObjectsThatMoved()
             }
             for veh in self.scenario.getObjectsThatMoved():
@@ -384,7 +398,13 @@ class BaseEnv(Env):
             dist = np.linalg.norm(obj_pos - goal_pos)
             self.goal_dist_normalizers[veh_id] = dist
             # compute the obs
-            obs_dict[veh_id] = self.get_observation(veh_obj)
+            self.context_dict[veh_id].append(self.get_observation(veh_obj))
+            if self.n_frames_stacked > 1:
+                veh_deque = self.context_dict[veh_id]
+                context_list = list(islice(veh_deque, len(veh_deque) - self.n_frames_stacked, len(veh_deque)))
+                obs_dict[veh_id] = np.concatenate(context_list)
+            else:
+                obs_dict[veh_id] = self.context_dict[veh_id][-1]
             # pick the vehicle that has to travel the furthest distance and use it for rendering
             if dist > max_goal_dist:
                 # this attribute is just used for rendering of the view
@@ -393,7 +413,6 @@ class BaseEnv(Env):
                 max_goal_dist = dist
 
         self.done_ids = []
-        self.dead_feat = -np.ones_like(obs_dict[list(obs_dict.keys())[0]])
         # we should return obs for the missing agents
         if self.cfg['subscriber']['keep_inactive_agents']:
             max_id = max([int(key) for key in obs_dict.keys()])

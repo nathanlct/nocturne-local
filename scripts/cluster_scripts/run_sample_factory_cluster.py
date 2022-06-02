@@ -67,11 +67,13 @@ def main():
     overrides.add('hydra/launcher', ['submitit_slurm'])
     overrides.add('hydra.launcher.partition', ['learnlab'])
     overrides.add('experiment', [args.experiment])
-    overrides.add('num_files', [10, 100, 1000, 10000, -1])
+    overrides.add('num_files', [10])
     overrides.add('seed', [0, 1, 2, 3, 4])
-    overrides.add('algorithm.encoder_hidden_size', [256, 1024])
-    overrides.add('scenario.road_edge_first', [True, False])
-    overrides.add('scenario.max_visible_road_points', [1000, 500])
+    # overrides.add('algorithm.encoder_hidden_size', [256, 1024])
+    # overrides.add('scenario.road_edge_first', [True, False])
+    overrides.add('scenario.max_visible_road_points', [500])
+    overrides.add('algorithm.use_rnn', [False])
+    overrides.add('subscriber.n_frames_stacked', [10])
 
     cmd = [
         'python',
