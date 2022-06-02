@@ -1,11 +1,24 @@
 #pragma once
 
+#include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
+#include <utility>
+#include <vector>
 
 namespace nocturne {
 namespace geometry {
+
+class PointLike;
+class Polygon;
+class Vector2D;
+
 namespace utils {
+
+// Use uint32_t instead of bool for MaskType to avoid API limits of
+// std::vector<bool> and also reach better performance.
+using MaskType = uint32_t;
 
 constexpr double kEps = 1e-8;
 constexpr double kPi = M_PI;
@@ -49,6 +62,16 @@ template <typename T>
 inline T AngleSub(T lhs, T rhs) {
   return NormalizeAngle<T>(lhs - rhs);
 }
+
+// Pack the coordinates of points into x and y.
+std::pair<std::vector<float>, std::vector<float>> PackCoordinates(
+    const std::vector<Vector2D>& points);
+std::pair<std::vector<float>, std::vector<float>> PackCoordinates(
+    const std::vector<const PointLike*>& points);
+
+template <int64_t N>
+std::pair<std::array<float, N>, std::array<float, N>> PackSmallPolygon(
+    const Polygon& polygon);
 
 }  // namespace utils
 }  // namespace geometry

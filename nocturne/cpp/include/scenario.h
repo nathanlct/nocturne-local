@@ -9,6 +9,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include "action.h"
@@ -17,6 +18,8 @@
 #include "geometry/bvh.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
+#include "geometry/point_like.h"
+#include "geometry/range_tree_2d.h"
 #include "geometry/vector_2d.h"
 #include "ndarray.h"
 #include "object.h"
@@ -26,23 +29,14 @@
 #include "static_object.h"
 #include "stop_sign.h"
 #include "traffic_light.h"
+#include "utils/data_utils.h"
 #include "vehicle.h"
 
 namespace nocturne {
 
 using json = nlohmann::json;
 
-constexpr int64_t kMaxEnvTime = 100000;
-
-// The distance to goal must be greater than this
-// for a vehicle to be included in ObjectsThatMoved
-constexpr float kMovingThreshold = 0.2;
-// The vehicle speed at some point must be greater than this
-// for a vehicle to be included in ObjectsThatMoved
-constexpr float kSpeedThreshold = 0.05;
-
-// TODO(ev) hardcoding, this is the maximum number of vehicles that can be
-// returned in the state
+// Default values for visible features.
 constexpr int64_t kMaxVisibleObjects = 20;
 constexpr int64_t kMaxVisibleRoadPoints = 300;
 constexpr int64_t kMaxVisibleTrafficLights = 20;
@@ -74,11 +68,30 @@ constexpr int64_t kEgoFeatureSize = 7;
 
 class Scenario : public sf::Drawable {
  public:
-  Scenario(const std::string& scenario_path, int64_t start_time,
-           bool allow_non_vehicles, bool spawn_invalid_objects)
-      : current_time_(start_time),
-        allow_non_vehicles_(allow_non_vehicles),
-        spawn_invalid_objects_(spawn_invalid_objects) {
+  Scenario(const std::string& scenario_path,
+           const std::unordered_map<std::string,
+                                    std::variant<bool, int64_t, float>>& config)
+      : current_time_(std::get<int64_t>(config.at("start_time"))),
+        allow_non_vehicles_(std::get<bool>(
+            utils::FindWithDefault(config, "allow_non_vehicles", true))),
+        spawn_invalid_objects_(std::get<bool>(
+            utils::FindWithDefault(config, "spawn_invalid_objects", false))),
+        max_visible_objects_(std::get<int64_t>(utils::FindWithDefault(
+            config, "max_visible_objects", kMaxVisibleObjects))),
+        max_visible_road_points_(std::get<int64_t>(utils::FindWithDefault(
+            config, "max_visible_road_points", kMaxVisibleRoadPoints))),
+        max_visible_traffic_lights_(std::get<int64_t>(utils::FindWithDefault(
+            config, "max_visible_traffic_lights", kMaxVisibleTrafficLights))),
+        max_visible_stop_signs_(std::get<int64_t>(utils::FindWithDefault(
+            config, "max_visible_stop_signs", kMaxVisibleStopSigns))),
+        sample_every_n_(std::get<int64_t>(
+            utils::FindWithDefault(config, "sample_every_n", int64_t(1)))),
+        road_edge_first_(std::get<bool>(
+            utils::FindWithDefault(config, "road_edge_first", false))),
+        moving_threshold_(std::get<float>(
+            utils::FindWithDefault(config, "moving_threshold", 0.2f))),
+        speed_threshold_(std::get<float>(
+            utils::FindWithDefault(config, "speed_threshold", 0.05f))) {
     if (!scenario_path.empty()) {
       LoadScenario(scenario_path);
     } else {
@@ -92,8 +105,6 @@ class Scenario : public sf::Drawable {
   void LoadScenario(const std::string& scenario_path);
 
   const std::string& name() const { return name_; }
-
-  int64_t max_env_time() const { return max_env_time_; }
 
   void Step(float dt);
 
@@ -225,12 +236,14 @@ class Scenario : public sf::Drawable {
                                        float view_angle,
                                        float head_tilt = 0.0f) const;
 
-  int64_t getMaxNumVisibleObjects() const { return kMaxVisibleObjects; }
-  int64_t getMaxNumVisibleRoadPoints() const { return kMaxVisibleRoadPoints; }
-  int64_t getMaxNumVisibleTrafficLights() const {
-    return kMaxVisibleTrafficLights;
+  int64_t getMaxNumVisibleObjects() const { return max_visible_objects_; }
+  int64_t getMaxNumVisibleRoadPoints() const {
+    return max_visible_road_points_;
   }
-  int64_t getMaxNumVisibleStopSigns() const { return kMaxVisibleStopSigns; }
+  int64_t getMaxNumVisibleTrafficLights() const {
+    return max_visible_traffic_lights_;
+  }
+  int64_t getMaxNumVisibleStopSigns() const { return max_visible_stop_signs_; }
   int64_t getObjectFeatureSize() const { return kObjectFeatureSize; }
   int64_t getRoadPointFeatureSize() const { return kRoadPointFeatureSize; }
   int64_t getTrafficLightFeatureSize() const {
@@ -246,7 +259,8 @@ class Scenario : public sf::Drawable {
   // Update the collision status of all objects
   void UpdateCollision();
 
-  std::tuple<std::vector<const ObjectBase*>, std::vector<const ObjectBase*>,
+  std::tuple<std::vector<const ObjectBase*>,
+             std::vector<const geometry::PointLike*>,
              std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
   VisibleObjects(const Object& src, float view_dist, float view_angle,
                  float head_tilt = 0.0f) const;
@@ -277,13 +291,33 @@ class Scenario : public sf::Drawable {
   std::string name_;
 
   int64_t current_time_;
-  int64_t max_env_time_ = kMaxEnvTime;
+
+  // Config
 
   // Whether to use non vehicle objects.
   const bool allow_non_vehicles_ = true;
-  // Whether to spawn vehicles that are invalid in the first time
-  // step
+  // Whether to spawn vehicles that are invalid in the first time step
   const bool spawn_invalid_objects_ = false;
+
+  // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
+  // returned in the state
+  const int64_t max_visible_objects_ = 20;
+  const int64_t max_visible_road_points_ = 300;
+  const int64_t max_visible_traffic_lights_ = 20;
+  const int64_t max_visible_stop_signs_ = 4;
+
+  // from the set of road points that comprise each polyline, we take
+  // every n-th one
+  const int64_t sample_every_n_ = 1;
+
+  const bool road_edge_first_ = false;
+
+  // The distance to goal must be greater than this
+  // for a vehicle to be included in ObjectsThatMoved
+  const float moving_threshold_ = 0.2;
+  // The vehicle speed at some point must be greater than this
+  // for a vehicle to be included in ObjectsThatMoved
+  const float speed_threshold_ = 0.05;
 
   std::vector<std::shared_ptr<Vehicle>> vehicles_;
   std::vector<std::shared_ptr<Pedestrian>> pedestrians_;
@@ -300,7 +334,8 @@ class Scenario : public sf::Drawable {
 
   geometry::BVH object_bvh_;        // track objects for collisions
   geometry::BVH line_segment_bvh_;  // track line segments for collisions
-  geometry::BVH static_bvh_;        // static objects
+  geometry::BVH static_bvh_;        // static objects other than road points
+  geometry::RangeTree2d road_point_tree_;  // track road points
 
   // expert data
   const float expert_dt_ = 0.1f;

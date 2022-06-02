@@ -1,9 +1,12 @@
 #include "simulation.h"
 
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <variant>
 
 namespace py = pybind11;
 
@@ -11,10 +14,13 @@ namespace nocturne {
 
 void DefineSimulation(py::module& m) {
   py::class_<Simulation, std::shared_ptr<Simulation>>(m, "Simulation")
-      .def(py::init<const std::string&, int, bool, bool>(),
+      .def(py::init<const std::string&,
+                    const std::unordered_map<
+                        std::string, std::variant<bool, int64_t, float>>&>(),
            "Constructor for Simulation", py::arg("scenario_path") = "",
-           py::arg("start_time") = 0, py::arg("allow_non_vehicles") = true,
-           py::arg("spawn_invalid_objects") = false)
+           py::arg("config") =
+               std::unordered_map<std::string,
+                                  std::variant<bool, int64_t, float>>())
       .def("reset", &Simulation::Reset)
       .def("step", &Simulation::Step)
       .def("render", &Simulation::Render)

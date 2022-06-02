@@ -2,12 +2,14 @@
 
 #include <optional>
 #include <utility>
+#include <vector>
 
 #include "geometry/aabb.h"
 #include "geometry/aabb_interface.h"
 #include "geometry/circle.h"
 #include "geometry/geometry_utils.h"
 #include "geometry/line_segment.h"
+#include "geometry/point_like.h"
 #include "geometry/vector_2d.h"
 
 namespace nocturne {
@@ -47,6 +49,9 @@ class CircularSector : public CircleLike {
   }
 
   bool Contains(const Vector2D& p) const override;
+
+  std::vector<utils::MaskType> BatchContains(
+      const std::vector<const PointLike*>& points) const override;
 
   std::pair<std::optional<Vector2D>, std::optional<Vector2D>> Intersection(
       const LineSegment& segment) const override;

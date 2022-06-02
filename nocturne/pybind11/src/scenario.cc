@@ -4,6 +4,8 @@
 #include <pybind11/stl.h>
 
 #include <memory>
+#include <string>
+#include <variant>
 
 #include "geometry/geometry_utils.h"
 #include "numpy_utils.h"
@@ -17,14 +19,14 @@ using geometry::utils::kHalfPi;
 
 void DefineScenario(py::module& m) {
   py::class_<Scenario, std::shared_ptr<Scenario>>(m, "Scenario")
-      .def(py::init<const std::string&, int64_t, bool, bool>(),
-           "Constructor for Scenario", py::arg("path") = "",
-           py::arg("start_time") = 0, py::arg("allow_non_vehicles") = true,
-           py::arg("spawn_invalid_objects") = false)
+      .def(py::init<const std::string&,
+                    const std::unordered_map<
+                        std::string, std::variant<bool, int64_t, float>>&>(),
+           "Constructor for Scenario", py::arg("scenario_path"),
+           py::arg("config"))
 
       // Properties
       .def_property_readonly("name", &Scenario::name)
-      .def_property_readonly("max_env_time", &Scenario::max_env_time)
 
       // Methods
       .def("vehicles", &Scenario::vehicles, py::return_value_policy::reference)
@@ -74,7 +76,6 @@ void DefineScenario(py::module& m) {
       .def("getObjectsThatMoved", &Scenario::moving_objects,
            py::return_value_policy::reference)
       .def("getObjects", &Scenario::objects, py::return_value_policy::reference)
-      .def("getMaxEnvTime", &Scenario::max_env_time)
       .def("getRoadLines", &Scenario::road_lines)
       .def(
           "getImage",
