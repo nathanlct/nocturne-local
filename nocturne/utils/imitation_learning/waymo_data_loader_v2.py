@@ -8,13 +8,13 @@ from nocturne import Simulation
 
 def _get_waymo_iterator(paths, tmin=0, tmax=90, view_dist=80, view_angle=120 * 3.14 / 180, dt=0.1,
                         expert_action_bounds=[[-2, 3], [-0.8, 0.8]], state_normalization=100.0,
-                        n_stacked_states=5):
+                        n_stacked_states=5, scenario_config={'start_time': 0, 'allow_non_vehicles':True, 'spawn_invalid_objects':True}):
     while True:
         # select a random scenario path
         scenario_path = np.random.choice(paths)
 
         # create simulation
-        sim = Simulation(str(scenario_path), start_time=tmin, allow_non_vehicles=True, spawn_invalid_objects=True)
+        sim = Simulation(str(scenario_path), scenario_config)
         scenario = sim.getScenario()
 
         # set objects to be expert-controlled
