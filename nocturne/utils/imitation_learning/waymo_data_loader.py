@@ -6,9 +6,17 @@ import numpy as np
 from nocturne import Simulation
 
 
-def _get_waymo_iterator(paths, tmin=0, tmax=90, view_dist=80, view_angle=120 * 3.14 / 180, dt=0.1,
-                        expert_action_bounds=[[-2, 3], [-0.8, 0.8]], state_normalization=100.0,
-                        n_stacked_states=5, scenario_config={'start_time': 0, 'allow_non_vehicles':True, 'spawn_invalid_objects':True}):
+def _get_waymo_iterator(paths, dataloader_config, scenario_config):
+    # load dataloader config
+    tmin = dataloader_config.get('tmin', 0)
+    tmax = dataloader_config.get('tmax', 90)
+    view_dist = dataloader_config.get('view_dist', 80)
+    view_angle = dataloader_config.get('view_angle', 120 * 3.14 / 180)
+    dt = dataloader_config.get('dt', 0.1)
+    expert_action_bounds = dataloader_config.get('expert_action_bounds', [[-2, 3], [-0.8, 0.8]])
+    state_normalization = dataloader_config.get('state_normalization', 100)
+    n_stacked_states = dataloader_config.get('n_stacked_states', 5)
+    
     while True:
         # select a random scenario path
         scenario_path = np.random.choice(paths)
@@ -78,8 +86,12 @@ def _get_waymo_iterator(paths, tmin=0, tmax=90, view_dist=80, view_angle=120 * 3
 class WaymoDataset(torch.utils.data.IterableDataset):
     """Waymo dataset loader."""
 
-    def __init__(self, data_path, file_limit=None):
+    def __init__(self, data_path, dataloader_config={}, scenario_config={}, file_limit=None):
         super(WaymoDataset).__init__()
+
+        # save configs
+        self.dataloader_config = dataloader_config
+        self.scenario_config = scenario_config
 
         # get paths of dataset files (up to file_limit paths)
         self.file_paths = list(Path(data_path).glob('tfrecord*.json'))[:file_limit]
@@ -95,19 +107,28 @@ class WaymoDataset(torch.utils.data.IterableDataset):
 
         if worker_info is None:
             # single-process data loading, return the whole set of files
-            return _get_waymo_iterator(self.file_paths)
+            return _get_waymo_iterator(self.file_paths, self.dataloader_config, self.scenario_config)
 
         # distribute a unique set of file paths to each worker process
         worker_file_paths = np.array_split(
             self.file_paths, worker_info.num_workers
         )[worker_info.id]
-        return _get_waymo_iterator(list(worker_file_paths))
+        return _get_waymo_iterator(list(worker_file_paths), self.dataloader_config, self.scenario_config)
 
 
 if __name__ == '__main__':
     dataset = WaymoDataset(
         data_path='dataset/tf_records',
         file_limit=20,
+        dataloader_config={
+            'view_dist': 80,
+            'n_stacked_states': 3,
+        },
+        scenario_config={
+            'start_time': 0,
+            'allow_non_vehicles': True,
+            'spawn_invalid_objects': True,
+        }
     )
 
     data_loader = torch.utils.data.DataLoader(
