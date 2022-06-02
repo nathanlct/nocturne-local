@@ -93,7 +93,7 @@ if __name__ == '__main__':
         losses = []
         l2_norms = []
         for batch, (states, expert_actions) in enumerate(
-                tqdm(train_dataloader, unit='batch')):
+                tqdm(data_loader, unit='batch')):
             states = states.to(args.device)
             expert_actions = expert_actions.to(args.device)
             dist = model.dist(states)
