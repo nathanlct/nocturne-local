@@ -260,8 +260,8 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx, 
 
                     # throw out actions containing nan or too large values
                     if np.isnan(expert_action).any() \
-                            or expert_action[0] < -2 or expert_action[0] > 3 \
-                            or expert_action[1] < -0.8 or expert_action[1] > 0.8:
+                            or expert_action[0] < -3 or expert_action[0] > 3 \
+                            or expert_action[1] < -0.7 or expert_action[1] > 0.7:
                         a_nan_count += 1
                         sa_nan = True
 
@@ -274,8 +274,6 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx, 
                     # normalize state
                     veh_state /= 100.0
 
-                    data[obj.id].append((veh_state, np.array([obj.position.x, obj.position.y, obj.heading])))
-
                     # throw out states containing nan
                     if np.isnan(veh_state).any():
                         s_nan_count += 1
@@ -284,6 +282,8 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx, 
                     total_sample_count += 1
                     if sa_nan:
                         continue
+
+                    data[obj.id].append((veh_state, expert_action, np.array([obj.position.x])))
 
                     # make sure state and action are 1D arrays
                     assert (len(veh_state.shape) == 1
@@ -310,11 +310,12 @@ def _precompute_dataset_impl(scenario_paths, to_path, start_index, process_idx, 
                 veh_state = np.concatenate(state)
                 if np.isnan(state).any():
                     continue
-                pos = v_data[k+n_stack_input-1][1]
-                next_pos = v_data[k+n_stack_input][1]
+                pos = v_data[k + n_stack_input-1][2]
+                next_pos = v_data[k + n_stack_input][2]
+                expert_action = v_data[k+n_stack_input - 1][1]
                 if np.isclose(pos[0], -10000) or np.isclose(next_pos[0], -10000):
                     continue
-                expert_action = next_pos - pos
+                # expert_action = next_pos #- pos
                 sa_str = ','.join(map(str, veh_state)) + ';' + ','.join(
                     map(str, expert_action))
                 f.write(sa_str + '\n')

@@ -103,7 +103,7 @@ if __name__ == '__main__':
     if os.path.exists(MODEL_PATH):
         model = torch.load(MODEL_PATH).to(args.device)
     else:
-        model_cfg = {'n_stack': 10, 'pos_scaling': 3.0, 'heading_scaling': 0.07}
+        model_cfg = {'n_stack': 10, 'accel_scaling': 3.0, 'steer_scaling': 0.7, 'std_dev': [0.1, 0.02]}
         model = ImitationAgent(n_states, n_actions, model_cfg, hidden_layers=[1024, 256, 128]).to(args.device)
     model.train()
     print(model)
@@ -137,7 +137,7 @@ if __name__ == '__main__':
             loss = -dist.log_prob(expert_actions).mean()
             optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             losses.append(loss.item())
             l2_norms.append(np.mean(np.linalg.norm(expert_actions.detach().cpu().numpy() - dist.mean.detach().cpu().numpy(), axis=1)))

@@ -101,10 +101,12 @@ if __name__ == '__main__':
                         # veh.acceleration = action[0]
                         # veh.steering = action[1]
                         action = action.cpu().numpy()
-                        pos_diff = action[0:2]
-                        heading = action[2:3]
-                        veh.position = Vector2D.from_numpy(pos_diff + veh.position.numpy())
-                        veh.heading += heading
+                        # pos_diff = action[0:2]
+                        # heading = action[2:3]
+                        # veh.position = Vector2D.from_numpy(pos_diff + veh.position.numpy())
+                        # veh.heading += heading
+                        veh.acceleration = action[0]
+                        veh.steering = action[1]
                     sim.step(0.1)
                     for veh in scenario.getObjectsThatMoved():
                         if (veh.position -

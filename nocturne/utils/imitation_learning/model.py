@@ -15,9 +15,11 @@ class ImitationAgent(nn.Module):
         self.n_actions = n_actions
         self.cfg = cfg
         self.n_stack = cfg['n_stack']
-        self.pos_scaling = cfg['pos_scaling']
-        self.heading_scaling = cfg['heading_scaling']
-        self.parameters_list = nn.ParameterList([nn.Parameter(torch.tensor([self.pos_scaling, self.pos_scaling, self.heading_scaling]), requires_grad=False)])
+        self.std_dev = cfg['std_dev']
+        self.accel_scaling = cfg['accel_scaling']
+        self.steer_scaling = cfg['steer_scaling']
+        self.parameters_list = nn.ParameterList([nn.Parameter(torch.tensor([self.accel_scaling, self.steer_scaling]), requires_grad=False),
+                                                nn.Parameter(torch.tensor(self.std_dev), requires_grad=False)])
         self.hidden_layers = hidden_layers
         self._build_model()
 
@@ -43,7 +45,7 @@ class ImitationAgent(nn.Module):
     def dist(self, x):
         """Construct a distirbution from tensor x."""
         x_out = self.nn(x)
-        std = torch.ones_like(x_out) * 0.1
+        std = torch.ones_like(x_out) * self.parameters_list[1]
         m = MultivariateNormal(x_out[:, 0:self.n_actions] * self.parameters_list[0],
                                torch.diag_embed(std))
         return m
