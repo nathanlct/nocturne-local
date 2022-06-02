@@ -114,7 +114,7 @@ if __name__ == '__main__':
     # create LR scheduler
     scheduler = LinearLR(optimizer,
                          start_factor=1.0,
-                         end_factor=0.1,
+                         end_factor=0.8,
                          total_iters=args.epochs,
                          verbose=True)
 

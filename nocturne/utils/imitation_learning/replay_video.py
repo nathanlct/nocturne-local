@@ -35,7 +35,7 @@ if __name__ == '__main__':
             file for file in Path(data_path).iterdir()
             if 'tfrecord' in file.stem
         ]
-    files = files[:100]
+    files = files[:10]
     np.random.shuffle(files)
     for traj_path in files:
         traj_path = str(traj_path)
