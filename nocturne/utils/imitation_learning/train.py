@@ -3,52 +3,34 @@ import argparse
 import numpy as np
 from pathlib import Path
 import torch
-from torch.utils.data import DataLoader
-from torch.optim import Adam
-from torch.optim.lr_scheduler import LinearLR  # , ExponentialLR
 from tqdm import tqdm
 import multiprocessing
 
-# from cfgs.config import PROCESSED_TRAIN_NO_TL  # TODO make this work
-
 from nocturne.utils.imitation_learning.model import ImitationAgent
 from nocturne.utils.imitation_learning.waymo_data_loader import WaymoDataset
-from nocturne.utils.eval.average_displacement import compute_average_displacement
-from nocturne.utils.eval.collision_rate import compute_average_collision_rate
-from nocturne.utils.eval.goal_reaching_rate import compute_average_goal_reaching_rate
 
 
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--path',
-        type=str,
-        default='dataset/tf_records',
-        help='Path to the training data (directory containing .json scenario '
-             'files).',
-    )
-    parser.add_argument(
-        '--precompute',
-        action='store_true',
-        default=False,
-        help='Whether or not to precompute the dataset. This should be run '
-             'before the first training or everytime changes in the states '
-             'or actions getters are made.'
-    )
-    parser.add_argument(
-        '--n_cpus',
-        type=int,
-        default=multiprocessing.cpu_count(),
-        help='Number of processes to use for dataset precomputing and loading.'
-    )
+
+    # data
+    parser.add_argument('--path', type=str, default='dataset/tf_records',
+        help='Path to the training data (directory containing .json scenario files).')
+    parser.add_argument('--file_limit', type=int, default=None, help='Limit on the number of files to train on')
+
+    # training
+    parser.add_argument('--n_cpus', type=int, default=multiprocessing.cpu_count() - 1,
+        help='Number of processes to use for dataset precomputing and loading.')
     parser.add_argument('--lr', type=float, default=3e-4, help='Learning rate')
+    parser.add_argument('--samples_per_epoch', type=int, default=50000, help='Train batch size')
     parser.add_argument('--batch_size', type=int, default=256, help='Minibatch size')
     parser.add_argument('--epochs', type=int, default=200, help='Number of training iterations')
     parser.add_argument('--device', type=str, default='cpu', help='Device (cpu or cuda)')
-    parser.add_argument('--file_limit', type=int, default=None, help='Limit on the number of files to use/precompute')
-    parser.add_argument('--sample_limit', type=int, default=None,
-                        help='Limit on the number of samples to use during training')
+
+    # config
+    parser.add_argument('--n_stacked_states', type=int, default=5, help='Number of states to stack.')
+
     args = parser.parse_args()
     return args
 
@@ -56,23 +38,36 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    # create dataset (and potentially precompute data)
-    dataset = WaymoDataset({
-        'data_path': args.path,
-        'precompute_dataset': args.precompute,
-        'n_cpus': args.n_cpus,
-        'file_limit': args.file_limit,
-        'sample_limit': args.sample_limit,
-        'shuffle': True,
-    })
+    # create dataset
+    dataset = WaymoDataset(
+        data_path=args.path,
+        file_limit=args.file_limit,
+        dataloader_config={
+            'tmin': 0,
+            'tmax': 90,
+            'view_dist': 80,
+            'view_angle': np.radians(120),
+            'dt': 0.1,
+            'expert_action_bounds': [[-3, 3], [-0.7, 0.7]],
+            'state_normalization': 100,
+            'n_stacked_states': args.n_stacked_states,
+        },
+        scenario_config={
+            'start_time': 0,
+            'allow_non_vehicles': True,
+            'spawn_invalid_objects': True,
+            'max_visible_road_points': 300,
+            'sample_every_n': 1,
+            'road_edge_first': False,
+        }
+    )
 
     # create dataloader
-    train_dataloader = DataLoader(
+    data_loader = torch.utils.data.DataLoader(
         dataset,
-        pin_memory=True,
-        shuffle=False,  # shuffling is done in the dataloader for faster sampling
         batch_size=args.batch_size,
         num_workers=args.n_cpus,
+        pin_memory=True,
     )
 
     # create model
@@ -83,17 +78,12 @@ if __name__ == '__main__':
     print(model)
 
     # create optimizer
-    optimizer = Adam(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     # create LR scheduler
-    scheduler = LinearLR(optimizer,
-                         start_factor=1.0,
-                         end_factor=0.1,
-                         total_iters=args.epochs,
-                         verbose=True)
-
-    # eval trajectories
-    eval_trajs = list(Path(args.path).glob('*tfrecord*.json'))[:5]
+    scheduler = torch.optim.lr_scheduler.LinearLR(
+        optimizer, start_factor=1.0, end_factor=0.1,
+        total_iters=args.epochs, verbose=True)
 
     # train loop
     metrics = []
@@ -114,7 +104,8 @@ if __name__ == '__main__':
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             losses.append(loss.item())
-            l2_norms.append(np.mean(np.linalg.norm(expert_actions.detach().numpy() - dist.mean.detach().numpy(), axis=1)))
+            l2_norms.append(
+                np.mean(np.linalg.norm(expert_actions.detach().numpy() - dist.mean.detach().numpy(), axis=1)))
         scheduler.step()
 
         print(f'avg training loss this epoch: {np.mean(losses):.3f}')
