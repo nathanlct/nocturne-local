@@ -30,7 +30,7 @@ void PartialSort(RandomIt first, RandomIt middle, RandomIt last,
   std::sort(first, middle, cmp);
 }
 
-// The function FindWithDefault is adapted from protobuf's map_utils.h
+// The function FindWithDefault is adapted from protobuf's map_util.h
 // implementation.
 //
 // That code is under the following copyright:
