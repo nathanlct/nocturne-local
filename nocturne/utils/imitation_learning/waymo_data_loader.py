@@ -24,7 +24,7 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
     steer_grid = np.linspace(expert_action_bounds[1][0], expert_action_bounds[1][1], steer_discretization)
     state_normalization = dataloader_config.get('state_normalization', 100)
     n_stacked_states = dataloader_config.get('n_stacked_states', 5)
-    
+
     while True:
         # select a random scenario path
         scenario_path = np.random.choice(paths)

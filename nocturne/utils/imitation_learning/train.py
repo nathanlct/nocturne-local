@@ -25,12 +25,12 @@ def parse_args():
 
     # data
     parser.add_argument('--path', type=str, default='dataset/tf_records',
-        help='Path to the training data (directory containing .json scenario files).')
+                        help='Path to the training data (directory containing .json scenario files).')
     parser.add_argument('--file_limit', type=int, default=None, help='Limit on the number of files to train on')
 
     # training
     parser.add_argument('--n_cpus', type=int, default=multiprocessing.cpu_count() - 1,
-        help='Number of processes to use for dataset precomputing and loading.')
+                        help='Number of processes to use for dataset precomputing and loading.')
     parser.add_argument('--lr', type=float, default=3e-4, help='Learning rate')
     parser.add_argument('--samples_per_epoch', type=int, default=50000, help='Train batch size')
     parser.add_argument('--batch_size', type=int, default=256, help='Minibatch size')
