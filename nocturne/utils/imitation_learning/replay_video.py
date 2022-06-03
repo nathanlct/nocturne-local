@@ -18,7 +18,7 @@ from nocturne.utils.imitation_learning.train import VIEW_DIST, VIEW_ANGLE
 
 OUTPUT_PATH = './vids'
 
-MODEL_PATH = 'train_logs/2022_06_02_18_47_22/model_90.pth'
+MODEL_PATH = 'train_logs/2022_06_02_21_39_12/model_20.pth'
 GOAL_TOLERANCE = 1.0
 
 if __name__ == '__main__':
@@ -45,12 +45,14 @@ if __name__ == '__main__':
         }
     files = files[:10]
     np.random.shuffle(files)
+    model = torch.load(MODEL_PATH).to('cpu')
+    model.eval()
+    accel_grid = np.linspace(-model.accel_scaling, model.accel_scaling, model.cfg['accel_discretization'])
+    steer_grid = np.linspace(-model.steer_scaling, model.steer_scaling, model.cfg['steer_discretization'])
     for traj_path in files:
         traj_path = str(traj_path)
         sim = Simulation(os.path.join(data_path, str(traj_path)), scenario_config)
         output_str = traj_path.split('.')[0].split('/')[-1]
-        model = torch.load(MODEL_PATH).to('cpu')
-        model.eval()
 
         def policy(state):
             """Get model output."""
@@ -105,16 +107,17 @@ if __name__ == '__main__':
                                 veh, view_dist=VIEW_DIST, view_angle=VIEW_ANGLE),
                                     copy=False)))
                         collections_dict[veh.getID()].append(veh_state)
-                        action = policy(np.concatenate(collections_dict[veh.getID()]))[0]
+                        accel_idx, steer_idx = policy(np.concatenate(collections_dict[veh.getID()]))
                         # veh.acceleration = action[0]
                         # veh.steering = action[1]
-                        action = action.cpu().numpy()
+                        accel_idx = accel_idx.cpu()
+                        steer_idx = steer_idx.cpu()
                         # pos_diff = action[0:2]
                         # heading = action[2:3]
                         # veh.position = Vector2D.from_numpy(pos_diff + veh.position.numpy())
                         # veh.heading += heading
-                        veh.acceleration = action[0]
-                        veh.steering = action[1]
+                        veh.acceleration = accel_grid[accel_idx]
+                        veh.steering = steer_grid[steer_idx]
                     sim.step(0.1)
                     for veh in scenario.getObjectsThatMoved():
                         if (veh.position -

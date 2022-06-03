@@ -58,6 +58,8 @@ if __name__ == '__main__':
             'view_angle': VIEW_ANGLE,
             'dt': 0.1,
             'expert_action_bounds': [[-3, 3], [-0.7, 0.7]],
+            'accel_discretization': 7,
+            'steer_discretization': 63,
             'state_normalization': 100,
             'n_stacked_states': args.n_stacked_states,
         },
@@ -82,9 +84,11 @@ if __name__ == '__main__':
     # create model
     sample_state, sample_expert_action = next(data_loader)
     n_states = sample_state.shape[-1]
-    n_actions = sample_expert_action.shape[-1]
-    model_cfg = {'n_stack': args.n_stacked_states, 'accel_scaling': 3.0, 'steer_scaling': 0.7, 'std_dev': [0.1, 0.02]}
-    model = ImitationAgent(n_states, n_actions, model_cfg, hidden_layers=[1024, 256, 128]).to(args.device)
+    # n_actions = sample_expert_action.shape[-1]
+    # TODO(eugenevinitsky) not robust copying of values
+    model_cfg = {'n_stack': args.n_stacked_states, 'accel_scaling': 3.0, 'steer_scaling': 0.7, 'std_dev': [0.1, 0.02],
+                'accel_discretization': 7, 'steer_discretization': 63}
+    model = ImitationAgent(n_states, model_cfg, hidden_layers=[1024, 256, 128]).to(args.device)
     model.train()
     print(model)
 
@@ -108,13 +112,16 @@ if __name__ == '__main__':
 
         for i in tqdm(range(args.samples_per_epoch // args.batch_size), unit='batch'):
             # get states and expert actions
-            states, expert_actions = next(data_loader)
+            states, (accel, steer) = next(data_loader)
             states = states.to(args.device)
-            expert_actions = expert_actions.to(args.device)
+            accel = accel.float().to(args.device)
+            steer = steer.float().to(args.device)
+            # import ipdb; ipdb.set_trace()
+            # expert_actions = expert_actions.to(args.device)
 
             # compute loss
-            dist = model.dist(states)
-            loss = -dist.log_prob(expert_actions).mean()
+            accel_dist, steer_dist = model.dist(states)
+            loss = -accel_dist.log_prob(accel).mean() - steer_dist.log_prob(steer).mean()
 
             # optim step
             optimizer.zero_grad()
@@ -123,10 +130,18 @@ if __name__ == '__main__':
 
             # tensorboard logging
             writer.add_scalar('train/loss', loss.item(), n_samples)
-            action_diff = np.abs(expert_actions.detach().cpu().numpy() - dist.mean.detach().cpu().numpy())
-            for action_i, action_val in enumerate(np.mean(action_diff, axis=0)):
-                writer.add_scalar(f'train/action_{action_i}_diff', action_val, n_samples)
+            writer.add_scalar('train/accel_acc', (accel_dist.logits.argmax(axis=-1) == accel).float().mean(), n_samples)
+            writer.add_scalar('train/steer_acc', (steer_dist.logits.argmax(axis=-1) == steer).float().mean(), n_samples)
+            # action_diff = np.abs(expert_actions.detach().cpu().numpy() - dist.mean.detach().cpu().numpy())
+            # for action_i, action_val in enumerate(np.mean(action_diff, axis=0)):
+            #     writer.add_scalar(f'train/action_{action_i}_diff', action_val, n_samples)
 
+        print('accel')
+        print(accel[:10])
+        print(accel_dist.logits.argmax(axis=-1)[:10])
+        print('steer')
+        print(steer[:10])
+        print(steer_dist.logits.argmax(axis=-1)[:10])
         # save model checkpoint
         if (epoch + 1) % 10 == 0 or epoch == args.epochs - 1:
             model_path = exp_dir / f'model_{epoch+1}.pth'
