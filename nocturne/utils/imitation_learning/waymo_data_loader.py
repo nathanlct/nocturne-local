@@ -16,7 +16,7 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
     expert_action_bounds = dataloader_config.get('expert_action_bounds', [[-3, 3], [-0.7, 0.7]])
     state_normalization = dataloader_config.get('state_normalization', 100)
     n_stacked_states = dataloader_config.get('n_stacked_states', 5)
-    
+
     while True:
         # select a random scenario path
         scenario_path = np.random.choice(paths)
