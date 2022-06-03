@@ -2,9 +2,14 @@
 import argparse
 import numpy as np
 from pathlib import Path
-import torch
 from tqdm import tqdm
 import multiprocessing
+from datetime import datetime
+
+import torch
+from torch.utils.tensorboard import SummaryWriter
+from torch.optim import Adam
+from torch.utils.data import DataLoader
 
 from nocturne.utils.imitation_learning.model import ImitationAgent
 from nocturne.utils.imitation_learning.waymo_data_loader import WaymoDataset
@@ -63,63 +68,67 @@ if __name__ == '__main__':
     )
 
     # create dataloader
-    data_loader = torch.utils.data.DataLoader(
+    data_loader = iter(DataLoader(
         dataset,
         batch_size=args.batch_size,
         num_workers=args.n_cpus,
         pin_memory=True,
-    )
+    ))
 
     # create model
-    n_states = len(dataset[0][0])
-    n_actions = len(dataset[0][1])
+    sample_state, sample_expert_action = next(data_loader)
+    n_states = sample_state.shape[-1]
+    n_actions = sample_expert_action.shape[-1]
     model = ImitationAgent(n_states, n_actions, hidden_layers=[1024, 256, 128]).to(args.device)
     model.train()
     print(model)
 
     # create optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = Adam(model.parameters(), lr=args.lr)
 
-    # create LR scheduler
-    scheduler = torch.optim.lr_scheduler.LinearLR(
-        optimizer, start_factor=1.0, end_factor=0.1,
-        total_iters=args.epochs, verbose=True)
+    # create exp dir
+    time_str = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+    exp_dir = Path('train_logs') / time_str
+    exp_dir.mkdir(parents=True, exist_ok=True)
+
+    # tensorboard writer
+    writer = SummaryWriter(log_dir=str(exp_dir))
 
     # train loop
-    metrics = []
+    print('Exp dir created at', exp_dir)
+    print(f'`tensorboard --logdir={exp_dir}`\n')
     for epoch in range(args.epochs):
         print(f'\nepoch {epoch+1}/{args.epochs}')
+        n_samples = epoch * args.batch_size * (args.samples_per_epoch // args.batch_size)
 
-        losses = []
-        l2_norms = []
-        for batch, (states, expert_actions) in enumerate(
-                tqdm(data_loader, unit='batch')):
+        for i in tqdm(range(args.samples_per_epoch // args.batch_size), unit='batch'):
+            # get states and expert actions
+            states, expert_actions = next(data_loader)
             states = states.to(args.device)
             expert_actions = expert_actions.to(args.device)
+
+            # compute loss
             dist = model.dist(states)
-            # print(dist.mean, dist.variance, expert_actions)
             loss = -dist.log_prob(expert_actions).mean()
+
+            # optim step
             optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
-            losses.append(loss.item())
-            l2_norms.append(
-                np.mean(np.linalg.norm(expert_actions.detach().numpy() - dist.mean.detach().numpy(), axis=1)))
-        scheduler.step()
 
-        print(f'avg training loss this epoch: {np.mean(losses):.3f}')
-        print(f'avg action l2 norm: {np.mean(l2_norms):.3f}')
+            # tensorboard logging
+            writer.add_scalar('train/loss', loss.item(), n_samples)
+            action_diff = np.abs(expert_actions.detach().numpy() - dist.mean.detach().numpy())
+            for action_i, action_val in enumerate(np.mean(action_diff, axis=0)):
+                writer.add_scalar(f'train/action_{action_i}_diff', action_val, n_samples)
 
-        # cr = compute_average_collision_rate(eval_trajs, model)
-        # ade = compute_average_displacement(eval_trajs, model)
-        # grr = compute_average_goal_reaching_rate(eval_trajs, model)
-        # print('cr', cr, 'ade', ade, 'grr', grr)
+        # save model checkpoint
+        if (epoch + 1) % 10 == 0 or epoch == args.epochs - 1:
+            model_path = exp_dir / f'model_{epoch+1}.pth'
+            torch.save(model, str(model_path))
+            print(f'\nSaved model at {model_path}')
 
-        # metrics.append((np.mean(losses), cr, ade, grr))
+    print('Done, exp dir is', exp_dir)
 
-        model_path = 'model.pth'
-        torch.save(model, model_path)
-        print(f'\nSaved model at {model_path}')
-
-    print('metrics', metrics)
+    writer.flush()
+    writer.close()

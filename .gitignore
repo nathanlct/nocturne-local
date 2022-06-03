@@ -37,3 +37,6 @@ dataset/
 
 # trained models
 *.pth
+
+# tensorboard
+*tfevents*
