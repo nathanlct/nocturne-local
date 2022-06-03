@@ -2,6 +2,7 @@
 import os
 
 from hydra import compose, initialize
+from hydra.core.global_hydra import GlobalHydra
 from pyvirtualdisplay import Display
 
 from cfgs.config import PROJECT_PATH
@@ -13,6 +14,7 @@ def test_rl_env():
     """Test step and rendering functions."""
     disp = Display()
     disp.start()
+    GlobalHydra.instance().clear()
     initialize(config_path="../cfgs/")
     cfg = compose(config_name="config")
     cfg.scenario_path = os.path.join(PROJECT_PATH, 'tests')
@@ -22,7 +24,7 @@ def test_rl_env():
     _ = env.reset()
     # quick check that rendering works
     _ = env.scenario.getConeImage(env.scenario.getVehicles()[0], 120.0,
-                                  1.99 * 3.14, 0.0, False)
+                                  1.99 * 3.14, 0.0, draw_target_position=False)
     for _ in range(90):
         vehs = env.scenario.getObjectsThatMoved()
         prev_position = {

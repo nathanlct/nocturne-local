@@ -14,11 +14,11 @@ import torch
 
 from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL
 from nocturne import Simulation, Vector2D
-from nocturne.utils.imitation_learning.waymo_data_loader import VIEW_DIST, VIEW_ANGLE
+from nocturne.utils.imitation_learning.train import VIEW_DIST, VIEW_ANGLE
 
 OUTPUT_PATH = './vids'
 
-MODEL_PATH = 'model.pth'
+MODEL_PATH = 'train_logs/2022_06_02_18_47_22/model_90.pth'
 GOAL_TOLERANCE = 1.0
 
 if __name__ == '__main__':
@@ -35,11 +35,19 @@ if __name__ == '__main__':
             file for file in Path(data_path).iterdir()
             if 'tfrecord' in file.stem
         ]
+    scenario_config={
+            'start_time': 0,
+            'allow_non_vehicles': True,
+            'spawn_invalid_objects': True,
+            'max_visible_road_points': 500,
+            'sample_every_n': 1,
+            'road_edge_first': False,
+        }
     files = files[:10]
     np.random.shuffle(files)
     for traj_path in files:
         traj_path = str(traj_path)
-        sim = Simulation(scenario_path=os.path.join(data_path, str(traj_path)))
+        sim = Simulation(os.path.join(data_path, str(traj_path)), scenario_config)
         output_str = traj_path.split('.')[0].split('/')[-1]
         model = torch.load(MODEL_PATH).to('cpu')
         model.eval()
