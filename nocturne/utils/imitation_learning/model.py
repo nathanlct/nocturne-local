@@ -22,8 +22,9 @@ class ImitationAgent(nn.Module):
             self.actions_discretizations = cfg['actions_discretizations']
             self.actions_bounds = cfg['actions_bounds']
             self.actions_grids = [
-                np.linspace(a_min, a_max, a_count)
-                for (a_min, a_max), a_count in zip(self.actions_bounds, self.actions_discretizations)
+                torch.linspace(a_min, a_max, a_count).to(cfg['device'])
+                for (a_min, a_max), a_count in zip(
+                    self.actions_bounds, self.actions_discretizations)
             ]
         else:
             # neural network outputs between -1 and 1 (tanh filter)
@@ -46,22 +47,22 @@ class ImitationAgent(nn.Module):
                 nn.Tanh(),
                 *[
                     nn.Sequential(
-                        nn.Linear(self.hidden_layers[i], self.hidden_layers[i + 1]),
+                        nn.Linear(self.hidden_layers[i],
+                                  self.hidden_layers[i + 1]),
                         nn.Tanh(),
-                    )
-                    for i in range(len(self.hidden_layers) - 1)
+                    ) for i in range(len(self.hidden_layers) - 1)
                 ],
             )
             pre_head_size = self.hidden_layers[-1]
 
         if self.discrete:
-            self.heads = [nn.Linear(pre_head_size, discretization)
-                          for discretization in self.actions_discretizations]
+            self.heads = nn.ModuleList([
+                nn.Linear(pre_head_size, discretization)
+                for discretization in self.actions_discretizations
+            ])
         else:
             self.head = nn.Sequential(
-                nn.Linear(pre_head_size, len(self.mean_scalings)),
-                nn.Tanh()
-            )
+                nn.Linear(pre_head_size, len(self.mean_scalings)), nn.Tanh())
 
     def dist(self, state):
         """Construct a distribution from tensor input."""
@@ -69,20 +70,25 @@ class ImitationAgent(nn.Module):
         if self.discrete:
             return [Categorical(logits=head(x_out)) for head in self.heads]
         else:
-            return MultivariateNormal(self.head(x_out) * self.mean_scalings, self.covariance_matrix)
+            return MultivariateNormal(
+                self.head(x_out) * self.mean_scalings, self.covariance_matrix)
 
     def forward(self, state, deterministic=False, return_indexes=False):
         """Generate an output from tensor input."""
-        dist = self.dist(state)
+        dists = self.dist(state)
         if self.discrete:
-            actions_idx = np.array([
-                d.logits.argmax(axis=-1).numpy() if deterministic
-                else d.sample().numpy() for d in dist])
-            actions = np.array([action_grid[action_idx]
-                                for action_grid, action_idx in zip(self.actions_grids, actions_idx)]).T
-            return (actions, actions_idx.T) if return_indexes else actions
+            actions_idx = [
+                d.logits.argmax(axis=-1) if deterministic else d.sample()
+                for d in dists
+            ]
+            actions = [
+                action_grid[action_idx] for action_grid, action_idx in zip(
+                    self.actions_grids, actions_idx)
+            ]
+            return (actions, actions_idx) if return_indexes else actions
         else:
-            return dist.mean if deterministic else dist.sample()
+            return [dist.argmax(axis=-1) for dist in dists
+                    ] if deterministic else [dist.sample() for dist in dists]
 
     def log_prob(self, state, ground_truth_action, return_indexes=False):
         """Compute the log prob of the expert action for a given input tensor."""
@@ -91,7 +97,8 @@ class ImitationAgent(nn.Module):
             # find indexes in actions grids whose values are the closest to the ground truth actions
             actions_idx = self.action_to_grid_idx(ground_truth_action)
             # sum log probs of actions indexes wrt. Categorial variables for each action dimension
-            log_prob = sum([d.log_prob(actions_idx[:, i]) for i, d in enumerate(dist)])
+            log_prob = sum(
+                [d.log_prob(actions_idx[:, i]) for i, d in enumerate(dist)])
             return (log_prob, actions_idx) if return_indexes else log_prob
         else:
             return dist.log_prob(ground_truth_action)
@@ -101,21 +108,22 @@ class ImitationAgent(nn.Module):
         # action is of shape (batch_size, n_actions)
         # we want to transform it into an array of same shape, but with indexes instead of actions
         # credits https://stackoverflow.com/a/46184652/16207351
-        output = torch.zeros(action.shape)
+        output = torch.zeros_like(action)
         for i, action_grid in enumerate(self.actions_grids):
-            actions = action.numpy()[:, i]
+            actions = action[:, i]
 
             # get indexes where actions would be inserted in action_grid to keep it sorted
-            idxs = np.searchsorted(action_grid, actions, side='left')
+            idxs = torch.searchsorted(action_grid, actions)
 
             # if it would be inserted at the end, we're looking at the last action
             idxs[idxs == len(action_grid)] -= 1
 
             # find indexes where previous index is closer (simple grid has constant sampling intervals)
-            idxs[action_grid[idxs] - actions > np.diff(action_grid).mean() * 0.5] -= 1
+            idxs[action_grid[idxs] - actions > torch.diff(action_grid).mean() *
+                 0.5] -= 1
 
             # write indexes in output
-            output[:, i] = torch.tensor(idxs)
+            output[:, i] = idxs
         return output
 
 

@@ -21,23 +21,56 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # data
-    parser.add_argument('--path', type=str, default='dataset/tf_records',
-                        help='Path to the training data (directory containing .json scenario files).')
-    parser.add_argument('--file_limit', type=int, default=None, help='Limit on the number of files to train on')
+    parser.add_argument(
+        '--path',
+        type=str,
+        default='dataset/tf_records',
+        help=
+        'Path to the training data (directory containing .json scenario files).'
+    )
+    parser.add_argument('--file_limit',
+                        type=int,
+                        default=None,
+                        help='Limit on the number of files to train on')
 
     # training
-    parser.add_argument('--n_cpus', type=int, default=multiprocessing.cpu_count() - 1,
-                        help='Number of processes to use for dataset precomputing and loading.')
+    parser.add_argument(
+        '--n_cpus',
+        type=int,
+        default=multiprocessing.cpu_count() - 1,
+        help='Number of processes to use for dataset precomputing and loading.'
+    )
     parser.add_argument('--lr', type=float, default=3e-4, help='Learning rate')
-    parser.add_argument('--samples_per_epoch', type=int, default=50000, help='Train batch size')
-    parser.add_argument('--batch_size', type=int, default=256, help='Minibatch size')
-    parser.add_argument('--epochs', type=int, default=200, help='Number of training iterations')
-    parser.add_argument('--device', type=str, default='cpu', help='Device (cpu or cuda)')
+    parser.add_argument('--samples_per_epoch',
+                        type=int,
+                        default=50000,
+                        help='Train batch size')
+    parser.add_argument('--batch_size',
+                        type=int,
+                        default=256,
+                        help='Minibatch size')
+    parser.add_argument('--epochs',
+                        type=int,
+                        default=200,
+                        help='Number of training iterations')
+    parser.add_argument('--device',
+                        type=str,
+                        default='cpu',
+                        help='Device (cpu or cuda)')
 
     # config
-    parser.add_argument('--n_stacked_states', type=int, default=10, help='Number of states to stack.')
-    parser.add_argument('--view_dist', type=float, default=80, help='Visible state view distance.')
-    parser.add_argument('--view_angle', type=float, default=np.radians(120), help='Visible state cone angle.')
+    parser.add_argument('--n_stacked_states',
+                        type=int,
+                        default=10,
+                        help='Number of states to stack.')
+    parser.add_argument('--view_dist',
+                        type=float,
+                        default=80,
+                        help='Visible state view distance.')
+    parser.add_argument('--view_angle',
+                        type=float,
+                        default=np.radians(120),
+                        help='Visible state cone angle.')
 
     args = parser.parse_args()
     return args
@@ -55,8 +88,8 @@ if __name__ == '__main__':
         'dt': 0.1,
         'expert_action_bounds': [[-3, 3], [-0.7, 0.7]],
         'accel_discretization': 7,
-        'steer_discretization': 63,
-        'state_normalization': 100,
+        'steer_discretization': 21,
+        'state_normalization': 10,
         'n_stacked_states': args.n_stacked_states,
     }
     scenario_cfg = {
@@ -73,12 +106,13 @@ if __name__ == '__main__':
         dataloader_config=dataloader_cfg,
         scenario_config=scenario_cfg,
     )
-    data_loader = iter(DataLoader(
-        dataset,
-        batch_size=args.batch_size,
-        num_workers=args.n_cpus,
-        pin_memory=True,
-    ))
+    data_loader = iter(
+        DataLoader(
+            dataset,
+            batch_size=args.batch_size,
+            num_workers=args.n_cpus,
+            pin_memory=True,
+        ))
 
     # create model
     sample_state, _ = next(data_loader)
@@ -86,12 +120,13 @@ if __name__ == '__main__':
 
     model_cfg = {
         'n_inputs': n_states,
-        'hidden_layers': [1024, 256, 128],
+        'hidden_layers': [1024, 1024, 256, 128],
         'discrete': True,
         # 'mean_scalings': [3.0, 0.7],
         # 'std_devs': [0.1, 0.02],
         'actions_discretizations': [7, 63],
         'actions_bounds': [[-3, 3], [-0.7, 0.7]],
+        'device': args.device
     }
 
     model = ImitationAgent(model_cfg).to(args.device)
@@ -125,16 +160,20 @@ if __name__ == '__main__':
     print(f'`tensorboard --logdir={exp_dir}`\n')
     for epoch in range(args.epochs):
         print(f'\nepoch {epoch+1}/{args.epochs}')
-        n_samples = epoch * args.batch_size * (args.samples_per_epoch // args.batch_size)
+        n_samples = epoch * args.batch_size * (args.samples_per_epoch //
+                                               args.batch_size)
 
-        for i in tqdm(range(args.samples_per_epoch // args.batch_size), unit='batch'):
+        for i in tqdm(range(args.samples_per_epoch // args.batch_size),
+                      unit='batch'):
             # get states and expert actions
             states, expert_actions = next(data_loader)
             states = states.to(args.device)
             expert_actions = expert_actions.to(args.device)
 
             # compute loss
-            log_prob, expert_idxs = model.log_prob(states, expert_actions, return_indexes=True)
+            log_prob, expert_idxs = model.log_prob(states,
+                                                   expert_actions,
+                                                   return_indexes=True)
             loss = -log_prob.mean()
 
             # optim step
@@ -149,13 +188,22 @@ if __name__ == '__main__':
             writer.add_scalar('train/steer_logprob', log_prob[1], n_samples)
 
             with torch.no_grad():
-                model_actions, model_idxs = model(states, deterministic=True, return_indexes=True)
+                model_actions, model_idxs = model(states,
+                                                  deterministic=True,
+                                                  return_indexes=True)
 
-            diff_actions = np.mean(np.abs(model_actions - expert_actions.numpy()), axis=0)
-            writer.add_scalar('train/accel_diff', diff_actions[0], n_samples)
-            writer.add_scalar('train/steer_diff', diff_actions[1], n_samples)
+            if not model_cfg['discrete']:
+                diff_actions = np.mean(np.abs(model_actions - expert_actions),
+                                       axis=0)
+                writer.add_scalar('train/accel_diff', diff_actions[0],
+                                  n_samples)
+                writer.add_scalar('train/steer_diff', diff_actions[1],
+                                  n_samples)
             if model_cfg['discrete']:
-                accuracy = (model_idxs == expert_idxs.numpy()).mean(axis=0)
+                accuracy = [
+                    (model_idx == expert_idx).float().mean(axis=0)
+                    for model_idx, expert_idx in zip(model_idxs, expert_idxs.T)
+                ]
                 writer.add_scalar('train/accel_acc', accuracy[0], n_samples)
                 writer.add_scalar('train/steer_acc', accuracy[1], n_samples)
 
