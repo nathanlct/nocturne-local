@@ -52,7 +52,7 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
                 # stack state
                 if n_stacked_states > 1:
                     if stacked_state is None:
-                        stacked_state = np.zeros(len(state) * n_stacked_states)
+                        stacked_state = np.zeros(len(state) * n_stacked_states, dtype=state.dtype)
                     stacked_state = np.roll(stacked_state, len(state))
                     stacked_state[:len(state)] = state
 
