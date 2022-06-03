@@ -13,9 +13,9 @@ class ImitationAgent(nn.Module):
         """Initialize."""
         super(ImitationAgent, self).__init__()
 
-        self.n_states = cfg['n_inputs'] 
+        self.n_states = cfg['n_inputs']
         self.hidden_layers = cfg.get('hidden_layers', [256, 256])
-        
+
         self.discrete = cfg['discrete']
 
         if self.discrete:
@@ -27,8 +27,8 @@ class ImitationAgent(nn.Module):
             ]
         else:
             # neural network outputs between -1 and 1 (tanh filter)
-            # then output is sampled from a Gaussian distribution 
-            # N(nn output * mean_scalings, std_devs) 
+            # then output is sampled from a Gaussian distribution
+            # N(nn output * mean_scalings, std_devs)
             self.mean_scalings = torch.tensor(cfg['mean_scalings'])
             self.std_devs = torch.tensor(cfg['std_devs'])
             self.covariance_matrix = torch.diag_embed(self.std_devs)
@@ -75,8 +75,10 @@ class ImitationAgent(nn.Module):
         """Generate an output from tensor input."""
         dist = self.dist(state)
         if self.discrete:
-            actions_idx = np.array([d.logits.argmax(axis=-1).numpy() if deterministic else d.sample().numpy() for d in dist])
-            actions = np.array([action_grid[action_idx] 
+            actions_idx = np.array([
+                d.logits.argmax(axis=-1).numpy() if deterministic
+                else d.sample().numpy() for d in dist])
+            actions = np.array([action_grid[action_idx]
                                 for action_grid, action_idx in zip(self.actions_grids, actions_idx)]).T
             return (actions, actions_idx.T) if return_indexes else actions
         else:
@@ -95,6 +97,7 @@ class ImitationAgent(nn.Module):
             return dist.log_prob(ground_truth_action)
 
     def action_to_grid_idx(self, action):
+        """Convert a batch of actions to a batch of action indexes (for discrete actions only)."""
         # action is of shape (batch_size, n_actions)
         # we want to transform it into an array of same shape, but with indexes instead of actions
         # credits https://stackoverflow.com/a/46184652/16207351

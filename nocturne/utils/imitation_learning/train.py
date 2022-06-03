@@ -144,7 +144,7 @@ if __name__ == '__main__':
 
             # tensorboard logging
             writer.add_scalar('train/loss', loss.item(), n_samples)
-        
+
             with torch.no_grad():
                 model_actions, model_idxs = model(states, deterministic=True, return_indexes=True)
 

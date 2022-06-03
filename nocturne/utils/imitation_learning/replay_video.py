@@ -1,13 +1,11 @@
 """Replay a video of a trained controller."""
 from collections import deque, defaultdict
 import json
-import os
 from pathlib import Path
 import sys
 
 import imageio
 import numpy as np
-from pathlib import Path
 from pyvirtualdisplay import Display
 import subprocess
 import torch
@@ -22,8 +20,8 @@ CONFIG_PATH = MODEL_PATH.parent / 'configs.json'
 GOAL_TOLERANCE = 1.0
 
 if __name__ == '__main__':
-    # disp = Display()
-    # disp.start()
+    disp = Display()
+    disp.start()
     output_dir = Path(OUTPUT_PATH)
     output_dir.mkdir(exist_ok=True)
 
@@ -58,12 +56,13 @@ if __name__ == '__main__':
                 sim.reset()
                 scenario = sim.getScenario()
 
-                objects_of_interest = [obj for obj in scenario.getVehicles()
-                        if obj in scenario.getObjectsThatMoved()]
-                
+                objects_of_interest = [
+                    obj for obj in scenario.getVehicles()
+                    if obj in scenario.getObjectsThatMoved()]
+
                 for obj in objects_of_interest:
-                    obj.expert_control=True
-                
+                    obj.expert_control = True
+
                 view_dist = configs['dataloader_cfg']['view_dist']
                 view_angle = configs['dataloader_cfg']['view_angle']
                 state_normalization = configs['dataloader_cfg']['state_normalization']
@@ -71,7 +70,8 @@ if __name__ == '__main__':
 
                 n_stacked_states = configs['dataloader_cfg']['n_stacked_states']
                 state_size = configs['model_cfg']['n_inputs'] // n_stacked_states
-                collections_dict = defaultdict(lambda: deque([np.zeros(state_size) for i in range(n_stacked_states)], n_stacked_states))
+                collections_dict = defaultdict(lambda: deque([
+                    np.zeros(state_size) for i in range(n_stacked_states)], n_stacked_states))
                 for i in range(n_stacked_states):
                     for veh in objects_of_interest:
                         collections_dict[veh.getID()].append(np.concatenate(
@@ -80,7 +80,7 @@ if __name__ == '__main__':
                                 veh, view_dist=view_dist, view_angle=view_angle),
                                     copy=False))) / state_normalization)
                     sim.step(dt)
-                
+
                 for obj in scenario.getObjectsThatMoved():
                     obj.expert_control = True
                 for veh in objects_of_interest:
@@ -124,7 +124,8 @@ if __name__ == '__main__':
         # stack the movies side by side
         output_name = traj_path.split('.')[0].split('/')[-1]
         output_path = f'{output_name}_output.mp4'
-        ffmpeg_command = f'ffmpeg -y -i {output_str}_true_rollout.mp4 -i {output_str}_policy_rollout.mp4 -filter_complex hstack {output_path}'
+        ffmpeg_command = f'ffmpeg -y -i {output_str}_true_rollout.mp4 ' \
+            f'-i {output_str}_policy_rollout.mp4 -filter_complex hstack {output_path}'
         print(ffmpeg_command)
         subprocess.call(ffmpeg_command.split(' '))
         print(f'> {output_path}')
