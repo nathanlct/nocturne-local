@@ -5,12 +5,12 @@ import numpy as np
 
 from nocturne import Simulation
 
-def find_nearest(array, value):
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return idx
 
 def _get_waymo_iterator(paths, dataloader_config, scenario_config):
+    # if worker has no paths, return an empty iterator
+    if len(paths) == 0:
+        return
+
     # load dataloader config
     tmin = dataloader_config.get('tmin', 0)
     tmax = dataloader_config.get('tmax', 90)
