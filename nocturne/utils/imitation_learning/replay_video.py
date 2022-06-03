@@ -12,52 +12,42 @@ from pyvirtualdisplay import Display
 import subprocess
 import torch
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL
-from nocturne import Simulation, Vector2D
-from nocturne.utils.imitation_learning.train import VIEW_DIST, VIEW_ANGLE
+from cfgs.config import PROCESSED_TRAIN_NO_TL
+from nocturne import Simulation
 
 OUTPUT_PATH = './vids'
 
-MODEL_PATH = 'train_logs/2022_06_02_21_39_12/model_20.pth'
+MODEL_PATH = Path('train_logs/2022_06_03_15_30_47/model_20.pth')
+CONFIG_PATH = MODEL_PATH.parent / 'configs.json'
 GOAL_TOLERANCE = 1.0
 
 if __name__ == '__main__':
-    disp = Display()
-    disp.start()
+    # disp = Display()
+    # disp.start()
     output_dir = Path(OUTPUT_PATH)
     output_dir.mkdir(exist_ok=True)
 
-    # with open(os.path.join(PROCESSED_VALID_NO_TL, 'valid_files.json')) as file:
-    #     valid_veh_dict = json.load(file)
-    #     files = list(valid_veh_dict.keys())
+    with open(CONFIG_PATH, 'r') as f:
+        configs = json.load(f)
+
     data_path = PROCESSED_TRAIN_NO_TL
     files = [
-            file for file in Path(data_path).iterdir()
-            if 'tfrecord' in file.stem
-        ]
-    scenario_config={
-            'start_time': 0,
-            'allow_non_vehicles': True,
-            'spawn_invalid_objects': True,
-            'max_visible_road_points': 500,
-            'sample_every_n': 1,
-            'road_edge_first': False,
-        }
+        file for file in Path(data_path).iterdir()
+        if 'tfrecord' in file.stem
+    ]
+    scenario_config = configs['scenario_cfg']
     files = files[:10]
     np.random.shuffle(files)
     model = torch.load(MODEL_PATH).to('cpu')
     model.eval()
-    accel_grid = np.linspace(-model.accel_scaling, model.accel_scaling, model.cfg['accel_discretization'])
-    steer_grid = np.linspace(-model.steer_scaling, model.steer_scaling, model.cfg['steer_discretization'])
     for traj_path in files:
-        traj_path = str(traj_path)
-        sim = Simulation(os.path.join(data_path, str(traj_path)), scenario_config)
-        output_str = traj_path.split('.')[0].split('/')[-1]
+        sim = Simulation(str(traj_path), scenario_config)
+        output_str = traj_path.stem.split('.')[0].split('/')[-1]
 
         def policy(state):
             """Get model output."""
             state = torch.as_tensor(np.array([state]), dtype=torch.float32)
-            return model(state, deterministic=True)
+            return model.forward(state, deterministic=True, return_indexes=False)
 
         with torch.no_grad():
             for expert_control_vehicles, mp4_name in [
@@ -74,51 +64,56 @@ if __name__ == '__main__':
                 for obj in objects_of_interest:
                     obj.expert_control=True
                 
-                state_size = model.n_states // model.n_stack
-                collections_dict = defaultdict(lambda: deque([np.zeros(state_size) for i in range(model.n_stack)], model.n_stack))
-                for i in range(model.n_stack):
+                view_dist = configs['dataloader_cfg']['view_dist']
+                view_angle = configs['dataloader_cfg']['view_angle']
+                state_normalization = configs['dataloader_cfg']['state_normalization']
+                dt = configs['dataloader_cfg']['dt']
+
+                n_stacked_states = configs['dataloader_cfg']['n_stacked_states']
+                state_size = configs['model_cfg']['n_inputs'] // n_stacked_states
+                collections_dict = defaultdict(lambda: deque([np.zeros(state_size) for i in range(n_stacked_states)], n_stacked_states))
+                for i in range(n_stacked_states):
                     for veh in objects_of_interest:
-                        # TODO(eugenevinitsky) remove the 100.0
                         collections_dict[veh.getID()].append(np.concatenate(
                             (np.array(scenario.ego_state(veh), copy=False),
                              np.array(scenario.flattened_visible_state(
-                                veh, view_dist=VIEW_DIST, view_angle=VIEW_ANGLE),
-                                    copy=False))) / 100.0)
-                    sim.step(0.1)
+                                veh, view_dist=view_dist, view_angle=view_angle),
+                                    copy=False))) / state_normalization)
+                    sim.step(dt)
                 
                 for obj in scenario.getObjectsThatMoved():
                     obj.expert_control = True
                 for veh in objects_of_interest:
                     veh.expert_control = expert_control_vehicles
 
-                for i in range(90 - model.n_stack):
-                    print(f'...{i+1}/{90 - model.n_stack} ({traj_path} ; {mp4_name})')
+                for i in range(90 - n_stacked_states):
+                    print(f'...{i+1}/{90 - n_stacked_states} ({traj_path} ; {mp4_name})')
                     img = scenario.getImage(
-                            img_width=1600,
-                            img_height=1600,
-                            draw_target_positions=True,
-                            padding=50.0,
-                            )
+                        img_width=1600,
+                        img_height=1600,
+                        draw_target_positions=True,
+                        padding=50.0,
+                    )
                     frames.append(img)
                     for veh in objects_of_interest:
                         veh_state = np.concatenate(
                             (np.array(scenario.ego_state(veh), copy=False),
                              np.array(scenario.flattened_visible_state(
-                                veh, view_dist=VIEW_DIST, view_angle=VIEW_ANGLE),
+                                veh, view_dist=view_dist, view_angle=view_angle),
                                     copy=False)))
                         collections_dict[veh.getID()].append(veh_state)
-                        accel_idx, steer_idx = policy(np.concatenate(collections_dict[veh.getID()]))
+                        action = policy(np.concatenate(collections_dict[veh.getID()]))
                         # veh.acceleration = action[0]
                         # veh.steering = action[1]
-                        accel_idx = accel_idx.cpu()
-                        steer_idx = steer_idx.cpu()
+                        # accel_idx = accel_idx.cpu()
+                        # steer_idx = steer_idx.cpu()
                         # pos_diff = action[0:2]
                         # heading = action[2:3]
                         # veh.position = Vector2D.from_numpy(pos_diff + veh.position.numpy())
                         # veh.heading += heading
-                        veh.acceleration = accel_grid[accel_idx]
-                        veh.steering = steer_grid[steer_idx]
-                    sim.step(0.1)
+                        veh.acceleration = action[0][0]
+                        veh.steering = action[0][1]
+                    sim.step(dt)
                     for veh in scenario.getObjectsThatMoved():
                         if (veh.position -
                                 veh.target_position).norm() < GOAL_TOLERANCE:
