@@ -4,7 +4,7 @@ import numpy as np
 from pathlib import Path
 from tqdm import tqdm
 import multiprocessing
-import os
+import json
 from datetime import datetime
 
 import torch
@@ -15,9 +15,6 @@ from torch.utils.data import DataLoader
 from nocturne.utils.imitation_learning.model import ImitationAgent
 from nocturne.utils.imitation_learning.waymo_data_loader import WaymoDataset
 
-MODEL_PATH = 'model.pth'
-VIEW_DIST = 80
-VIEW_ANGLE = np.radians(120)
 
 def parse_args():
     """Parse command-line arguments."""
@@ -39,6 +36,8 @@ def parse_args():
 
     # config
     parser.add_argument('--n_stacked_states', type=int, default=10, help='Number of states to stack.')
+    parser.add_argument('--view_dist', type=float, default=80, help='Visible state view distance.')
+    parser.add_argument('--view_angle', type=float, default=np.radians(120), help='Visible state cone angle.')
 
     args = parser.parse_args()
     return args
@@ -47,33 +46,33 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    # create dataset
+    # create dataset and dataloader
+    dataloader_cfg = {
+        'tmin': 0,
+        'tmax': 90,
+        'view_dist': args.view_dist,
+        'view_angle': args.view_angle,
+        'dt': 0.1,
+        'expert_action_bounds': [[-3, 3], [-0.7, 0.7]],
+        'accel_discretization': 7,
+        'steer_discretization': 63,
+        'state_normalization': 100,
+        'n_stacked_states': args.n_stacked_states,
+    }
+    scenario_cfg = {
+        'start_time': 0,
+        'allow_non_vehicles': True,
+        'spawn_invalid_objects': False,
+        'max_visible_road_points': 500,
+        'sample_every_n': 1,
+        'road_edge_first': False,
+    }
     dataset = WaymoDataset(
         data_path=args.path,
         file_limit=args.file_limit,
-        dataloader_config={
-            'tmin': 0,
-            'tmax': 90,
-            'view_dist': VIEW_DIST,
-            'view_angle': VIEW_ANGLE,
-            'dt': 0.1,
-            'expert_action_bounds': [[-3, 3], [-0.7, 0.7]],
-            'accel_discretization': 7,
-            'steer_discretization': 63,
-            'state_normalization': 100,
-            'n_stacked_states': args.n_stacked_states,
-        },
-        scenario_config={
-            'start_time': 0,
-            'allow_non_vehicles': True,
-            'spawn_invalid_objects': True,
-            'max_visible_road_points': 500,
-            'sample_every_n': 1,
-            'road_edge_first': False,
-        }
+        dataloader_config=dataloader_cfg,
+        scenario_config=scenario_cfg,
     )
-
-    # create dataloader
     data_loader = iter(DataLoader(
         dataset,
         batch_size=args.batch_size,
@@ -82,13 +81,20 @@ if __name__ == '__main__':
     ))
 
     # create model
-    sample_state, sample_expert_action = next(data_loader)
+    sample_state, _ = next(data_loader)
     n_states = sample_state.shape[-1]
-    # n_actions = sample_expert_action.shape[-1]
-    # TODO(eugenevinitsky) not robust copying of values
-    model_cfg = {'n_stack': args.n_stacked_states, 'accel_scaling': 3.0, 'steer_scaling': 0.7, 'std_dev': [0.1, 0.02],
-                'accel_discretization': 7, 'steer_discretization': 63}
-    model = ImitationAgent(n_states, model_cfg, hidden_layers=[1024, 256, 128]).to(args.device)
+
+    model_cfg = {
+        'n_inputs': n_states,
+        'hidden_layers': [1024, 256, 128],
+        'discrete': True,
+        # 'mean_scalings': [3.0, 0.7],
+        # 'std_devs': [0.1, 0.02],
+        'actions_discretizations': [7, 63],
+        'actions_bounds': [[-3, 3], [-0.7, 0.7]],
+    }
+
+    model = ImitationAgent(model_cfg).to(args.device)
     model.train()
     print(model)
 
@@ -99,6 +105,17 @@ if __name__ == '__main__':
     time_str = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     exp_dir = Path('train_logs') / time_str
     exp_dir.mkdir(parents=True, exist_ok=True)
+
+    # save configs
+    configs_path = exp_dir / 'configs.json'
+    configs = {
+        'scenario_cfg': scenario_cfg,
+        'dataloader_cfg': dataloader_cfg,
+        'model_cfg': model_cfg,
+    }
+    with open(configs_path, 'w') as fp:
+        json.dump(configs, fp, sort_keys=True, indent=4)
+    print('Wrote configs at', configs_path)
 
     # tensorboard writer
     writer = SummaryWriter(log_dir=str(exp_dir))
@@ -112,16 +129,13 @@ if __name__ == '__main__':
 
         for i in tqdm(range(args.samples_per_epoch // args.batch_size), unit='batch'):
             # get states and expert actions
-            states, (accel, steer) = next(data_loader)
+            states, expert_actions = next(data_loader)
             states = states.to(args.device)
-            accel = accel.float().to(args.device)
-            steer = steer.float().to(args.device)
-            # import ipdb; ipdb.set_trace()
-            # expert_actions = expert_actions.to(args.device)
+            expert_actions = expert_actions.to(args.device)
 
             # compute loss
-            accel_dist, steer_dist = model.dist(states)
-            loss = -accel_dist.log_prob(accel).mean() - steer_dist.log_prob(steer).mean()
+            log_prob, expert_idxs = model.log_prob(states, expert_actions, return_indexes=True)
+            loss = -log_prob.mean()
 
             # optim step
             optimizer.zero_grad()
@@ -130,18 +144,18 @@ if __name__ == '__main__':
 
             # tensorboard logging
             writer.add_scalar('train/loss', loss.item(), n_samples)
-            writer.add_scalar('train/accel_acc', (accel_dist.logits.argmax(axis=-1) == accel).float().mean(), n_samples)
-            writer.add_scalar('train/steer_acc', (steer_dist.logits.argmax(axis=-1) == steer).float().mean(), n_samples)
-            # action_diff = np.abs(expert_actions.detach().cpu().numpy() - dist.mean.detach().cpu().numpy())
-            # for action_i, action_val in enumerate(np.mean(action_diff, axis=0)):
-            #     writer.add_scalar(f'train/action_{action_i}_diff', action_val, n_samples)
+        
+            with torch.no_grad():
+                model_actions, model_idxs = model(states, deterministic=True, return_indexes=True)
 
-        print('accel')
-        print(accel[:10])
-        print(accel_dist.logits.argmax(axis=-1)[:10])
-        print('steer')
-        print(steer[:10])
-        print(steer_dist.logits.argmax(axis=-1)[:10])
+            diff_actions = np.mean(np.abs(model_actions - expert_actions.numpy()), axis=0)
+            writer.add_scalar('train/accel_diff', diff_actions[0], n_samples)
+            writer.add_scalar('train/steer_diff', diff_actions[1], n_samples)
+            if model_cfg['discrete']:
+                accuracy = (model_idxs == expert_idxs.numpy()).mean(axis=0)
+                writer.add_scalar('train/accel_acc', accuracy[0], n_samples)
+                writer.add_scalar('train/steer_acc', accuracy[1], n_samples)
+
         # save model checkpoint
         if (epoch + 1) % 10 == 0 or epoch == args.epochs - 1:
             model_path = exp_dir / f'model_{epoch+1}.pth'

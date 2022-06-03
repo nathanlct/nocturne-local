@@ -18,10 +18,6 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
     view_angle = dataloader_config.get('view_angle', np.radians(120))
     dt = dataloader_config.get('dt', 0.1)
     expert_action_bounds = dataloader_config.get('expert_action_bounds', [[-3, 3], [-0.7, 0.7]])
-    accel_discretization = dataloader_config.get('accel_discretization')
-    accel_grid = np.linspace(expert_action_bounds[0][0], expert_action_bounds[0][1], accel_discretization)
-    steer_discretization = dataloader_config.get('steer_discretization')
-    steer_grid = np.linspace(expert_action_bounds[1][0], expert_action_bounds[1][1], steer_discretization)
     state_normalization = dataloader_config.get('state_normalization', 100)
     n_stacked_states = dataloader_config.get('n_stacked_states', 5)
 
@@ -78,22 +74,13 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
                         or expert_action[1] < expert_action_bounds[1][0] \
                         or expert_action[1] > expert_action_bounds[1][1]:
                     continue
-                # now find it in the grid
-                accel = expert_action[0]
-                steer = expert_action[1]
-                accel_index = find_nearest(accel_grid, accel)
-                steer_index = find_nearest(steer_grid, steer)
-                # accel_one_hot = np.zeros(accel_discretization)
-                # accel_one_hot[accel_index] = 1
-                # steer_one_hot = np.zeros(steer_discretization)
-                # steer_one_hot[steer_index] = 1
 
                 # yield state and expert action
                 if stacked_state is not None:
                     if initial_warmup <= 0:  # warmup to wait for stacked state to be filled up
-                        yield (stacked_state, [accel_index, steer_index])
+                        yield (stacked_state, expert_action)
                 else:
-                    yield (state, [accel_index, steer_index])
+                    yield (state, expert_action)
 
             # step the simulation
             sim.step(dt)
