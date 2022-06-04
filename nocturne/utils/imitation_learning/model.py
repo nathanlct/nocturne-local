@@ -22,7 +22,8 @@ class ImitationAgent(nn.Module):
             self.actions_discretizations = cfg['actions_discretizations']
             self.actions_bounds = cfg['actions_bounds']
             self.actions_grids = [
-                torch.linspace(a_min, a_max, a_count).to(cfg['device'])
+                torch.linspace(a_min, a_max, a_count,
+                               requires_grad=False).to(cfg['device'])
                 for (a_min, a_max), a_count in zip(
                     self.actions_bounds, self.actions_discretizations)
             ]

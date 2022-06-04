@@ -87,9 +87,7 @@ if __name__ == '__main__':
         'view_angle': args.view_angle,
         'dt': 0.1,
         'expert_action_bounds': [[-3, 3], [-0.7, 0.7]],
-        'accel_discretization': 7,
-        'steer_discretization': 21,
-        'state_normalization': 10,
+        'state_normalization': 1000,
         'n_stacked_states': args.n_stacked_states,
     }
     scenario_cfg = {
@@ -120,7 +118,7 @@ if __name__ == '__main__':
 
     model_cfg = {
         'n_inputs': n_states,
-        'hidden_layers': [1024, 1024, 256, 128],
+        'hidden_layers': [1024, 256, 128],
         'discrete': True,
         # 'mean_scalings': [3.0, 0.7],
         # 'std_devs': [0.1, 0.02],
