@@ -15,7 +15,7 @@ from nocturne import Simulation
 
 OUTPUT_PATH = './vids'
 
-MODEL_PATH = Path('train_logs/2022_06_03_21_09_44/model_60.pth')
+MODEL_PATH = Path('train_logs/2022_06_04_10_05_47/model_30.pth')
 CONFIG_PATH = MODEL_PATH.parent / 'configs.json'
 GOAL_TOLERANCE = 1.0
 
@@ -80,7 +80,7 @@ if __name__ == '__main__':
                      for i in range(n_stacked_states)], n_stacked_states))
                 for i in range(n_stacked_states):
                     for veh in objects_of_interest:
-                        collections_dict[veh.getID()].append(
+                        collections_dict[veh.getID()].appendleft(
                             np.concatenate(
                                 (np.array(scenario.ego_state(veh), copy=False),
                                  np.array(scenario.flattened_visible_state(
@@ -92,10 +92,25 @@ if __name__ == '__main__':
 
                 for obj in scenario.getObjectsThatMoved():
                     obj.expert_control = True
+                # we only actually want to take control once the vehicle
+                # has been placed into the network
                 for veh in objects_of_interest:
-                    veh.expert_control = expert_control_vehicles
+                    if np.isclose(veh.position.x, -10000.0):
+                        veh.expert_control = True
+                    else:
+                        veh.expert_control = expert_control_vehicles
 
                 for i in range(90 - n_stacked_states):
+                    # we only actually want to take control once the vehicle
+                    # has been placed into the network
+                    # so vehicles that should be controlled by our agent
+                    # are overriden to be expert controlled
+                    # until they are actually spawned in the scene
+                    for veh in objects_of_interest:
+                        if np.isclose(veh.position.x, -10000.0):
+                            veh.expert_control = True
+                        else:
+                            veh.expert_control = expert_control_vehicles
                     print(
                         f'...{i+1}/{90 - n_stacked_states} ({traj_path} ; {mp4_name})'
                     )
@@ -114,7 +129,7 @@ if __name__ == '__main__':
                                  view_dist=view_dist,
                                  view_angle=view_angle),
                                       copy=False)))
-                        collections_dict[veh.getID()].append(veh_state)
+                        collections_dict[veh.getID()].appendleft(veh_state)
                         action = policy(
                             np.concatenate(collections_dict[veh.getID()]))
                         # veh.acceleration = action[0]

@@ -1,10 +1,12 @@
 """Dataloader for imitation learning in Nocturne."""
+from collections import defaultdict
 import random
 
 import torch
 from pathlib import Path
 import numpy as np
 
+from cfgs.config import ERR_VAL
 from nocturne import Simulation
 
 
@@ -43,7 +45,7 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
         ]
 
         # initialize values if stacking states
-        stacked_state = None
+        stacked_state = defaultdict(lambda: None)
         initial_warmup = n_stacked_states - 1
 
         state_list = []
@@ -63,15 +65,19 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
 
                 # stack state
                 if n_stacked_states > 1:
-                    if stacked_state is None:
-                        stacked_state = np.zeros(len(state) * n_stacked_states,
-                                                 dtype=state.dtype)
-                    stacked_state = np.roll(stacked_state, len(state))
-                    stacked_state[:len(state)] = state
+                    if stacked_state[obj.getID()] is None:
+                        stacked_state[obj.getID()] = np.zeros(
+                            len(state) * n_stacked_states, dtype=state.dtype)
+                    stacked_state[obj.getID()] = np.roll(
+                        stacked_state[obj.getID()], len(state))
+                    stacked_state[obj.getID()][:len(state)] = state
 
                 # get expert action
                 expert_action = scenario.expert_action(obj, time)
-                if expert_action is None:
+                # check for invalid action (because no value available for taking derivative)
+                # or because the vehicle is at an invalid state
+                if expert_action is None or np.isclose(obj.position.x,
+                                                       ERR_VAL):
                     continue
                 expert_action = expert_action.numpy()
                 # now find the corresponding expert actions in the grids
@@ -85,9 +91,9 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
                     continue
 
                 # yield state and expert action
-                if stacked_state is not None:
+                if stacked_state[obj.getID()] is not None:
                     if initial_warmup <= 0:  # warmup to wait for stacked state to be filled up
-                        state_list.append(stacked_state)
+                        state_list.append(stacked_state[obj.getID()])
                         action_list.append(expert_action)
                 else:
                     state_list.append(state)

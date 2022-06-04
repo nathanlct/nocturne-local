@@ -5,6 +5,8 @@ from torch import nn
 from torch.distributions.multivariate_normal import MultivariateNormal
 from torch.distributions.categorical import Categorical
 
+from nocturne.utils.imitation_learning.filters import MeanStdFilter
+
 
 class ImitationAgent(nn.Module):
     """Pytorch Module for imitation. Output is a Multivariable Gaussian."""
@@ -44,6 +46,7 @@ class ImitationAgent(nn.Module):
             pre_head_size = self.n_states
         else:
             self.nn = nn.Sequential(
+                MeanStdFilter(self.n_states),
                 nn.Linear(self.n_states, self.hidden_layers[0]),
                 nn.Tanh(),
                 *[

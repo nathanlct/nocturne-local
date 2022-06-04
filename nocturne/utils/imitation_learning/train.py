@@ -2,6 +2,7 @@
 import argparse
 import numpy as np
 from pathlib import Path
+import pickle
 from tqdm import tqdm
 import multiprocessing
 import json
@@ -87,14 +88,14 @@ if __name__ == '__main__':
         'view_angle': args.view_angle,
         'dt': 0.1,
         'expert_action_bounds': [[-3, 3], [-0.7, 0.7]],
-        'state_normalization': 1000,
+        'state_normalization': 100,
         'n_stacked_states': args.n_stacked_states,
     }
     scenario_cfg = {
         'start_time': 0,
         'allow_non_vehicles': True,
-        'spawn_invalid_objects': False,
-        'max_visible_road_points': 500,
+        'spawn_invalid_objects': True,
+        'max_visible_road_points': 1000,
         'sample_every_n': 1,
         'road_edge_first': False,
     }
@@ -122,7 +123,7 @@ if __name__ == '__main__':
         'discrete': True,
         # 'mean_scalings': [3.0, 0.7],
         # 'std_devs': [0.1, 0.02],
-        'actions_discretizations': [7, 63],
+        'actions_discretizations': [7, 21],
         'actions_bounds': [[-3, 3], [-0.7, 0.7]],
         'device': args.device
     }
@@ -181,15 +182,17 @@ if __name__ == '__main__':
             # grad clipping
             total_norm = 0
             for p in model.parameters():
-                param_norm = p.grad.detach().data.norm(2)
-                total_norm += param_norm.item()**2
+                if p.grad is not None:
+                    param_norm = p.grad.detach().data.norm(2)
+                    total_norm += param_norm.item()**2
             total_norm = total_norm**0.5
             writer.add_scalar('train/grad_norm', total_norm, n_samples)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             total_norm = 0
             for p in model.parameters():
-                param_norm = p.grad.detach().data.norm(2)
-                total_norm += param_norm.item()**2
+                if p.grad is not None:
+                    param_norm = p.grad.detach().data.norm(2)
+                    total_norm += param_norm.item()**2
             total_norm = total_norm**0.5
             writer.add_scalar('train/post_clip_grad_norm', total_norm,
                               n_samples)
@@ -225,6 +228,7 @@ if __name__ == '__main__':
         if (epoch + 1) % 10 == 0 or epoch == args.epochs - 1:
             model_path = exp_dir / f'model_{epoch+1}.pth'
             torch.save(model, str(model_path))
+            pickle.dump(filter, open(exp_dir / f"filter_{epoch+1}.pth", "wb"))
             print(f'\nSaved model at {model_path}')
         print('accel')
         print('model: ', model_idxs[0][0:10])
