@@ -179,6 +179,22 @@ if __name__ == '__main__':
             # optim step
             optimizer.zero_grad()
             loss.backward()
+
+            # grad clipping
+            total_norm = 0
+            for p in model.parameters():
+                param_norm = p.grad.detach().data.norm(2)
+                total_norm += param_norm.item()**2
+            total_norm = total_norm**0.5
+            writer.add_scalar('train/grad_norm', total_norm, n_samples)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            total_norm = 0
+            for p in model.parameters():
+                param_norm = p.grad.detach().data.norm(2)
+                total_norm += param_norm.item()**2
+            total_norm = total_norm**0.5
+            writer.add_scalar('train/post_clip_grad_norm', total_norm,
+                              n_samples)
             optimizer.step()
 
             # tensorboard logging
@@ -212,6 +228,12 @@ if __name__ == '__main__':
             model_path = exp_dir / f'model_{epoch+1}.pth'
             torch.save(model, str(model_path))
             print(f'\nSaved model at {model_path}')
+        print('accel')
+        print('model: ', model_idxs[0][0:10])
+        print('expert: ', expert_idxs[0:10, 0])
+        print('steer')
+        print('model: ', model_idxs[1][0:10])
+        print('expert: ', expert_idxs[0:10, 1])
 
     print('Done, exp dir is', exp_dir)
 
