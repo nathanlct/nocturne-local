@@ -58,6 +58,9 @@ def parse_args():
                         type=str,
                         default='cpu',
                         help='Device (cpu or cuda)')
+    parser.add_argument('--discrete',
+                        action='store_true',
+                        help='If true use a discrete action space')
 
     # config
     parser.add_argument('--n_stacked_states',
@@ -72,6 +75,10 @@ def parse_args():
                         type=float,
                         default=np.radians(120),
                         help='Visible state cone angle.')
+    parser.add_argument(
+        '--actions_are_positions',
+        action='store_true',
+        help='If true the model outputs diff in position and heading directly')
 
     args = parser.parse_args()
     return args
@@ -81,13 +88,27 @@ if __name__ == '__main__':
     args = parse_args()
 
     # create dataset and dataloader
+    if args.actions_are_positions:
+        expert_bounds = [[-0.5, 3], [-3, 3], [-0.07, 0.07]]
+        actions_discretizations = [21, 21, 21]
+        actions_bounds = [[-0.5, 3], [-3, 3], [-0.07, 0.07]]
+        mean_scalings = [3, 3, 0.07]
+        std_devs = [0.1, 0.1, 0.02]
+    else:
+        expert_bounds = [[-3, 3], [-0.7, 0.7]]
+        actions_bounds = [[-3, 3], [-0.7, 0.7]]
+        actions_discretizations = [7, 21]
+        mean_scalings = [3, 0.7]
+        std_devs = [0.1, 0.02]
+
     dataloader_cfg = {
         'tmin': 0,
         'tmax': 90,
         'view_dist': args.view_dist,
         'view_angle': args.view_angle,
         'dt': 0.1,
-        'expert_action_bounds': [[-3, 3], [-0.7, 0.7]],
+        'expert_action_bounds': expert_bounds,
+        'expert_position': args.actions_are_positions,
         'state_normalization': 100,
         'n_stacked_states': args.n_stacked_states,
     }
@@ -120,11 +141,11 @@ if __name__ == '__main__':
     model_cfg = {
         'n_inputs': n_states,
         'hidden_layers': [1024, 256, 128],
-        'discrete': True,
-        # 'mean_scalings': [3.0, 0.7],
-        # 'std_devs': [0.1, 0.02],
-        'actions_discretizations': [7, 21],
-        'actions_bounds': [[-3, 3], [-0.7, 0.7]],
+        'discrete': args.discrete,
+        'mean_scalings': mean_scalings,
+        'std_devs': std_devs,
+        'actions_discretizations': actions_discretizations,
+        'actions_bounds': actions_bounds,
         'device': args.device
     }
 
@@ -170,9 +191,13 @@ if __name__ == '__main__':
             expert_actions = expert_actions.to(args.device)
 
             # compute loss
-            log_prob, expert_idxs = model.log_prob(states,
-                                                   expert_actions,
-                                                   return_indexes=True)
+            if args.discrete:
+                log_prob, expert_idxs = model.log_prob(states,
+                                                       expert_actions,
+                                                       return_indexes=True)
+            else:
+                dist = model.dist(states)
+                log_prob = dist.log_prob(expert_actions.float())
             loss = -log_prob.mean()
 
             # optim step
@@ -201,28 +226,50 @@ if __name__ == '__main__':
             # tensorboard logging
             writer.add_scalar('train/loss', loss.item(), n_samples)
 
-            writer.add_scalar('train/accel_logprob', log_prob[0], n_samples)
-            writer.add_scalar('train/steer_logprob', log_prob[1], n_samples)
-
-            with torch.no_grad():
-                model_actions, model_idxs = model(states,
-                                                  deterministic=True,
-                                                  return_indexes=True)
+            if args.actions_are_positions:
+                writer.add_scalar('train/x_logprob', log_prob[0], n_samples)
+                writer.add_scalar('train/y_logprob', log_prob[1], n_samples)
+                writer.add_scalar('train/steer_logprob', log_prob[2],
+                                  n_samples)
+            else:
+                writer.add_scalar('train/accel_logprob', log_prob[0],
+                                  n_samples)
+                writer.add_scalar('train/steer_logprob', log_prob[1],
+                                  n_samples)
 
             if not model_cfg['discrete']:
-                diff_actions = np.mean(np.abs(model_actions - expert_actions),
-                                       axis=0)
+                diff_actions = torch.mean(torch.abs(dist.mean -
+                                                    expert_actions),
+                                          axis=0)
                 writer.add_scalar('train/accel_diff', diff_actions[0],
                                   n_samples)
                 writer.add_scalar('train/steer_diff', diff_actions[1],
                                   n_samples)
+                writer.add_scalar(
+                    'train/l2_dist',
+                    torch.norm(dist.mean - expert_actions.float()), n_samples)
+
             if model_cfg['discrete']:
+                with torch.no_grad():
+                    model_actions, model_idxs = model(states,
+                                                      deterministic=True,
+                                                      return_indexes=True)
                 accuracy = [
                     (model_idx == expert_idx).float().mean(axis=0)
                     for model_idx, expert_idx in zip(model_idxs, expert_idxs.T)
                 ]
-                writer.add_scalar('train/accel_acc', accuracy[0], n_samples)
-                writer.add_scalar('train/steer_acc', accuracy[1], n_samples)
+                if args.actions_are_positions:
+                    writer.add_scalar('train/x_pos_acc', accuracy[0],
+                                      n_samples)
+                    writer.add_scalar('train/y_pos_acc', accuracy[1],
+                                      n_samples)
+                    writer.add_scalar('train/heading_acc', accuracy[2],
+                                      n_samples)
+                else:
+                    writer.add_scalar('train/accel_acc', accuracy[0],
+                                      n_samples)
+                    writer.add_scalar('train/steer_acc', accuracy[1],
+                                      n_samples)
 
         # save model checkpoint
         if (epoch + 1) % 10 == 0 or epoch == args.epochs - 1:
@@ -230,12 +277,24 @@ if __name__ == '__main__':
             torch.save(model, str(model_path))
             pickle.dump(filter, open(exp_dir / f"filter_{epoch+1}.pth", "wb"))
             print(f'\nSaved model at {model_path}')
-        print('accel')
-        print('model: ', model_idxs[0][0:10])
-        print('expert: ', expert_idxs[0:10, 0])
-        print('steer')
-        print('model: ', model_idxs[1][0:10])
-        print('expert: ', expert_idxs[0:10, 1])
+        if args.discrete:
+            if args.actions_are_positions:
+                print('xpos')
+                print('model: ', model_idxs[0][0:10])
+                print('expert: ', expert_idxs[0:10, 0])
+                print('ypos')
+                print('model: ', model_idxs[1][0:10])
+                print('expert: ', expert_idxs[0:10, 1])
+                print('steer')
+                print('model: ', model_idxs[2][0:10])
+                print('expert: ', expert_idxs[0:10, 2])
+            else:
+                print('accel')
+                print('model: ', model_idxs[0][0:10])
+                print('expert: ', expert_idxs[0:10, 0])
+                print('steer')
+                print('model: ', model_idxs[1][0:10])
+                print('expert: ', expert_idxs[0:10, 1])
 
     print('Done, exp dir is', exp_dir)
 

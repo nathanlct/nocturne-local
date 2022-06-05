@@ -138,16 +138,22 @@ class Scenario : public sf::Drawable {
   std::optional<Action> ExpertAction(const Object& obj,
                                      int64_t timestamp) const;
 
+  std::optional<geometry::Vector2D> ExpertPosShift(const Object& obj,
+                                                   int64_t timestamp) const;
+
+  std::optional<float> ExpertHeadingShift(const Object& obj,
+                                          int64_t timestamp) const;
+
   /*********************** Drawing Functions *****************/
 
-  // Computes and returns an `sf::View` of size (`view_height`, `view_width`)
-  // (in scenario coordinates), centered around `view_center` (in scenario
-  // coordinates) and rotated by `rotation` radians. The view is mapped to a
-  // viewport of size (`target_height`, `target_width`) pixels, with a minimum
-  // padding of `padding` pixels between the scenario boundaries and the
-  // viewport border. A scale-to-fit transform is applied so that the scenario
-  // view is scaled to fit the viewport (minus padding) without changing the
-  // width:height ratio of the captured view.
+  // Computes and returns an `sf::View` of size (`view_height`,
+  // `view_width`) (in scenario coordinates), centered around `view_center`
+  // (in scenario coordinates) and rotated by `rotation` radians. The view
+  // is mapped to a viewport of size (`target_height`, `target_width`)
+  // pixels, with a minimum padding of `padding` pixels between the scenario
+  // boundaries and the viewport border. A scale-to-fit transform is applied
+  // so that the scenario view is scaled to fit the viewport (minus padding)
+  // without changing the width:height ratio of the captured view.
   sf::View View(geometry::Vector2D view_center, float rotation,
                 float view_height, float view_width, float target_height,
                 float target_width, float padding) const;

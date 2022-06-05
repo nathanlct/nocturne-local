@@ -23,6 +23,7 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
     dt = dataloader_config.get('dt', 0.1)
     expert_action_bounds = dataloader_config.get('expert_action_bounds',
                                                  [[-3, 3], [-0.7, 0.7]])
+    expert_position = dataloader_config.get('expert_position', True)
     state_normalization = dataloader_config.get('state_normalization', 100)
     n_stacked_states = dataloader_config.get('n_stacked_states', 5)
 
@@ -72,23 +73,43 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
                         stacked_state[obj.getID()], len(state))
                     stacked_state[obj.getID()][:len(state)] = state
 
-                # get expert action
-                expert_action = scenario.expert_action(obj, time)
-                # check for invalid action (because no value available for taking derivative)
-                # or because the vehicle is at an invalid state
-                if expert_action is None or np.isclose(obj.position.x,
-                                                       ERR_VAL):
+                if np.isclose(obj.position.x, ERR_VAL):
                     continue
-                expert_action = expert_action.numpy()
-                # now find the corresponding expert actions in the grids
 
-                # throw out actions containing NaN or out-of-bound values
-                if np.isnan(expert_action).any() \
-                        or expert_action[0] < expert_action_bounds[0][0] \
-                        or expert_action[0] > expert_action_bounds[0][1] \
-                        or expert_action[1] < expert_action_bounds[1][0] \
-                        or expert_action[1] > expert_action_bounds[1][1]:
-                    continue
+                if not expert_position:
+                    # get expert action
+                    expert_action = scenario.expert_action(obj, time)
+                    # check for invalid action (because no value available for taking derivative)
+                    # or because the vehicle is at an invalid state
+                    if expert_action is None:
+                        continue
+                    expert_action = expert_action.numpy()
+                    # now find the corresponding expert actions in the grids
+
+                    # throw out actions containing NaN or out-of-bound values
+                    if np.isnan(expert_action).any() \
+                            or expert_action[0] < expert_action_bounds[0][0] \
+                            or expert_action[0] > expert_action_bounds[0][1] \
+                            or expert_action[1] < expert_action_bounds[1][0] \
+                            or expert_action[1] > expert_action_bounds[1][1]:
+                        continue
+                else:
+                    expert_pos_shift = scenario.expert_pos_shift(obj, time)
+                    if expert_pos_shift is None:
+                        continue
+                    expert_pos_shift = expert_pos_shift.numpy()
+                    expert_heading_shift = scenario.expert_heading_shift(
+                        obj, time)
+                    if expert_heading_shift is None \
+                            or expert_pos_shift[0] < expert_action_bounds[0][0] \
+                            or expert_pos_shift[0] > expert_action_bounds[0][1] \
+                            or expert_pos_shift[1] < expert_action_bounds[1][0] \
+                            or expert_pos_shift[1] > expert_action_bounds[1][1] \
+                            or expert_heading_shift < expert_action_bounds[2][0] \
+                            or expert_heading_shift > expert_action_bounds[2][1]:
+                        continue
+                    expert_action = np.concatenate(
+                        (expert_pos_shift, [expert_heading_shift]))
 
                 # yield state and expert action
                 if stacked_state[obj.getID()] is not None:
@@ -104,11 +125,12 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
             if initial_warmup > 0:
                 initial_warmup -= 1
 
-        temp = list(zip(state_list, action_list))
-        random.shuffle(temp)
-        state_list, action_list = zip(*temp)
-        for state_return, action_return in zip(state_list, action_list):
-            yield (state_return, action_return)
+        if len(state_list) > 0:
+            temp = list(zip(state_list, action_list))
+            random.shuffle(temp)
+            state_list, action_list = zip(*temp)
+            for state_return, action_return in zip(state_list, action_list):
+                yield (state_return, action_return)
 
 
 class WaymoDataset(torch.utils.data.IterableDataset):

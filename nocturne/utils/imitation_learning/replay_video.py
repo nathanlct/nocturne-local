@@ -11,11 +11,11 @@ import subprocess
 import torch
 
 from cfgs.config import PROCESSED_TRAIN_NO_TL
-from nocturne import Simulation
+from nocturne import Simulation, Vector2D
 
 OUTPUT_PATH = './vids'
 
-MODEL_PATH = Path('train_logs/2022_06_04_10_05_47/model_30.pth')
+MODEL_PATH = Path('train_logs/2022_06_04_18_42_55/model_10.pth')
 CONFIG_PATH = MODEL_PATH.parent / 'configs.json'
 GOAL_TOLERANCE = 1.0
 
@@ -33,6 +33,7 @@ if __name__ == '__main__':
         file for file in Path(data_path).iterdir() if 'tfrecord' in file.stem
     ]
     scenario_config = configs['scenario_cfg']
+    dataloader_config = configs['dataloader_cfg']
     files = files[:10]
     np.random.shuffle(files)
     model = torch.load(MODEL_PATH).to('cpu')
@@ -75,19 +76,19 @@ if __name__ == '__main__':
                     'n_stacked_states']
                 state_size = configs['model_cfg'][
                     'n_inputs'] // n_stacked_states
-                collections_dict = defaultdict(lambda: deque(
-                    [np.zeros(state_size)
-                     for i in range(n_stacked_states)], n_stacked_states))
+                state_dict = defaultdict(
+                    lambda: np.zeros(state_size * n_stacked_states))
                 for i in range(n_stacked_states):
                     for veh in objects_of_interest:
-                        collections_dict[veh.getID()].appendleft(
-                            np.concatenate(
-                                (np.array(scenario.ego_state(veh), copy=False),
-                                 np.array(scenario.flattened_visible_state(
-                                     veh,
-                                     view_dist=view_dist,
-                                     view_angle=view_angle),
-                                          copy=False))) / state_normalization)
+                        ego_state = scenario.ego_state(veh)
+                        visible_state = scenario.flattened_visible_state(
+                            veh, view_dist=view_dist, view_angle=view_angle)
+                        state = np.concatenate(
+                            (ego_state, visible_state)) / state_normalization
+                        state_dict[veh.getID()] = np.roll(
+                            state_dict[veh.getID()], len(state))
+                        state_dict[veh.getID()][:len(state)] = state
+
                     sim.step(dt)
 
                 for obj in scenario.getObjectsThatMoved():
@@ -129,19 +130,34 @@ if __name__ == '__main__':
                                  view_dist=view_dist,
                                  view_angle=view_angle),
                                       copy=False)))
-                        collections_dict[veh.getID()].appendleft(veh_state)
-                        action = policy(
-                            np.concatenate(collections_dict[veh.getID()]))
+                        ego_state = scenario.ego_state(veh)
+                        visible_state = scenario.flattened_visible_state(
+                            veh, view_dist=view_dist, view_angle=view_angle)
+                        state = np.concatenate(
+                            (ego_state, visible_state)) / state_normalization
+                        state_dict[veh.getID()] = np.roll(
+                            state_dict[veh.getID()], len(state))
+                        state_dict[veh.getID()][:len(state)] = state
+                        action = policy(state_dict[veh.getID()]).squeeze()
                         # veh.acceleration = action[0]
                         # veh.steering = action[1]
                         # accel_idx = accel_idx.cpu()
                         # steer_idx = steer_idx.cpu()
-                        # pos_diff = action[0:2]
-                        # heading = action[2:3]
-                        # veh.position = Vector2D.from_numpy(pos_diff + veh.position.numpy())
-                        # veh.heading += heading
-                        veh.acceleration = action[0].cpu().numpy()
-                        veh.steering = action[1].cpu().numpy()
+                        if dataloader_config['expert_position']:
+                            if configs['model_cfg']['discrete']:
+                                pos_diff = np.array([
+                                    pos.cpu().numpy()[0] for pos in action[0:2]
+                                ])
+                                heading = action[2:3][0].cpu().numpy()[0]
+                            else:
+                                pos_diff = action[0:2]
+                                heading = action[2:3]
+                            veh.position = Vector2D.from_numpy(
+                                pos_diff + veh.position.numpy())
+                            veh.heading += heading
+                        else:
+                            veh.acceleration = action[0].cpu().numpy()
+                            veh.steering = action[1].cpu().numpy()
                     sim.step(dt)
                     for veh in scenario.getObjectsThatMoved():
                         if (veh.position -
