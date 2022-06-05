@@ -1,91 +1,25 @@
 """Imitation learning training script (behavioral cloning)."""
 import argparse
-import numpy as np
+from datetime import datetime
 from pathlib import Path
 import pickle
-from tqdm import tqdm
 import multiprocessing
 import json
-from datetime import datetime
 
+import hydra
+import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from nocturne.utils.imitation_learning.model import ImitationAgent
 from nocturne.utils.imitation_learning.waymo_data_loader import WaymoDataset
 
 
-def parse_args():
-    """Parse command-line arguments."""
-    parser = argparse.ArgumentParser()
-
-    # data
-    parser.add_argument(
-        '--path',
-        type=str,
-        default='dataset/tf_records',
-        help=
-        'Path to the training data (directory containing .json scenario files).'
-    )
-    parser.add_argument('--file_limit',
-                        type=int,
-                        default=None,
-                        help='Limit on the number of files to train on')
-
-    # training
-    parser.add_argument(
-        '--n_cpus',
-        type=int,
-        default=multiprocessing.cpu_count() - 1,
-        help='Number of processes to use for dataset precomputing and loading.'
-    )
-    parser.add_argument('--lr', type=float, default=3e-4, help='Learning rate')
-    parser.add_argument('--samples_per_epoch',
-                        type=int,
-                        default=50000,
-                        help='Train batch size')
-    parser.add_argument('--batch_size',
-                        type=int,
-                        default=256,
-                        help='Minibatch size')
-    parser.add_argument('--epochs',
-                        type=int,
-                        default=200,
-                        help='Number of training iterations')
-    parser.add_argument('--device',
-                        type=str,
-                        default='cpu',
-                        help='Device (cpu or cuda)')
-    parser.add_argument('--discrete',
-                        action='store_true',
-                        help='If true use a discrete action space')
-
-    # config
-    parser.add_argument('--n_stacked_states',
-                        type=int,
-                        default=10,
-                        help='Number of states to stack.')
-    parser.add_argument('--view_dist',
-                        type=float,
-                        default=80,
-                        help='Visible state view distance.')
-    parser.add_argument('--view_angle',
-                        type=float,
-                        default=np.radians(120),
-                        help='Visible state cone angle.')
-    parser.add_argument(
-        '--actions_are_positions',
-        action='store_true',
-        help='If true the model outputs diff in position and heading directly')
-
-    args = parser.parse_args()
-    return args
-
-
-if __name__ == '__main__':
-    args = parse_args()
+@hydra.main(config_path="../../../cfgs/imitation", config_name="config")
+def main(args):
 
     # create dataset and dataloader
     if args.actions_are_positions:
@@ -158,7 +92,7 @@ if __name__ == '__main__':
 
     # create exp dir
     time_str = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-    exp_dir = Path('train_logs') / time_str
+    exp_dir = Path.cwd() / Path('train_logs') / time_str
     exp_dir.mkdir(parents=True, exist_ok=True)
 
     # save configs
@@ -300,3 +234,7 @@ if __name__ == '__main__':
 
     writer.flush()
     writer.close()
+
+
+if __name__ == '__main__':
+    main()

@@ -10,12 +10,14 @@ from pyvirtualdisplay import Display
 import subprocess
 import torch
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL
 from nocturne import Simulation, Vector2D
 
 OUTPUT_PATH = './vids'
 
-MODEL_PATH = Path('train_logs/2022_06_04_18_42_55/model_10.pth')
+MODEL_PATH = Path(
+    '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/11.02.49/++device=cuda,++file_limit=600/train_logs/2022_06_05_11_02_55/model_270.pth'
+)
 CONFIG_PATH = MODEL_PATH.parent / 'configs.json'
 GOAL_TOLERANCE = 1.0
 
@@ -34,7 +36,7 @@ if __name__ == '__main__':
     ]
     scenario_config = configs['scenario_cfg']
     dataloader_config = configs['dataloader_cfg']
-    files = files[:10]
+    files = files[:100]
     np.random.shuffle(files)
     model = torch.load(MODEL_PATH).to('cpu')
     model.eval()
@@ -65,6 +67,10 @@ if __name__ == '__main__':
 
                 for obj in objects_of_interest:
                     obj.expert_control = True
+
+                relevant_obj_ids = [
+                    obj.getID() for obj in objects_of_interest[0:2]
+                ]
 
                 view_dist = configs['dataloader_cfg']['view_dist']
                 view_angle = configs['dataloader_cfg']['view_angle']
@@ -99,7 +105,9 @@ if __name__ == '__main__':
                     if np.isclose(veh.position.x, -10000.0):
                         veh.expert_control = True
                     else:
-                        veh.expert_control = expert_control_vehicles
+                        if veh.getID() in relevant_obj_ids:
+                            veh.expert_control = expert_control_vehicles
+                            veh.highlight = True
 
                 for i in range(90 - n_stacked_states):
                     # we only actually want to take control once the vehicle
@@ -111,7 +119,9 @@ if __name__ == '__main__':
                         if np.isclose(veh.position.x, -10000.0):
                             veh.expert_control = True
                         else:
-                            veh.expert_control = expert_control_vehicles
+                            if veh.getID() in relevant_obj_ids:
+                                veh.expert_control = expert_control_vehicles
+                                veh.highlight = True
                     print(
                         f'...{i+1}/{90 - n_stacked_states} ({traj_path} ; {mp4_name})'
                     )
@@ -138,7 +148,7 @@ if __name__ == '__main__':
                         state_dict[veh.getID()] = np.roll(
                             state_dict[veh.getID()], len(state))
                         state_dict[veh.getID()][:len(state)] = state
-                        action = policy(state_dict[veh.getID()]).squeeze()
+                        action = policy(state_dict[veh.getID()])
                         # veh.acceleration = action[0]
                         # veh.steering = action[1]
                         # accel_idx = accel_idx.cpu()
