@@ -29,9 +29,9 @@ def main(args):
         mean_scalings = [3, 3, 0.07]
         std_devs = [0.1, 0.1, 0.02]
     else:
-        expert_bounds = [[-3, 3], [-0.7, 0.7]]
-        actions_bounds = [[-3, 3], [-0.7, 0.7]]
-        actions_discretizations = [7, 21]
+        expert_bounds = [[-6, 6], [-0.7, 0.7]]
+        actions_bounds = expert_bounds
+        actions_discretizations = [15, 43]
         mean_scalings = [3, 0.7]
         std_devs = [0.1, 0.02]
 

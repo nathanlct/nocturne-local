@@ -16,7 +16,7 @@ from nocturne import Simulation, Vector2D
 OUTPUT_PATH = './vids'
 
 MODEL_PATH = Path(
-    '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/11.02.49/++device=cuda,++file_limit=600/train_logs/2022_06_05_11_02_55/model_270.pth'
+    '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/14.23.17/++device=cuda,++file_limit=1000/train_logs/2022_06_05_14_23_23/model_220.pth'
 )
 CONFIG_PATH = MODEL_PATH.parent / 'configs.json'
 GOAL_TOLERANCE = 1.0
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     ]
     scenario_config = configs['scenario_cfg']
     dataloader_config = configs['dataloader_cfg']
-    files = files[:100]
+    files = files[:600]
     np.random.shuffle(files)
     model = torch.load(MODEL_PATH).to('cpu')
     model.eval()
