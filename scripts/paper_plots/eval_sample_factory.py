@@ -33,7 +33,208 @@ from examples.sample_factory_files.run_sample_factory import register_custom_com
 from cfgs.config import PROCESSED_VALID_NO_TL, PROCESSED_TRAIN_NO_TL, ERR_VAL
 
 
-def run_eval(cfgs, test_zsc, output_path, scenario_dir, num_file_loops=1):
+def run_rollouts(env,
+                 cfg,
+                 device,
+                 expert_trajectory_dict,
+                 distance_bins,
+                 actor_1,
+                 actor_2=None):
+    episode_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
+    true_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
+    obs = env.reset()
+    rollout_traj_dict = defaultdict(lambda: np.zeros((80, 2)))
+    # some key information for tracking statistics
+    goal_dist = env.goal_dist_normalizers
+    valid_indices = env.valid_indices
+    agent_id_to_env_id_map = env.agent_id_to_env_id_map
+
+    success_rate_by_num_agents = np.zeros((cfg.max_num_vehicles, 3))
+    success_rate_by_distance = np.zeros((distance_bins.shape[-1], 3))
+
+    if actor_2 is not None:
+        # pick which valid indices go to which policy
+        val = np.random.uniform()
+        if val < 0.5:
+            num_choice = int(np.floor(len(valid_indices) / 2.0))
+        else:
+            num_choice = int(np.ceil(len(valid_indices) / 2.0))
+        indices_1 = list(
+            np.random.choice(valid_indices, num_choice, replace=False))
+        indices_2 = [val for val in valid_indices if val not in indices_1]
+        rnn_states = torch.zeros(
+            [env.num_agents, get_hidden_size(cfg)],
+            dtype=torch.float32,
+            device=device)
+        rnn_states_2 = torch.zeros(
+            [env.num_agents, get_hidden_size(cfg)],
+            dtype=torch.float32,
+            device=device)
+    else:
+        rnn_states = torch.zeros(
+            [env.num_agents, get_hidden_size(cfg)],
+            dtype=torch.float32,
+            device=device)
+    episode_reward = np.zeros(env.num_agents)
+    finished_episode = [False] * env.num_agents
+    goal_achieved = [False] * len(valid_indices)
+    collision_observed = [False] * len(valid_indices)
+    veh_counter = 0
+
+    while not all(finished_episode):
+        with torch.no_grad():
+            obs_torch = AttrDict(transform_dict_observations(obs))
+            for key, x in obs_torch.items():
+                obs_torch[key] = torch.from_numpy(x).to(device).float()
+
+            # we have to make a copy before doing the pass
+            # because (for some reason), sample factory is making
+            # some changes to the obs in the forwards pass
+            # TBD what it is
+            if actor_2 is not None:
+                obs_torch_2 = deepcopy(obs_torch)
+                policy_outputs_2 = actor_2(obs_torch_2,
+                                           rnn_states_2,
+                                           with_action_distribution=True)
+
+            policy_outputs = actor_1(obs_torch,
+                                     rnn_states,
+                                     with_action_distribution=True)
+
+            # sample actions from the distribution by default
+            # also update the indices that should be drawn from the second policy
+            # with its outputs
+            actions = policy_outputs.actions
+            if actor_2 is not None:
+                actions[indices_2] = policy_outputs_2.actions[indices_2]
+
+            action_distribution = policy_outputs.action_distribution
+            if isinstance(action_distribution, ContinuousActionDistribution):
+                if not cfg.continuous_actions_sample:  # TODO: add similar option for discrete actions
+                    actions = action_distribution.means
+                    if actor_2 is not None:
+                        actions[
+                            indices_2] = policy_outputs_2.action_distribution.means[
+                                indices_2]
+            if isinstance(action_distribution, CategoricalActionDistribution):
+                if not cfg.discrete_actions_sample:
+                    actions = policy_outputs['action_logits'].argmax(axis=1)
+                    if actor_2 is not None:
+                        actions[indices_2] = policy_outputs_2[
+                            'action_logits'].argmax(axis=1)[indices_2]
+
+            actions = actions.cpu().numpy()
+
+            for veh in env.unwrapped.get_objects_that_moved():
+                # only check vehicles we are actually controlling
+                if veh.expert_control == False:
+                    rollout_traj_dict[veh.id][
+                        env.step_num] = veh.position.numpy()
+
+            rnn_states = policy_outputs.rnn_states
+            if actor_2 is not None:
+                rnn_states_2 = policy_outputs_2.rnn_states
+
+            obs, rew, done, infos = env.step(actions)
+            episode_reward += rew
+
+            for i, index in enumerate(valid_indices):
+                goal_achieved[
+                    i] = infos[index]['goal_achieved'] or goal_achieved[i]
+                collision_observed[
+                    i] = infos[index]['collided'] or collision_observed[i]
+
+            for agent_i, done_flag in enumerate(done):
+                if done_flag:
+                    finished_episode[agent_i] = True
+                    episode_rewards[agent_i].append(episode_reward[agent_i])
+                    true_rewards[agent_i].append(infos[agent_i].get(
+                        'true_reward', episode_reward[agent_i]))
+                    log.info(
+                        'Episode finished for agent %d. Reward: %.3f, true_reward: %.3f',
+                        agent_i, episode_reward[agent_i],
+                        true_rewards[agent_i][-1])
+                    rnn_states[agent_i] = torch.zeros([get_hidden_size(cfg)],
+                                                      dtype=torch.float32,
+                                                      device=device)
+                    episode_reward[agent_i] = 0
+
+            if all(finished_episode):
+                avg_episode_rewards_str, avg_true_reward_str = '', ''
+                for agent_i in range(env.num_agents):
+                    avg_rew = np.mean(episode_rewards[agent_i])
+                    avg_true_rew = np.mean(true_rewards[agent_i])
+                    if not np.isnan(avg_rew):
+                        if avg_episode_rewards_str:
+                            avg_episode_rewards_str += ', '
+                        avg_episode_rewards_str += f'#{agent_i}: {avg_rew:.3f}'
+                    if not np.isnan(avg_true_rew):
+                        if avg_true_reward_str:
+                            avg_true_reward_str += ', '
+                        avg_true_reward_str += f'#{agent_i}: {avg_true_rew:.3f}'
+                avg_goal = infos[0]['episode_extra_stats']['goal_achieved']
+                avg_collisions = infos[0]['episode_extra_stats']['collided']
+                avg_veh_edge_collisions = infos[0]['episode_extra_stats'][
+                    'veh_edge_collided']
+                avg_veh_veh_collisions = infos[0]['episode_extra_stats'][
+                    'veh_veh_collided']
+                success_rate_by_num_agents[len(valid_indices) - 1,
+                                           0] += avg_goal
+                success_rate_by_num_agents[len(valid_indices) - 1,
+                                           1] += avg_collisions
+                success_rate_by_num_agents[len(valid_indices) - 1, 2] += 1
+                # track how well we do as a function of distance
+                for i, index in enumerate(valid_indices):
+                    env_id = agent_id_to_env_id_map[index]
+                    bin = np.searchsorted(distance_bins, goal_dist[env_id])
+                    success_rate_by_distance[bin - 1, 0] += goal_achieved[i]
+                    success_rate_by_distance[bin - 1,
+                                             1] += collision_observed[i]
+                    success_rate_by_distance[bin - 1, 2] += 1
+                # compute ADE and FDE
+                ades = []
+                fdes = []
+                for agent_id, traj in rollout_traj_dict.items():
+                    masking_arr = traj.sum(axis=1)
+                    mask = (masking_arr != 0.0) * (masking_arr !=
+                                                   traj.shape[1] * ERR_VAL)
+                    expert_mask_arr = expert_trajectory_dict[agent_id].sum(
+                        axis=1)
+                    expert_mask = (expert_mask_arr != 0.0) * (
+                        expert_mask_arr != traj.shape[1] * ERR_VAL)
+                    ade = np.linalg.norm(traj -
+                                         expert_trajectory_dict[agent_id],
+                                         axis=-1)[mask * expert_mask]
+                    ades.append(ade.mean())
+                    fde = np.linalg.norm(
+                        traj - expert_trajectory_dict[agent_id],
+                        axis=-1)[np.max(np.argwhere(mask * expert_mask))]
+                    fdes.append(fde)
+                    veh_counter += 1
+
+                log.info('Avg episode rewards: %s, true rewards: %s',
+                         avg_episode_rewards_str, avg_true_reward_str)
+                log.info(
+                    'Avg episode reward: %.3f, avg true_reward: %.3f',
+                    np.mean([
+                        np.mean(episode_rewards[i])
+                        for i in range(env.num_agents)
+                    ]),
+                    np.mean([
+                        np.mean(true_rewards[i]) for i in range(env.num_agents)
+                    ]))
+
+                return (avg_goal, avg_collisions, avg_veh_edge_collisions, avg_veh_veh_collisions, \
+                       success_rate_by_distance, success_rate_by_num_agents, \
+                           np.mean(ades), np.mean(fdes), veh_counter)
+
+
+def run_eval(cfgs,
+             test_zsc,
+             output_path,
+             scenario_dir,
+             files,
+             num_file_loops=1):
     """Eval a stored agent over all files in validation set.
 
     Args:
@@ -58,6 +259,10 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, num_file_loops=1):
 
         cfg.env_frameskip = 1  # for evaluation
         cfg.num_envs = 1
+        # this config is used for computing displacement errors
+        ade_cfg = deepcopy(cfg)
+        ade_cfg['remove_at_goal'] = True
+        ade_cfg['remove_at_collide'] = True
 
         def make_env_func(env_config):
             return create_env(cfg.env, cfg=cfg, env_config=env_config)
@@ -90,6 +295,7 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, num_file_loops=1):
     # the second dimension is the counts
     distance_bins = np.linspace(0, 400, 40)
     num_files = cfg['num_eval_files']
+    # TODO(eugenevinitsky) horrifying copy and paste
     if test_zsc:
         goal_array = np.zeros((len(actor_critics), len(actor_critics),
                                num_file_loops * num_files))
@@ -100,22 +306,30 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, num_file_loops=1):
         success_rate_by_distance = np.zeros(
             (len(actor_critics), len(actor_critics), distance_bins.shape[-1],
              3))
+        ade_array = np.zeros(len(actor_critics), len(actor_critics),
+                             num_file_loops * num_files)
+        fde_array = np.zeros(len(actor_critics), len(actor_critics),
+                             num_file_loops * num_files)
+        veh_veh_collision_array = np.zeros(
+            (len(actor_critics), len(actor_critics),
+             num_file_loops * num_files))
+        veh_edge_collision_array = np.zeros(
+            (len(actor_critics), len(actor_critics),
+             num_file_loops * num_files))
     else:
         goal_array = np.zeros((len(actor_critics), num_file_loops * num_files))
         collision_array = np.zeros(
+            (len(actor_critics), num_file_loops * num_files))
+        veh_veh_collision_array = np.zeros(
+            (len(actor_critics), num_file_loops * num_files))
+        veh_edge_collision_array = np.zeros(
             (len(actor_critics), num_file_loops * num_files))
         success_rate_by_num_agents = np.zeros(
             (len(actor_critics), cfg.max_num_vehicles, 3))
         success_rate_by_distance = np.zeros(
             (len(actor_critics), distance_bins.shape[-1], 3))
-    ade_array = np.zeros(len(actor_critics))
-    fde_array = np.zeros(len(actor_critics))
-
-    with open(os.path.join(scenario_dir, 'valid_files.json')) as file:
-        valid_veh_dict = json.load(file)
-        files = list(valid_veh_dict.keys())
-        # sort the files so that we have a consistent order
-        files = sorted(files)
+        ade_array = np.zeros((len(actor_critics), num_file_loops * num_files))
+        fde_array = np.zeros((len(actor_critics), num_file_loops * num_files))
 
     if test_zsc:
         output_generator = itertools.product(actor_critics, actor_critics)
@@ -127,23 +341,21 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, num_file_loops=1):
             (index_1, actor_1), (index_2, actor_2) = output
         else:
             (index_1, actor_1) = output
-        episode_rewards = [
-            deque([], maxlen=100) for _ in range(env.num_agents)
-        ]
-        true_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
         goal_frac = []
         collision_frac = []
-        average_displacement_error = 0
-        final_displacement_error = 0
+        veh_veh_collision_frac = []
+        veh_edge_collision_frac = []
+        average_displacement_error = []
+        final_displacement_error = []
         veh_counter = 0
         for loop_num in range(num_file_loops):
             for file_num, file in enumerate(files[0:cfg['num_eval_files']]):
                 print('file is {}'.format(os.path.join(scenario_dir, file)))
 
-                num_frames = 0
                 env.unwrapped.files = [os.path.join(scenario_dir, file)]
 
                 # step the env to its conclusion to generate the expert trajectories we compare against
+                env.cfg = ade_cfg
                 env.reset()
                 expert_trajectory_dict = defaultdict(lambda: np.zeros((80, 2)))
                 env.unwrapped.make_all_vehicles_experts()
@@ -153,275 +365,80 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, num_file_loops=1):
                             veh.id][i] = veh.position.numpy()
                     env.unwrapped.simulation.step(0.1)
 
-                obs = env.reset()
-
-                rollout_traj_dict = defaultdict(lambda: np.zeros((80, 2)))
-                # some key information for tracking statistics
-                goal_dist = env.goal_dist_normalizers
-                valid_indices = env.valid_indices
-                agent_id_to_env_id_map = env.agent_id_to_env_id_map
+                env.cfg = cfg
                 if test_zsc:
-                    # pick which valid indices go to which policy
-                    val = np.random.uniform()
-                    if val < 0.5:
-                        num_choice = int(np.floor(len(valid_indices) / 2.0))
-                    else:
-                        num_choice = int(np.ceil(len(valid_indices) / 2.0))
-                    indices_1 = list(
-                        np.random.choice(valid_indices,
-                                         num_choice,
-                                         replace=False))
-                    indices_2 = [
-                        val for val in valid_indices if val not in indices_1
-                    ]
-                    rnn_states = torch.zeros(
-                        [env.num_agents, get_hidden_size(cfg)],
-                        dtype=torch.float32,
-                        device=device)
-                    rnn_states_2 = torch.zeros(
-                        [env.num_agents, get_hidden_size(cfg)],
-                        dtype=torch.float32,
-                        device=device)
+                    output = run_rollouts(env, cfg, device,
+                                          expert_trajectory_dict,
+                                          distance_bins, actor_1, actor_2)
                 else:
-                    rnn_states = torch.zeros(
-                        [env.num_agents, get_hidden_size(cfg)],
-                        dtype=torch.float32,
-                        device=device)
-                episode_reward = np.zeros(env.num_agents)
-                finished_episode = [False] * env.num_agents
-                goal_achieved = [False] * len(valid_indices)
-                collision_observed = [False] * len(valid_indices)
+                    output = run_rollouts(env, cfg, device,
+                                          expert_trajectory_dict,
+                                          distance_bins, actor_1)
 
-                while not all(finished_episode):
-                    with torch.no_grad():
-                        obs_torch = AttrDict(transform_dict_observations(obs))
-                        for key, x in obs_torch.items():
-                            obs_torch[key] = torch.from_numpy(x).to(
-                                device).float()
+                avg_goal, avg_collisions, avg_veh_edge_collisions, avg_veh_veh_collisions, \
+                       success_rate_by_distance_return, success_rate_by_num_agents_return, \
+                           _, _, veh_counter = output
+                # TODO(eugenevinitsky) hideous copy and pasting
+                goal_frac.append(avg_goal)
+                collision_frac.append(avg_collisions)
+                veh_veh_collision_frac.append(avg_veh_veh_collisions)
+                veh_edge_collision_frac.append(avg_veh_edge_collisions)
+                if test_zsc:
+                    success_rate_by_distance[
+                        index_1, index_2] += success_rate_by_distance_return
+                    success_rate_by_num_agents[
+                        index_1, index_2] += success_rate_by_num_agents_return
+                else:
+                    success_rate_by_distance[
+                        index_1] += success_rate_by_distance_return
+                    success_rate_by_num_agents[
+                        index_1] += success_rate_by_num_agents_return
+                # do some logging
+                log.info(
+                    f'Avg goal achieved {np.mean(goal_frac)}±{np.std(goal_frac)}'
+                )
+                log.info(
+                    f'Avg num collisions {np.mean(collision_frac)}±{np.std(collision_frac)}'
+                )
 
-                        # we have to make a copy before doing the pass
-                        # because (for some reason), sample factory is making
-                        # some changes to the obs in the forwards pass
-                        # TBD what it is
-                        if test_zsc:
-                            obs_torch_2 = deepcopy(obs_torch)
-                            policy_outputs_2 = actor_2(
-                                obs_torch_2,
-                                rnn_states_2,
-                                with_action_distribution=True)
+                env.cfg = ade_cfg
+                # okay, now run the rollout one more time but this time set
+                # remove_at_goal and remove_at_collide to be false so we can do the ADE computations
+                if test_zsc:
+                    output = run_rollouts(env, cfg, device,
+                                          expert_trajectory_dict,
+                                          distance_bins, actor_1, actor_2)
+                else:
+                    output = run_rollouts(env, cfg, device,
+                                          expert_trajectory_dict,
+                                          distance_bins, actor_1)
 
-                        policy_outputs = actor_1(obs_torch,
-                                                 rnn_states,
-                                                 with_action_distribution=True)
+                _, _, _, _, _, _, ade, fde, veh_counter = output
+                average_displacement_error.append(ade)
+                final_displacement_error.append(fde)
 
-                        # sample actions from the distribution by default
-                        # also update the indices that should be drawn from the second policy
-                        # with its outputs
-                        actions = policy_outputs.actions
-                        if test_zsc:
-                            actions[indices_2] = policy_outputs_2.actions[
-                                indices_2]
-
-                        action_distribution = policy_outputs.action_distribution
-                        if isinstance(action_distribution,
-                                      ContinuousActionDistribution):
-                            if not cfg.continuous_actions_sample:  # TODO: add similar option for discrete actions
-                                actions = action_distribution.means
-                                if test_zsc:
-                                    actions[
-                                        indices_2] = policy_outputs_2.action_distribution.means[
-                                            indices_2]
-                        if isinstance(action_distribution,
-                                      CategoricalActionDistribution):
-                            if not cfg.discrete_actions_sample:
-                                actions = policy_outputs[
-                                    'action_logits'].argmax(axis=1)
-                                if test_zsc:
-                                    actions[indices_2] = policy_outputs_2[
-                                        'action_logits'].argmax(
-                                            axis=1)[indices_2]
-
-                        actions = actions.cpu().numpy()
-
-                        for veh in env.unwrapped.get_objects_that_moved():
-                            # only check vehicles we are actually controlling
-                            if veh.expert_control == False:
-                                rollout_traj_dict[veh.id][
-                                    env.step_num] = veh.position.numpy()
-
-                        rnn_states = policy_outputs.rnn_states
-                        if test_zsc:
-                            rnn_states_2 = policy_outputs_2.rnn_states
-
-                        for _ in range(render_action_repeat):
-
-                            obs, rew, done, infos = env.step(actions)
-                            episode_reward += rew
-                            num_frames += 1
-
-                            for i, index in enumerate(valid_indices):
-                                goal_achieved[i] = infos[index][
-                                    'goal_achieved'] or goal_achieved[i]
-                                collision_observed[i] = infos[index][
-                                    'collided'] or collision_observed[i]
-
-                            for agent_i, done_flag in enumerate(done):
-                                if done_flag:
-                                    finished_episode[agent_i] = True
-                                    episode_rewards[agent_i].append(
-                                        episode_reward[agent_i])
-                                    true_rewards[agent_i].append(
-                                        infos[agent_i].get(
-                                            'true_reward',
-                                            episode_reward[agent_i]))
-                                    log.info(
-                                        'Episode finished for agent %d at %d frames. Reward: %.3f, true_reward: %.3f',
-                                        agent_i, num_frames,
-                                        episode_reward[agent_i],
-                                        true_rewards[agent_i][-1])
-                                    rnn_states[agent_i] = torch.zeros(
-                                        [get_hidden_size(cfg)],
-                                        dtype=torch.float32,
-                                        device=device)
-                                    episode_reward[agent_i] = 0
-
-                            if all(finished_episode):
-                                avg_episode_rewards_str, avg_true_reward_str = '', ''
-                                for agent_i in range(env.num_agents):
-                                    avg_rew = np.mean(episode_rewards[agent_i])
-                                    avg_true_rew = np.mean(
-                                        true_rewards[agent_i])
-                                    if not np.isnan(avg_rew):
-                                        if avg_episode_rewards_str:
-                                            avg_episode_rewards_str += ', '
-                                        avg_episode_rewards_str += f'#{agent_i}: {avg_rew:.3f}'
-                                    if not np.isnan(avg_true_rew):
-                                        if avg_true_reward_str:
-                                            avg_true_reward_str += ', '
-                                        avg_true_reward_str += f'#{agent_i}: {avg_true_rew:.3f}'
-                                avg_goal = infos[0]['episode_extra_stats'][
-                                    'goal_achieved']
-                                avg_collisions = infos[0][
-                                    'episode_extra_stats']['collided']
-                                goal_frac.append(avg_goal)
-                                collision_frac.append(avg_collisions)
-                                if test_zsc:
-                                    success_rate_by_num_agents[
-                                        index_1, index_2,
-                                        len(valid_indices) - 1, 0] += avg_goal
-                                    success_rate_by_num_agents[
-                                        index_1, index_2,
-                                        len(valid_indices) - 1,
-                                        1] += avg_collisions
-                                    success_rate_by_num_agents[
-                                        index_1, index_2,
-                                        len(valid_indices) - 1, 2] += 1
-                                else:
-                                    success_rate_by_num_agents[
-                                        index_1,
-                                        len(valid_indices) - 1, 0] += avg_goal
-                                    success_rate_by_num_agents[
-                                        index_1,
-                                        len(valid_indices) - 1,
-                                        1] += avg_collisions
-                                    success_rate_by_num_agents[
-                                        index_1,
-                                        len(valid_indices) - 1, 2] += 1
-                                # track how well we do as a function of distance
-                                for i, index in enumerate(valid_indices):
-                                    env_id = agent_id_to_env_id_map[index]
-                                    bin = np.searchsorted(
-                                        distance_bins, goal_dist[env_id])
-                                    if test_zsc:
-                                        success_rate_by_distance[
-                                            index_1, index_2, bin - 1,
-                                            0] += goal_achieved[i]
-                                        success_rate_by_distance[
-                                            index_1, index_2, bin - 1,
-                                            1] += collision_observed[i]
-                                        success_rate_by_distance[index_1,
-                                                                 index_2,
-                                                                 bin - 1,
-                                                                 2] += 1
-                                    else:
-                                        success_rate_by_distance[
-                                            index_1, bin - 1,
-                                            0] += goal_achieved[i]
-                                        success_rate_by_distance[
-                                            index_1, bin - 1,
-                                            1] += collision_observed[i]
-                                        success_rate_by_distance[index_1,
-                                                                 bin - 1,
-                                                                 2] += 1
-                                # compute ADE and FDE
-                                for agent_id, traj in rollout_traj_dict.items(
-                                ):
-                                    masking_arr = traj.sum(axis=1)
-                                    mask = (masking_arr != 0.0) * (
-                                        masking_arr != traj.shape[1] * ERR_VAL)
-                                    expert_mask_arr = expert_trajectory_dict[
-                                        agent_id].sum(axis=1)
-                                    expert_mask = (expert_mask_arr != 0.0) * (
-                                        expert_mask_arr !=
-                                        traj.shape[1] * ERR_VAL)
-                                    ade = np.linalg.norm(
-                                        traj -
-                                        expert_trajectory_dict[agent_id],
-                                        axis=-1)[mask * expert_mask]
-                                    average_displacement_error = (
-                                        veh_counter *
-                                        average_displacement_error +
-                                        np.mean(ade)) / (veh_counter + 1)
-                                    fde = np.linalg.norm(
-                                        traj -
-                                        expert_trajectory_dict[agent_id],
-                                        axis=-1)[np.max(
-                                            np.argwhere(mask * expert_mask))]
-                                    final_displacement_error = (
-                                        veh_counter * final_displacement_error
-                                        + fde) / (veh_counter + 1)
-                                    veh_counter += 1
-
-                                # do some logging
-                                log.info(
-                                    f'Avg goal achieved {np.mean(goal_frac)}±{np.std(goal_frac)}'
-                                )
-                                log.info(
-                                    f'Avg num collisions {np.mean(collision_frac)}±{np.std(collision_frac)}'
-                                )
-                                log.info(
-                                    'Avg episode rewards: %s, true rewards: %s',
-                                    avg_episode_rewards_str,
-                                    avg_true_reward_str)
-                                log.info(
-                                    'Avg episode reward: %.3f, avg true_reward: %.3f',
-                                    np.mean([
-                                        np.mean(episode_rewards[i])
-                                        for i in range(env.num_agents)
-                                    ]),
-                                    np.mean([
-                                        np.mean(true_rewards[i])
-                                        for i in range(env.num_agents)
-                                    ]))
-        # goal_array[index_1,
-        #            index_2] = goal_frac / len(os.listdir(PROCESSED_TEST_NO_TL))
-        # collision_array[index_1, index_2] = collision_frac / len(
-        #     os.listdir(PROCESSED_TEST_NO_TL))
         if test_zsc:
             goal_array[index_1, index_2] = goal_frac
             collision_array[index_1, index_2] = collision_frac
-            if index_1 == index_2:
-                ade_array[index_1] = average_displacement_error
-            if index_1 == index_2:
-                fde_array[index_1] = final_displacement_error
+            veh_veh_collision_array[index_1, index_2] = veh_veh_collision_frac
+            veh_edge_collision_array[index_1,
+                                     index_2] = veh_edge_collision_frac
+            ade_array[index_1, index_2] = average_displacement_error
+            fde_array[index_1, index_2] = final_displacement_error
         else:
             goal_array[index_1] = goal_frac
             collision_array[index_1] = collision_frac
+            veh_veh_collision_array[index_1] = veh_veh_collision_frac
+            veh_edge_collision_array[index_1] = veh_edge_collision_frac
             ade_array[index_1] = average_displacement_error
             fde_array[index_1] = final_displacement_error
 
     np.save(os.path.join(output_path, 'zsc_goal.npy'), goal_array)
     np.save(os.path.join(output_path, 'zsc_collision.npy'), collision_array)
+    np.save(os.path.join(output_path, 'zsc_veh_veh_collision.npy'),
+            veh_veh_collision_array)
+    np.save(os.path.join(output_path, 'zsc_veh_edge_collision.npy'),
+            veh_edge_collision_array)
     np.save(os.path.join(output_path, 'ade.npy'), ade_array)
     np.save(os.path.join(output_path, 'fde.npy'), fde_array)
     with open(os.path.join(output_path, 'success_by_veh_number.npy'),
@@ -448,10 +465,10 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, num_file_loops=1):
 
     env.close()
 
-    return ExperimentStatus.SUCCESS, np.mean(episode_rewards)
+    return
 
 
-def load_wandb(experiment_name, force_reload=False):
+def load_wandb(experiment_name, cfg_filter, force_reload=False):
     if not os.path.exists(
             'wandb_{}.csv'.format(experiment_name)) or force_reload:
         import wandb
@@ -470,10 +487,11 @@ def load_wandb(experiment_name, force_reload=False):
                     k: v
                     for k, v in run.config.items() if not k.startswith('_')
                 }
-                history_df = run.history()
-                history_df['seed'] = config['seed']
-                history_df['num_files'] = config['num_files']
-                history_list.append(history_df)
+                if cfg_filter(config):
+                    history_df = run.history()
+                    history_df['seed'] = config['seed']
+                    history_df['num_files'] = config['num_files']
+                    history_list.append(history_df)
 
         runs_df = pd.concat(history_list)
         runs_df.to_csv('wandb_{}.csv'.format(experiment_name))
@@ -523,6 +541,7 @@ def plot_df(experiment_name):
 
 def eval_generalization(output_folder,
                         num_eval_files,
+                        files,
                         scenario_dir,
                         num_file_loops,
                         test_zsc=False,
@@ -557,7 +576,7 @@ def eval_generalization(output_folder,
     if test_zsc:
         # TODO(eugenevinitsky) we're currently storing the ZSC result in a random
         # folder which seems bad.
-        status, avg_reward = run_eval(
+        run_eval(
             [Bunch(cfg_dict) for cfg_dict in cfg_dicts],
             test_zsc=test_zsc,
             output_path=file_paths[0],
@@ -566,11 +585,12 @@ def eval_generalization(output_folder,
         print('stored ZSC result in {}'.format(file_paths[0]))
     else:
         for file_path, cfg_dict in zip(file_paths, cfg_dicts):
-            status, avg_reward = run_eval([Bunch(cfg_dict)],
-                                          test_zsc=test_zsc,
-                                          output_path=file_path,
-                                          scenario_dir=scenario_dir,
-                                          num_file_loops=num_file_loops)
+            run_eval([Bunch(cfg_dict)],
+                    test_zsc=test_zsc,
+                    output_path=file_path,
+                    scenario_dir=scenario_dir,
+                    files=files,
+                    num_file_loops=num_file_loops)
 
 
 def main():
@@ -579,13 +599,13 @@ def main():
     disp.start()
     register_custom_components()
     RUN_EVAL = True
-    TEST_ZSC = True
-    PLOT_RESULTS = False
-    RELOAD_WANDB = False
-    FILES = PROCESSED_TRAIN_NO_TL
-    NUM_EVAL_FILES = 50
+    TEST_ZSC = False
+    PLOT_RESULTS = True
+    RELOAD_WANDB = True
+    FILE_PATH = PROCESSED_VALID_NO_TL
+    NUM_EVAL_FILES = 200
     NUM_FILE_LOOPS = 1  # the number of times to loop over a fixed set of files
-    experiment_names = ['srt_12']
+    experiment_names = ['srt_v27']
     # output_folder = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35'
     # output_folder = [
     #     '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.23/srt_v10/17.02.40/'
@@ -594,16 +614,18 @@ def main():
     # output_folder = [
     #     '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/'
     # ]
-    # 100 files
+    # SRT submission results
     output_folder = [
-        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/'
+        '/checkpoint/eugenevinitsky/nocturne/sweep/2022.06.01/srt_v27/17.35.33'
     ]
     generalization_dfs = []
 
     cfg_filter = None
 
     def cfg_filter(cfg_dict):
-        if cfg_dict['num_files'] == 10000:
+        if cfg_dict['scenario']['road_edge_first'] == False and cfg_dict[
+                'scenario']['max_visible_road_points'] == 500 and cfg_dict[
+                    'algorithm']['encoder_hidden_size'] == 256:
             return True
         else:
             return False
@@ -613,11 +635,19 @@ def main():
     #########           Build the generalization dataframes ######################
     ##############################################################################
     '''
+    with open(os.path.join(FILE_PATH, 'valid_files.json')) as file:
+        valid_veh_dict = json.load(file)
+        files = list(valid_veh_dict.keys())
+        # sort the files so that we have a consistent order
+        np.random.seed(0)
+        np.random.shuffle(files)
+
     if RUN_EVAL:
         for folder in output_folder:
             eval_generalization(folder,
                                 NUM_EVAL_FILES,
-                                FILES,
+                                files,
+                                scenario_dir=FILE_PATH,
                                 num_file_loops=NUM_FILE_LOOPS,
                                 test_zsc=TEST_ZSC,
                                 cfg_filter=cfg_filter)
@@ -633,24 +663,33 @@ def main():
                     file_paths.append(dirpath)
                     with open(os.path.join(dirpath, 'cfg.json'), 'r') as file:
                         cfg_dict = json.load(file)
-                    goal = np.mean(
-                        np.load(os.path.join(dirpath, 'zsc_goal.npy')))
-                    collide = np.mean(
-                        np.load(os.path.join(dirpath, 'zsc_collision.npy')))
-                    ade = np.mean(np.load(os.path.join(dirpath, 'ade.npy')))
-                    fde = np.mean(np.load(os.path.join(dirpath, 'fde.npy')))
-                    num_files = cfg_dict['num_files']
-                    if int(num_files) == -1:
-                        num_files = 134453
-                    if int(num_files) == 1:
-                        continue
-                    data_dicts.append({
-                        'num_files': num_files,
-                        'goal_rate': goal,
-                        'collide_rate': collide,
-                        'ade': ade,
-                        'fde': fde
-                    })
+                    if cfg_filter(cfg_dict):
+                        # TODO(eugenevinitsky) why do they not all have this?
+                        try:
+                            goal = np.mean(
+                                np.load(os.path.join(dirpath, 'zsc_goal.npy')))
+                            collide = np.mean(
+                                np.load(
+                                    os.path.join(dirpath,
+                                                 'zsc_collision.npy')))
+                            ade = np.mean(
+                                np.load(os.path.join(dirpath, 'ade.npy')))
+                            fde = np.mean(
+                                np.load(os.path.join(dirpath, 'fde.npy')))
+                        except:
+                            pass
+                        num_files = cfg_dict['num_files']
+                        if int(num_files) == -1:
+                            num_files = 134453
+                        if int(num_files) == 1:
+                            continue
+                        data_dicts.append({
+                            'num_files': num_files,
+                            'goal_rate': goal,
+                            'collide_rate': collide,
+                            'ade': ade,
+                            'fde': fde
+                        })
             df = pd.DataFrame(data_dicts)
             goals = df.groupby(['num_files'])['goal_rate'].mean().reset_index()
             ade = df.groupby(['num_files'])['ade'].mean().reset_index()
@@ -668,7 +707,7 @@ def main():
         '''
         training_dfs = []
         for experiment_name in experiment_names:
-            load_wandb(experiment_name, force_reload=RELOAD_WANDB)
+            load_wandb(experiment_name, cfg_filter, force_reload=RELOAD_WANDB)
             training_dfs.append(
                 pd.read_csv('wandb_{}.csv'.format(experiment_name)))
 

@@ -117,6 +117,10 @@ class SampleFactoryEnv():
             avg_len = np.mean(self.num_steps[self.valid_indices])
             avg_goal_achieved = np.mean(self.goal_achieved[self.valid_indices])
             avg_collided = np.mean(self.collided[self.valid_indices])
+            avg_veh_edge_collided = np.mean(
+                self.veh_edge_collided[self.valid_indices])
+            avg_veh_veh_collided = np.mean(
+                self.veh_veh_collided[self.valid_indices])
             for info in info_n:
                 info['episode_extra_stats'] = {}
                 info['episode_extra_stats']['avg_rew'] = avg_rew
@@ -124,6 +128,10 @@ class SampleFactoryEnv():
                 info['episode_extra_stats'][
                     'goal_achieved'] = avg_goal_achieved
                 info['episode_extra_stats']['collided'] = avg_collided
+                info['episode_extra_stats'][
+                    'veh_edge_collided'] = avg_veh_edge_collided
+                info['episode_extra_stats'][
+                    'veh_veh_collided'] = avg_veh_veh_collided
 
         # update the dones so we know if we need to reset
         # sample factory does not call reset for you
@@ -190,6 +198,8 @@ class SampleFactoryEnv():
         self.num_steps = np.zeros(self.num_agents)
         self.goal_achieved = np.zeros(self.num_agents)
         self.collided = np.zeros(self.num_agents)
+        self.veh_veh_collided = np.zeros(self.num_agents)
+        self.veh_edge_collided = np.zeros(self.num_agents)
         self.already_done = [False for _ in self.agent_ids]
         next_obses = self.env.reset()
         env_keys = sorted(list(next_obses.keys()))
@@ -244,6 +254,7 @@ class SampleFactoryEnv():
 
 
 class CustomEncoder(EncoderBase):
+
     def __init__(self, cfg, obs_space, timing):
         super().__init__(cfg, timing)
 

@@ -46,10 +46,13 @@ class BaseEnv(Env):
         self.scenario = self.simulation.getScenario()
         self.controlled_vehicles = self.scenario.getObjectsThatMoved()
         self.cfg = cfg
-        self.n_frames_stacked = self.cfg['subscriber'].get('n_frames_stacked', 1)
+        self.n_frames_stacked = self.cfg['subscriber'].get(
+            'n_frames_stacked', 1)
         if self.n_frames_stacked > 1:
-            print('WARNING: you are frame stacking and may want to turn off recurrence if it is enabled\
-                  in your agent as frame-stacking may not be needed when using recurrent policies.')
+            print(
+                'WARNING: you are frame stacking and may want to turn off recurrence if it is enabled\
+                  in your agent as frame-stacking may not be needed when using recurrent policies.'
+            )
         self.single_agent_mode = cfg['single_agent_mode']
         self.seed(cfg['seed'])
         self.episode_length = cfg['episode_length']
@@ -149,7 +152,10 @@ class BaseEnv(Env):
             self.context_dict[veh_id].append(self.get_observation(veh_obj))
             if self.n_frames_stacked > 1:
                 veh_deque = self.context_dict[veh_id]
-                context_list = list(islice(veh_deque, len(veh_deque) - self.n_frames_stacked, len(veh_deque)))
+                context_list = list(
+                    islice(veh_deque,
+                           len(veh_deque) - self.n_frames_stacked,
+                           len(veh_deque)))
                 obs_dict[veh_id] = np.concatenate(context_list)
             else:
                 obs_dict[veh_id] = self.context_dict[veh_id][-1]
@@ -157,6 +163,8 @@ class BaseEnv(Env):
             done_dict[veh_id] = False
             info_dict[veh_id]['goal_achieved'] = False
             info_dict[veh_id]['collided'] = False
+            info_dict[veh_id]['veh_veh_collision'] = False
+            info_dict[veh_id]['veh_edge_collision'] = False
             obj_pos = veh_obj.position
             goal_pos = veh_obj.target_position
             '''############################################
@@ -210,27 +218,28 @@ class BaseEnv(Env):
                         rew_dict[veh_id] -= rew_cfg.get(
                             'shaped_goal_distance_scaling', 1.0) * (
                                 np.abs(veh_obj.speed - veh_obj.target_speed) /
-                                40.0
-                            ) / rew_cfg['reward_scaling']
+                                40.0) / rew_cfg['reward_scaling']
                     else:
                         rew_dict[veh_id] += rew_cfg.get(
-                            'shaped_goal_distance_scaling',
-                            1.0) * (1 - np.abs(veh_obj.speed - veh_obj.target_speed) /
-                                    40.0
-                                    ) / rew_cfg['reward_scaling']
-                if rew_cfg['shaped_goal_distance'] and rew_cfg['heading_target']:
+                            'shaped_goal_distance_scaling', 1.0
+                        ) * (1 - np.abs(veh_obj.speed - veh_obj.target_speed) /
+                             40.0) / rew_cfg['reward_scaling']
+                if rew_cfg['shaped_goal_distance'] and rew_cfg[
+                        'heading_target']:
                     if rew_cfg['goal_distance_penalty']:
                         rew_dict[veh_id] -= rew_cfg.get(
-                            'shaped_goal_distance_scaling', 1.0) * (
-                                np.abs(self.normalize_angle(veh_obj.heading - veh_obj.target_heading)) /
-                                (2 * np.pi)
-                            ) / rew_cfg['reward_scaling']
+                            'shaped_goal_distance_scaling',
+                            1.0) * (np.abs(
+                                self.normalize_angle(veh_obj.heading -
+                                                     veh_obj.target_heading)) /
+                                    (2 * np.pi)) / rew_cfg['reward_scaling']
                     else:
                         rew_dict[veh_id] += rew_cfg.get(
                             'shaped_goal_distance_scaling',
-                            1.0) * (1 - np.abs(self.normalize_angle(veh_obj.heading - veh_obj.target_heading)) /
-                                    (2 * np.pi)
-                                    ) / rew_cfg['reward_scaling']
+                            1.0) * (1 - np.abs(
+                                self.normalize_angle(veh_obj.heading -
+                                                     veh_obj.target_heading)) /
+                                    (2 * np.pi)) / rew_cfg['reward_scaling']
             '''############################################
                     Handle potential done conditions
             ############################################'''
@@ -239,6 +248,10 @@ class BaseEnv(Env):
                 done_dict[veh_id] = True
             if veh_obj.getCollided():
                 info_dict[veh_id]['collided'] = True
+                if int(veh_obj.collision_type) == 1:
+                    info_dict[veh_id]['veh_veh_collision'] = True
+                if int(veh_obj.collision_type) == 2:
+                    info_dict[veh_id]['veh_edge_collision'] = True
                 rew_dict[veh_id] -= np.abs(
                     rew_cfg['collision_penalty']) / rew_cfg['reward_scaling']
                 done_dict[veh_id] = True
@@ -246,7 +259,11 @@ class BaseEnv(Env):
             # in the multi-agent setting.
             if done_dict[veh_id]:
                 self.done_ids.append(veh_id)
-                objs_to_remove.append(veh_obj)
+                if (info_dict[veh_id]['goal_achieved']
+                        and self.cfg.get('remove_at_goal', True)) or (
+                            info_dict[veh_id]['collided']
+                            and self.cfg.get('remove_at_collide', True)):
+                    objs_to_remove.append(veh_obj)
 
         for veh_obj in objs_to_remove:
             self.scenario.removeVehicle(veh_obj)
@@ -295,11 +312,14 @@ class BaseEnv(Env):
                 warm up policies by stepping all vehicles as experts.
             #####################################################################'''
             dead_obs = self.get_observation(self.scenario.getVehicles()[0])
-            self.dead_feat = -np.ones(dead_obs.shape[0] * self.n_frames_stacked)
+            self.dead_feat = -np.ones(
+                dead_obs.shape[0] * self.n_frames_stacked)
             # step all the vehicles forward by one second and record their observations as context
             context_len = max(10, self.n_frames_stacked)
             self.context_dict = {
-                veh.getID(): deque([self.dead_feat for _ in range(context_len)], maxlen=context_len)
+                veh.getID():
+                deque([self.dead_feat for _ in range(context_len)],
+                      maxlen=context_len)
                 for veh in self.scenario.getObjectsThatMoved()
             }
             for veh in self.scenario.getObjectsThatMoved():
@@ -401,7 +421,10 @@ class BaseEnv(Env):
             self.context_dict[veh_id].append(self.get_observation(veh_obj))
             if self.n_frames_stacked > 1:
                 veh_deque = self.context_dict[veh_id]
-                context_list = list(islice(veh_deque, len(veh_deque) - self.n_frames_stacked, len(veh_deque)))
+                context_list = list(
+                    islice(veh_deque,
+                           len(veh_deque) - self.n_frames_stacked,
+                           len(veh_deque)))
                 obs_dict[veh_id] = np.concatenate(context_list)
             else:
                 obs_dict[veh_id] = self.context_dict[veh_id][-1]
@@ -459,7 +482,7 @@ class BaseEnv(Env):
         return self.scenario.getVehicles()
 
     def get_objects_that_moved(self):
-        return self.scenario.getVehicles()
+        return self.scenario.getObjectsThatMoved()
 
     def render(self, mode=None):
         """See superclass."""
@@ -516,7 +539,7 @@ class BaseEnv(Env):
         if ret > np.pi:
             return angle - 2 * np.pi
         else:
-            if ret < - np.pi:
+            if ret < -np.pi:
                 return ret + 2 * np.pi
             else:
                 return ret
