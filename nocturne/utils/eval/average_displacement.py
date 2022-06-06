@@ -11,6 +11,7 @@ from multiprocessing import Pool
 from itertools import repeat
 
 SIM_N_STEPS = 90  # number of steps per trajectory
+GOAL_TOLERANCE = 0.5
 
 
 def _average_displacement_impl(arg):
@@ -74,6 +75,7 @@ def _average_displacement_impl(arg):
 
     avg_displacements = []
     collisions = [False for _ in controlled_vehicles]
+    goal_achieved = [False for _ in controlled_vehicles]
     for i in range(SIM_N_STEPS - n_stacked_states):
         for veh in controlled_vehicles:
             if np.isclose(veh.position.x, -10000.0):
@@ -123,6 +125,8 @@ def _average_displacement_impl(arg):
             # a collision with another a vehicle
             if veh.collided and int(veh.collision_type) == 1:
                 collisions[i] = True
+            if (veh.position - veh.target_position).norm() < GOAL_TOLERANCE:
+                goal_achieved[i] = True
 
         # average displacements over all vehicles
         if len(displacements) > 0:
@@ -133,13 +137,16 @@ def _average_displacement_impl(arg):
     avg_displacement = np.mean(
         avg_displacements) if len(avg_displacements) > 0 else np.nan
     avg_collisions = np.mean(collisions) if len(collisions) > 0 else np.nan
+    avg_goals = np.mean(goal_achieved) if len(goal_achieved) > 0 else np.nan
     print('displacements', avg_displacement)
     print('collisions', avg_collisions)
-    return avg_displacement, avg_collisions
+    print('goal_rate', avg_goals)
+    return avg_displacement, avg_collisions, avg_goals
 
 
 def compute_average_displacement(trajectories_dir, model, configs):
     """Compute average displacement error between a model and the ground truth."""
+    NUM_FILES = 280
     # get trajectories paths
     if isinstance(trajectories_dir, str):
         # if trajectories_dir is a string, treat it as the path to a directory of trajectories
@@ -151,25 +158,35 @@ def compute_average_displacement(trajectories_dir, model, configs):
         # if trajectories_dir is a list, treat it as a list of paths to trajectory files
         trajectories_paths = [Path(path) for path in trajectories_dir]
     # compute average displacement over each individual trajectory file
-    trajectories_paths = trajectories_paths[:140]
+    trajectories_paths = trajectories_paths[:NUM_FILES]
     with Pool(processes=14) as pool:
         result = list(
             pool.map(_average_displacement_impl,
                      zip(trajectories_paths, repeat(model), repeat(configs))))
         average_displacements = np.array(result)[:, 0]
         average_collisions = np.array(result)[:, 1]
-        print(average_displacements, average_collisions)
+        average_goals = np.array(result)[:, 2]
+        print(average_displacements, average_collisions, average_goals)
 
-    return np.mean(
-        average_displacements[~np.isnan(average_displacements)]), np.mean(
-            average_collisions[~np.isnan(average_collisions)])
+    return [
+        np.mean(average_displacements[~np.isnan(average_displacements)]),
+        np.std(average_displacements[~np.isnan(average_displacements)]) /
+        np.sqrt(NUM_FILES)
+    ], [
+        np.mean(average_collisions[~np.isnan(average_collisions)]),
+        np.std(average_collisions[~np.isnan(average_displacements)]) /
+        np.sqrt(NUM_FILES)
+    ], [
+        np.mean(average_goals[~np.isnan(average_goals)]),
+        np.std(average_goals[~np.isnan(average_goals)]) / np.sqrt(NUM_FILES)
+    ]
 
 
 if __name__ == '__main__':
     from nocturne.utils.imitation_learning.model import ImitationAgent  # noqa: F401
     import json
     model = torch.load(
-        '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/14.23.17/++device=cuda,++file_limit=1000/train_logs/2022_06_05_14_23_23/model_390.pth'
+        '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/14.23.17/++device=cuda,++file_limit=1000/train_logs/2022_06_05_14_23_23/model_600.pth'
     ).to('cpu')
     model.actions_grids = [x.to('cpu') for x in model.actions_grids]
     model.eval()
@@ -179,9 +196,12 @@ if __name__ == '__main__':
         configs = json.load(fp)
         configs['device'] = 'cpu'
     with torch.no_grad():
-        ade, collisions = compute_average_displacement(
+        ade, collisions, goals = compute_average_displacement(
             '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json_v2_no_tl_valid',
             model=model,
             configs=configs)
-    print(f'Average Displacement Error: {ade:.3f} meters')
-    print(f'Average Collisions: {collisions:.3f}\%')
+    print(f'Average Displacement Error: {ade[0]:.3f} ± {ade[1]:.3f} meters')
+    print(f'Average Collisions: {collisions[0]:.3f} ± {collisions[1]:.3f}\%')
+    print(
+        f'Average Success at getting to goal: {goals[0]:.3f} ± {goals[1]:.3f}\%'
+    )
