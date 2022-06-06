@@ -106,7 +106,7 @@ std::vector<std::pair<const PointType*, float>> NearestKRoadPoints(
   const geometry::Vector2D& src_pos = src.position();
   const int64_t n = points.size();
   std::vector<std::pair<const PointType*, float>> ret;
-  std::vector<bool> mask(n);
+  std::vector<geometry::utils::MaskType> mask(n);
   ret.reserve(n);
   for (int64_t i = 0; i < n; ++i) {
     const PointType* p = points[i];
