@@ -247,7 +247,8 @@ def main():
     # 10000 file run
     # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/17/srt_12/cfg.json'
     # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.06.01/srt_v27/17.35.33/177/srt_v27/cfg.json'
-    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.06.01/srt_v27/17.35.33/11/srt_v27/cfg.json'
+    # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.06.01/srt_v27/17.35.33/11/srt_v27/cfg.json'
+    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.06.01/srt_v27/17.35.33/83/srt_v27/cfg.json'
     with open(file_path, 'r') as file:
         cfg_dict = json.load(file)
 
@@ -259,7 +260,9 @@ def main():
     cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
     cfg_dict['continuous_actions_sample'] = True
     cfg_dict['discrete_actions_sample'] = False
-    cfg_dict['scenario_path'] = PROCESSED_TRAIN_NO_TL
+    cfg_dict['remove_at_collide'] = True
+    cfg_dict['remove_at_goal'] = True
+    cfg_dict['scenario_path'] = PROCESSED_VALID_NO_TL
 
     class Bunch(object):
 

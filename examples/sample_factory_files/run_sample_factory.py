@@ -101,6 +101,10 @@ class SampleFactoryEnv():
                     agent_id] or agent_info['goal_achieved']
                 self.collided[agent_id] = self.collided[
                     agent_id] or agent_info['collided']
+                self.veh_edge_collided[agent_id] = self.veh_edge_collided[
+                    agent_id] or agent_info['veh_edge_collision']
+                self.veh_veh_collided[agent_id] = self.veh_veh_collided[
+                    agent_id] or agent_info['veh_veh_collision']
             else:
                 rew_n.append(0)
                 agent_info = {}
@@ -129,9 +133,9 @@ class SampleFactoryEnv():
                     'goal_achieved'] = avg_goal_achieved
                 info['episode_extra_stats']['collided'] = avg_collided
                 info['episode_extra_stats'][
-                    'veh_edge_collided'] = avg_veh_edge_collided
+                    'veh_edge_collision'] = avg_veh_edge_collided
                 info['episode_extra_stats'][
-                    'veh_veh_collided'] = avg_veh_veh_collided
+                    'veh_veh_collision'] = avg_veh_veh_collided
 
         # update the dones so we know if we need to reset
         # sample factory does not call reset for you

@@ -1,5 +1,6 @@
 """Default environment for Nocturne."""
 
+from operator import truediv
 from typing import Any, Dict, Sequence, Union
 
 from collections import defaultdict, deque
@@ -244,7 +245,8 @@ class BaseEnv(Env):
                     Handle potential done conditions
             ############################################'''
             # achieved our goal
-            if info_dict[veh_id]['goal_achieved']:
+            if info_dict[veh_id]['goal_achieved'] and self.cfg.get(
+                    'remove_at_goal', True):
                 done_dict[veh_id] = True
             if veh_obj.getCollided():
                 info_dict[veh_id]['collided'] = True
@@ -254,7 +256,8 @@ class BaseEnv(Env):
                     info_dict[veh_id]['veh_edge_collision'] = True
                 rew_dict[veh_id] -= np.abs(
                     rew_cfg['collision_penalty']) / rew_cfg['reward_scaling']
-                done_dict[veh_id] = True
+                if self.cfg.get('remove_at_collide', True):
+                    done_dict[veh_id] = True
             # remove the vehicle so that its trajectory doesn't continue. This is important
             # in the multi-agent setting.
             if done_dict[veh_id]:
@@ -282,6 +285,8 @@ class BaseEnv(Env):
                     rew_dict[key] = 0.0
                     info_dict[key]['goal_achieved'] = False
                     info_dict[key]['collided'] = False
+                    info_dict[key]['veh_veh_collision'] = False
+                    info_dict[key]['veh_edge_collision'] = False
 
         if self.step_num >= self.episode_length:
             done_dict = {key: True for key in done_dict.keys()}
