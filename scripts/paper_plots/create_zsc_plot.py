@@ -65,10 +65,10 @@ if __name__ == '__main__':
     # 10000 on train
     # zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/4/srt_12'
     zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.06.01/srt_v27/17.35.33/123/srt_v27'
-    create_heat_map('test_zsc_goal.npy', "Cross-play Relative Goal Rate",
+    create_heat_map('train_zsc_goal.npy', "Cross-play Relative Goal Rate",
                     'cross_play_heat_map.png')
-    create_heat_map('test_zsc_collision.npy',
+    create_heat_map('train_zsc_collision.npy',
                     "Cross-play Relative Collision Rate",
                     'cross_play_collision_map.png')
-    compute_average_change('test_zsc_goal.npy')
-    compute_average_change('test_zsc_collision.npy')
+    compute_average_change('train_zsc_goal.npy')
+    compute_average_change('train_zsc_collision.npy')

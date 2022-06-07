@@ -6,9 +6,12 @@ TODO(ev) refactor, this is wildly similar to visualize_sample_factory
 from copy import deepcopy
 from collections import deque, defaultdict
 import itertools
+from itertools import repeat
 import json
-import sys
+import multiprocessing as mp
+from multiprocessing import Process
 import os
+import sys
 
 import ipdb
 import matplotlib.pyplot as plt
@@ -37,6 +40,12 @@ CB_color_cycle = [
     '#377eb8', '#ff7f00', '#4daf4a', '#f781bf', '#a65628', '#984ea3',
     '#999999', '#e41a1c', '#dede00'
 ]
+
+
+class Bunch(object):
+
+    def __init__(self, adict):
+        self.__dict__.update(adict)
 
 
 def ccw(A, B, C):
@@ -68,6 +77,8 @@ def run_rollouts(env,
                  device,
                  expert_trajectory_dict,
                  distance_bins,
+                 intersection_bins,
+                 veh_intersection_dict,
                  actor_1,
                  actor_2=None):
     episode_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
@@ -81,7 +92,7 @@ def run_rollouts(env,
 
     success_rate_by_num_agents = np.zeros((cfg.max_num_vehicles, 3))
     success_rate_by_distance = np.zeros((distance_bins.shape[-1], 3))
-
+    success_rate_by_intersections = np.zeros((intersection_bins.shape[-1], 3))
     if actor_2 is not None:
         # pick which valid indices go to which policy
         val = np.random.uniform()
@@ -220,6 +231,14 @@ def run_rollouts(env,
                     success_rate_by_distance[bin - 1, :] += [
                         goal_achieved[i], collision_observed[i], 1
                     ]
+                # track how well we do as number of intersections
+                for i, index in enumerate(valid_indices):
+                    env_id = agent_id_to_env_id_map[index]
+                    bin = min(veh_intersection_dict[env_id],
+                              distance_bins.shape[-1] - 1)
+                    success_rate_by_intersections[bin, :] += [
+                        goal_achieved[i], collision_observed[i], 1
+                    ]
                 # compute ADE and FDE
                 ades = []
                 fdes = []
@@ -254,11 +273,17 @@ def run_rollouts(env,
                     ]))
 
                 return (avg_goal, avg_collisions, avg_veh_edge_collisions, avg_veh_veh_collisions, \
-                       success_rate_by_distance, success_rate_by_num_agents, \
+                       success_rate_by_distance, success_rate_by_num_agents, success_rate_by_intersections, \
                            np.mean(ades), np.mean(fdes), veh_counter)
 
 
-def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
+def run_eval(cfgs,
+             test_zsc,
+             output_path,
+             scenario_dir,
+             files,
+             file_type,
+             device='cuda'):
     """Eval a stored agent over all files in validation set.
 
     Args:
@@ -271,7 +296,11 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
         None: None
     """
     actor_critics = []
+    if not isinstance(cfgs, list):
+        cfgs = [cfgs]
     for i, cfg in enumerate(cfgs):
+        if not isinstance(cfg, Bunch):
+            cfg = Bunch(cfg)
         cfg = load_from_checkpoint(cfg)
 
         render_action_repeat = cfg.render_action_repeat if cfg.render_action_repeat is not None else cfg.env_frameskip
@@ -305,7 +334,7 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
         actor_critic = create_actor_critic(cfg, env.observation_space,
                                            env.action_space)
 
-        device = torch.device('cpu' if cfg.device == 'cpu' else 'cuda')
+        device = torch.device(device)
         actor_critic.model_to_device(device)
 
         policy_id = cfg.policy_index
@@ -318,7 +347,7 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
     # we bin the success rate into bins of 10 meters between 0 and 400
     # the second dimension is the counts
     distance_bins = np.linspace(0, 400, 40)
-    intersections_bins = np.linspace(0, 5, 5)
+    intersections_bins = np.linspace(0, 7, 7)
     num_files = cfg['num_eval_files']
     num_file_loops = cfg['num_file_loops']
     # TODO(eugenevinitsky) horrifying copy and paste
@@ -334,7 +363,7 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
              3))
         success_rate_by_intersections = np.zeros(
             (len(actor_critics), len(actor_critics),
-             intersections_bins.shape[-1], 2, num_file_loops * num_files))
+             intersections_bins.shape[-1], 3))
         ade_array = np.zeros((len(actor_critics), len(actor_critics),
                               num_file_loops * num_files))
         fde_array = np.zeros((len(actor_critics), len(actor_critics),
@@ -358,8 +387,7 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
         success_rate_by_distance = np.zeros(
             (len(actor_critics), distance_bins.shape[-1], 3))
         success_rate_by_intersections = np.zeros(
-            (len(actor_critics), intersections_bins.shape[-1], 2,
-             num_file_loops * num_files))
+            (len(actor_critics), intersections_bins.shape[-1], 3))
         ade_array = np.zeros((len(actor_critics), num_file_loops * num_files))
         fde_array = np.zeros((len(actor_critics), num_file_loops * num_files))
 
@@ -382,6 +410,7 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
         veh_counter = 0
         for loop_num in range(num_file_loops):
             for file_num, file in enumerate(files[0:cfg['num_eval_files']]):
+                print(loop_num * cfg['num_eval_files'] + file_num)
                 print('file is {}'.format(os.path.join(scenario_dir, file)))
 
                 env.unwrapped.files = [os.path.join(scenario_dir, file)]
@@ -400,11 +429,13 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
                 # compute the number of expert trajectories that intersect
                 # while filtering out the bits of the trajectory
                 # that were invalid
-                num_intersections = 0
-                for i, trajectory in enumerate(
-                        list(expert_trajectory_dict.values())):
-                    for trajectory2 in list(
-                            expert_trajectory_dict.values())[i + 1:]:
+                vehs_with_intersecting_ids = defaultdict(int)
+                for veh_id in expert_trajectory_dict.keys():
+                    for veh_id2 in expert_trajectory_dict.keys():
+                        if veh_id == veh_id2:
+                            continue
+                        trajectory = expert_trajectory_dict[veh_id]
+                        trajectory2 = expert_trajectory_dict[veh_id2]
                         expert_mask_arr = trajectory.sum(axis=1)
                         expert_mask = (expert_mask_arr != 0.0) * (
                             expert_mask_arr != trajectory.shape[1] * ERR_VAL)
@@ -414,21 +445,26 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
                             expert_mask_arr != trajectory2.shape[1] * ERR_VAL)
                         trajectory2 = trajectory2[expert_mask]
                         if poly_intersection(trajectory, trajectory2):
-                            num_intersections += poly_intersection(
-                                trajectory, trajectory2)
+                            vehs_with_intersecting_ids[
+                                veh_id] += poly_intersection(
+                                    trajectory, trajectory2)
 
                 env.cfg = cfg
                 if test_zsc:
                     output = run_rollouts(env, cfg, device,
                                           expert_trajectory_dict,
-                                          distance_bins, actor_1, actor_2)
+                                          distance_bins, intersections_bins,
+                                          vehs_with_intersecting_ids, actor_1,
+                                          actor_2)
                 else:
                     output = run_rollouts(env, cfg, device,
                                           expert_trajectory_dict,
-                                          distance_bins, actor_1)
+                                          distance_bins, intersections_bins,
+                                          vehs_with_intersecting_ids, actor_1)
 
                 avg_goal, avg_collisions, avg_veh_edge_collisions, avg_veh_veh_collisions, \
                        success_rate_by_distance_return, success_rate_by_num_agents_return, \
+                       success_rate_by_intersections_return, \
                            _, _, veh_counter = output
                 # TODO(eugenevinitsky) hideous copy and pasting
                 goal_frac.append(avg_goal)
@@ -441,22 +477,15 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
                     success_rate_by_num_agents[
                         index_1, index_2] += success_rate_by_num_agents_return
                     success_rate_by_intersections[
-                        index_1, index_2,
-                        min(intersections_bins.shape[-1] -
-                            1, num_intersections), :,
-                        loop_num * file_num] = [avg_goal, avg_collisions]
+                        index_1,
+                        index_2] += success_rate_by_intersections_return
                 else:
                     success_rate_by_distance[
                         index_1] += success_rate_by_distance_return
                     success_rate_by_num_agents[
                         index_1] += success_rate_by_num_agents_return
                     success_rate_by_intersections[
-                        index_1,
-                        min(intersections_bins.shape[-1] -
-                            1, num_intersections), :,
-                        loop_num * cfg['num_eval_files'] + file_num] = [
-                            avg_goal, avg_collisions
-                        ]
+                        index_1] += success_rate_by_intersections_return
                 # do some logging
                 log.info(
                     f'Avg goal achieved {np.mean(goal_frac)}±{np.std(goal_frac) / len(goal_frac)}'
@@ -477,13 +506,16 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
                 if test_zsc:
                     output = run_rollouts(env, cfg, device,
                                           expert_trajectory_dict,
-                                          distance_bins, actor_1, actor_2)
+                                          distance_bins, intersections_bins,
+                                          vehs_with_intersecting_ids, actor_1,
+                                          actor_2)
                 else:
                     output = run_rollouts(env, cfg, device,
                                           expert_trajectory_dict,
-                                          distance_bins, actor_1)
+                                          distance_bins, intersections_bins,
+                                          vehs_with_intersecting_ids, actor_1)
 
-                _, _, _, _, _, _, ade, fde, veh_counter = output
+                _, _, _, _, _, _, _, ade, fde, veh_counter = output
                 average_displacement_error.append(ade)
                 final_displacement_error.append(fde)
                 log.info(
@@ -502,7 +534,11 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
             ade_array[index_1, index_2] = average_displacement_error
             fde_array[index_1, index_2] = final_displacement_error
         else:
-            goal_array[index_1] = goal_frac
+            try:
+                goal_array[index_1] = goal_frac
+            except:
+                import ipdb
+                ipdb.set_trace()
             collision_array[index_1] = collision_frac
             veh_veh_collision_array[index_1] = veh_veh_collision_frac
             veh_edge_collision_array[index_1] = veh_edge_collision_frac
@@ -551,10 +587,20 @@ def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
                                        success_rate_by_distance[:, :, [2]])
         print(dist_ratio)
         np.save(f, dist_ratio)
-    np.save(
-        os.path.join(output_path,
-                     '{}_success_by_num_intersections.npy'.format(file_type)),
-        success_rate_by_intersections)
+    with open(
+            os.path.join(
+                '{}_success_by_num_intersections.npy'.format(file_type)),
+            'wb') as f:
+        if test_zsc:
+            dist_ratio = np.nan_to_num(
+                success_rate_by_intersections[:, :, :, 0:2] /
+                success_rate_by_intersections[:, :, :, [2]])
+        else:
+            dist_ratio = np.nan_to_num(
+                success_rate_by_intersections[:, :, 0:2] /
+                success_rate_by_intersections[:, :, [2]])
+        print(dist_ratio)
+        np.save(f, dist_ratio)
 
     env.close()
 
@@ -593,8 +639,8 @@ def load_wandb(experiment_name, cfg_filter, force_reload=False):
 def plot_df(experiment_name, global_step_cutoff=3e9):
     from matplotlib import pyplot as plt
     plt.figure(dpi=300)
-    plt.rcParams['figure.dpi'] = 150
-    plt.rcParams['figure.figsize'] = (6, 4)
+    # plt.rcParams['figure.dpi'] = 150
+    # plt.rcParams['figure.figsize'] = (6, 4)
 
     df = pd.read_csv("wandb_{}.csv".format(experiment_name))
     df["timestamp"] = pd.to_datetime(df["_timestamp"] * 1e9)
@@ -618,10 +664,11 @@ def plot_df(experiment_name, global_step_cutoff=3e9):
             col_name = 134453
         else:
             col_name = num_files
-        dfs.append(df_n[column].ewm(
+        dfs.append((df_n[column] * 100).ewm(
             halflife=500,
             min_periods=10).mean().rename(f"num_files={col_name}"))
-        stdevs.append(df_n[column].ewm(halflife=500, min_periods=10).std())
+        stdevs.append((df_n[column] * 100).ewm(halflife=500,
+                                               min_periods=10).std())
 
     values_num_files = [
         val if val != -1 else 134453 for val in values_num_files
@@ -634,7 +681,10 @@ def plot_df(experiment_name, global_step_cutoff=3e9):
         x = dfs[i].index.values
         y = dfs[i].values
         yerr = stdevs[i].replace(np.nan, 0) / np.sqrt(num_seeds)
-        p = ax.plot(x, y, label=dfs[i].name, color=CB_color_cycle[i])
+        p = ax.plot(x,
+                    y,
+                    label=f'Training Files: {values_num_files[i]}',
+                    color=CB_color_cycle[i])
         ax.fill_between(x,
                         y - 2 * yerr,
                         y + 2 * yerr,
@@ -643,8 +693,8 @@ def plot_df(experiment_name, global_step_cutoff=3e9):
     plt.grid(ls='--', color='#ccc')
     plt.legend()
     plt.xlabel("Environment step")
-    plt.ylabel("% Goal Achieved")
-    plt.savefig('goal_achieved_v_step')
+    plt.ylabel("% Goals Achieved")
+    plt.savefig('goal_achieved_v_step', bbox_inches='tight', pad_inches=0.1)
 
 
 def eval_generalization(output_folder,
@@ -655,11 +705,6 @@ def eval_generalization(output_folder,
                         num_file_loops,
                         test_zsc=False,
                         cfg_filter=None):
-
-    class Bunch(object):
-
-        def __init__(self, adict):
-            self.__dict__.update(adict)
 
     file_paths = []
     cfg_dicts = []
@@ -681,10 +726,13 @@ def eval_generalization(output_folder,
             cfg_dict['discrete_actions_sample'] = False
             # for the train set, we don't want to loop over
             # files we didn't train on
-            if cfg_dict['num_files'] < num_eval_files and file_type == 'train':
+            # also watch out for -1 which means "train on all files"
+            if cfg_dict[
+                    'num_files'] < num_eval_files and 'train' in file_type and cfg_dict[
+                        'num_files'] != -1:
                 cfg_dict['num_eval_files'] = cfg_dict['num_files']
                 cfg_dict['num_file_loops'] = num_file_loops * int(
-                    num_eval_files // cfg_dict['num_files'])
+                    max(num_eval_files // cfg_dict['num_files'], 1))
             else:
                 cfg_dict['num_eval_files'] = num_eval_files
                 cfg_dict['num_file_loops'] = num_file_loops
@@ -700,13 +748,21 @@ def eval_generalization(output_folder,
                  file_type=file_type)
         print('stored ZSC result in {}'.format(file_paths[0]))
     else:
-        for file_path, cfg_dict in zip(file_paths, cfg_dicts):
-            run_eval([Bunch(cfg_dict)],
-                     test_zsc=test_zsc,
-                     output_path=file_path,
-                     scenario_dir=scenario_dir,
-                     files=files,
-                     file_type=file_type)
+        # why 13? because a 16 GB GPU can do a forwards pass on 13 copies of the model
+        # for 20 vehicles at once. More than that and you'll run out of memory
+        num_cpus = min(13, mp.cpu_count() - 2)
+        device = 'cuda'
+        # if torch.cuda.is_available():
+        #     device = 'cuda'
+        # else:
+        #     device = 'cpu'
+        with mp.Pool(processes=num_cpus) as pool:
+            list(
+                pool.starmap(
+                    run_eval,
+                    zip(cfg_dicts, repeat(test_zsc), file_paths,
+                        repeat(scenario_dir), repeat(files), repeat(file_type),
+                        repeat(device))))
     print(file_paths)
 
 
@@ -716,10 +772,11 @@ def main():
     disp.start()
     register_custom_components()
     RUN_EVAL = True
-    TEST_ZSC = True
+    TEST_ZSC = False
     PLOT_RESULTS = True
     RELOAD_WANDB = False
-    NUM_EVAL_FILES = 2
+    VERSION = 4
+    NUM_EVAL_FILES = 200
     NUM_FILE_LOOPS = 1  # the number of times to loop over a fixed set of files
     experiment_names = ['srt_v27']
     # output_folder = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.20/new_road_sample/18.32.35'
@@ -765,16 +822,24 @@ def main():
     '''
 
     if RUN_EVAL:
-        for file_path, file_type in [(PROCESSED_TRAIN_NO_TL, 'train'),
-                                     (PROCESSED_VALID_NO_TL, 'test')]:
+        if TEST_ZSC:
+            output_generator = [(PROCESSED_VALID_NO_TL,
+                                 'test_{}'.format(VERSION))]
+        else:
+            output_generator = [
+                (PROCESSED_TRAIN_NO_TL, 'train_{}'.format(VERSION)),
+                (PROCESSED_VALID_NO_TL, 'test_{}'.format(VERSION))
+            ]
+
+        for file_path, file_type in output_generator:
             with open(os.path.join(file_path, 'valid_files.json')) as file:
                 valid_veh_dict = json.load(file)
                 files = list(valid_veh_dict.keys())
-                if file_type == 'test':
+                if file_type == 'test_{}'.format(VERSION):
                     # sort the files so that we have a consistent order
                     np.random.seed(0)
                     np.random.shuffle(files)
-                if file_type == 'train':
+                if file_type == 'train_{}'.format(VERSION):
                     # for train make sure we use the same ordering
                     # that is used in base_env
                     # TODO(eugenevinitsky) this is dangerous and could
@@ -794,7 +859,11 @@ def main():
         # okay, now build a pandas dataframe of the results that we will use for plotting
         # the generalization results
         for folder in output_folder:
-            for file_type in ['train', 'test']:
+            for file_type in [
+                    'train_{}'.format(VERSION), 'test_{}'.format(VERSION)
+                    # 'train',
+                    # 'test'
+            ]:
                 file_paths = []
                 data_dicts = []
                 for (dirpath, dirnames, filenames) in os.walk(folder):
@@ -842,9 +911,23 @@ def main():
                                     dirpath,
                                     '{}_success_by_num_intersections.npy'.
                                     format(file_type)))
-                            success_by_num_intersections = success_by_num_intersections.sum(
-                                axis=-1) / (success_by_num_intersections >
-                                            0).sum(axis=-1)
+                            success_by_veh_num = np.load(
+                                os.path.join(
+                                    dirpath,
+                                    '{}_success_by_veh_number.npy'.format(
+                                        file_type)))
+                            if cfg_dict[
+                                    'num_files'] == 10000 and 'test' in file_type:
+                                print((success_by_num_intersections > -1).sum(
+                                    axis=-1))
+                            success_by_num_intersections = np.where(
+                                success_by_num_intersections == -1, 0,
+                                success_by_num_intersections).sum(
+                                    axis=-1) / (success_by_num_intersections >
+                                                -1).sum(axis=-1)
+                            if cfg_dict[
+                                    'num_files'] == 10000 and 'test' in file_type:
+                                print(success_by_num_intersections)
                             num_files = cfg_dict['num_files']
                             if int(num_files) == -1:
                                 num_files = 134453
@@ -868,7 +951,11 @@ def main():
                                 'goal_by_intersections':
                                 success_by_num_intersections[0, :, 0],
                                 'collide_by_intersections':
-                                success_by_num_intersections[0, :, 1]
+                                success_by_num_intersections[0, :, 1],
+                                'goal_by_vehicle_num':
+                                success_by_veh_num[0, :, 0],
+                                'collide_by_vehicle_num':
+                                success_by_veh_num[0, :, 1],
                             })
                 df = pd.DataFrame(data_dicts)
                 new_dict = {}
@@ -920,7 +1007,8 @@ def main():
                             df.goal_rate + 2 * yerr,
                             color=CB_color_cycle[i],
                             alpha=0.3)
-        plt.xlabel('Log(Number Training Files)')
+        plt.ylim([0, 100])
+        plt.xlabel(' Number of Training Files (Logarithmic Scale)')
         plt.ylabel('% Goals Achieved')
         plt.legend()
         plt.savefig('goal_achieved.png', bbox_inches='tight', pad_inches=0.1)
@@ -940,7 +1028,8 @@ def main():
                             df.collide_rate + 2 * yerr,
                             color=CB_color_cycle[i],
                             alpha=0.3)
-        plt.xlabel('Log(Number Training Files)')
+        plt.ylim([0, 50])
+        plt.xlabel(' Number of Training Files (Logarithmic Scale)')
         plt.ylabel('% Vehicles Collided')
         plt.legend()
         plt.savefig('collide_rate.png', bbox_inches='tight', pad_inches=0.1)
@@ -955,15 +1044,17 @@ def main():
                      df.ade,
                      label=file_type,
                      color=CB_color_cycle[i])
+            ax = plt.gca()
             ax.fill_between(np.log(df.num_files),
                             df.ade - 2 * yerr,
                             df.ade + 2 * yerr,
                             color=CB_color_cycle[i],
                             alpha=0.3)
-        plt.xlabel('Log(Number Training Files)')
+        plt.xlabel(' Number of Training Files (Logarithmic Scale)')
         plt.ylabel('Average Displacement Error (m)')
+        plt.ylim([0, 5])
         plt.legend()
-        plt.savefig('ade.png', bbox_inches='tight', pad_inches=0)
+        plt.savefig('ade.png', bbox_inches='tight', pad_inches=0.1)
 
         plt.figure(dpi=300)
         for i, (df, file_type) in enumerate(
@@ -973,50 +1064,84 @@ def main():
                      df.fde,
                      label=file_type,
                      color=CB_color_cycle[i])
+            ax = plt.gca()
             ax.fill_between(np.log(df.num_files),
                             df.fde - 2 * yerr,
                             df.fde + 2 * yerr,
                             color=CB_color_cycle[i],
                             alpha=0.3)
-        plt.xlabel('Log(Number Training Files)')
+        plt.ylim([4, 10])
+        plt.xlabel(' Number of Training Files (Logarithmic Scale)')
         plt.ylabel('Final Displacement Error (m)')
         plt.legend()
-        plt.savefig('fde.png', bbox_inches='tight', pad_inches=0)
+        plt.savefig('fde.png', bbox_inches='tight', pad_inches=0.1)
         plot_df(experiment_names[0])
 
         # create error by number of expert intersections plots
-        # plt.figure(dpi=300)
-        # for df in generalization_dfs:
-        #     values_num_files = np.unique(df.num_files.values)
-        #     print(values_num_files)
-        #     for value in values_num_files:
-        #         numpy_arr = df[df.num_files ==
-        #                        value]['goal_by_intersections'].to_numpy()[0]
-        #         temp_df = pd.DataFrame(numpy_arr).melt()
-        #         sns.lineplot(x=temp_df.index, y=temp_df.value * 100)
-        # plt.xlabel('Number of intersecting paths')
-        # plt.ylabel('Percent Goals Achieved')
-        # plt.legend(np.unique(df.num_files.values))
-        # plt.savefig('goal_v_intersection.png',
-        #             bbox_inches='tight',
-        #             pad_inches=0)
+        plt.figure(dpi=300)
+        for i, (df, file_type) in enumerate(
+                zip(generalization_dfs, ['Train', 'Test'])):
+            values_num_files = np.unique(df.num_files.values)
+            print(values_num_files)
+            for value in values_num_files:
+                if value != 10000:
+                    continue
+                numpy_arr = df[df.num_files ==
+                               value]['goal_by_intersections'].to_numpy()[0]
+                temp_df = pd.DataFrame(numpy_arr).melt()
+                plt.plot(temp_df.index,
+                         temp_df.value * 100,
+                         label=file_type,
+                         color=CB_color_cycle[i])
+                # sns.lineplot(x=temp_df.index, y=temp_df.value * 100)
+        plt.xlabel('Number of intersecting paths')
+        plt.ylabel('Percent Goals Achieved')
+        plt.legend()
+        plt.savefig('goal_v_intersection.png',
+                    bbox_inches='tight',
+                    pad_inches=0)
 
-        # # create error by number of expert intersections plots
-        # plt.figure(dpi=300)
-        # for df in generalization_dfs:
-        #     values_num_files = np.unique(df.num_files.values)
-        #     print(values_num_files)
-        #     for value in values_num_files:
-        #         numpy_arr = df[df.num_files ==
-        #                        value]['collide_by_intersections'].to_numpy()[0]
-        #         temp_df = pd.DataFrame(numpy_arr).melt()
-        #         sns.lineplot(x=temp_df.index, y=temp_df.value * 100)
-        # plt.xlabel('Number of intersecting paths')
-        # plt.ylabel('Percent Collisions')
-        # plt.legend(np.unique(df.num_files.values))
-        # plt.savefig('collide_v_intersection.png',
-        #             bbox_inches='tight',
-        #             pad_inches=0)
+        # create error by number of expert intersections plots
+        plt.figure(dpi=300)
+        for df in generalization_dfs:
+            values_num_files = np.unique(df.num_files.values)
+            for value in values_num_files:
+                if value != 10000:
+                    continue
+                numpy_arr = df[df.num_files ==
+                               value]['collide_by_intersections'].to_numpy()[0]
+                temp_df = pd.DataFrame(numpy_arr).melt()
+                sns.lineplot(x=temp_df.index, y=temp_df.value * 100)
+        plt.xlabel('Number of intersecting paths')
+        plt.ylabel('Percent Collisions')
+        plt.legend()
+        plt.savefig('collide_v_intersection.png',
+                    bbox_inches='tight',
+                    pad_inches=0)
+
+        # create error by number of vehicles plots
+        plt.figure(dpi=300)
+        for i, (df, file_type) in enumerate(
+                zip(generalization_dfs, ['Train', 'Test'])):
+            values_num_files = np.unique(df.num_files.values)
+            print(values_num_files)
+            for value in values_num_files:
+                if value != 10000:
+                    continue
+                numpy_arr = df[df.num_files ==
+                               value]['goal_by_vehicle_num'].to_numpy()[0]
+                temp_df = pd.DataFrame(numpy_arr).melt()
+                plt.plot(temp_df.index,
+                         temp_df.value * 100,
+                         label=file_type,
+                         color=CB_color_cycle[i])
+                # sns.lineplot(x=temp_df.index, y=temp_df.value * 100)
+        plt.xlabel('Number of controlled vehicles')
+        plt.ylabel('Percent Goals Achieved')
+        plt.legend()
+        plt.savefig('goal_v_vehicle_num.png',
+                    bbox_inches='tight',
+                    pad_inches=0)
 
 
 if __name__ == '__main__':
