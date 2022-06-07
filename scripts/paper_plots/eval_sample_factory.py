@@ -577,7 +577,7 @@ def run_eval(cfgs,
                 success_rate_by_num_agents[:, :, [2]])
         print(success_ratio)
         np.save(f, success_ratio)
-    with open(os.path.join('{}_success_by_dist.npy'.format(file_type)),
+    with open(os.path.join(output_path, '{}_success_by_dist.npy'.format(file_type)),
               'wb') as f:
         if test_zsc:
             dist_ratio = np.nan_to_num(success_rate_by_distance[:, :, :, 0:2] /
@@ -588,7 +588,7 @@ def run_eval(cfgs,
         print(dist_ratio)
         np.save(f, dist_ratio)
     with open(
-            os.path.join(
+            os.path.join(output_path,
                 '{}_success_by_num_intersections.npy'.format(file_type)),
             'wb') as f:
         if test_zsc:
@@ -916,18 +916,10 @@ def main():
                                     dirpath,
                                     '{}_success_by_veh_number.npy'.format(
                                         file_type)))
-                            if cfg_dict[
-                                    'num_files'] == 10000 and 'test' in file_type:
-                                print((success_by_num_intersections > -1).sum(
-                                    axis=-1))
-                            success_by_num_intersections = np.where(
-                                success_by_num_intersections == -1, 0,
-                                success_by_num_intersections).sum(
-                                    axis=-1) / (success_by_num_intersections >
-                                                -1).sum(axis=-1)
-                            if cfg_dict[
-                                    'num_files'] == 10000 and 'test' in file_type:
-                                print(success_by_num_intersections)
+                            success_by_distance = np.load(
+                                os.path.join(
+                                    dirpath, '{}_success_by_dist.npy'.format(
+                                        file_type)))
                             num_files = cfg_dict['num_files']
                             if int(num_files) == -1:
                                 num_files = 134453
@@ -956,6 +948,10 @@ def main():
                                 success_by_veh_num[0, :, 0],
                                 'collide_by_vehicle_num':
                                 success_by_veh_num[0, :, 1],
+                                'goal_by_distance':
+                                success_by_distance[0, :, 0],
+                                'collide_by_distance':
+                                success_by_distance[0, :, 1],
                             })
                 df = pd.DataFrame(data_dicts)
                 new_dict = {}
@@ -1112,7 +1108,7 @@ def main():
                                value]['collide_by_intersections'].to_numpy()[0]
                 temp_df = pd.DataFrame(numpy_arr).melt()
                 sns.lineplot(x=temp_df.index, y=temp_df.value * 100)
-        plt.xlabel('Number of intersecting paths')
+        plt.xlabel('Number of Intersecting Paths')
         plt.ylabel('Percent Collisions')
         plt.legend()
         plt.savefig('collide_v_intersection.png',
@@ -1142,6 +1138,28 @@ def main():
         plt.savefig('goal_v_vehicle_num.png',
                     bbox_inches='tight',
                     pad_inches=0)
+
+        # create error by distance plots
+        plt.figure(dpi=300)
+        for i, (df, file_type) in enumerate(
+                zip(generalization_dfs, ['Train', 'Test'])):
+            values_num_files = np.unique(df.num_files.values)
+            print(values_num_files)
+            for value in values_num_files:
+                if value != 10000:
+                    continue
+                numpy_arr = df[df.num_files ==
+                               value]['goal_by_distance'].to_numpy()[0]
+                temp_df = pd.DataFrame(numpy_arr).melt()
+                plt.plot(temp_df.index,
+                         temp_df.value * 100,
+                         label=file_type,
+                         color=CB_color_cycle[i])
+                # sns.lineplot(x=temp_df.index, y=temp_df.value * 100)
+        plt.xlabel('Starting Distance to Goal')
+        plt.ylabel('Percent Goals Achieved')
+        plt.legend()
+        plt.savefig('goal_v_distance.png', bbox_inches='tight', pad_inches=0)
 
 
 if __name__ == '__main__':
