@@ -706,8 +706,7 @@ def eval_generalization(output_folder,
                      output_path=file_path,
                      scenario_dir=scenario_dir,
                      files=files,
-                     file_type=file_type,
-                     num_file_loops=num_file_loops)
+                     file_type=file_type)
     print(file_paths)
 
 
