@@ -258,13 +258,7 @@ def run_rollouts(env,
                            np.mean(ades), np.mean(fdes), veh_counter)
 
 
-def run_eval(cfgs,
-             test_zsc,
-             output_path,
-             scenario_dir,
-             files,
-             file_type,
-             num_file_loops=1):
+def run_eval(cfgs, test_zsc, output_path, scenario_dir, files, file_type):
     """Eval a stored agent over all files in validation set.
 
     Args:
@@ -326,6 +320,7 @@ def run_eval(cfgs,
     distance_bins = np.linspace(0, 400, 40)
     intersections_bins = np.linspace(0, 5, 5)
     num_files = cfg['num_eval_files']
+    num_file_loops = cfg['num_file_loops']
     # TODO(eugenevinitsky) horrifying copy and paste
     if test_zsc:
         goal_array = np.zeros((len(actor_critics), len(actor_critics),
@@ -684,7 +679,15 @@ def eval_generalization(output_folder,
             cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
             cfg_dict['continuous_actions_sample'] = False
             cfg_dict['discrete_actions_sample'] = False
-            cfg_dict['num_eval_files'] = num_eval_files
+            # for the train set, we don't want to loop over
+            # files we didn't train on
+            if cfg_dict['num_files'] < num_eval_files and file_type == 'train':
+                cfg_dict['num_eval_files'] = cfg_dict['num_files']
+                cfg_dict['num_file_loops'] = num_file_loops * int(
+                    num_eval_files // cfg_dict['num_files'])
+            else:
+                cfg_dict['num_eval_files'] = num_eval_files
+                cfg_dict['num_file_loops'] = num_file_loops
             cfg_dicts.append(cfg_dict)
     if test_zsc:
         # TODO(eugenevinitsky) we're currently storing the ZSC result in a random
@@ -694,8 +697,7 @@ def eval_generalization(output_folder,
                  output_path=file_paths[0],
                  scenario_dir=scenario_dir,
                  files=files,
-                 file_type=file_type,
-                 num_file_loops=num_file_loops)
+                 file_type=file_type)
         print('stored ZSC result in {}'.format(file_paths[0]))
     else:
         for file_path, cfg_dict in zip(file_paths, cfg_dicts):
@@ -769,9 +771,16 @@ def main():
             with open(os.path.join(file_path, 'valid_files.json')) as file:
                 valid_veh_dict = json.load(file)
                 files = list(valid_veh_dict.keys())
-                # sort the files so that we have a consistent order
-                np.random.seed(0)
-                np.random.shuffle(files)
+                if file_type == 'test':
+                    # sort the files so that we have a consistent order
+                    np.random.seed(0)
+                    np.random.shuffle(files)
+                if file_type == 'train':
+                    # for train make sure we use the same ordering
+                    # that is used in base_env
+                    # TODO(eugenevinitsky) this is dangerous and could
+                    # break easily
+                    files = sorted(files)
             for folder in output_folder:
                 eval_generalization(folder,
                                     NUM_EVAL_FILES,
