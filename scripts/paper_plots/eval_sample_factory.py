@@ -89,10 +89,11 @@ def run_rollouts(env,
     goal_dist = env.goal_dist_normalizers
     valid_indices = env.valid_indices
     agent_id_to_env_id_map = env.agent_id_to_env_id_map
+    env_id_to_agent_id_map = env.env_id_to_agent_id_map
 
-    success_rate_by_num_agents = np.zeros((cfg.max_num_vehicles, 3))
-    success_rate_by_distance = np.zeros((distance_bins.shape[-1], 3))
-    success_rate_by_intersections = np.zeros((intersection_bins.shape[-1], 3))
+    success_rate_by_num_agents = np.zeros((cfg.max_num_vehicles, 4))
+    success_rate_by_distance = np.zeros((distance_bins.shape[-1], 4))
+    success_rate_by_intersections = np.zeros((intersection_bins.shape[-1], 4))
     if actor_2 is not None:
         # pick which valid indices go to which policy
         val = np.random.uniform()
@@ -120,6 +121,7 @@ def run_rollouts(env,
     finished_episode = [False] * env.num_agents
     goal_achieved = [False] * len(valid_indices)
     collision_observed = [False] * len(valid_indices)
+    veh_veh_collision_observed = [False] * len(valid_indices)
     veh_counter = 0
 
     while not all(finished_episode):
@@ -171,6 +173,11 @@ def run_rollouts(env,
                 if veh.expert_control == False:
                     rollout_traj_dict[veh.id][
                         env.step_num] = veh.position.numpy()
+                if int(veh.collision_type) == 1:
+                    if veh.getID() in env_id_to_agent_id_map.keys():
+                        agent_id = env_id_to_agent_id_map[veh.getID()]
+                        idx = valid_indices.index(agent_id)
+                        veh_veh_collision_observed[idx] = 1
 
             rnn_states = policy_outputs.rnn_states
             if actor_2 is not None:
@@ -223,13 +230,17 @@ def run_rollouts(env,
                                            0] += avg_goal
                 success_rate_by_num_agents[len(valid_indices) - 1,
                                            1] += avg_collisions
-                success_rate_by_num_agents[len(valid_indices) - 1, 2] += 1
+                success_rate_by_num_agents[len(valid_indices) - 1,
+                                           2] += np.mean(
+                                               veh_veh_collision_observed)
+                success_rate_by_num_agents[len(valid_indices) - 1, 3] += 1
                 # track how well we do as a function of distance
                 for i, index in enumerate(valid_indices):
                     env_id = agent_id_to_env_id_map[index]
                     bin = np.searchsorted(distance_bins, goal_dist[env_id])
                     success_rate_by_distance[bin - 1, :] += [
-                        goal_achieved[i], collision_observed[i], 1
+                        goal_achieved[i], collision_observed[i],
+                        veh_veh_collision_observed[i], 1
                     ]
                 # track how well we do as number of intersections
                 for i, index in enumerate(valid_indices):
@@ -237,7 +248,8 @@ def run_rollouts(env,
                     bin = min(veh_intersection_dict[env_id],
                               distance_bins.shape[-1] - 1)
                     success_rate_by_intersections[bin, :] += [
-                        goal_achieved[i], collision_observed[i], 1
+                        goal_achieved[i], collision_observed[i],
+                        veh_veh_collision_observed[i], 1
                     ]
                 # compute ADE and FDE
                 ades = []
@@ -357,13 +369,13 @@ def run_eval(cfgs,
         collision_array = np.zeros((len(actor_critics), len(actor_critics),
                                     num_files * num_file_loops))
         success_rate_by_num_agents = np.zeros(
-            (len(actor_critics), len(actor_critics), cfg.max_num_vehicles, 3))
+            (len(actor_critics), len(actor_critics), cfg.max_num_vehicles, 4))
         success_rate_by_distance = np.zeros(
             (len(actor_critics), len(actor_critics), distance_bins.shape[-1],
-             3))
+             4))
         success_rate_by_intersections = np.zeros(
             (len(actor_critics), len(actor_critics),
-             intersections_bins.shape[-1], 3))
+             intersections_bins.shape[-1], 4))
         ade_array = np.zeros((len(actor_critics), len(actor_critics),
                               num_file_loops * num_files))
         fde_array = np.zeros((len(actor_critics), len(actor_critics),
@@ -383,11 +395,11 @@ def run_eval(cfgs,
         veh_edge_collision_array = np.zeros(
             (len(actor_critics), num_file_loops * num_files))
         success_rate_by_num_agents = np.zeros(
-            (len(actor_critics), cfg.max_num_vehicles, 3))
+            (len(actor_critics), cfg.max_num_vehicles, 4))
         success_rate_by_distance = np.zeros(
-            (len(actor_critics), distance_bins.shape[-1], 3))
+            (len(actor_critics), distance_bins.shape[-1], 4))
         success_rate_by_intersections = np.zeros(
-            (len(actor_critics), intersections_bins.shape[-1], 3))
+            (len(actor_critics), intersections_bins.shape[-1], 4))
         ade_array = np.zeros((len(actor_critics), num_file_loops * num_files))
         fde_array = np.zeros((len(actor_critics), num_file_loops * num_files))
 
@@ -567,40 +579,18 @@ def run_eval(cfgs,
             os.path.join(output_path,
                          '{}_success_by_veh_number.npy'.format(file_type)),
             'wb') as f:
-        if test_zsc:
-            success_ratio = np.nan_to_num(
-                success_rate_by_num_agents[:, :, :, 0:2] /
-                success_rate_by_num_agents[:, :, :, [2]])
-        else:
-            success_ratio = np.nan_to_num(
-                success_rate_by_num_agents[:, :, 0:2] /
-                success_rate_by_num_agents[:, :, [2]])
-        print(success_ratio)
-        np.save(f, success_ratio)
-    with open(os.path.join(output_path, '{}_success_by_dist.npy'.format(file_type)),
-              'wb') as f:
-        if test_zsc:
-            dist_ratio = np.nan_to_num(success_rate_by_distance[:, :, :, 0:2] /
-                                       success_rate_by_distance[:, :, :, [2]])
-        else:
-            dist_ratio = np.nan_to_num(success_rate_by_distance[:, :, 0:2] /
-                                       success_rate_by_distance[:, :, [2]])
-        print(dist_ratio)
-        np.save(f, dist_ratio)
+        np.save(f, success_rate_by_num_agents)
     with open(
             os.path.join(output_path,
+                         '{}_success_by_dist.npy'.format(file_type)),
+            'wb') as f:
+        np.save(f, success_rate_by_distance)
+    with open(
+            os.path.join(
+                output_path,
                 '{}_success_by_num_intersections.npy'.format(file_type)),
             'wb') as f:
-        if test_zsc:
-            dist_ratio = np.nan_to_num(
-                success_rate_by_intersections[:, :, :, 0:2] /
-                success_rate_by_intersections[:, :, :, [2]])
-        else:
-            dist_ratio = np.nan_to_num(
-                success_rate_by_intersections[:, :, 0:2] /
-                success_rate_by_intersections[:, :, [2]])
-        print(dist_ratio)
-        np.save(f, dist_ratio)
+        np.save(f, success_rate_by_intersections)
 
     env.close()
 
@@ -771,11 +761,11 @@ def main():
     disp = Display()
     disp.start()
     register_custom_components()
-    RUN_EVAL = True
+    RUN_EVAL = False
     TEST_ZSC = False
     PLOT_RESULTS = True
     RELOAD_WANDB = False
-    VERSION = 4
+    VERSION = 5
     NUM_EVAL_FILES = 200
     NUM_FILE_LOOPS = 1  # the number of times to loop over a fixed set of files
     experiment_names = ['srt_v27']
@@ -911,6 +901,14 @@ def main():
                                     dirpath,
                                     '{}_success_by_num_intersections.npy'.
                                     format(file_type)))
+                            # there aren't a lot of data points past 3
+                            # so just bundle them in
+                            success_by_num_intersections[:,
+                                                         3, :] = success_by_num_intersections[:, 3:, :].sum(
+                                                             axis=1)
+                            success_by_num_intersections = success_by_num_intersections[:,
+                                                                                        0:
+                                                                                        4, :]
                             success_by_veh_num = np.load(
                                 os.path.join(
                                     dirpath,
@@ -941,9 +939,13 @@ def main():
                                 'veh_edge_collision':
                                 veh_edge_collision,
                                 'goal_by_intersections':
-                                success_by_num_intersections[0, :, 0],
+                                np.nan_to_num(
+                                    success_by_num_intersections[0, :, 0] /
+                                    success_by_num_intersections[0, :, 2]),
                                 'collide_by_intersections':
-                                success_by_num_intersections[0, :, 1],
+                                np.nan_to_num(
+                                    success_by_num_intersections[0, :, 1] /
+                                    success_by_num_intersections[0, :, 2]),
                                 'goal_by_vehicle_num':
                                 success_by_veh_num[0, :, 0],
                                 'collide_by_vehicle_num':
@@ -953,6 +955,8 @@ def main():
                                 'collide_by_distance':
                                 success_by_distance[0, :, 1],
                             })
+                            if cfg_dict['num_files'] == 10000:
+                                print(success_by_num_intersections[0, :, 1])
                 df = pd.DataFrame(data_dicts)
                 new_dict = {}
                 for key in data_dicts[0].keys():
@@ -1099,7 +1103,8 @@ def main():
 
         # create error by number of expert intersections plots
         plt.figure(dpi=300)
-        for df in generalization_dfs:
+        for i, (df, file_type) in enumerate(
+                zip(generalization_dfs, ['Train', 'Test'])):
             values_num_files = np.unique(df.num_files.values)
             for value in values_num_files:
                 if value != 10000:
@@ -1107,7 +1112,10 @@ def main():
                 numpy_arr = df[df.num_files ==
                                value]['collide_by_intersections'].to_numpy()[0]
                 temp_df = pd.DataFrame(numpy_arr).melt()
-                sns.lineplot(x=temp_df.index, y=temp_df.value * 100)
+                plt.plot(temp_df.index,
+                         temp_df.value * 100,
+                         color=CB_color_cycle[i],
+                         label=file_type)
         plt.xlabel('Number of Intersecting Paths')
         plt.ylabel('Percent Collisions')
         plt.legend()
