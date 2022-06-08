@@ -22,6 +22,7 @@ class MeanStdFilter(nn.Module):
 
     def forward(self, x):
         if self.track_running_states:
+            print('we are pushing but should not be')
             for i in range(x.shape[0]):
                 self.push(x[i])
         x = x - self.mean
