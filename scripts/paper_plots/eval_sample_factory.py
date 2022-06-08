@@ -1026,6 +1026,7 @@ def main():
                             df.goal_rate + 2 * yerr,
                             color=CB_color_cycle[i],
                             alpha=0.3)
+            print(f'{file_type} goal rate', df.goal_rate, yerr)
         plt.ylim([0, 100])
         plt.xlabel(' Number of Training Files (Logarithmic Scale)')
         plt.ylabel('% Goals Achieved')
@@ -1047,6 +1048,7 @@ def main():
                             df.collide_rate + 2 * yerr,
                             color=CB_color_cycle[i],
                             alpha=0.3)
+            print(f'{file_type} collide rate', df.collide_rate, yerr)
         plt.ylim([0, 50])
         plt.xlabel(' Number of Training Files (Logarithmic Scale)')
         plt.ylabel('% Vehicles Collided')
@@ -1069,6 +1071,7 @@ def main():
                             df.ade + 2 * yerr,
                             color=CB_color_cycle[i],
                             alpha=0.3)
+            print(f'{file_type} ade', df.ade, yerr)
         plt.xlabel(' Number of Training Files (Logarithmic Scale)')
         plt.ylabel('Average Displacement Error (m)')
         plt.ylim([0, 5])
@@ -1089,6 +1092,7 @@ def main():
                             df.fde + 2 * yerr,
                             color=CB_color_cycle[i],
                             alpha=0.3)
+            print(f'{file_type} fde', df.fde, yerr)
         plt.ylim([4, 10])
         plt.xlabel(' Number of Training Files (Logarithmic Scale)')
         plt.ylabel('Final Displacement Error (m)')
