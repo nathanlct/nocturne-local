@@ -546,11 +546,7 @@ def run_eval(cfgs,
             ade_array[index_1, index_2] = average_displacement_error
             fde_array[index_1, index_2] = final_displacement_error
         else:
-            try:
-                goal_array[index_1] = goal_frac
-            except:
-                import ipdb
-                ipdb.set_trace()
+            goal_array[index_1] = goal_frac
             collision_array[index_1] = collision_frac
             veh_veh_collision_array[index_1] = veh_veh_collision_frac
             veh_edge_collision_array[index_1] = veh_edge_collision_frac
@@ -941,22 +937,29 @@ def main():
                                 'goal_by_intersections':
                                 np.nan_to_num(
                                     success_by_num_intersections[0, :, 0] /
-                                    success_by_num_intersections[0, :, 2]),
+                                    success_by_num_intersections[0, :, 3]),
                                 'collide_by_intersections':
                                 np.nan_to_num(
                                     success_by_num_intersections[0, :, 1] /
-                                    success_by_num_intersections[0, :, 2]),
+                                    success_by_num_intersections[0, :, 3]),
                                 'goal_by_vehicle_num':
-                                success_by_veh_num[0, :, 0],
+                                np.nan_to_num(success_by_veh_num[0, :, 0] /
+                                              success_by_veh_num[0, :, 3]),
                                 'collide_by_vehicle_num':
-                                success_by_veh_num[0, :, 1],
+                                np.nan_to_num(success_by_veh_num[0, :, 1] /
+                                              success_by_veh_num[0, :, 3]),
                                 'goal_by_distance':
-                                success_by_distance[0, :, 0],
+                                np.nan_to_num(success_by_distance[0, :, 0] /
+                                              success_by_distance[0, :, 3]),
                                 'collide_by_distance':
-                                success_by_distance[0, :, 1],
+                                np.nan_to_num(success_by_distance[0, :, 1] /
+                                              success_by_distance[0, :, 3]),
                             })
                             if cfg_dict['num_files'] == 10000:
-                                print(success_by_num_intersections[0, :, 1])
+                                print('goal ',
+                                      success_by_num_intersections[0, :, 0])
+                                print('num vehicles in bin',
+                                      success_by_num_intersections[0, :, 3])
                 df = pd.DataFrame(data_dicts)
                 new_dict = {}
                 for key in data_dicts[0].keys():
@@ -969,7 +972,23 @@ def main():
                             ['num_files'])[key].std().reset_index().rename(
                                 columns={key: key + '_std'})
                     except:
-                        pass
+                        # TODO(eugenevinitsky) learn to use pandas dawg
+                        # what even is this
+                        temp_dict = {}
+                        for name, group in df.groupby(['num_files'])[key]:
+                            temp = []
+                            for arr in group:
+                                temp.append(arr)
+                            np_arr = np.vstack(temp)
+                            std_err = np.std(np_arr, axis=0) / np.sqrt(
+                                np_arr.shape[0])
+                            temp_dict[name] = std_err
+                        new_dict[key + '_stderr'] = pd.Series(
+                            data=temp_dict).reset_index().rename(
+                                columns={
+                                    'index': 'num_files',
+                                    0: key + '_stderr'
+                                })
                 first_elem_key = 'goal_rate'
                 first_elem = new_dict[first_elem_key]
                 for key, value in new_dict.items():
@@ -1093,13 +1112,23 @@ def main():
                          temp_df.value * 100,
                          label=file_type,
                          color=CB_color_cycle[i])
-                # sns.lineplot(x=temp_df.index, y=temp_df.value * 100)
+                numpy_arr = df[df.num_files == value][
+                    'goal_by_intersections_stderr'].to_numpy()[0]
+                std_err_df = pd.DataFrame(numpy_arr).melt()
+                ax = plt.gca()
+                ax.fill_between(temp_df.index,
+                                100 * (temp_df.value - 2 * std_err_df.value),
+                                100 * (temp_df.value + 2 * std_err_df.value),
+                                color=CB_color_cycle[i],
+                                alpha=0.3)
+
         plt.xlabel('Number of intersecting paths')
         plt.ylabel('Percent Goals Achieved')
+        ax.set_xticks([i for i in range(numpy_arr.shape[-1])])
         plt.legend()
         plt.savefig('goal_v_intersection.png',
                     bbox_inches='tight',
-                    pad_inches=0)
+                    pad_inches=0.1)
 
         # create error by number of expert intersections plots
         plt.figure(dpi=300)
@@ -1116,12 +1145,22 @@ def main():
                          temp_df.value * 100,
                          color=CB_color_cycle[i],
                          label=file_type)
+                numpy_arr = df[df.num_files == value][
+                    'collide_by_intersections_stderr'].to_numpy()[0]
+                std_err_df = pd.DataFrame(numpy_arr).melt()
+                ax = plt.gca()
+                ax.fill_between(temp_df.index,
+                                100 * (temp_df.value - 2 * std_err_df.value),
+                                100 * (temp_df.value + 2 * std_err_df.value),
+                                color=CB_color_cycle[i],
+                                alpha=0.3)
         plt.xlabel('Number of Intersecting Paths')
         plt.ylabel('Percent Collisions')
+        ax.set_xticks([i for i in range(numpy_arr.shape[-1])])
         plt.legend()
         plt.savefig('collide_v_intersection.png',
                     bbox_inches='tight',
-                    pad_inches=0)
+                    pad_inches=0.1)
 
         # create error by number of vehicles plots
         plt.figure(dpi=300)
@@ -1139,13 +1178,23 @@ def main():
                          temp_df.value * 100,
                          label=file_type,
                          color=CB_color_cycle[i])
+                numpy_arr = df[df.num_files == value][
+                    'goal_by_vehicle_num_stderr'].to_numpy()[0]
+                std_err_df = pd.DataFrame(numpy_arr).melt()
+                ax = plt.gca()
+                ax.fill_between(temp_df.index,
+                                100 * (temp_df.value - 2 * std_err_df.value),
+                                100 * (temp_df.value + 2 * std_err_df.value),
+                                color=CB_color_cycle[i],
+                                alpha=0.3)
                 # sns.lineplot(x=temp_df.index, y=temp_df.value * 100)
-        plt.xlabel('Number of controlled vehicles')
+        plt.xlabel('Number of Controlled Vehicles')
         plt.ylabel('Percent Goals Achieved')
+        ax.set_xticks([i for i in range(numpy_arr.shape[-1])])
         plt.legend()
         plt.savefig('goal_v_vehicle_num.png',
                     bbox_inches='tight',
-                    pad_inches=0)
+                    pad_inches=0.1)
 
         # create error by distance plots
         plt.figure(dpi=300)
@@ -1163,11 +1212,21 @@ def main():
                          temp_df.value * 100,
                          label=file_type,
                          color=CB_color_cycle[i])
+                numpy_arr = df[df.num_files ==
+                               value]['goal_by_distance_stderr'].to_numpy()[0]
+                std_err_df = pd.DataFrame(numpy_arr).melt()
+                ax = plt.gca()
+                ax.fill_between(temp_df.index,
+                                100 * (temp_df.value - 2 * std_err_df.value),
+                                100 * (temp_df.value + 2 * std_err_df.value),
+                                color=CB_color_cycle[i],
+                                alpha=0.3)
                 # sns.lineplot(x=temp_df.index, y=temp_df.value * 100)
         plt.xlabel('Starting Distance to Goal')
         plt.ylabel('Percent Goals Achieved')
+        ax.set_xticks([i for i in range(numpy_arr.shape[-1])])
         plt.legend()
-        plt.savefig('goal_v_distance.png', bbox_inches='tight', pad_inches=0)
+        plt.savefig('goal_v_distance.png', bbox_inches='tight', pad_inches=0.1)
 
 
 if __name__ == '__main__':

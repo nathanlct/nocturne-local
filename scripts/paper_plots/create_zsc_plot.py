@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def create_heat_map(file, title, save_path):
+def create_heat_map(file, title, save_path, white_switch):
     np_arr = np.load(os.path.join(zsc_path, file))
     np_arr_mean = np.mean(np_arr, axis=-1)
     np_arr_mean_centered = np_arr_mean - np.diag(np_arr_mean)[:, np.newaxis]
@@ -27,12 +27,16 @@ def create_heat_map(file, title, save_path):
     # Loop over data dimensions and create text annotations.
     for i in range(len(agent_indices)):
         for j in range(len(agent_indices)):
+            if np_arr_mean[i, j] > white_switch:
+                color = 'black'
+            else:
+                color = 'w'
             text = ax.text(j,
                            i,
                            f'{np.round(np_arr_mean[i, j], decimals=2)}',
                            ha="center",
                            va="center",
-                           color="w")
+                           color=color)
 
     ax.set_title(title)
     fig.tight_layout()
@@ -65,10 +69,13 @@ if __name__ == '__main__':
     # 10000 on train
     # zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.28/srt_12/16.43.16/4/srt_12'
     zsc_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.06.01/srt_v27/17.35.33/123/srt_v27'
-    create_heat_map('train_zsc_goal.npy', "Cross-play Relative Goal Rate",
-                    'cross_play_heat_map.png')
+    create_heat_map('train_zsc_goal.npy',
+                    "Cross-play Goal Rate",
+                    'cross_play_heat_map.png',
+                    white_switch=.8)
     create_heat_map('train_zsc_collision.npy',
-                    "Cross-play Relative Collision Rate",
-                    'cross_play_collision_map.png')
+                    "Cross-play Collision Rate",
+                    'cross_play_collision_map.png',
+                    white_switch=0.18)
     compute_average_change('train_zsc_goal.npy')
     compute_average_change('train_zsc_collision.npy')
