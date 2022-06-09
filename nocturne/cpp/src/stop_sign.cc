@@ -14,7 +14,8 @@ geometry::ConvexPolygon StopSign::BoundingPolygon() const {
   std::vector<geometry::Vector2D> vertices;
   vertices.reserve(kStopSignNumEdges);
   for (int i = 0; i < kStopSignNumEdges; ++i) {
-    vertices.push_back(geometry::PolarToVector2D(kStopSignRadius, angle));
+    vertices.push_back(position_ +
+                       geometry::PolarToVector2D(kStopSignRadius, angle));
     angle = geometry::utils::AngleAdd(angle, kTheta);
   }
   return geometry::ConvexPolygon(std::move(vertices));
