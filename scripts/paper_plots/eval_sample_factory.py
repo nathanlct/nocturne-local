@@ -1015,13 +1015,13 @@ def main():
         plt.figure(dpi=300)
         for i, (df, file_type) in enumerate(
                 zip(generalization_dfs, ['Train', 'Test'])):
-            plt.plot(np.log(df.num_files),
+            plt.plot(np.log10(df.num_files),
                      df.goal_rate,
                      color=CB_color_cycle[i],
                      label=file_type)
             ax = plt.gca()
             yerr = df.goal_rate_std.replace(np.nan, 0) / np.sqrt(num_seeds)
-            ax.fill_between(np.log(df.num_files),
+            ax.fill_between(np.log10(df.num_files),
                             df.goal_rate - 2 * yerr,
                             df.goal_rate + 2 * yerr,
                             color=CB_color_cycle[i],
@@ -1037,13 +1037,13 @@ def main():
         plt.figure(dpi=300)
         for i, (df, file_type) in enumerate(
                 zip(generalization_dfs, ['Train', 'Test'])):
-            plt.plot(np.log(df.num_files),
+            plt.plot(np.log10(df.num_files),
                      df.collide_rate,
                      color=CB_color_cycle[i],
                      label=file_type)
             ax = plt.gca()
             yerr = df.collide_rate_std.replace(np.nan, 0) / np.sqrt(num_seeds)
-            ax.fill_between(np.log(df.num_files),
+            ax.fill_between(np.log10(df.num_files),
                             df.collide_rate - 2 * yerr,
                             df.collide_rate + 2 * yerr,
                             color=CB_color_cycle[i],
@@ -1061,12 +1061,12 @@ def main():
         for i, (df, file_type) in enumerate(
                 zip(generalization_dfs, ['Train', 'Test'])):
             yerr = df.ade_std.replace(np.nan, 0) / np.sqrt(num_seeds)
-            plt.plot(np.log(df.num_files),
+            plt.plot(np.log10(df.num_files),
                      df.ade,
                      label=file_type,
                      color=CB_color_cycle[i])
             ax = plt.gca()
-            ax.fill_between(np.log(df.num_files),
+            ax.fill_between(np.log10(df.num_files),
                             df.ade - 2 * yerr,
                             df.ade + 2 * yerr,
                             color=CB_color_cycle[i],
@@ -1082,12 +1082,12 @@ def main():
         for i, (df, file_type) in enumerate(
                 zip(generalization_dfs, ['Train', 'Test'])):
             yerr = df.fde_std.replace(np.nan, 0) / np.sqrt(num_seeds)
-            plt.plot(np.log(df.num_files),
+            plt.plot(np.log10(df.num_files),
                      df.fde,
                      label=file_type,
                      color=CB_color_cycle[i])
             ax = plt.gca()
-            ax.fill_between(np.log(df.num_files),
+            ax.fill_between(np.log10(df.num_files),
                             df.fde - 2 * yerr,
                             df.fde + 2 * yerr,
                             color=CB_color_cycle[i],
