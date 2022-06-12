@@ -28,7 +28,7 @@ using geometry::Vector2D;
 using geometry::utils::kTwoPi;
 
 // TODO: Find a better eps.
-constexpr float kRotationEps = 1e-3;
+constexpr float kRotationEps = 1e-4f;
 
 void AppendSightCandidates(const CircleLike& vision,
                            const geometry::Vector2D& p,

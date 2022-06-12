@@ -250,16 +250,17 @@ TEST(ViewFieldTest, NumericTest) {
   }
 
   constexpr float kViewDist1 = 80.0f;
-  const ViewField vf1(ego.position(), kViewDist1, ego.heading(),
-                     geometry::utils::Radians(120.0f));
+  const ViewField vf1(ego.position(), kViewDist1,
+                      geometry::utils::AngleAdd(ego.heading(), 0.3f),
+                      geometry::utils::Radians(120.0f));
   const auto visible_objects1 = vf1.VisibleObjects(ptrs);
   EXPECT_EQ(visible_objects1.size(), 15);
 
   constexpr float kViewDist2 = 50.0f;
   const ViewField vf2(ego.position(), kViewDist2, ego.heading(),
-                     geometry::utils::Radians(120.0f));
+                      geometry::utils::Radians(120.0f));
   const auto visible_objects2 = vf2.VisibleObjects(ptrs);
-  EXPECT_EQ(visible_objects2.size(), 13);
+  EXPECT_EQ(visible_objects2.size(), 14);
 }
 
 }  // namespace
