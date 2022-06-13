@@ -27,12 +27,28 @@ using geometry::LineSegment;
 using geometry::Vector2D;
 using geometry::utils::kTwoPi;
 
-Vector2D MakeSightEndpoint(const CircleLike& vision,
-                           const geometry::Vector2D& p) {
+// TODO: Find a better eps.
+constexpr float kRotationEps = 1e-4f;
+
+void AppendSightCandidates(const CircleLike& vision,
+                           const geometry::Vector2D& p,
+                           std::vector<Vector2D>& candidates) {
   const geometry::Vector2D& o = vision.center();
   const float r = vision.radius();
   const geometry::Vector2D d = p - o;
-  return o + d / d.Norm() * r;
+  const geometry::Vector2D d0 = d / d.Norm() * r;
+  const geometry::Vector2D d1 = d0.Rotate(kRotationEps);
+  const geometry::Vector2D d2 = d0.Rotate(-kRotationEps);
+  const geometry::Vector2D p0 = o + d0;
+  const geometry::Vector2D p1 = o + d1;
+  const geometry::Vector2D p2 = o + d2;
+  candidates.push_back(p0);
+  if (vision.Contains(p1)) {
+    candidates.push_back(p1);
+  }
+  if (vision.Contains(p2)) {
+    candidates.push_back(p2);
+  }
 }
 
 std::vector<geometry::utils::MaskType> VisibleObjectsImpl(
@@ -197,14 +213,14 @@ std::vector<Vector2D> ViewField::ComputeSightEndpoints(
       // the next edge.
       const Vector2D& x = edge.Endpoint0();
       if (vision_->Contains(x)) {
-        ret.push_back(MakeSightEndpoint(*vision_, x));
+        AppendSightCandidates(*vision_, x, ret);
       }
       const auto [p, q] = vision_->Intersection(edge);
       if (p.has_value()) {
-        ret.push_back(MakeSightEndpoint(*vision_, *p));
+        AppendSightCandidates(*vision_, *p, ret);
       }
       if (q.has_value()) {
-        ret.push_back(MakeSightEndpoint(*vision_, *q));
+        AppendSightCandidates(*vision_, *q, ret);
       }
     }
   }
