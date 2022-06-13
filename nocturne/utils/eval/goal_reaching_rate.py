@@ -1,8 +1,9 @@
+"""Goal reaching rate computation."""
 from pathlib import Path
 import numpy as np
+import torch
 
 from nocturne import Simulation
-from cfgs.config import ERR_VAL as INVALID_POSITION
 
 
 SIM_N_STEPS = 90  # number of steps per trajectory
@@ -10,8 +11,6 @@ SIM_STEP_TIME = 0.1  # dt (in seconds)
 
 
 def _goal_reaching_rate_impl(trajectory_path, model=None, sim_allow_non_vehicles=True, check_vehicles_only=True):
-    print(trajectory_path)
-
     # create expert simulation
     sim = Simulation(scenario_path=str(trajectory_path), start_time=0, allow_non_vehicles=sim_allow_non_vehicles)
     scenario = sim.getScenario()
@@ -67,12 +66,19 @@ def _goal_reaching_rate_impl(trajectory_path, model=None, sim_allow_non_vehicles
     return reached_goal_rate
 
 
-def compute_average_goal_reaching_rate(trajectories_dir, model=None):
+def compute_average_goal_reaching_rate(trajectories_dir, model=None, **kwargs):
+    """Compute average goal reaching rate for a model."""
+    # get trajectories paths
+    if isinstance(trajectories_dir, str):
+        # if trajectories_dir is a string, treat it as the path to a directory of trajectories
+        trajectories_dir = Path(trajectories_dir)
+        trajectories_paths = list(trajectories_dir.glob('*tfrecord*.json'))
+    elif isinstance(trajectories_dir, list):
+        # if trajectories_dir is a list, treat it as a list of paths to trajectory files
+        trajectories_paths = [Path(path) for path in trajectories_dir]
     # compute average collision rate over each individual trajectory file
-    trajectories_dir = Path(trajectories_dir)
-    trajectories_paths = list(trajectories_dir.glob('*tfrecord*.json'))
     average_goal_reaching_rates = np.array(list(map(
-        lambda path: _goal_reaching_rate_impl(path, model),
+        lambda path: _goal_reaching_rate_impl(path, model, **kwargs),
         trajectories_paths
     )))
 
@@ -80,7 +86,6 @@ def compute_average_goal_reaching_rate(trajectories_dir, model=None):
 
 
 if __name__ == '__main__':
-    import torch
     from nocturne.utils.imitation_learning.waymo_data_loader import ImitationAgent  # noqa: F401
     model = torch.load('model.pth')
     goal_reaching_rate = compute_average_goal_reaching_rate('dataset/json_files', model=None)

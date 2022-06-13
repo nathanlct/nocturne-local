@@ -53,6 +53,7 @@ void DefineObject(py::module& m) {
                     &Object::set_manual_control)
       .def_property("expert_control", &Object::expert_control,
                     &Object::set_expert_control)
+      .def_property("highlight", &Object::highlight, &Object::set_highlight)
       .def_property_readonly("collided", &Object::collided)
       .def_property_readonly("collision_type", &Object::collision_type)
 

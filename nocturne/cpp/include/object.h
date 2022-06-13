@@ -116,6 +116,9 @@ class Object : public ObjectBase {
     expert_control_ = expert_control;
   }
 
+  bool highlight() const { return highlight_; }
+  void set_highlight(bool highlight) { highlight_ = highlight; }
+
   const sf::Color& color() const { return color_; }
 
   sf::RenderTexture* ConeTexture() const { return cone_texture_.get(); }
@@ -194,6 +197,9 @@ class Object : public ObjectBase {
   float acceleration_ = 0.0f;
   float steering_ = 0.0f;
   float head_angle_ = 0.0f;
+
+  // used to color the object in videos if set to True
+  bool highlight_ = false;
 
   // If true the object is controlled by keyboard input.
   bool manual_control_ = false;

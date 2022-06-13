@@ -571,6 +571,51 @@ std::optional<Action> Scenario::ExpertAction(const Object& obj,
   return std::make_optional<Action>(acceleration, steering, 0.0);
 }
 
+std::optional<geometry::Vector2D> Scenario::ExpertPosShift(
+    const Object& obj, int64_t timestamp) const {
+  const std::vector<geometry::Vector2D>& cur_positions =
+      expert_trajectories_.at(obj.id());
+  const std::vector<bool>& valid_mask = expert_valid_masks_.at(obj.id());
+  const int64_t trajectory_length = valid_mask.size();
+
+  if (timestamp < 0 || timestamp > trajectory_length - 1) {
+    return std::nullopt;
+  }
+  if (!valid_mask[timestamp] || !valid_mask[timestamp + 1]) {
+    return std::nullopt;
+  }
+
+  // compute acceleration
+  // a_t = (v_{t+1} - v_t) / dt
+  geometry::Vector2D pos_shift =
+      (cur_positions[timestamp + 1] - cur_positions[timestamp]);
+
+  // return action
+  return pos_shift;
+}
+
+std::optional<float> Scenario::ExpertHeadingShift(const Object& obj,
+                                                  int64_t timestamp) const {
+  const std::vector<float>& cur_heading = expert_headings_.at(obj.id());
+  const std::vector<bool>& valid_mask = expert_valid_masks_.at(obj.id());
+  const int64_t trajectory_length = valid_mask.size();
+
+  if (timestamp < 0 || timestamp > trajectory_length - 1) {
+    return std::nullopt;
+  }
+  if (!valid_mask[timestamp] || !valid_mask[timestamp + 1]) {
+    return std::nullopt;
+  }
+
+  // compute acceleration
+  // a_t = (v_{t+1} - v_t) / dt
+  float heading_shift = geometry::utils::AngleSub(cur_heading[timestamp + 1],
+                                                  cur_heading[timestamp]);
+
+  // return action
+  return heading_shift;
+}
+
 // O(N) time remove.
 bool Scenario::RemoveObject(const Object& object) {
   if (!RemoveObjectImpl(object, objects_)) {
@@ -895,12 +940,9 @@ void Scenario::LoadObjects(const json& objects_json) {
       }
     }
 
-    // TODO(ev) make it a flag whether all vehicles are added or just the
-    // vehicles that are valid
     // we only want to store and load vehicles that are valid at this
-    // initialization time
-
-    if (!valid_mask[current_time_]) {
+    // initialization time, unless spawn_invalid_objects_ is set
+    if (!valid_mask[current_time_] && !spawn_invalid_objects_) {
       continue;
     }
 

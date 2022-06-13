@@ -34,3 +34,12 @@ checkpoint/
 
 # waymo dataset
 dataset/
+
+# trained models
+*.pth
+
+# tensorboard
+*tfevents*
+
+# configs
+configs.json
