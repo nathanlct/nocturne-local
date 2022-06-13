@@ -1,9 +1,8 @@
 """Imitation learning training script (behavioral cloning)."""
-import argparse
 from datetime import datetime
 from pathlib import Path
 import pickle
-import multiprocessing
+import random
 import json
 
 import hydra
@@ -13,14 +12,23 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import wandb
 
 from nocturne.utils.imitation_learning.model import ImitationAgent
 from nocturne.utils.imitation_learning.waymo_data_loader import WaymoDataset
 
 
+def set_seed_everywhere(seed):
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
+
 @hydra.main(config_path="../../../cfgs/imitation", config_name="config")
 def main(args):
-
+    set_seed_everywhere(args.seed)
     # create dataset and dataloader
     if args.actions_are_positions:
         expert_bounds = [[-0.5, 3], [-3, 3], [-0.07, 0.07]]
@@ -50,13 +58,13 @@ def main(args):
         'start_time': 0,
         'allow_non_vehicles': True,
         'spawn_invalid_objects': True,
-        'max_visible_road_points': 1000,
+        'max_visible_road_points': args.max_visible_road_points,
         'sample_every_n': 1,
         'road_edge_first': False,
     }
     dataset = WaymoDataset(
         data_path=args.path,
-        file_limit=args.file_limit,
+        file_limit=args.num_files,
         dataloader_config=dataloader_cfg,
         scenario_config=scenario_cfg,
     )
@@ -107,7 +115,19 @@ def main(args):
     print('Wrote configs at', configs_path)
 
     # tensorboard writer
-    writer = SummaryWriter(log_dir=str(exp_dir))
+    if args.write_to_tensorboard:
+        writer = SummaryWriter(log_dir=str(exp_dir))
+    # wandb logging
+    if args.wandb:
+        wandb_mode = "online"
+        wandb.init(
+            config=args,
+            project=args.wandb_project,
+            #  name=wandb_id,
+            group=args.experiment,
+            resume="allow",
+            settings=wandb.Settings(start_method="fork"),
+            mode=wandb_mode)
 
     # train loop
     print('Exp dir created at', exp_dir)
@@ -134,6 +154,8 @@ def main(args):
                 log_prob = dist.log_prob(expert_actions.float())
             loss = -log_prob.mean()
 
+            metrics_dict = {}
+
             # optim step
             optimizer.zero_grad()
             loss.backward()
@@ -145,7 +167,7 @@ def main(args):
                     param_norm = p.grad.detach().data.norm(2)
                     total_norm += param_norm.item()**2
             total_norm = total_norm**0.5
-            writer.add_scalar('train/grad_norm', total_norm, n_samples)
+            metrics_dict['train/grad_norm'] = total_norm
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             total_norm = 0
             for p in model.parameters():
@@ -153,35 +175,28 @@ def main(args):
                     param_norm = p.grad.detach().data.norm(2)
                     total_norm += param_norm.item()**2
             total_norm = total_norm**0.5
-            writer.add_scalar('train/post_clip_grad_norm', total_norm,
-                              n_samples)
+            metrics_dict['train/post_clip_grad_norm'] = total_norm
             optimizer.step()
 
             # tensorboard logging
-            writer.add_scalar('train/loss', loss.item(), n_samples)
+            metrics_dict['train/loss'] = loss.item()
 
             if args.actions_are_positions:
-                writer.add_scalar('train/x_logprob', log_prob[0], n_samples)
-                writer.add_scalar('train/y_logprob', log_prob[1], n_samples)
-                writer.add_scalar('train/steer_logprob', log_prob[2],
-                                  n_samples)
+                metrics_dict['train/x_logprob'] = log_prob[0]
+                metrics_dict['train/y_logprob'] = log_prob[1]
+                metrics_dict['train/steer_logprob'] = log_prob[2]
             else:
-                writer.add_scalar('train/accel_logprob', log_prob[0],
-                                  n_samples)
-                writer.add_scalar('train/steer_logprob', log_prob[1],
-                                  n_samples)
+                metrics_dict['train/accel_logprob'] = log_prob[0]
+                metrics_dict['train/steer_logprob'] = log_prob[1]
 
             if not model_cfg['discrete']:
                 diff_actions = torch.mean(torch.abs(dist.mean -
                                                     expert_actions),
                                           axis=0)
-                writer.add_scalar('train/accel_diff', diff_actions[0],
-                                  n_samples)
-                writer.add_scalar('train/steer_diff', diff_actions[1],
-                                  n_samples)
-                writer.add_scalar(
-                    'train/l2_dist',
-                    torch.norm(dist.mean - expert_actions.float()), n_samples)
+                metrics_dict['train/accel_diff'] = diff_actions[0]
+                metrics_dict['train/steer_diff'] = diff_actions[1]
+                metrics_dict['train/l2_dist'] = torch.norm(
+                    dist.mean - expert_actions.float())
 
             if model_cfg['discrete']:
                 with torch.no_grad():
@@ -193,18 +208,18 @@ def main(args):
                     for model_idx, expert_idx in zip(model_idxs, expert_idxs.T)
                 ]
                 if args.actions_are_positions:
-                    writer.add_scalar('train/x_pos_acc', accuracy[0],
-                                      n_samples)
-                    writer.add_scalar('train/y_pos_acc', accuracy[1],
-                                      n_samples)
-                    writer.add_scalar('train/heading_acc', accuracy[2],
-                                      n_samples)
+                    metrics_dict['train/x_pos_acc'] = accuracy[0]
+                    metrics_dict['train/y_pos_acc'] = accuracy[1]
+                    metrics_dict['train/heading_acc'] = accuracy[2]
                 else:
-                    writer.add_scalar('train/accel_acc', accuracy[0],
-                                      n_samples)
-                    writer.add_scalar('train/steer_acc', accuracy[1],
-                                      n_samples)
+                    metrics_dict['train/accel_acc'] = accuracy[0]
+                    metrics_dict['train/steer_acc'] = accuracy[1]
 
+            for key, val in metrics_dict.items():
+                if args.write_to_tensorboard:
+                    writer.add_scalar(key, val, n_samples)
+            if args.wandb:
+                wandb.log(metrics_dict, step=n_samples)
         # save model checkpoint
         if (epoch + 1) % 10 == 0 or epoch == args.epochs - 1:
             model_path = exp_dir / f'model_{epoch+1}.pth'

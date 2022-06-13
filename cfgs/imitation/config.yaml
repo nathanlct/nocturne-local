@@ -1,27 +1,30 @@
 defaults:
   - override hydra/launcher: submitit_local
 
-# WANDB things
-wandb: True
-wandb_project: nocturne
-wandb_id: null
-wandb_group: ${experiment}
-
 experiment: test
 path: '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json_v2_no_tl_train'
-file_limit: 1000
-n_cpus: 10
+num_files: 10000
+n_cpus: 9
 lr: 3e-4
 samples_per_epoch: 50000
+max_visible_road_points: 500
 batch_size: 512
-epochs: 600
+epochs: 700
 device: cuda
 n_stacked_states: 5
 view_dist: 80
-
 view_angle: 3.14
 actions_are_positions: False
 discrete: True
+seed: 0
+
+# WANDB things
+wandb: True
+wandb_project: nocturne
+wandb_group: ${experiment}
+
+# tensorboard logs
+write_to_tensorboard: True
 
 hydra:
   run:
