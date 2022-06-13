@@ -15,7 +15,8 @@ geometry::ConvexPolygon TrafficLight::BoundingPolygon() const {
   std::vector<geometry::Vector2D> vertices;
   vertices.reserve(kTrafficLightNumEdges);
   for (int i = 0; i < kTrafficLightNumEdges; ++i) {
-    vertices.push_back(geometry::PolarToVector2D(kTrafficLightRadius, angle));
+    vertices.push_back(position_ +
+                       geometry::PolarToVector2D(kTrafficLightRadius, angle));
     angle = geometry::utils::AngleAdd(angle, kTheta);
   }
   return geometry::ConvexPolygon(std::move(vertices));

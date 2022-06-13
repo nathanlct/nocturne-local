@@ -106,7 +106,7 @@ std::vector<std::pair<const PointType*, float>> NearestKRoadPoints(
   const geometry::Vector2D& src_pos = src.position();
   const int64_t n = points.size();
   std::vector<std::pair<const PointType*, float>> ret;
-  std::vector<bool> mask(n);
+  std::vector<geometry::utils::MaskType> mask(n);
   ret.reserve(n);
   for (int64_t i = 0; i < n; ++i) {
     const PointType* p = points[i];
@@ -817,8 +817,8 @@ NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
        std::vector<std::pair<std::vector<const ObjectBase*>, int64_t>>{
            // {road_points, max_visible_road_points_},
            {kinetic_objects, max_visible_objects_},
-           {traffic_lights, max_visible_stop_signs_},
-           {stop_signs, max_visible_traffic_lights_},
+           {traffic_lights, max_visible_traffic_lights_},
+           {stop_signs, max_visible_stop_signs_},
        }) {
     for (const auto [obj, dist] : NearestK(source, objects, limit)) {
       drawables.emplace_back(obj);
