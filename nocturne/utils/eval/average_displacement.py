@@ -1,9 +1,12 @@
 """Average displacement error computation."""
+import json
+
 from pathlib import Path
 import numpy as np
 import torch
 from collections import defaultdict
 import random
+import os
 
 from nocturne import Simulation
 from cfgs.config import ERR_VAL as INVALID_POSITION
@@ -160,17 +163,16 @@ def compute_average_displacement(trajectories_dir, model, configs):
     """Compute average displacement error between a model and the ground truth."""
     NUM_FILES = 200
     # get trajectories paths
-    if isinstance(trajectories_dir, str):
-        # if trajectories_dir is a string, treat it as the path to a directory of trajectories
-        trajectories_dir = Path(trajectories_dir)
-        trajectories_paths = list(trajectories_dir.glob('*tfrecord*.json'))
-        trajectories_paths.sort()
-        trajectories_paths = trajectories_paths[:]
-    elif isinstance(trajectories_dir, list):
-        # if trajectories_dir is a list, treat it as a list of paths to trajectory files
-        trajectories_paths = [Path(path) for path in trajectories_dir]
+    with open(os.path.join(trajectories_dir, 'valid_files.json')) as file:
+        valid_veh_dict = json.load(file)
+        files = list(valid_veh_dict.keys())
+        # sort the files so that we have a consistent order
+        np.random.seed(0)
+        np.random.shuffle(files)
     # compute average displacement over each individual trajectory file
-    trajectories_paths = trajectories_paths[:NUM_FILES]
+    trajectories_paths = files[:NUM_FILES]
+    for i, trajectory in enumerate(trajectories_paths):
+        trajectories_paths[i] = os.path.join(trajectories_dir, trajectory)
     with Pool(processes=14) as pool:
         result = list(
             pool.map(_average_displacement_impl,
