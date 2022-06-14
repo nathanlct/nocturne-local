@@ -120,14 +120,13 @@ def main(args):
     # wandb logging
     if args.wandb:
         wandb_mode = "online"
-        wandb.init(
-            config=args,
-            project=args.wandb_project,
-            #  name=wandb_id,
-            group=args.experiment,
-            resume="allow",
-            settings=wandb.Settings(start_method="fork"),
-            mode=wandb_mode)
+        wandb.init(config=args,
+                   project=args.wandb_project,
+                   name=args.experiment,
+                   group=args.experiment,
+                   resume="allow",
+                   settings=wandb.Settings(start_method="fork"),
+                   mode=wandb_mode)
 
     # train loop
     print('Exp dir created at', exp_dir)
