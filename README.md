@@ -72,7 +72,7 @@ Python tests can be ran with `pytest`.
 
 ### Downloading the dataset
 Two versions of the dataset are available:
-- a mini-one that is about 1 GB (TODO) and consists of 1000 training files and 100 validation files
+- a mini-one that is about 1 GB and consists of 1000 training files and 100 validation files at: [Link](https://drive.google.com/drive/folders/1URK27v78gKAVirvUahaXK_pT2KeJkBM3?usp=sharing)
 - the full dataset (100 GB TODO) and consistents of X training files and X validation files.
 
 ### Constructing the Dataset
