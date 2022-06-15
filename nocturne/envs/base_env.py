@@ -184,7 +184,8 @@ class BaseEnv(Env):
                     veh_obj.target_speed) < rew_cfg['speed_target_tolerance']
             if rew_cfg['heading_target']:
                 heading_target_achieved = np.abs(
-                    veh_obj.heading - veh_obj.target_heading
+                    self.smallest_angle(veh_obj.heading,
+                                        veh_obj.target_heading)
                 ) < rew_cfg['heading_target_tolerance']
             if position_target_achieved and speed_target_achieved and heading_target_achieved:
                 info_dict[veh_id]['goal_achieved'] = True
@@ -231,15 +232,15 @@ class BaseEnv(Env):
                         rew_dict[veh_id] -= rew_cfg.get(
                             'shaped_goal_distance_scaling',
                             1.0) * (np.abs(
-                                self.normalize_angle(veh_obj.heading -
-                                                     veh_obj.target_heading)) /
+                                self.smallest_angle(veh_obj.heading,
+                                                    veh_obj.target_heading)) /
                                     (2 * np.pi)) / rew_cfg['reward_scaling']
                     else:
                         rew_dict[veh_id] += rew_cfg.get(
                             'shaped_goal_distance_scaling',
                             1.0) * (1 - np.abs(
-                                self.normalize_angle(veh_obj.heading -
-                                                     veh_obj.target_heading)) /
+                                self.smallest_angle(veh_obj.heading,
+                                                    veh_obj.target_heading)) /
                                     (2 * np.pi)) / rew_cfg['reward_scaling']
             '''############################################
                     Handle potential done conditions
@@ -539,12 +540,12 @@ class BaseEnv(Env):
             torch.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
 
-    def normalize_angle(self, angle):
-        ret = fmod(angle, 2 * np.pi)
-        if ret > np.pi:
-            return angle - 2 * np.pi
-        else:
-            if ret < -np.pi:
-                return ret + 2 * np.pi
-            else:
-                return ret
+    def smallest_angle(self, current_angle, target_angle) -> int:
+        # Subtract the angles, constraining the value to [0, 2 * np.pi)
+        diff = (target_angle - current_angle) % (2 * np.pi)
+
+        # If we are more than np.pi we're taking the long way around.
+        # Let's instead go in the shorter, negative direction
+        if diff > np.pi:
+            diff = -(2 * np.pi - diff)
+        return diff

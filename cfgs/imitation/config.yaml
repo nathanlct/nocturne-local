@@ -3,7 +3,7 @@ defaults:
 
 experiment: test
 path: '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json_v2_no_tl_train'
-num_files: 10000
+num_files: 1000
 n_cpus: 9
 lr: 3e-4
 samples_per_epoch: 50000

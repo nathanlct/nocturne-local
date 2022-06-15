@@ -1,6 +1,6 @@
 Nocturne is a 2D driving simulator, built in C++ for speed and exported as a Python library.
 
-It is currently designed to handle traffic scenarios from the [Waymo Open Dataset](https://github.com/waymo-research/waymo-open-dataset), and with some work could be extended to support different driving tasks. Using the Python library `nocturne`, one is able to train controllers for AVs to solve various tasks from the Waymo dataset, which we provide as a benchmark, then use the tools we offer to evaluate the designed controllers.
+It is currently designed to handle traffic scenarios from the [Waymo Open Dataset](https://github.com/waymo-research/waymo-open-dataset), and with some work could be extended to support different driving datasets. Using the Python library `nocturne`, one is able to train controllers for AVs to solve various tasks from the Waymo dataset, which we provide as a benchmark, then use the tools we offer to evaluate the designed controllers.
 
 **Citation**: [Todo] 
 
@@ -24,7 +24,7 @@ To install SFML:
 
 pybind11 is included as a submodule and will be installed in the next step.
 
-## Nocturne
+## Installing Nocturne
 
 Start by cloning the repo:
 
@@ -68,9 +68,14 @@ Resetting simulation.
 
 Python tests can be ran with `pytest`.
 
-## Constructing the dataset
+## Dataset
 
-At the moment for FAIR researchers the dataset is available on the cluster so no need to do anything.
+### Downloading the dataset
+Two versions of the dataset are available:
+- a mini-one that is about 1 GB (TODO) and consists of 1000 training files and 100 validation files
+- the full dataset (100 GB TODO) and consistents of X training files and X validation files.
+
+### Constructing the Dataset
 If you do want to rebuild the dataset:
 - Open ```nocturne_utils/config.py``` and change ```DATA_FOLDER``` to be the path to your Waymo motion files
 - Run ```python nocturne_utils/run_waymo_constructor.py --parallel --no_tl --all_files --datatype train valid```. This will construct, in parallel, a dataset of all the train, valid, and test files in the waymo motion data. It should take on the order of 5 minutes with 20 cpus.
@@ -91,11 +96,14 @@ make install
 
 Subsequently, the C++ tests can be ran with `./tests/nocturne_test` from within the `nocturne/cpp/build` directory.
 
+## Examples of Nocturne Usage
+To get a sense of available functionality in Nocturne, we have provided a few examples of how to construct the env, how to construct particular observations, and how to render results.
+
 ## Running the RL Algorithms
 Nocturne by default comes with support for three versions of Proximal Policy Optimization:
 1. Sample Factory, a high throughput asynchronous PPO implementation (https://github.com/alex-petrenko/sample-factory)
 2. RLlib's PPO (https://github.com/ray-project/ray/tree/master/rllib)
-3. A slightly modified version of PPO from (https://github.com/marlbenchmark/on-policy)
+3. Multi-Agent PPO from (https://github.com/marlbenchmark/on-policy)
 Each algorithm is in its corresponding folder in examples and has a corresponding config file in cfgs/
 *Warning:* only the sample factory code has been extensively swept and tested. The default hyperparameters in there
 should work for training a basic agent, if not a perfectly performant one. The other versions are provided for convenience
@@ -105,23 +113,25 @@ but are not guaranteed to train a basic agent with the current hyperparameter se
 There are a few key hyperparameters that we expect users to care quite a bit about. Each of these can be toggled by adding
 ```++<hyperparam_name>=<hyperparam_value>``` to the run command.
 - ```num_files```: this controls how many training scenarios are used. Set to -1 to use all of them.
-- ```max_num_vehicles```: this controls the maximum number of controllable agents in a scenario. We continue randomly samplgin
-scenarios until we find one with <= ```max_num_vehicles```.
+- ```max_num_vehicles```: this controls the maximum number of controllable agents in a scenario. If there are more than ```max_num_vehicles``` controllable agents in the scene, we sample ```max_num_vehicles``` randomly from them and set the remainder to be experts. If you want to ensure that all agents are controllable, simply pick a large number like 100.
 
 ### Running sample factory
 Files from sample factory can be run from examples/sample_factory_files and should work by default by running
 ```python examples/sample_factory_files/run_sample_factory.py algorithm=APPO```
 Additional config options for hyperparameters can be found in the config file.
 
+Once you have a trained checkpoint, you can visualize the results and make a movie of them by running ```python examples/sample_factory_files/run_sample_factory.py <PATH TO OUTPUT MODEL>```.
+
 *Warning*: because of how the algorithm is configured, sample-factory works best with a fixed number of agents
-operating on a fixed horizon. To enable this, we use the config parameter ```max_num_vehicles``` which initializes the
-environment with only scenes that have fewer controllable agents than ```max_num_vehicles```. Additionally, if there
-are fewer than ```max_num_vehicles``` in the scene we add dummy agents that receive a vector of -1 at all timesteps.
-When a vehicle exits the scene we continue providing it a vector of -1 as an observation and a reward of 0.
+operating on a fixed horizon. To enable this, we use the config parameter ```max_num_vehicles``` which initializes the environment with only scenes that have fewer controllable agents than ```max_num_vehicles```. Additionally, if there are fewer than ```max_num_vehicles``` in the scene we add dummy agents that receive a vector of -1 at all timesteps. When a vehicle exits the scene we continue providing it a vector of -1 as an observation and a reward of 0.
 
 ### Running RLlib
 
 ### Running on-policy PPO
+
+## Running the IL Algorithms
+Nocturne comes with a baseline implementation of behavioral cloning and a corresponding
+DataLoader. This can be run via ```python examples/imitation_learning/train.py```.
 
 ## Common installation errors
 

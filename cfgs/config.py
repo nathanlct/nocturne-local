@@ -15,15 +15,10 @@ PROCESSED_TRAIN_NO_TL = os.path.join(
     DATA_FOLDER, f'formatted_json_v{VERSION_NUMBER}_no_tl_train')
 PROCESSED_VALID_NO_TL = os.path.join(
     DATA_FOLDER, f'formatted_json_v{VERSION_NUMBER}_no_tl_valid')
-PROCESSED_TEST_NO_TL = os.path.join(
-    DATA_FOLDER, f'formatted_json_v{VERSION_NUMBER}_no_tl_test')
 PROCESSED_TRAIN = os.path.join(DATA_FOLDER,
                                f'formatted_json_v{VERSION_NUMBER}_train')
 PROCESSED_VALID = os.path.join(DATA_FOLDER,
                                f'formatted_json_v{VERSION_NUMBER}_valid')
-PROCESSED_TEST = os.path.join(DATA_FOLDER,
-                              f'formatted_json_v{VERSION_NUMBER}_test')
-
 ERR_VAL = -1e4
 
 

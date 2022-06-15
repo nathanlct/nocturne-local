@@ -69,7 +69,7 @@ def main(cfg):
     disp.start()
 
     if not os.path.exists(PROJECT_PATH / 'examples/rendering'):
-        os.path.makedirs(PROJECT_PATH / 'examples/rendering')
+        os.makedirs(PROJECT_PATH / 'examples/rendering')
 
     # movie of whole scenario
     make_movie(
@@ -147,7 +147,8 @@ def main(cfg):
             padding=50.0,
             draw_target_position=True,
         ),
-        output_path=PROJECT_PATH / 'examples/rendering' / 'movie_cone_head_tilt.mp4',
+        output_path=PROJECT_PATH / 'examples/rendering' /
+        'movie_cone_head_tilt.mp4',
     )
 
     # image of whole scenario
@@ -175,7 +176,8 @@ def main(cfg):
             padding=50.0,
             draw_target_position=True,
         ),
-        output_path=PROJECT_PATH / 'examples/rendering' / 'img_cone_tilted.png',
+        output_path=PROJECT_PATH / 'examples/rendering' /
+        'img_cone_tilted.png',
     )
 
     # image of visible state

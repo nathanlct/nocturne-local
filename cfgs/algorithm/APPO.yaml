@@ -73,7 +73,7 @@ num_minibatches_to_accumulate: -1
 # experience collection will be halted during training.This is the regime with potentially lowest policy-lag.When this parameter is 0 and num_workers *
 # num_envs_per_worker * rollout == num_batches_per_iteration * batch_size, the algorithm is similar toregular synchronous PPO. (default: -1)
 max_grad_norm: 4.0 # Max L2 norm of the gradient vector (default: 4.0)
-exploration_loss_coeff: 0.001 # Coefficient for the exploration component of the loss function. (default: 0.0)
+exploration_loss_coeff: 0.001 # Coefficient for the exploration component of the loss function. (default: 0.001)
 value_loss_coeff: 0.5 # Coefficient for the critic loss (default: 0.5)
 kl_loss_coeff: 0.0 #Coefficient for fixed KL loss (as used by Schulman et al. in https://arxiv.org/pdf/1707.06347.pdf). Highly recommended for environments with continuous
                    #     action spaces. (default: 0.0)

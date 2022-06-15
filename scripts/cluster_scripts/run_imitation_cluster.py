@@ -40,7 +40,7 @@ def make_code_snap(experiment, code_path, str_time):
     dirs_to_copy = [
         '.', './cfgs/', './cfgs/algorithm', './cfgs/imitation',
         './nocturne/envs/', './nocturne/pybind11',
-        './nocturne/utils/imitation_learning', './build'
+        '.examples/imitation_learning', './build'
     ]
     src_dir = pathlib.Path(PROJECT_PATH)
     for dir in dirs_to_copy:
