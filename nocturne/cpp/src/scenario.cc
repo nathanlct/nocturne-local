@@ -321,8 +321,8 @@ std::tuple<std::vector<const ObjectBase*>,
            std::vector<const geometry::PointLike*>,
            std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
 Scenario::VisibleObjects(const Object& src, float view_dist, float view_angle,
-                         float head_tilt) const {
-  const float heading = geometry::utils::AngleAdd(src.heading(), head_tilt);
+                         float head_angle) const {
+  const float heading = geometry::utils::AngleAdd(src.heading(), head_angle);
   const geometry::Vector2D& position = src.position();
   const ViewField vf(position, view_dist, heading, view_angle);
 
@@ -355,10 +355,10 @@ Scenario::VisibleObjects(const Object& src, float view_dist, float view_angle,
 
 std::vector<const TrafficLight*> Scenario::VisibleTrafficLights(
     const Object& src, float view_dist, float view_angle,
-    float head_tilt) const {
+    float head_angle) const {
   std::vector<const TrafficLight*> ret;
 
-  const float heading = geometry::utils::AngleAdd(src.heading(), head_tilt);
+  const float heading = geometry::utils::AngleAdd(src.heading(), head_angle);
   const geometry::Vector2D& position = src.position();
   const ViewField vf(position, view_dist, heading, view_angle);
 
@@ -406,10 +406,10 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
 }
 
 std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
-    const Object& src, float view_dist, float view_angle, float head_tilt,
+    const Object& src, float view_dist, float view_angle, float head_angle,
     bool padding) const {
   const auto [objects, road_points, traffic_lights, stop_signs] =
-      VisibleObjects(src, view_dist, view_angle, head_tilt);
+      VisibleObjects(src, view_dist, view_angle, head_angle);
   const auto o_targets = NearestK(src, objects, max_visible_objects_);
   const auto r_targets = NearestKRoadPoints(
       src, road_points, max_visible_road_points_, road_edge_first_);
@@ -476,7 +476,7 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
 NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
                                                float view_dist,
                                                float view_angle,
-                                               float head_tilt) const {
+                                               float head_angle) const {
   const int64_t kObjectFeatureStride = 0;
   const int64_t kRoadPointFeatureStride =
       kObjectFeatureStride + max_visible_objects_ * kObjectFeatureSize;
@@ -490,7 +490,7 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
       kStopSignFeatureStride + max_visible_stop_signs_ * kStopSignsFeatureSize;
 
   const auto [objects, road_points, traffic_lights, stop_signs] =
-      VisibleObjects(src, view_dist, view_angle, head_tilt);
+      VisibleObjects(src, view_dist, view_angle, head_angle);
 
   const auto o_targets = NearestK(src, objects, max_visible_objects_);
   const auto r_targets = NearestKRoadPoints(
@@ -770,7 +770,7 @@ NdArray<unsigned char> Scenario::Image(uint64_t img_height, uint64_t img_width,
 }
 
 NdArray<unsigned char> Scenario::EgoVehicleConeImage(
-    const Object& source, float view_dist, float view_angle, float head_tilt,
+    const Object& source, float view_dist, float view_angle, float head_angle,
     uint64_t img_height, uint64_t img_width, float padding,
     bool draw_target_positions) const {
   // define transforms
@@ -830,14 +830,14 @@ NdArray<unsigned char> Scenario::EgoVehicleConeImage(
 
   // draw cone
   auto cone_drawables =
-      utils::MakeInvertedConeShape(view_dist, view_angle, head_tilt);
+      utils::MakeInvertedConeShape(view_dist, view_angle, head_angle);
   DrawOnTarget(canvas, cone_drawables, cone_view, horizontal_flip);
 
   return canvas.AsNdArray();
 }
 
 NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
-    const Object& source, float view_dist, float view_angle, float head_tilt,
+    const Object& source, float view_dist, float view_angle, float head_angle,
     uint64_t img_height, uint64_t img_width, float padding,
     bool draw_target_position) const {
   sf::Transform horizontal_flip;
@@ -851,7 +851,7 @@ NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
 
   // TODO(nl) remove code duplication and linear overhead
   const auto [kinetic_objects, road_points, traffic_lights, stop_signs] =
-      VisibleObjects(source, view_dist, view_angle, head_tilt);
+      VisibleObjects(source, view_dist, view_angle, head_angle);
   std::vector<const sf::Drawable*> drawables;
 
   for (const auto [obj, dist] : NearestKRoadPoints(

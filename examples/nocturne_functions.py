@@ -87,7 +87,7 @@ def main(cfg):
                                                         view_dist=80,
                                                         view_angle=120 *
                                                         (np.pi / 180),
-                                                        head_tilt=0.0)
+                                                        head_angle=0.0)
     # we can also grab a dict of all of the objects
     # if padding is true we will add extra objects to the dict
     # to ensure we hit the maximum number of objects for each type

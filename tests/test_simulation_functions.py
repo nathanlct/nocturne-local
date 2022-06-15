@@ -85,7 +85,7 @@ def test_scenario_functions():
     new_center = start_point + 0.5 * road_segment_dir
     veh0.setPosition(new_center[0], new_center[1])
     sim.step(1e-6)
-    cone = scenario.getConeImage(veh0, view_angle=2 * np.pi, head_tilt=0.0)
+    cone = scenario.getConeImage(veh0, view_angle=2 * np.pi, head_angle=0.0)
     plt.figure()
     plt.imshow(cone)
     plt.savefig('line_veh_check.png')

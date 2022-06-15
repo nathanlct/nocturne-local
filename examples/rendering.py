@@ -125,7 +125,7 @@ def main(cfg):
             source=scenario.getObjectsThatMoved()[6],
             view_dist=80,
             view_angle=np.pi * (120 / 180),
-            head_tilt=0.0,
+            head_angle=0.0,
             img_width=1600,
             img_height=1600,
             padding=50.0,
@@ -134,21 +134,21 @@ def main(cfg):
         output_path=PROJECT_PATH / 'examples/rendering' / 'movie_cone.mp4',
     )
 
-    # movie of cone around vehicle with varying head tilt
+    # movie of cone around vehicle with varying head angle
     make_movie(
         cfg,
         scenario_fn=lambda scenario, timestep: scenario.getConeImage(
             source=scenario.getVehicles()[6],
             view_dist=80.0,
             view_angle=np.pi * (120 / 180),
-            head_tilt=0.8 * np.sin(timestep / 10),
+            head_angle=0.8 * np.sin(timestep / 10),
             img_width=1600,
             img_height=1600,
             padding=50.0,
             draw_target_position=True,
         ),
         output_path=PROJECT_PATH / 'examples/rendering' /
-        'movie_cone_head_tilt.mp4',
+        'movie_cone_head_angle.mp4',
     )
 
     # image of whole scenario
@@ -170,7 +170,7 @@ def main(cfg):
             source=scenario.getVehicles()[9],
             view_dist=80,
             view_angle=np.pi * (120 / 180),
-            head_tilt=np.pi / 8.0,
+            head_angle=np.pi / 8.0,
             img_width=2000,
             img_height=2000,
             padding=50.0,
@@ -187,7 +187,7 @@ def main(cfg):
             source=scenario.getVehicles()[9],
             view_dist=80,
             view_angle=np.pi * (120 / 180),
-            head_tilt=np.pi / 8.0,
+            head_angle=np.pi / 8.0,
             img_width=2000,
             img_height=2000,
             padding=50.0,

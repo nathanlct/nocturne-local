@@ -39,22 +39,24 @@ CB_color_cycle = [
 
 
 class Bunch(object):
+    """Converts a dict into an object with the keys as attributes."""
 
     def __init__(self, adict):
         self.__dict__.update(adict)
 
 
 def ccw(A, B, C):
+    """Blah."""
     return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0])
 
 
-# Return true if line segments AB and CD intersect
 def intersect(A, B, C, D):
+    """Check if two line segments AB and CD intersect."""
     return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
 
 
 def poly_intersection(poly1, poly2):
-
+    """Compute if two polylines intersect."""
     for i, p1_first_point in enumerate(poly1[:-1]):
         p1_second_point = poly1[i + 1]
 
@@ -77,6 +79,53 @@ def run_rollouts(env,
                  veh_intersection_dict,
                  actor_1,
                  actor_2=None):
+    """Run a single rollout.
+
+    Args:
+        env (_type_): Env we are running.
+        cfg (dict): dictionary configuring the environment.
+        device (str): device you want to run the model on
+        expert_trajectory_dict (dict[str]: np.array): expert trajectories
+            keyed by ID
+        distance_bins (np.array): bins used to compute the goal
+            rate as a function of the starting distance from goal
+        intersection_bins (np.array): bins used to compute the
+            goal rate as a function of the number of intersections
+            between paths in the expert trajectories
+        veh_intersection_dict (dict[str]: np.array): dict mapping
+            a vehicle ID to the number of intersections it 
+            experienced
+        actor_1: SampleFactory agent
+        actor_2: SampleFactory agent. Will be none unless we're testing for
+                ZSC
+
+    Returns
+    -------
+        avg_goal: average goal rate of agents
+        avg_collisions: average collision rate of agents
+        avg_veh_edge_collisions: average veh-edge collision rate
+        avg_veh_veh_collisions: average veh-veh collision rate
+        success_rate_by_distance: np.array(number of distance bins, 4)
+            where the row indexes how far the vehicle was from goal
+            at initialization and where the column index is 
+            [goal rate, collision rate, veh-veh collision rate, counter of
+                            number of vehicles in this bin]
+        success_rate_by_num_agents: np.array(maximum number of vehicles, 4)
+            where the row index is how many vehicles were in this episode
+            where the column index is [goal rate, collision rate, 
+                            veh-veh collision rate, counter of
+                            number of vehicles in this bin]
+        success_rate_by_intersections: np.array(number of intersections, 4)
+            where the row index is how many intersections that vehicle
+            had and where the column index is [goal rate, collision rate, 
+                            veh-veh collision rate, counter of
+                            number of vehicles in this bin]
+        np.mean(ades): mean average displacement error of all vehicles in th
+                       episode
+        np.mean(fdes): mean final displacement error of all vehicles in th
+                       episode
+        veh_counter(int): how many vehicles were in that episode
+    """
     episode_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
     true_rewards = [deque([], maxlen=100) for _ in range(env.num_agents)]
     obs = env.reset()
@@ -593,6 +642,17 @@ def run_eval(cfgs,
 
 
 def load_wandb(experiment_name, cfg_filter, force_reload=False):
+    """Pull the results from the wandb server.
+
+    Args:
+    ----
+        experiment_name (str): name of the wandb group.
+        cfg_filter (function): use the config dict to filter
+                               which runs are actually kept
+        force_reload (bool, optional): if true we overwrite
+                                       the wandb csv
+                                       even if it exists.
+    """
     if not os.path.exists(
             'wandb_{}.csv'.format(experiment_name)) or force_reload:
         import wandb
@@ -621,11 +681,9 @@ def load_wandb(experiment_name, cfg_filter, force_reload=False):
         runs_df.to_csv('wandb_{}.csv'.format(experiment_name))
 
 
-def plot_df(experiment_name, global_step_cutoff=3e9):
+def plot_goal_achieved(experiment_name, global_step_cutoff=3e9):
+    """Use the WANDB CSV to plot number of train steps v. goal achieved."""
     plt.figure(dpi=300)
-    # plt.rcParams['figure.dpi'] = 150
-    # plt.rcParams['figure.figsize'] = (6, 4)
-
     df = pd.read_csv("wandb_{}.csv".format(experiment_name))
     df["timestamp"] = pd.to_datetime(df["_timestamp"] * 1e9)
 
@@ -689,7 +747,28 @@ def eval_generalization(output_folder,
                         num_file_loops,
                         test_zsc=False,
                         cfg_filter=None):
+    """Evaluate generalization for all agent checkpoints in output_folder.
 
+    Args:
+    ----
+        output_folder (str): path to folder containing agent checkpoints
+        num_eval_files (int): how many files to use for eval
+        files (list[str]): list of scenario files to use for eval
+        file_type (str): 'train' or 'test' used to indicate if we are 
+                         testing in or out of distribution
+        scenario_dir (str): path to directory where `files` are stored
+        num_file_loops (int): how many times to iterate over the files. 
+                              Used for in-distribution testing if
+                              in-distribution we trained on M files
+                              but we want to test over N files where
+                              N > M.
+        test_zsc (bool, optional): If true we pair up ever
+                                   agent in the folder and compute
+                                   all the cross-play scores. Defaults to False.
+        cfg_filter (_type_, optional): function used to filter over
+                                       whether eval should actually be done on that
+                                       agent. Filters using the agent config dict.
+    """
     file_paths = []
     cfg_dicts = []
     for (dirpath, dirnames, filenames) in os.walk(output_folder):
@@ -1096,7 +1175,7 @@ def main():
         plt.ylabel('Final Displacement Error (m)')
         plt.legend()
         plt.savefig('fde.png', bbox_inches='tight', pad_inches=0.1)
-        plot_df(experiment_names[0], global_step_cutoff)
+        plot_goal_achieved(experiment_names[0], global_step_cutoff)
 
         # create error by number of expert intersections plots
         plt.figure(dpi=300)

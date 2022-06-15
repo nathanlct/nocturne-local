@@ -186,23 +186,23 @@ class Scenario : public sf::Drawable {
   // Computes and returns an image of the visible state of the `source` object,
   // ie. the features returned by the `VisibleState` method. See the
   // documentation of `VisibleState` for an explanation of the `view_dist`,
-  // `view_angle` and `head_tilt` parameters. See the documentation of `Image`
+  // `view_angle` and `head_angle` parameters. See the documentation of `Image`
   // for an explanation of the remaining parameters of this function.
   NdArray<unsigned char> EgoVehicleFeaturesImage(
       const Object& source, float view_dist = 120.0f,
-      float view_angle = geometry::utils::kPi * 0.8f, float head_tilt = 0.0f,
+      float view_angle = geometry::utils::kPi * 0.8f, float head_angle = 0.0f,
       uint64_t img_height = 1000, uint64_t img_width = 1000,
       float padding = 0.0f, bool draw_destination = true) const;
 
   // Computes and returns an image of a cone of vision of the `source` object.
   // The image is centered around the `source` object, with a cone of vision of
   // radius `view_dist` and of angle `view_angle` (in radians). The cone points
-  // upwards (+pi/2) with an optional tilt `head_tilt` (in radians). See the
+  // upwards (+pi/2) with an optional tilt `head_angle` (in radians). See the
   // documentation of `Image` for an explanation of the remaining parameters of
   // this function.
   NdArray<unsigned char> EgoVehicleConeImage(
       const Object& source, float view_dist = 120.0f,
-      float view_angle = geometry::utils::kPi * 0.8f, float head_tilt = 0.0f,
+      float view_angle = geometry::utils::kPi * 0.8f, float head_angle = 0.0f,
       uint64_t img_height = 1000, uint64_t img_width = 1000,
       float padding = 0.0f, bool draw_destinations = true) const;
 
@@ -236,11 +236,11 @@ class Scenario : public sf::Drawable {
 
   std::unordered_map<std::string, NdArray<float>> VisibleState(
       const Object& src, float view_dist, float view_angle,
-      float head_tilt = 0.0f, bool padding = false) const;
+      float head_angle = 0.0f, bool padding = false) const;
 
   NdArray<float> FlattenedVisibleState(const Object& src, float view_dist,
                                        float view_angle,
-                                       float head_tilt = 0.0f) const;
+                                       float head_angle = 0.0f) const;
 
   int64_t getMaxNumVisibleObjects() const { return max_visible_objects_; }
   int64_t getMaxNumVisibleRoadPoints() const {
@@ -269,11 +269,11 @@ class Scenario : public sf::Drawable {
              std::vector<const geometry::PointLike*>,
              std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
   VisibleObjects(const Object& src, float view_dist, float view_angle,
-                 float head_tilt = 0.0f) const;
+                 float head_angle = 0.0f) const;
 
   std::vector<const TrafficLight*> VisibleTrafficLights(
       const Object& src, float view_dist, float view_angle,
-      float head_tilt = 0.0f) const;
+      float head_angle = 0.0f) const;
 
   // Draws the objects contained in `drawables` on the render target `target`.
   // The view `view` is applied to the target before drawing the objects, and

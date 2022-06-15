@@ -1,3 +1,4 @@
+"""Run script that generates summary statistics for a folder of IL agents."""
 import json
 import os
 
