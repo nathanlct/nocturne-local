@@ -93,7 +93,7 @@ def run_rollouts(env,
             goal rate as a function of the number of intersections
             between paths in the expert trajectories
         veh_intersection_dict (dict[str]: np.array): dict mapping
-            a vehicle ID to the number of intersections it 
+            a vehicle ID to the number of intersections it
             experienced
         actor_1: SampleFactory agent
         actor_2: SampleFactory agent. Will be none unless we're testing for
@@ -107,22 +107,22 @@ def run_rollouts(env,
         avg_veh_veh_collisions: average veh-veh collision rate
         success_rate_by_distance: np.array(number of distance bins, 4)
             where the row indexes how far the vehicle was from goal
-            at initialization and where the column index is 
+            at initialization and where the column index is
             [goal rate, collision rate, veh-veh collision rate, counter of
                             number of vehicles in this bin]
         success_rate_by_num_agents: np.array(maximum number of vehicles, 4)
             where the row index is how many vehicles were in this episode
-            where the column index is [goal rate, collision rate, 
+            where the column index is [goal rate, collision rate,
                             veh-veh collision rate, counter of
                             number of vehicles in this bin]
         success_rate_by_intersections: np.array(number of intersections, 4)
             where the row index is how many intersections that vehicle
-            had and where the column index is [goal rate, collision rate, 
+            had and where the column index is [goal rate, collision rate,
                             veh-veh collision rate, counter of
                             number of vehicles in this bin]
-        np.mean(ades): mean average displacement error of all vehicles in th
+        np.mean(ades): mean average displacement error of all vehicles in the
                        episode
-        np.mean(fdes): mean final displacement error of all vehicles in th
+        np.mean(fdes): mean final displacement error of all vehicles in the
                        episode
         veh_counter(int): how many vehicles were in that episode
     """
@@ -754,10 +754,10 @@ def eval_generalization(output_folder,
         output_folder (str): path to folder containing agent checkpoints
         num_eval_files (int): how many files to use for eval
         files (list[str]): list of scenario files to use for eval
-        file_type (str): 'train' or 'test' used to indicate if we are 
+        file_type (str): 'train' or 'test' used to indicate if we are
                          testing in or out of distribution
         scenario_dir (str): path to directory where `files` are stored
-        num_file_loops (int): how many times to iterate over the files. 
+        num_file_loops (int): how many times to iterate over the files.
                               Used for in-distribution testing if
                               in-distribution we trained on M files
                               but we want to test over N files where

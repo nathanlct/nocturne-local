@@ -18,7 +18,6 @@ from sample_factory.algorithms.appo.model import create_actor_critic
 from sample_factory.algorithms.appo.model_utils import get_hidden_size
 from sample_factory.algorithms.utils.action_distributions import ContinuousActionDistribution, \
      CategoricalActionDistribution
-from sample_factory.algorithms.utils.algo_utils import ExperimentStatus
 from sample_factory.algorithms.utils.arguments import load_from_checkpoint
 from sample_factory.algorithms.utils.multi_agent_wrapper import MultiAgentWrapper, is_multiagent_env
 from sample_factory.envs.create_env import create_env
@@ -26,7 +25,7 @@ from sample_factory.utils.utils import log, AttrDict
 
 from run_sample_factory import register_custom_components
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL, PROJECT_PATH
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL, PROJECT_PATH  # noqa: F401
 
 
 def run_eval(cfg_dict, max_num_frames=1e9):
@@ -224,13 +223,6 @@ def run_eval(cfg_dict, max_num_frames=1e9):
                             for i in range(env.num_agents)
                         ]))
                     return avg_goal
-
-                # VizDoom multiplayer stuff
-                # for player in [1, 2, 3, 4, 5, 6, 7, 8]:
-                #     key = f'PLAYER{player}_FRAGCOUNT'
-                #     if key in infos[0]:
-                #         log.debug('Score for player %d: %r', player, infos[0][key])
-
     env.close()
 
 

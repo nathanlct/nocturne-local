@@ -1,17 +1,16 @@
 """Average displacement error computation."""
+from collections import defaultdict
+from itertools import repeat
 import json
+from multiprocessing import Pool
+import os
+import random
 
-from pathlib import Path
 import numpy as np
 import torch
-from collections import defaultdict
-import random
-import os
 
+from cfgs.config import PROCESSED_VALID_NO_TL, ERR_VAL
 from nocturne import Simulation
-from cfgs.config import ERR_VAL as INVALID_POSITION
-from multiprocessing import Pool
-from itertools import repeat
 
 SIM_N_STEPS = 90  # number of steps per trajectory
 GOAL_TOLERANCE = 0.5
@@ -22,7 +21,6 @@ def _average_displacement_impl(arg):
     print(trajectory_path)
 
     scenario_config = configs['scenario_cfg']
-    dataloader_config = configs['dataloader_cfg']
 
     view_dist = configs['dataloader_cfg']['view_dist']
     view_angle = configs['dataloader_cfg']['view_angle']
@@ -82,7 +80,7 @@ def _average_displacement_impl(arg):
     goal_achieved = [False for _ in controlled_vehicles]
     for i in range(SIM_N_STEPS - n_stacked_states):
         for veh in controlled_vehicles:
-            if np.isclose(veh.position.x, -10000.0):
+            if np.isclose(veh.position.x, ERR_VAL):
                 veh.expert_control = True
             else:
                 veh.expert_control = False
@@ -125,7 +123,7 @@ def _average_displacement_impl(arg):
             expert_veh = id2veh_expert[veh.id]
             # make sure it is valid
             if np.isclose(expert_veh.position.x,
-                          -10000) or expert_veh.collided:
+                          ERR_VAL) or expert_veh.collided:
                 continue
             # print(expert_veh.position, veh.position)
             # compute displacement
@@ -134,8 +132,7 @@ def _average_displacement_impl(arg):
             pos_diff = (model_pos - expert_pos).norm()
             displacements.append(pos_diff)
             final_displacements[i] = pos_diff
-            # a collision with another a vehicle
-            if veh.collided:  #and int(veh.collision_type) == 1:
+            if veh.collided:
                 collisions[i] = True
             if (veh.position - veh.target_position).norm() < GOAL_TOLERANCE:
                 goal_achieved[i] = True
@@ -200,27 +197,26 @@ def compute_average_displacement(trajectories_dir, model, configs):
 
 
 if __name__ == '__main__':
-    from nocturne.utils.imitation_learning.model import ImitationAgent  # noqa: F401
-    import json
+    from examples.imitation_learning.model import ImitationAgent  # noqa: F401
     model = torch.load(
-        '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/14.23.17/++device=cuda,++file_limit=1000/train_logs/2022_06_05_14_23_23/model_600.pth'
+        '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/14.23.17/\
+            ++device=cuda,++file_limit=1000/train_logs/2022_06_05_14_23_23/model_600.pth'
     ).to('cpu')
     model.actions_grids = [x.to('cpu') for x in model.actions_grids]
     model.eval()
     model.nn[0].eval()
     with open(
-            '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/14.23.17/++device=cuda,++file_limit=1000/train_logs/2022_06_05_14_23_23/configs.json',
+            '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/14.23.17/\
+                ++device=cuda,++file_limit=1000/train_logs/2022_06_05_14_23_23/configs.json',
             'r') as fp:
         configs = json.load(fp)
         configs['device'] = 'cpu'
     with torch.no_grad():
         ade, fde, collisions, goals = compute_average_displacement(
-            '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json_v2_no_tl_valid',
-            model=model,
-            configs=configs)
+            PROCESSED_VALID_NO_TL, model=model, configs=configs)
     print(f'Average Displacement Error: {ade[0]:.3f} ± {ade[1]:.3f} meters')
     print(f'Final Displacement Error: {fde[0]:.3f} ± {fde[1]:.3f} meters')
-    print(f'Average Collisions: {collisions[0]:.3f} ± {collisions[1]:.3f}\%')
+    print(f'Average Collisions: {collisions[0]:.3f} ± {collisions[1]:.3f}%')
     print(
-        f'Average Success at getting to goal: {goals[0]:.3f} ± {goals[1]:.3f}\%'
+        f'Average Success at getting to goal: {goals[0]:.3f} ± {goals[1]:.3f}%'
     )

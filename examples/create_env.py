@@ -20,7 +20,7 @@ def create_rl_env(cfg):
         view_dist=cfg['subscriber']['view_dist'],
         # the angle formed by the view cone
         view_angle=cfg['subscriber']['view_angle'],
-        # the agent's head tilt
+        # the agent's head angle
         head_angle=0.0,
         # whether to draw the goal position in the image
         draw_target_position=False)

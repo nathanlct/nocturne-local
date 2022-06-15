@@ -2,7 +2,6 @@
 import os
 
 import hydra
-import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 from pyvirtualdisplay import Display
@@ -64,7 +63,7 @@ def main(cfg):
     print(f'norm of position is {vehs[0].position.norm()}')
     print(f'angle in a world-centered frame {vehs[0].position.angle()}')
     print(f'rotated position is {vehs[0].position.rotate(np.pi).numpy()}')
-    # we can set vehicle accel, steering, head tilt directly
+    # we can set vehicle accel, steering, head angle directly
     vehs[0].acceleration = -1
     vehs[0].steering = 1
     vehs[0].head_angle = np.pi
@@ -116,7 +115,7 @@ def main(cfg):
     objects_that_moved = scenario.getObjectsThatMoved()
     objects_of_interest = [
         obj for obj in scenario.getVehicles() if obj in objects_that_moved
-    ]
+    ]  # noqa: 841
     vehicles = scenario.getVehicles()
     cyclists = scenario.getCyclists()
     pedestrians = scenario.getPedestrians()

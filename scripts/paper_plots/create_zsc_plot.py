@@ -1,9 +1,22 @@
+"""Utilities for plotting ZSC results."""
 import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 
 def create_heat_map(file, title, save_path, white_switch):
+    """Construct a heatmap of the ZSC results.
+
+    Args:
+    ----
+        file (str): file path to zsc results
+        title (str): title of the plot
+        save_path (str): path to save it at
+        white_switch (float): if the value is greater than white_switch
+            we write the cell text as black. This is just to make
+            the plots more readable.
+    """
     np_arr = np.load(os.path.join(zsc_path, file))
     np_arr_mean = np.mean(np_arr, axis=-1)
 
@@ -42,6 +55,7 @@ def create_heat_map(file, title, save_path, white_switch):
 
 
 def compute_average_change(file):
+    """Compare cross play to self play."""
     np_arr = np.load(os.path.join(zsc_path, file))
     np_arr_mean = np.mean(np_arr, axis=-1)
     self_play = np.mean(np.diag(np_arr_mean))

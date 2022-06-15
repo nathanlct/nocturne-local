@@ -1,12 +1,9 @@
 """Default environment for Nocturne."""
-
-from operator import truediv
 from typing import Any, Dict, Sequence, Union
 
 from collections import defaultdict, deque
 from itertools import islice
 import json
-from math import fmod
 import os
 
 from gym import Env
@@ -480,13 +477,16 @@ class BaseEnv(Env):
         return obs
 
     def make_all_vehicles_experts(self):
+        """Force all vehicles to be experts."""
         for veh in self.scenario.getVehicles():
             veh.expert_control = True
 
     def get_vehicles(self):
+        """Return the vehicles."""
         return self.scenario.getVehicles()
 
     def get_objects_that_moved(self):
+        """Return the objects that moved."""
         return self.scenario.getObjectsThatMoved()
 
     def render(self, mode=None):
@@ -540,6 +540,7 @@ class BaseEnv(Env):
             torch.cuda.manual_seed_all(seed)
 
     def angle_sub(self, current_angle, target_angle) -> int:
+        """Subtract two angles to find the minimum angle between them."""
         # Subtract the angles, constraining the value to [0, 2 * np.pi)
         diff = (target_angle - current_angle) % (2 * np.pi)
 

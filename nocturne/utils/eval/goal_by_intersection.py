@@ -88,7 +88,6 @@ def _intesection_metrics_impl(trajectory_path, model, configs):
     print(trajectory_path)
 
     scenario_config = configs['scenario_cfg']
-    dataloader_config = configs['dataloader_cfg']
 
     view_dist = configs['dataloader_cfg']['view_dist']
     view_angle = configs['dataloader_cfg']['view_angle']
@@ -136,7 +135,7 @@ def _intesection_metrics_impl(trajectory_path, model, configs):
     goal_achieved = [False] * len(controlled_vehicles)
     for i in range(SIM_N_STEPS - n_stacked_states):
         for veh in controlled_vehicles:
-            if np.isclose(veh.position.x, -10000.0):
+            if np.isclose(veh.position.x, INVALID_POSITION):
                 veh.expert_control = True
             else:
                 veh.expert_control = False
@@ -175,7 +174,7 @@ def _intesection_metrics_impl(trajectory_path, model, configs):
         # compute displacements over non-collided vehicles
         for i, veh in enumerate(controlled_vehicles):
             # make sure it is valid
-            if np.isclose(veh.position.x, -10000):
+            if np.isclose(veh.position.x, INVALID_POSITION):
                 continue
 
             # a collision with another a vehicle
@@ -232,22 +231,24 @@ def compute_metrics_by_intersection(trajectories_dir, model, configs):
 
 
 if __name__ == '__main__':
-    from nocturne.utils.imitation_learning.model import ImitationAgent  # noqa: F401
-    import json
+    from examples.imitation_learning.model import ImitationAgent  # noqa: F401
     model = torch.load(
-        '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/14.23.17/++device=cuda,++file_limit=1000/train_logs/2022_06_05_14_23_23/model_600.pth'
+        '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/14.23.17/\
+            ++device=cuda,++file_limit=1000/train_logs/2022_06_05_14_23_23/model_600.pth'
     ).to('cpu')
     model.actions_grids = [x.to('cpu') for x in model.actions_grids]
     model.eval()
     model.nn[0].eval()
     with open(
-            '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/14.23.17/++device=cuda,++file_limit=1000/train_logs/2022_06_05_14_23_23/configs.json',
+            '/checkpoint/eugenevinitsky/nocturne/test/2022.06.05/test/14.23.17\
+                /++device=cuda,++file_limit=1000/train_logs/2022_06_05_14_23_23/configs.json',
             'r') as fp:
         configs = json.load(fp)
         configs['device'] = 'cpu'
     with torch.no_grad():
         result = compute_metrics_by_intersection(
-            '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json_v2_no_tl_valid',
+            '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/\
+                uncompressed/scenario/formatted_json_v2_no_tl_valid',
             model=model,
             configs=configs)
         print('collision rates', result[0])
