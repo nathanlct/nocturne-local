@@ -4,7 +4,7 @@ from pathlib import Path
 import os
 import multiprocessing
 
-from cfgs.config import TRAIN_DATA_PATH, VALID_DATA_PATH, TEST_DATA_PATH, PROCESSED_TRAIN_NO_TL, \
+from cfgs.config import TRAIN_DATA_PATH, VALID_DATA_PATH, PROCESSED_TRAIN_NO_TL, \
     PROCESSED_VALID_NO_TL, PROCESSED_TRAIN, PROCESSED_VALID
 import waymo_scenario_construction as waymo
 

@@ -9,17 +9,14 @@ import itertools
 from itertools import repeat
 import json
 import multiprocessing as mp
-from multiprocessing import Process
 import os
 import sys
 
-import ipdb
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from pyvirtualdisplay import Display
 import torch
-import seaborn as sns
 
 from sample_factory.algorithms.appo.actor_worker import transform_dict_observations
 from sample_factory.algorithms.appo.learner import LearnerWorker
@@ -27,7 +24,6 @@ from sample_factory.algorithms.appo.model import create_actor_critic
 from sample_factory.algorithms.appo.model_utils import get_hidden_size
 from sample_factory.algorithms.utils.action_distributions import ContinuousActionDistribution, \
      CategoricalActionDistribution
-from sample_factory.algorithms.utils.algo_utils import ExperimentStatus
 from sample_factory.algorithms.utils.arguments import load_from_checkpoint
 from sample_factory.algorithms.utils.multi_agent_wrapper import MultiAgentWrapper, is_multiagent_env
 from sample_factory.envs.create_env import create_env
@@ -170,7 +166,7 @@ def run_rollouts(env,
 
             for veh in env.unwrapped.get_objects_that_moved():
                 # only check vehicles we are actually controlling
-                if veh.expert_control == False:
+                if veh.expert_control is False:
                     rollout_traj_dict[veh.id][
                         env.step_num] = veh.position.numpy()
                 if int(veh.collision_type) == 1:
@@ -284,9 +280,11 @@ def run_rollouts(env,
                         np.mean(true_rewards[i]) for i in range(env.num_agents)
                     ]))
 
-                return (avg_goal, avg_collisions, avg_veh_edge_collisions, avg_veh_veh_collisions, \
-                       success_rate_by_distance, success_rate_by_num_agents, success_rate_by_intersections, \
-                           np.mean(ades), np.mean(fdes), veh_counter)
+                return (avg_goal, avg_collisions, avg_veh_edge_collisions,
+                        avg_veh_veh_collisions, success_rate_by_distance,
+                        success_rate_by_num_agents,
+                        success_rate_by_intersections, np.mean(ades),
+                        np.mean(fdes), veh_counter)
 
 
 def run_eval(cfgs,
@@ -475,9 +473,9 @@ def run_eval(cfgs,
                                           vehs_with_intersecting_ids, actor_1)
 
                 avg_goal, avg_collisions, avg_veh_edge_collisions, avg_veh_veh_collisions, \
-                       success_rate_by_distance_return, success_rate_by_num_agents_return, \
-                       success_rate_by_intersections_return, \
-                           _, _, veh_counter = output
+                    success_rate_by_distance_return, success_rate_by_num_agents_return, \
+                    success_rate_by_intersections_return, \
+                    _, _, _ = output
                 # TODO(eugenevinitsky) hideous copy and pasting
                 goal_frac.append(avg_goal)
                 collision_frac.append(avg_collisions)
@@ -503,14 +501,15 @@ def run_eval(cfgs,
                     f'Avg goal achieved {np.mean(goal_frac)}±{np.std(goal_frac) / len(goal_frac)}'
                 )
                 log.info(
-                    f'Avg veh-veh collisions {np.mean(veh_veh_collision_frac)}±{np.std(veh_veh_collision_frac) / np.sqrt(len(veh_veh_collision_frac))}'
+                    f'Avg veh-veh collisions {np.mean(veh_veh_collision_frac)}±\
+                        {np.std(veh_veh_collision_frac) / np.sqrt(len(veh_veh_collision_frac))}'
                 )
                 log.info(
-                    f'Avg veh-edge collisions {np.mean(veh_edge_collision_frac)}±{np.std(veh_edge_collision_frac) / np.sqrt(len(veh_edge_collision_frac))}'
+                    f'Avg veh-edge collisions {np.mean(veh_edge_collision_frac)}±\
+                        {np.std(veh_edge_collision_frac) / np.sqrt(len(veh_edge_collision_frac))}'
                 )
-                log.info(
-                    f'Avg num collisions {np.mean(collision_frac)}±{np.std(collision_frac) / len(collision_frac)}'
-                )
+                log.info(f'Avg num collisions {np.mean(collision_frac)}±\
+                        {np.std(collision_frac) / len(collision_frac)}')
 
                 env.cfg = ade_cfg
                 # okay, now run the rollout one more time but this time set
@@ -530,12 +529,12 @@ def run_eval(cfgs,
                 _, _, _, _, _, _, _, ade, fde, veh_counter = output
                 average_displacement_error.append(ade)
                 final_displacement_error.append(fde)
-                log.info(
-                    f'Avg ADE {np.mean(average_displacement_error)}±{np.std(average_displacement_error) / np.sqrt(len(average_displacement_error))}'
-                )
-                log.info(
-                    f'Avg FDE {np.mean(final_displacement_error)}±{np.std(final_displacement_error) / np.sqrt(len(final_displacement_error))}'
-                )
+                log.info(f'Avg ADE {np.mean(average_displacement_error)}±\
+                        {np.std(average_displacement_error) / np.sqrt(len(average_displacement_error))}'
+                         )
+                log.info(f'Avg FDE {np.mean(final_displacement_error)}±\
+                        {np.std(final_displacement_error) / np.sqrt(len(final_displacement_error))}'
+                         )
 
         if test_zsc:
             goal_array[index_1, index_2] = goal_frac
@@ -623,16 +622,15 @@ def load_wandb(experiment_name, cfg_filter, force_reload=False):
 
 
 def plot_df(experiment_name, global_step_cutoff=3e9):
-    from matplotlib import pyplot as plt
     plt.figure(dpi=300)
     # plt.rcParams['figure.dpi'] = 150
     # plt.rcParams['figure.figsize'] = (6, 4)
 
     df = pd.read_csv("wandb_{}.csv".format(experiment_name))
     df["timestamp"] = pd.to_datetime(df["_timestamp"] * 1e9)
-    all_timestamps = np.sort(np.unique(df.timestamp.values))
 
     # technically not correct if the number of seeds varies by num_files
+    # but in this case we're alright
     num_seeds = len(np.unique(df.seed.values))
 
     values_num_files = np.unique(df.num_files.values)
@@ -667,10 +665,10 @@ def plot_df(experiment_name, global_step_cutoff=3e9):
         x = dfs[i].index.values
         y = dfs[i].values
         yerr = stdevs[i].replace(np.nan, 0) / np.sqrt(num_seeds)
-        p = ax.plot(x,
-                    y,
-                    label=f'Training Files: {values_num_files[i]}',
-                    color=CB_color_cycle[i])
+        ax.plot(x,
+                y,
+                label=f'Training Files: {values_num_files[i]}',
+                color=CB_color_cycle[i])
         ax.fill_between(x,
                         y - 2 * yerr,
                         y + 2 * yerr,
@@ -784,7 +782,7 @@ def main():
     if TEST_ZSC:
 
         def cfg_filter(cfg_dict):
-            if cfg_dict['scenario']['road_edge_first'] == False and cfg_dict[
+            if cfg_dict['scenario']['road_edge_first'] is False and cfg_dict[
                     'scenario']['max_visible_road_points'] == 500 and cfg_dict[
                         'algorithm']['encoder_hidden_size'] == 256 and cfg_dict[
                             'num_files'] == 10000:
@@ -794,7 +792,7 @@ def main():
     else:
 
         def cfg_filter(cfg_dict):
-            if cfg_dict['scenario']['road_edge_first'] == False and cfg_dict[
+            if cfg_dict['scenario']['road_edge_first'] is False and cfg_dict[
                     'scenario']['max_visible_road_points'] == 500 and cfg_dict[
                         'algorithm']['encoder_hidden_size'] == 256:
                 return True
@@ -971,7 +969,7 @@ def main():
                         new_dict[key + '_std'] = df.groupby(
                             ['num_files'])[key].std().reset_index().rename(
                                 columns={key: key + '_std'})
-                    except:
+                    except ValueError:
                         # TODO(eugenevinitsky) learn to use pandas dawg
                         # what even is this
                         temp_dict = {}
@@ -1098,7 +1096,7 @@ def main():
         plt.ylabel('Final Displacement Error (m)')
         plt.legend()
         plt.savefig('fde.png', bbox_inches='tight', pad_inches=0.1)
-        plot_df(experiment_names[0])
+        plot_df(experiment_names[0], global_step_cutoff)
 
         # create error by number of expert intersections plots
         plt.figure(dpi=300)

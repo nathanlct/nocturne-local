@@ -6,13 +6,11 @@ import numpy as np
 def create_heat_map(file, title, save_path, white_switch):
     np_arr = np.load(os.path.join(zsc_path, file))
     np_arr_mean = np.mean(np_arr, axis=-1)
-    np_arr_mean_centered = np_arr_mean - np.diag(np_arr_mean)[:, np.newaxis]
-    np_arr_std = np.std(np_arr - np.diag(np_arr_mean)[:, np.newaxis], axis=-1)
 
     agent_indices = [f'Agent {i}' for i in range(np_arr.shape[0])]
 
     fig, ax = plt.subplots()
-    im = ax.imshow(np_arr_mean)
+    ax.imshow(np_arr_mean)
 
     # Show all ticks and label them with the respective list entries
     ax.set_xticks(np.arange(len(agent_indices)), labels=agent_indices)
@@ -31,12 +29,12 @@ def create_heat_map(file, title, save_path, white_switch):
                 color = 'black'
             else:
                 color = 'w'
-            text = ax.text(j,
-                           i,
-                           f'{np.round(np_arr_mean[i, j], decimals=2)}',
-                           ha="center",
-                           va="center",
-                           color=color)
+            ax.text(j,
+                    i,
+                    f'{np.round(np_arr_mean[i, j], decimals=2)}',
+                    ha="center",
+                    va="center",
+                    color=color)
 
     ax.set_title(title)
     fig.tight_layout()

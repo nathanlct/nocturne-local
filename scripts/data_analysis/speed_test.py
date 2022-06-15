@@ -4,11 +4,10 @@ import os
 import time
 
 import hydra
-import matplotlib.pyplot as plt
 import numpy as np
 from pyvirtualdisplay import Display
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH,  get_scenario_dict
+from cfgs.config import PROCESSED_TRAIN_NO_TL, get_scenario_dict
 from nocturne import Simulation, Action
 
 
@@ -24,30 +23,20 @@ def run_speed_test(files, cfg):
                                 of moving vehicles in file
     """
     times_list = []
-    for file_idx, file in enumerate(files):
-        sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file), get_scenario_dict(cfg))
+    for file in files:
+        sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file),
+                         get_scenario_dict(cfg))
         vehs = sim.scenario().getObjectsThatMoved()
         scenario = sim.getScenario()
-        for veh in vehs:
-            t = time.perf_counter()
-            obs = scenario.flattened_visible_state(veh, 80,
-                                                   (180 / 180) * np.pi)
-            # scenario.getConeImage(
-            #     source=veh,
-            #     view_dist=120.0,
-            #     view_angle=np.pi,
-            #     head_tilt=0.0,
-            #     img_width=400,
-            #     img_height=400,
-            #     padding=0.0,
-            #     draw_target_position=True,
-            # )
-            #           veh.apply_action(Action(1.0, 1.0))
-
-            #            sim.step(0.1)
-            times_list.append(time.perf_counter() - t)
+        veh = vehs[np.random.randint(len(vehs))]
+        t = time.perf_counter()
+        _ = scenario.flattened_visible_state(veh, 80, (180 / 180) * np.pi)
+        veh.apply_action(Action(1.0, 1.0, 1.0))
+        sim.step(0.1)
+        times_list.append(time.perf_counter() - t)
     print('avg, std. time to get obs is {}, {}'.format(np.mean(times_list),
                                                        np.std(times_list)))
+
 
 @hydra.main(config_path="../../cfgs/", config_name="config")
 def analyze_accels(cfg):

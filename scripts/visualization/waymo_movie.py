@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pyvirtualdisplay import Display
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL, get_scenario_dict
+from cfgs.config import PROCESSED_TRAIN_NO_TL, get_scenario_dict
 from nocturne import Simulation
 
 
@@ -19,8 +19,8 @@ def main(cfg):
     _ = plt.figure()
     files = os.listdir(PROCESSED_TRAIN_NO_TL)
     file = os.path.join(
-        PROCESSED_VALID_NO_TL,
-        '/checkpoint/eugenevinitsky/waymo_open/motion_v1p1/uncompressed/scenario/formatted_json_v2_no_tl_valid/tfrecord-00134-of-00150_260.json'
+        PROCESSED_TRAIN_NO_TL,
+        files[np.random.randint(len(files))]
     )
     sim = Simulation(file, get_scenario_dict(cfg))
     frames = []
