@@ -1,17 +1,22 @@
 """Test expert action computation from inverse dynamics."""
+from hydra.core.global_hydra import GlobalHydra
+from hydra import compose, initialize
 import numpy as np
 
-from cfgs.config import PROJECT_PATH
+from cfgs.config import PROJECT_PATH, get_scenario_dict
 from nocturne import Simulation
-
 
 SIM_N_STEPS = 90  # number of steps per trajectory
 SIM_STEP_TIME = 0.1  # dt (in seconds)
 
 
 def _create_sim(file_path, expert_control):
+    # None in the config would cause a bug
+    GlobalHydra.instance().clear()
+    initialize(config_path="../cfgs/")
+    cfg = compose(config_name="config")
     # create simulation
-    sim = Simulation(scenario_path=file_path)
+    sim = Simulation(scenario_path=file_path, config=get_scenario_dict(cfg))
     # get controlled objects
     objects_that_moved = sim.getScenario().getObjectsThatMoved()
     for obj in objects_that_moved:
@@ -24,7 +29,8 @@ def test_inverse_dynamics():
     file_path = str(PROJECT_PATH / 'tests/large_file.json')
 
     # create a ground truth sim that will replay expert actions
-    sim_ground_truth, objects_ground_truth = _create_sim(file_path, expert_control=True)
+    sim_ground_truth, objects_ground_truth = _create_sim(file_path,
+                                                         expert_control=True)
     id2obj_ground_truth = {obj.id: obj for obj in objects_ground_truth}
     # create a test sim that will replay actions from inverse dynamics
     sim_test, objects_test = _create_sim(file_path, expert_control=False)
