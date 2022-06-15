@@ -1,4 +1,6 @@
 """Example of how to make movies of Nocturne scenarios."""
+import os
+
 import hydra
 import imageio
 import matplotlib.pyplot as plt
@@ -66,6 +68,9 @@ def main(cfg):
     disp = Display()
     disp.start()
 
+    if not os.path.exists(PROJECT_PATH / 'examples/rendering'):
+        os.makedirs(PROJECT_PATH / 'examples/rendering')
+
     # movie of whole scenario
     make_movie(
         cfg,
@@ -75,7 +80,8 @@ def main(cfg):
             draw_target_positions=True,
             padding=50.0,
         ),
-        output_path=PROJECT_PATH / 'examples' / 'movie_whole_scenario.mp4',
+        output_path=PROJECT_PATH / 'examples/rendering' /
+        'movie_whole_scenario.mp4',
     )
 
     # movie around a vehicle
@@ -91,7 +97,8 @@ def main(cfg):
             view_height=120,
             rotate_with_source=True,
         ),
-        output_path=PROJECT_PATH / 'examples' / 'movie_around_vehicle.mp4',
+        output_path=PROJECT_PATH / 'examples/rendering' /
+        'movie_around_vehicle.mp4',
     )
 
     # movie around a vehicle (without rotating with source)
@@ -107,7 +114,7 @@ def main(cfg):
             view_height=120,
             rotate_with_source=False,
         ),
-        output_path=PROJECT_PATH / 'examples' /
+        output_path=PROJECT_PATH / 'examples/rendering' /
         'movie_around_vehicle_stable.mp4',
     )
 
@@ -116,31 +123,32 @@ def main(cfg):
         cfg,
         scenario_fn=lambda scenario, _: scenario.getConeImage(
             source=scenario.getObjectsThatMoved()[6],
-            view_dist=120.0,
-            view_angle=np.pi * 0.8,
-            head_tilt=0.0,
+            view_dist=80,
+            view_angle=np.pi * (120 / 180),
+            head_angle=0.0,
             img_width=1600,
             img_height=1600,
             padding=50.0,
             draw_target_position=True,
         ),
-        output_path=PROJECT_PATH / 'examples' / 'movie_cone.mp4',
+        output_path=PROJECT_PATH / 'examples/rendering' / 'movie_cone.mp4',
     )
 
-    # movie of cone around vehicle with varying head tilt
+    # movie of cone around vehicle with varying head angle
     make_movie(
         cfg,
         scenario_fn=lambda scenario, timestep: scenario.getConeImage(
             source=scenario.getVehicles()[6],
-            view_dist=120.0,
-            view_angle=np.pi * 0.8,
-            head_tilt=0.8 * np.sin(timestep / 10),
+            view_dist=80.0,
+            view_angle=np.pi * (120 / 180),
+            head_angle=0.8 * np.sin(timestep / 10),
             img_width=1600,
             img_height=1600,
             padding=50.0,
             draw_target_position=True,
         ),
-        output_path=PROJECT_PATH / 'examples' / 'movie_cone_head_tilt.mp4',
+        output_path=PROJECT_PATH / 'examples/rendering' /
+        'movie_cone_head_angle.mp4',
     )
 
     # image of whole scenario
@@ -152,7 +160,7 @@ def main(cfg):
             padding=50.0,
             draw_target_positions=True,
         ),
-        output_path=PROJECT_PATH / 'examples' / 'img_scenario.png',
+        output_path=PROJECT_PATH / 'examples/rendering' / 'img_scenario.png',
     )
 
     # image of cone
@@ -160,15 +168,16 @@ def main(cfg):
         cfg,
         scenario_fn=lambda scenario: scenario.getConeImage(
             source=scenario.getVehicles()[9],
-            view_dist=120.0,
-            view_angle=np.pi * 0.8,
-            head_tilt=np.pi / 8.0,
+            view_dist=80,
+            view_angle=np.pi * (120 / 180),
+            head_angle=np.pi / 8.0,
             img_width=2000,
             img_height=2000,
             padding=50.0,
             draw_target_position=True,
         ),
-        output_path=PROJECT_PATH / 'examples' / 'img_cone_tilted.png',
+        output_path=PROJECT_PATH / 'examples/rendering' /
+        'img_cone_tilted.png',
     )
 
     # image of visible state
@@ -176,15 +185,16 @@ def main(cfg):
         cfg,
         scenario_fn=lambda scenario: scenario.getFeaturesImage(
             source=scenario.getVehicles()[9],
-            view_dist=120.0,
-            view_angle=np.pi * 0.8,
-            head_tilt=np.pi / 8.0,
+            view_dist=80,
+            view_angle=np.pi * (120 / 180),
+            head_angle=np.pi / 8.0,
             img_width=2000,
             img_height=2000,
             padding=50.0,
             draw_target_position=True,
         ),
-        output_path=PROJECT_PATH / 'examples' / 'img_features_tilted.png',
+        output_path=PROJECT_PATH / 'examples/rendering' /
+        'img_features_tilted.png',
     )
 
 

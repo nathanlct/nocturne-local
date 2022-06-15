@@ -4,12 +4,12 @@ Runner script for sample factory.
 To run in single agent mode on one file for testing.
 python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True \
     ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME \
-    ++single_agent_mode=True ++num_files=1
+    ++max_num_vehicles=1 ++num_files=1
 
 To run in multiagent mode on one file for testing
 python -m run_sample_factory algorithm=APPO ++algorithm.train_in_background_thread=True \
     ++algorithm.num_workers=10 ++algorithm.experiment=EXPERIMENT_NAME \
-        ++single_agent_mode=False ++num_files=1
+    ++num_files=1
 
 To run on all files set ++num_files=-1
 
@@ -29,6 +29,8 @@ from omegaconf import OmegaConf
 from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
 from sample_factory_examples.train_custom_env_custom_model import override_default_params_func
+from sample_factory.algorithms.appo.model_utils import get_obs_shape, EncoderBase, nonlinearity, register_custom_encoder
+from torch import nn
 
 from nocturne.envs.wrappers import create_env
 
@@ -44,10 +46,7 @@ class SampleFactoryEnv():
             env (BaseEnv): Base environment that we are wrapping.
         """
         self.env = env
-        if self.env.single_agent_mode:
-            self.num_agents = 1
-        else:
-            self.num_agents = self.env.cfg['max_num_vehicles']
+        self.num_agents = self.env.cfg['max_num_vehicles']
         self.agent_ids = [i for i in range(self.num_agents)]
         self.is_multiagent = True
         _ = self.env.reset()
@@ -102,6 +101,10 @@ class SampleFactoryEnv():
                     agent_id] or agent_info['goal_achieved']
                 self.collided[agent_id] = self.collided[
                     agent_id] or agent_info['collided']
+                self.veh_edge_collided[agent_id] = self.veh_edge_collided[
+                    agent_id] or agent_info['veh_edge_collision']
+                self.veh_veh_collided[agent_id] = self.veh_veh_collided[
+                    agent_id] or agent_info['veh_veh_collision']
             else:
                 rew_n.append(0)
                 agent_info = {}
@@ -118,6 +121,10 @@ class SampleFactoryEnv():
             avg_len = np.mean(self.num_steps[self.valid_indices])
             avg_goal_achieved = np.mean(self.goal_achieved[self.valid_indices])
             avg_collided = np.mean(self.collided[self.valid_indices])
+            avg_veh_edge_collided = np.mean(
+                self.veh_edge_collided[self.valid_indices])
+            avg_veh_veh_collided = np.mean(
+                self.veh_veh_collided[self.valid_indices])
             for info in info_n:
                 info['episode_extra_stats'] = {}
                 info['episode_extra_stats']['avg_rew'] = avg_rew
@@ -125,6 +132,10 @@ class SampleFactoryEnv():
                 info['episode_extra_stats'][
                     'goal_achieved'] = avg_goal_achieved
                 info['episode_extra_stats']['collided'] = avg_collided
+                info['episode_extra_stats'][
+                    'veh_edge_collision'] = avg_veh_edge_collided
+                info['episode_extra_stats'][
+                    'veh_veh_collision'] = avg_veh_veh_collided
 
         # update the dones so we know if we need to reset
         # sample factory does not call reset for you
@@ -191,6 +202,8 @@ class SampleFactoryEnv():
         self.num_steps = np.zeros(self.num_agents)
         self.goal_achieved = np.zeros(self.num_agents)
         self.collided = np.zeros(self.num_agents)
+        self.veh_veh_collided = np.zeros(self.num_agents)
+        self.veh_edge_collided = np.zeros(self.num_agents)
         self.already_done = [False for _ in self.agent_ids]
         next_obses = self.env.reset()
         env_keys = sorted(list(next_obses.keys()))
@@ -244,6 +257,33 @@ class SampleFactoryEnv():
         return getattr(self.env, name)
 
 
+class CustomEncoder(EncoderBase):
+    """Encoder for the input."""
+
+    def __init__(self, cfg, obs_space, timing):
+        super().__init__(cfg, timing)
+
+        obs_shape = get_obs_shape(obs_space)
+        assert len(obs_shape.obs) == 1
+
+        fc_encoder_layer = cfg.encoder_hidden_size
+        encoder_layers = [
+            nn.Linear(obs_shape.obs[0], fc_encoder_layer),
+            nonlinearity(cfg),
+            nn.Linear(fc_encoder_layer, fc_encoder_layer),
+            nonlinearity(cfg),
+        ]
+
+        self.mlp_head = nn.Sequential(*encoder_layers)
+        self.init_fc_blocks(fc_encoder_layer)
+
+    def forward(self, obs_dict):
+        """See superclass."""
+        x = self.mlp_head(obs_dict['obs'])
+        x = self.forward_fc_blocks(x)
+        return x
+
+
 def make_custom_multi_env_func(full_env_name, cfg, env_config=None):
     """Return a wrapped base environment.
 
@@ -267,6 +307,7 @@ def register_custom_components():
         make_env_func=make_custom_multi_env_func,
         override_default_params_func=override_default_params_func,
     )
+    register_custom_encoder('custom_env_encoder', CustomEncoder)
 
 
 @hydra.main(config_path="../../cfgs/", config_name="config")
@@ -290,8 +331,7 @@ def main(cfg):
     # recommendation from Aleksei to keep horizon length fixed
     # and number of agents fixed and just pad missing / exited
     # agents with a vector of -1s
-    if not cfg_dict['single_agent_mode']:
-        cfg_dict['subscriber']['keep_inactive_agents'] = True
+    cfg_dict['subscriber']['keep_inactive_agents'] = True
 
     # put it into a namespace so sample factory code runs correctly
     class Bunch(object):

@@ -55,16 +55,18 @@ void DefineScenario(py::module& m) {
       .def(
           "flattened_visible_state",
           [](const Scenario& scenario, const Object& src, float view_dist,
-             float view_angle) {
-            return utils::AsNumpyArray(
-                scenario.FlattenedVisibleState(src, view_dist, view_angle));
+             float view_angle, float head_angle) {
+            return utils::AsNumpyArray(scenario.FlattenedVisibleState(
+                src, view_dist, view_angle, head_angle));
           },
           py::arg("object"), py::arg("view_dist") = 60,
-          py::arg("view_angle") = kHalfPi)
+          py::arg("view_angle") = kHalfPi, py::arg("head_angle") = 0.0)
       .def("expert_heading", &Scenario::ExpertHeading)
       .def("expert_speed", &Scenario::ExpertSpeed)
       .def("expert_velocity", &Scenario::ExpertVelocity)
       .def("expert_action", &Scenario::ExpertAction)
+      .def("expert_pos_shift", &Scenario::ExpertPosShift)
+      .def("expert_heading_shift", &Scenario::ExpertHeadingShift)
 
       // TODO: Deprecate the legacy interfaces below.
       .def("getVehicles", &Scenario::vehicles,
@@ -75,6 +77,7 @@ void DefineScenario(py::module& m) {
            py::return_value_policy::reference)
       .def("getObjectsThatMoved", &Scenario::moving_objects,
            py::return_value_policy::reference)
+      .def("getObjects", &Scenario::objects, py::return_value_policy::reference)
       .def("getRoadLines", &Scenario::road_lines)
       .def(
           "getImage",
@@ -95,39 +98,38 @@ void DefineScenario(py::module& m) {
       .def(
           "getFeaturesImage",
           [](Scenario& scenario, const Object& source, float view_dist,
-             float view_angle, float head_tilt, uint64_t img_height,
+             float view_angle, float head_angle, uint64_t img_height,
              uint64_t img_width, float padding, bool draw_target_position) {
             return utils::AsNumpyArray<unsigned char>(
                 scenario.EgoVehicleFeaturesImage(
-                    source, view_dist, view_angle, head_tilt, img_height,
+                    source, view_dist, view_angle, head_angle, img_height,
                     img_width, padding, draw_target_position));
           },
           "Return a numpy array of dimension (img_height, img_width, 4) "
           "representing an image of what is returned by getVisibleState(?).",
           py::arg("source"), py::arg("view_dist") = 120.0f,
           py::arg("view_angle") = geometry::utils::kPi * 0.8f,
-          py::arg("head_tilt") = 0.0f, py::arg("img_height") = 1000,
+          py::arg("head_angle") = 0.0f, py::arg("img_height") = 1000,
           py::arg("img_width") = 1000, py::arg("padding") = 0.0f,
           py::arg("draw_target_position") = true)
       .def(
           "getConeImage",
           [](Scenario& scenario, const Object& source, float view_dist,
-             float view_angle, float head_tilt, uint64_t img_height,
+             float view_angle, float head_angle, uint64_t img_height,
              uint64_t img_width, float padding, bool draw_target_position) {
             return utils::AsNumpyArray<unsigned char>(
                 scenario.EgoVehicleConeImage(source, view_dist, view_angle,
-                                             head_tilt, img_height, img_width,
+                                             head_angle, img_height, img_width,
                                              padding, draw_target_position));
           },
           "Return a numpy array of dimension (img_height, img_width, 4) "
           "representing a cone of what the agent sees.",
           py::arg("source"), py::arg("view_dist") = 120.0f,
           py::arg("view_angle") = geometry::utils::kPi * 0.8f,
-          py::arg("head_tilt") = 0.0f, py::arg("img_height") = 1000,
+          py::arg("head_angle") = 0.0f, py::arg("img_height") = 1000,
           py::arg("img_width") = 1000, py::arg("padding") = 0.0f,
           py::arg("draw_target_position") = true)
       .def("removeVehicle", &Scenario::RemoveObject)
-      // .def("hasExpertAction", &Scenario::hasExpertAction)
       .def("getExpertAction", &Scenario::ExpertAction)
       .def("getExpertSpeeds", &Scenario::ExpertVelocity)
       .def("getMaxNumVisibleObjects", &Scenario::getMaxNumVisibleObjects)

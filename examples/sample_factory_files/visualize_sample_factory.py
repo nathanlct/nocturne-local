@@ -1,4 +1,5 @@
 """Use to create movies of trained policies."""
+import argparse
 from collections import deque
 import json
 import sys
@@ -17,7 +18,6 @@ from sample_factory.algorithms.appo.model import create_actor_critic
 from sample_factory.algorithms.appo.model_utils import get_hidden_size
 from sample_factory.algorithms.utils.action_distributions import ContinuousActionDistribution, \
      CategoricalActionDistribution
-from sample_factory.algorithms.utils.algo_utils import ExperimentStatus
 from sample_factory.algorithms.utils.arguments import load_from_checkpoint
 from sample_factory.algorithms.utils.multi_agent_wrapper import MultiAgentWrapper, is_multiagent_env
 from sample_factory.envs.create_env import create_env
@@ -25,10 +25,10 @@ from sample_factory.utils.utils import log, AttrDict
 
 from run_sample_factory import register_custom_components
 
-from cfgs.config import PROCESSED_TRAIN_NO_TL, PROJECT_PATH
+from cfgs.config import PROCESSED_TRAIN_NO_TL, PROCESSED_VALID_NO_TL, PROJECT_PATH  # noqa: F401
 
 
-def run_eval(cfg, max_num_frames=1e9):
+def run_eval(cfg_dict, max_num_frames=1e9):
     """Run evaluation over a single file. Exits when one episode finishes.
 
     Args:
@@ -40,7 +40,7 @@ def run_eval(cfg, max_num_frames=1e9):
         None: None
 
     """
-    cfg = load_from_checkpoint(cfg)
+    cfg = load_from_checkpoint(cfg_dict)
 
     render_action_repeat = cfg.render_action_repeat if cfg.render_action_repeat is not None else cfg.env_frameskip
     if render_action_repeat is None:
@@ -51,6 +51,7 @@ def run_eval(cfg, max_num_frames=1e9):
     cfg.env_frameskip = 1  # for evaluation
     cfg.num_envs = 1
     cfg.seed = np.random.randint(10000)
+    cfg.scenario_path = cfg_dict.scenario_path
 
     def make_env_func(env_config):
         return create_env(cfg.env, cfg=cfg, env_config=env_config)
@@ -87,6 +88,7 @@ def run_eval(cfg, max_num_frames=1e9):
         return max_num_frames is not None and frames > max_num_frames
 
     obs = env.reset()
+    print(os.path.join(env.cfg['scenario_path'], env.unwrapped.file))
     rnn_states = torch.zeros(
         [env.num_agents, get_hidden_size(cfg)],
         dtype=torch.float32,
@@ -97,6 +99,8 @@ def run_eval(cfg, max_num_frames=1e9):
     if not cfg.no_render:
         fig = plt.figure()
         frames = []
+        ego_frames = []
+        feature_frames = []
 
     with torch.no_grad():
         while not max_frames_reached(num_frames):
@@ -136,6 +140,12 @@ def run_eval(cfg, max_num_frames=1e9):
                     last_render_start = time.time()
                     img = env.render()
                     frames.append(img)
+                    ego_img = env.render_ego()
+                    if ego_img is not None:
+                        ego_frames.append(ego_img)
+                    feature_img = env.render_features()
+                    if feature_img is not None:
+                        feature_frames.append(feature_img)
 
                 obs, rew, done, infos = env.step(actions)
 
@@ -165,6 +175,16 @@ def run_eval(cfg, max_num_frames=1e9):
                         imageio.mimsave(os.path.join(PROJECT_PATH,
                                                      'animation.mp4'),
                                         np.array(frames),
+                                        fps=30)
+                        plt.close(fig)
+                        imageio.mimsave(os.path.join(PROJECT_PATH,
+                                                     'animation_ego.mp4'),
+                                        np.array(ego_frames),
+                                        fps=30)
+                        plt.close(fig)
+                        imageio.mimsave(os.path.join(PROJECT_PATH,
+                                                     'animation_feature.mp4'),
+                                        np.array(feature_frames),
                                         fps=30)
                         plt.close(fig)
                     if not cfg.no_render:
@@ -202,17 +222,8 @@ def run_eval(cfg, max_num_frames=1e9):
                             np.mean(true_rewards[i])
                             for i in range(env.num_agents)
                         ]))
-                    sys.exit()
-
-                # VizDoom multiplayer stuff
-                # for player in [1, 2, 3, 4, 5, 6, 7, 8]:
-                #     key = f'PLAYER{player}_FRAGCOUNT'
-                #     if key in infos[0]:
-                #         log.debug('Score for player %d: %r', player, infos[0][key])
-
+                    return avg_goal
     env.close()
-
-    return ExperimentStatus.SUCCESS, np.mean(episode_rewards)
 
 
 def main():
@@ -220,20 +231,26 @@ def main():
     disp = Display()
     disp.start()
     register_custom_components()
-    # file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.04/s_kl_control/06.47.53/9/s_kl_control/cfg.json'
-    file_path = '/checkpoint/eugenevinitsky/nocturne/sweep/2022.05.19/srt_v2/11.54.35/2/srt_v2/cfg.json'
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('cfg_path', type=str)
+    args = parser.parse_args()
+
+    file_path = os.path.join(args.cfg_path, 'cfg.json')
     with open(file_path, 'r') as file:
         cfg_dict = json.load(file)
 
     cfg_dict['cli_args'] = {}
     cfg_dict['fps'] = 0
     cfg_dict['render_action_repeat'] = None
-    cfg_dict['no_render'] = None
+    cfg_dict['no_render'] = False
     cfg_dict['policy_index'] = 0
     cfg_dict['record_to'] = os.path.join(os.getcwd(), '..', 'recs')
     cfg_dict['continuous_actions_sample'] = True
     cfg_dict['discrete_actions_sample'] = False
-    cfg_dict['scenario_path'] = PROCESSED_TRAIN_NO_TL
+    cfg_dict['remove_at_collide'] = True
+    cfg_dict['remove_at_goal'] = True
+    cfg_dict['scenario_path'] = PROCESSED_VALID_NO_TL
 
     class Bunch(object):
 
@@ -241,8 +258,12 @@ def main():
             self.__dict__.update(adict)
 
     cfg = Bunch(cfg_dict)
-    status, avg_reward = run_eval(cfg)
-    return status
+    avg_goals = []
+    for _ in range(1):
+        avg_goal = run_eval(cfg)
+        avg_goals.append(avg_goal)
+    print(avg_goals)
+    print('the total average goal achieved is {}'.format(np.mean(avg_goals)))
 
 
 if __name__ == '__main__':

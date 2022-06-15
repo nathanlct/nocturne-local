@@ -27,12 +27,15 @@ dt: 0.1
 sims_per_step: 10
 img_as_state: False
 discretize_actions: True
-accel_discretization: 9
+accel_discretization: 6
 accel_lower_bound: -3
 accel_upper_bound: 2
 steering_lower_bound: -0.7 # corresponds to about 40 degrees of max steering angle
 steering_upper_bound: 0.7 # corresponds to about 40 degrees of max steering angle
-steering_discretization: 9
+steering_discretization: 21
+head_angle_lower_bound: -1.6
+head_angle_upper_bound: 1.6
+head_angle_discretization: 5
 max_num_vehicles: 20 # we want to upper bound how many agents there can be in the scene
                      # this is mostly useful because RL libraries expect it
 # TODO(eugenevinitsky) actually implement this
@@ -60,13 +63,22 @@ scenario:
   # (road lines, lane lines) etc. if we have remaining states after
   road_edge_first: False
 
+# these configs are mostly used for aligning displacement error computations
+# with the standard way of doing it in other libraries i.e. we keep 
+# the agent for the whole rollout and compute its distance from the expert
+# at all the points that the expert is valid
+remove_at_goal: True # if true, remove the agent when it reaches its goal
+remove_at_collide: True # if true, remove the agent when it collides
+
 rew_cfg:
   shared_reward: False # agents get the collective reward instead of individual rewards
   goal_tolerance: 0.5
   reward_scaling: 10.0 # rescale all the rewards by this value. This can help w/ some learning algorithms
   collision_penalty: 0
+  shaped_goal_distance_scaling: 0.2
   shaped_goal_distance: True
-  goal_distance_penalty: False # if shaped_goal_distance is true, then when this is True the goal distance is a penalty for being far from 
+  goal_distance_penalty: False # if shaped_goal_distance is true, then when this is True the goal distance 
+                               # is a penalty for being far from 
                                # goal instead of a reward for being close
   goal_achieved_bonus: ${episode_length}
   # goal is only achieved if you're within this tolerance on distance from goal
@@ -74,9 +86,9 @@ rew_cfg:
   position_target_tolerance: 1.0
   # goal is only achieved if you're within this tolerance on final agent speed at goal position
   speed_target: True
-  speed_target_tolerance: 0.5
+  speed_target_tolerance: 1.0
   # goal is only achieved if you're within this tolerance on final agent heading at goal position
-  heading_target: False
+  heading_target: True
   heading_target_tolerance: 0.3
 subscriber:
   view_angle: 2.1
@@ -89,6 +101,8 @@ subscriber:
   # as well as returning an observation for the extra agents if the number of
   # agents in the system is less than max_num_vehicles
   keep_inactive_agents: False
+  # for values greater than 1, we will stack inputs together
+  n_frames_stacked: 1
 
 hydra:
   run:
@@ -98,7 +112,7 @@ hydra:
     subdir: ${hydra.job.num}
   launcher:
     timeout_min: 2880
-    cpus_per_task: 80
+    cpus_per_task: 10
     gpus_per_node: 1
     tasks_per_node: 1
     mem_gb: 160

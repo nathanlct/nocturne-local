@@ -10,7 +10,7 @@ keep_checkpoints: 3 #Number of model checkpoints to keep (default: 3)
 save_milestones_sec: -1 #Save intermediate checkpoints in a separate folder for later evaluation (default=never) (default: -1)
 stats_avg: 100 #How many episodes to average to measure performance (avg. reward etc) (default: 100)
 learning_rate: 0.0001 # LR (default: 0.0001)
-train_for_env_steps: 10000000000 # Stop after all policies are trained for this many env steps (default: 10000000000)
+train_for_env_steps: 3000000000 # Stop after all policies are trained for this many env steps (default: 10000000000)
 train_for_seconds: 10000000000 #Stop training after this many seconds (default: 10000000000)
 obs_subtract_mean: 0.0 # Observation preprocessing, mean value to subtract from observation (e.g. 128.0 for 8-bit RGB) (default: 0.0)
 obs_scale: 10.0 # Observation preprocessing, divide observation tensors by this scalar (e.g. 128.0 for 8-bit RGB) (default: 1.0)
@@ -21,8 +21,9 @@ reward_scale: 1.0
 reward_clip: 10.0 # Clip rewards between [-c, c]. Default [-10, 10] virtually means no clipping for most envs (default: 10.0)
 encoder_type: mlp # Type of the encoder. Supported: conv, mlp, resnet (feel free to define more) (default: conv)
 encoder_subtype: mlp_mujoco # Specific encoder design (see model.py) (default: convnet_simple)
-encoder_custom: null # Use custom encoder class from the registry (see model_utils.py) (default: null, options {null, custom_env_encoder})
+encoder_custom: custom_env_encoder # Use custom encoder class from the registry (see model_utils.py) (default: null, options {null, custom_env_encoder})
 encoder_extra_fc_layers: 1 # Number of fully-connected layers of size "hidden size" to add after the basic encoder (e.g. convolutional) (default: 1)
+encoder_hidden_size: 256
 hidden_size: 256 # Size of hidden layer in the model, or the size of RNN hidden state in recurrent model (e.g. GRU) (default: 128)
 nonlinearity: tanh #  {elu,relu,tanh}
                   #      Type of nonlinearity to use (default: elu)
@@ -72,7 +73,7 @@ num_minibatches_to_accumulate: -1
 # experience collection will be halted during training.This is the regime with potentially lowest policy-lag.When this parameter is 0 and num_workers *
 # num_envs_per_worker * rollout == num_batches_per_iteration * batch_size, the algorithm is similar toregular synchronous PPO. (default: -1)
 max_grad_norm: 4.0 # Max L2 norm of the gradient vector (default: 4.0)
-exploration_loss_coeff: 0.001 # Coefficient for the exploration component of the loss function. (default: 0.0)
+exploration_loss_coeff: 0.001 # Coefficient for the exploration component of the loss function. (default: 0.001)
 value_loss_coeff: 0.5 # Coefficient for the critic loss (default: 0.5)
 kl_loss_coeff: 0.0 #Coefficient for fixed KL loss (as used by Schulman et al. in https://arxiv.org/pdf/1707.06347.pdf). Highly recommended for environments with continuous
                    #     action spaces. (default: 0.0)

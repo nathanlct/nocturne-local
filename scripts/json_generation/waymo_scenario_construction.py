@@ -10,7 +10,6 @@ from waymo_open_dataset.protos import map_pb2, scenario_pb2
 
 from cfgs.config import ERR_VAL
 
-
 _WAYMO_OBJECT_STR = {
     scenario_pb2.Track.TYPE_UNSET: "unset",
     scenario_pb2.Track.TYPE_VEHICLE: "vehicle",
@@ -55,9 +54,9 @@ def _parse_object_state(
             "y": ERR_VAL
         } for state in states],
         "width":
-        states[0].width,
+        final_state.width,
         "length":
-        states[0].length,
+        final_state.length,
         "heading": [
             math.degrees(state.heading) if state.valid else ERR_VAL
             for state in states

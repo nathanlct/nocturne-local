@@ -53,7 +53,7 @@ def make_image(sim, scenario_file, scenario_fn, output_path='./img.png'):
     plt.figure(figsize=figsize, dpi=dpi)
     plt.axis('off')
     plt.imshow(img)
-    plt.savefig(output_path)
+    plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
     print('>', output_path)
 
 
@@ -91,6 +91,7 @@ def main(cfg):
             #         os.path.basename(file)),
             # )
 
+            veh_index = -3
             make_image(
                 sim,
                 file,
@@ -98,10 +99,10 @@ def main(cfg):
                     img_height=1600,
                     img_width=1600,
                     draw_target_positions=True,
-                    padding=50.0,
-                    source=scenario.getVehicles()[-1],
-                    view_height=120,
-                    view_width=120,
+                    padding=0.0,
+                    source=scenario.getVehicles()[veh_index],
+                    view_height=80,
+                    view_width=80,
                     rotate_with_source=True,
                 ),
                 output_path=PROJECT_PATH /
@@ -112,13 +113,13 @@ def main(cfg):
                 sim,
                 file,
                 scenario_fn=lambda scenario: scenario.getConeImage(
-                    source=scenario.getVehicles()[-1],
+                    source=scenario.getVehicles()[veh_index],
                     view_dist=cfg['subscriber']['view_dist'],
                     view_angle=cfg['subscriber']['view_angle'],
-                    head_tilt=0.0,
+                    head_angle=0.0,
                     img_height=1600,
                     img_width=1600,
-                    padding=50.0,
+                    padding=0.0,
                     draw_target_position=True,
                 ),
                 output_path=PROJECT_PATH /
@@ -129,13 +130,13 @@ def main(cfg):
                 sim,
                 file,
                 scenario_fn=lambda scenario: scenario.getFeaturesImage(
-                    source=scenario.getVehicles()[-1],
+                    source=scenario.getVehicles()[veh_index],
                     view_dist=cfg['subscriber']['view_dist'],
                     view_angle=cfg['subscriber']['view_angle'],
-                    head_tilt=0.0,
+                    head_angle=0.0,
                     img_height=1600,
                     img_width=1600,
-                    padding=50.0,
+                    padding=0.0,
                     draw_target_position=True,
                 ),
                 output_path=PROJECT_PATH /

@@ -321,8 +321,8 @@ std::tuple<std::vector<const ObjectBase*>,
            std::vector<const geometry::PointLike*>,
            std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
 Scenario::VisibleObjects(const Object& src, float view_dist, float view_angle,
-                         float head_tilt) const {
-  const float heading = geometry::utils::AngleAdd(src.heading(), head_tilt);
+                         float head_angle) const {
+  const float heading = geometry::utils::AngleAdd(src.heading(), head_angle);
   const geometry::Vector2D& position = src.position();
   const ViewField vf(position, view_dist, heading, view_angle);
 
@@ -355,10 +355,10 @@ Scenario::VisibleObjects(const Object& src, float view_dist, float view_angle,
 
 std::vector<const TrafficLight*> Scenario::VisibleTrafficLights(
     const Object& src, float view_dist, float view_angle,
-    float head_tilt) const {
+    float head_angle) const {
   std::vector<const TrafficLight*> ret;
 
-  const float heading = geometry::utils::AngleAdd(src.heading(), head_tilt);
+  const float heading = geometry::utils::AngleAdd(src.heading(), head_angle);
   const geometry::Vector2D& position = src.position();
   const ViewField vf(position, view_dist, heading, view_angle);
 
@@ -398,15 +398,18 @@ NdArray<float> Scenario::EgoState(const Object& src) const {
   state_data[4] = target_azimuth;
   state_data[5] = target_heading;
   state_data[6] = target_speed;
+  state_data[7] = src.acceleration();
+  state_data[8] = src.steering();
+  state_data[9] = src.head_angle();
 
   return state;
 }
 
 std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
-    const Object& src, float view_dist, float view_angle, float head_tilt,
+    const Object& src, float view_dist, float view_angle, float head_angle,
     bool padding) const {
   const auto [objects, road_points, traffic_lights, stop_signs] =
-      VisibleObjects(src, view_dist, view_angle, head_tilt);
+      VisibleObjects(src, view_dist, view_angle, head_angle);
   const auto o_targets = NearestK(src, objects, max_visible_objects_);
   const auto r_targets = NearestKRoadPoints(
       src, road_points, max_visible_road_points_, road_edge_first_);
@@ -473,7 +476,7 @@ std::unordered_map<std::string, NdArray<float>> Scenario::VisibleState(
 NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
                                                float view_dist,
                                                float view_angle,
-                                               float head_tilt) const {
+                                               float head_angle) const {
   const int64_t kObjectFeatureStride = 0;
   const int64_t kRoadPointFeatureStride =
       kObjectFeatureStride + max_visible_objects_ * kObjectFeatureSize;
@@ -487,7 +490,7 @@ NdArray<float> Scenario::FlattenedVisibleState(const Object& src,
       kStopSignFeatureStride + max_visible_stop_signs_ * kStopSignsFeatureSize;
 
   const auto [objects, road_points, traffic_lights, stop_signs] =
-      VisibleObjects(src, view_dist, view_angle, head_tilt);
+      VisibleObjects(src, view_dist, view_angle, head_angle);
 
   const auto o_targets = NearestK(src, objects, max_visible_objects_);
   const auto r_targets = NearestKRoadPoints(
@@ -540,22 +543,77 @@ std::optional<Action> Scenario::ExpertAction(const Object& obj,
   const std::vector<bool>& valid_mask = expert_valid_masks_.at(obj.id());
   const int64_t trajectory_length = valid_mask.size();
 
-  if (timestamp < 1 || timestamp > trajectory_length - 1) {
+  if (timestamp < 0 || timestamp > trajectory_length - 1) {
     return std::nullopt;
   }
-  if (!valid_mask[timestamp - 1] || !valid_mask[timestamp + 1]) {
+  if (!valid_mask[timestamp] || !valid_mask[timestamp + 1]) {
     return std::nullopt;
   }
 
-  const float speed = cur_speeds[timestamp];
+  // compute acceleration
+  // a_t = (v_{t+1} - v_t) / dt
   const float acceleration =
-      (cur_speeds[timestamp + 1] - cur_speeds[timestamp - 1]) /
-      (2.0f * expert_dt_);
+      (cur_speeds[timestamp + 1] - cur_speeds[timestamp]) / expert_dt_;
+
+  // compute steering
+  // cf Object::KinematicBicycleStep
+  // w = (h_{t+1} - h_t) / dt = v * tan(steering) * cos(beta) / length
+  // -> solve for steering s_t, we get s_t = atan(2C / sqrt(4 - C^2)) + k * pi
+  // with C = 2 * length * (h_{t+1} - h_t) / (dt * (v_t + v_{t+1}))
   const float w = geometry::utils::AngleSub(cur_headings[timestamp + 1],
-                                            cur_headings[timestamp - 1]) /
-                  (2.0 * expert_dt_);
-  const float steering = speed > 0 ? std::asin(w / speed * obj.length()) : 0.0f;
-  return std::make_optional<Action>(acceleration, steering);
+                                            cur_headings[timestamp]) /
+                  expert_dt_;
+  const float C = 2.0f * obj.length() * w /
+                  (cur_speeds[timestamp + 1] + cur_speeds[timestamp]);
+  const float steering = std::atan(2.0f * C / std::sqrt(4 - C * C));
+
+  // return action
+  return std::make_optional<Action>(acceleration, steering, 0.0);
+}
+
+std::optional<geometry::Vector2D> Scenario::ExpertPosShift(
+    const Object& obj, int64_t timestamp) const {
+  const std::vector<geometry::Vector2D>& cur_positions =
+      expert_trajectories_.at(obj.id());
+  const std::vector<bool>& valid_mask = expert_valid_masks_.at(obj.id());
+  const int64_t trajectory_length = valid_mask.size();
+
+  if (timestamp < 0 || timestamp > trajectory_length - 1) {
+    return std::nullopt;
+  }
+  if (!valid_mask[timestamp] || !valid_mask[timestamp + 1]) {
+    return std::nullopt;
+  }
+
+  // compute acceleration
+  // a_t = (v_{t+1} - v_t) / dt
+  geometry::Vector2D pos_shift =
+      (cur_positions[timestamp + 1] - cur_positions[timestamp]);
+
+  // return action
+  return pos_shift;
+}
+
+std::optional<float> Scenario::ExpertHeadingShift(const Object& obj,
+                                                  int64_t timestamp) const {
+  const std::vector<float>& cur_heading = expert_headings_.at(obj.id());
+  const std::vector<bool>& valid_mask = expert_valid_masks_.at(obj.id());
+  const int64_t trajectory_length = valid_mask.size();
+
+  if (timestamp < 0 || timestamp > trajectory_length - 1) {
+    return std::nullopt;
+  }
+  if (!valid_mask[timestamp] || !valid_mask[timestamp + 1]) {
+    return std::nullopt;
+  }
+
+  // compute acceleration
+  // a_t = (v_{t+1} - v_t) / dt
+  float heading_shift = geometry::utils::AngleSub(cur_heading[timestamp + 1],
+                                                  cur_heading[timestamp]);
+
+  // return action
+  return heading_shift;
 }
 
 // O(N) time remove.
@@ -712,7 +770,7 @@ NdArray<unsigned char> Scenario::Image(uint64_t img_height, uint64_t img_width,
 }
 
 NdArray<unsigned char> Scenario::EgoVehicleConeImage(
-    const Object& source, float view_dist, float view_angle, float head_tilt,
+    const Object& source, float view_dist, float view_angle, float head_angle,
     uint64_t img_height, uint64_t img_width, float padding,
     bool draw_target_positions) const {
   // define transforms
@@ -772,14 +830,14 @@ NdArray<unsigned char> Scenario::EgoVehicleConeImage(
 
   // draw cone
   auto cone_drawables =
-      utils::MakeInvertedConeShape(view_dist, view_angle, head_tilt);
+      utils::MakeInvertedConeShape(view_dist, view_angle, head_angle);
   DrawOnTarget(canvas, cone_drawables, cone_view, horizontal_flip);
 
   return canvas.AsNdArray();
 }
 
 NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
-    const Object& source, float view_dist, float view_angle, float head_tilt,
+    const Object& source, float view_dist, float view_angle, float head_angle,
     uint64_t img_height, uint64_t img_width, float padding,
     bool draw_target_position) const {
   sf::Transform horizontal_flip;
@@ -793,7 +851,7 @@ NdArray<unsigned char> Scenario::EgoVehicleFeaturesImage(
 
   // TODO(nl) remove code duplication and linear overhead
   const auto [kinetic_objects, road_points, traffic_lights, stop_signs] =
-      VisibleObjects(source, view_dist, view_angle, head_tilt);
+      VisibleObjects(source, view_dist, view_angle, head_angle);
   std::vector<const sf::Drawable*> drawables;
 
   for (const auto [obj, dist] : NearestKRoadPoints(
@@ -882,12 +940,9 @@ void Scenario::LoadObjects(const json& objects_json) {
       }
     }
 
-    // TODO(ev) make it a flag whether all vehicles are added or just the
-    // vehicles that are valid
     // we only want to store and load vehicles that are valid at this
-    // initialization time
-
-    if (!valid_mask[current_time_]) {
+    // initialization time, unless spawn_invalid_objects_ is set
+    if (!valid_mask[current_time_] && !spawn_invalid_objects_) {
       continue;
     }
 

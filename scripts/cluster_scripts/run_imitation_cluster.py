@@ -38,9 +38,9 @@ def make_code_snap(experiment, code_path, str_time):
             shutil.copy(f, dst_dir / f.name)
 
     dirs_to_copy = [
-        '.', './cfgs/', './examples/', './examples/sample_factory_files',
-        './cfgs/algorithm', './nocturne/envs/', './nocturne_utils/',
-        './nocturne/python/', './scenarios/', './build'
+        '.', './cfgs/', './cfgs/algorithm', './cfgs/imitation',
+        './nocturne/envs/', './nocturne/pybind11',
+        '.examples/imitation_learning', './build'
     ]
     src_dir = pathlib.Path(PROJECT_PATH)
     for dir in dirs_to_copy:
@@ -54,9 +54,8 @@ def main():
     """Launch experiments on SLURM cluster by overriding Hydra config."""
     parser = argparse.ArgumentParser()
     parser.add_argument('experiment', type=str)
-    parser.add_argument(
-        '--code_path',
-        default='/checkpoint/eugenevinitsky/nocturne/sample_factory_runs')
+    parser.add_argument('--code_path',
+                        default='/checkpoint/eugenevinitsky/nocturne/il_runs')
     parser.add_argument('--dry', action='store_true')
     args = parser.parse_args()
 
@@ -67,15 +66,14 @@ def main():
     overrides.add('hydra/launcher', ['submitit_slurm'])
     overrides.add('hydra.launcher.partition', ['learnlab'])
     overrides.add('experiment', [args.experiment])
-    overrides.add('num_files', [10000])
+    overrides.add('num_files', [1000])
+    overrides.add('epochs', [1400])
     overrides.add('seed', [0, 1, 2, 3, 4])
-    overrides.add('scenario.max_visible_road_points', [500])
-    overrides.add('rew_cfg.collision_penalty', [0, -80.0])
 
     cmd = [
         'python',
-        str(snap_dir / 'code' / 'examples' / 'sample_factory_files' /
-            'run_sample_factory.py'), '-m', 'algorithm=APPO'
+        str(snap_dir / 'code' / 'nocturne' / 'utils' / 'imitation_learning' /
+            'train.py'), '-m'
     ]
     print(cmd)
     cmd += overrides.cmd()

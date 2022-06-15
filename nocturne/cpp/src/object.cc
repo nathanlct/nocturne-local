@@ -43,6 +43,15 @@ void Object::draw(sf::RenderTarget& target, sf::RenderStates states) const {
   rect.setFillColor(col);
   target.draw(rect, states);
 
+  if (highlight_) {
+    float radius = std::max(length_, width_);
+    sf::CircleShape circ(radius);
+    circ.setOrigin(length_ / 2.0f, width_ / 2.0f);
+    circ.setPosition(utils::ToVector2f(position_));
+    circ.setFillColor(sf::Color(255, 0, 0, 100));
+    target.draw(circ, states);
+  }
+
   sf::ConvexShape arrow;
   arrow.setPointCount(3);
   arrow.setPoint(0, sf::Vector2f(0.0f, -width_ / 2.0f));

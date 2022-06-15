@@ -4,8 +4,8 @@ from pathlib import Path
 import os
 import multiprocessing
 
-from cfgs.config import TRAIN_DATA_PATH, VALID_DATA_PATH, TEST_DATA_PATH, PROCESSED_TRAIN_NO_TL, \
-    PROCESSED_VALID_NO_TL, PROCESSED_TEST_NO_TL, PROCESSED_TRAIN, PROCESSED_TEST, PROCESSED_VALID
+from cfgs.config import TRAIN_DATA_PATH, VALID_DATA_PATH, PROCESSED_TRAIN_NO_TL, \
+    PROCESSED_VALID_NO_TL, PROCESSED_TRAIN, PROCESSED_VALID
 import waymo_scenario_construction as waymo
 
 
@@ -66,9 +66,9 @@ def main():
     parser.add_argument("--datatype",
                         default='train',
                         type=str,
-                        choices=['train', 'valid', 'test'],
+                        choices=['train', 'valid'],
                         nargs='+',
-                        help="Whether to convert, train, valid, or test data")
+                        help="Whether to convert, train or valid data")
 
     args = parser.parse_args()
     folders_to_convert = []
@@ -80,10 +80,6 @@ def main():
         folders_to_convert.append(
             (VALID_DATA_PATH,
              PROCESSED_VALID_NO_TL if args.no_tl else PROCESSED_VALID))
-    if 'test' in args.datatype:
-        folders_to_convert.append(
-            (TEST_DATA_PATH,
-             PROCESSED_TEST_NO_TL if args.no_tl else PROCESSED_TEST))
 
     for folder_path, output_dir in folders_to_convert:
         if args.num > 1 or args.all_files:

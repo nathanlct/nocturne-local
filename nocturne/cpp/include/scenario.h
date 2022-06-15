@@ -64,7 +64,7 @@ constexpr int64_t kStopSignsFeatureSize = 3;
 // Ego features are:
 // [ length, width, speed, target distance, relative_target_azimuth,
 //   relative_target_heading, relative_target_speed ]
-constexpr int64_t kEgoFeatureSize = 7;
+constexpr int64_t kEgoFeatureSize = 10;
 
 class Scenario : public sf::Drawable {
  public:
@@ -74,6 +74,8 @@ class Scenario : public sf::Drawable {
       : current_time_(std::get<int64_t>(config.at("start_time"))),
         allow_non_vehicles_(std::get<bool>(
             utils::FindWithDefault(config, "allow_non_vehicles", true))),
+        spawn_invalid_objects_(std::get<bool>(
+            utils::FindWithDefault(config, "spawn_invalid_objects", false))),
         max_visible_objects_(std::get<int64_t>(utils::FindWithDefault(
             config, "max_visible_objects", kMaxVisibleObjects))),
         max_visible_road_points_(std::get<int64_t>(utils::FindWithDefault(
@@ -136,16 +138,22 @@ class Scenario : public sf::Drawable {
   std::optional<Action> ExpertAction(const Object& obj,
                                      int64_t timestamp) const;
 
+  std::optional<geometry::Vector2D> ExpertPosShift(const Object& obj,
+                                                   int64_t timestamp) const;
+
+  std::optional<float> ExpertHeadingShift(const Object& obj,
+                                          int64_t timestamp) const;
+
   /*********************** Drawing Functions *****************/
 
-  // Computes and returns an `sf::View` of size (`view_height`, `view_width`)
-  // (in scenario coordinates), centered around `view_center` (in scenario
-  // coordinates) and rotated by `rotation` radians. The view is mapped to a
-  // viewport of size (`target_height`, `target_width`) pixels, with a minimum
-  // padding of `padding` pixels between the scenario boundaries and the
-  // viewport border. A scale-to-fit transform is applied so that the scenario
-  // view is scaled to fit the viewport (minus padding) without changing the
-  // width:height ratio of the captured view.
+  // Computes and returns an `sf::View` of size (`view_height`,
+  // `view_width`) (in scenario coordinates), centered around `view_center`
+  // (in scenario coordinates) and rotated by `rotation` radians. The view
+  // is mapped to a viewport of size (`target_height`, `target_width`)
+  // pixels, with a minimum padding of `padding` pixels between the scenario
+  // boundaries and the viewport border. A scale-to-fit transform is applied
+  // so that the scenario view is scaled to fit the viewport (minus padding)
+  // without changing the width:height ratio of the captured view.
   sf::View View(geometry::Vector2D view_center, float rotation,
                 float view_height, float view_width, float target_height,
                 float target_width, float padding) const;
@@ -178,23 +186,23 @@ class Scenario : public sf::Drawable {
   // Computes and returns an image of the visible state of the `source` object,
   // ie. the features returned by the `VisibleState` method. See the
   // documentation of `VisibleState` for an explanation of the `view_dist`,
-  // `view_angle` and `head_tilt` parameters. See the documentation of `Image`
+  // `view_angle` and `head_angle` parameters. See the documentation of `Image`
   // for an explanation of the remaining parameters of this function.
   NdArray<unsigned char> EgoVehicleFeaturesImage(
       const Object& source, float view_dist = 120.0f,
-      float view_angle = geometry::utils::kPi * 0.8f, float head_tilt = 0.0f,
+      float view_angle = geometry::utils::kPi * 0.8f, float head_angle = 0.0f,
       uint64_t img_height = 1000, uint64_t img_width = 1000,
       float padding = 0.0f, bool draw_destination = true) const;
 
   // Computes and returns an image of a cone of vision of the `source` object.
   // The image is centered around the `source` object, with a cone of vision of
   // radius `view_dist` and of angle `view_angle` (in radians). The cone points
-  // upwards (+pi/2) with an optional tilt `head_tilt` (in radians). See the
+  // upwards (+pi/2) with an optional tilt `head_angle` (in radians). See the
   // documentation of `Image` for an explanation of the remaining parameters of
   // this function.
   NdArray<unsigned char> EgoVehicleConeImage(
       const Object& source, float view_dist = 120.0f,
-      float view_angle = geometry::utils::kPi * 0.8f, float head_tilt = 0.0f,
+      float view_angle = geometry::utils::kPi * 0.8f, float head_angle = 0.0f,
       uint64_t img_height = 1000, uint64_t img_width = 1000,
       float padding = 0.0f, bool draw_destinations = true) const;
 
@@ -228,11 +236,11 @@ class Scenario : public sf::Drawable {
 
   std::unordered_map<std::string, NdArray<float>> VisibleState(
       const Object& src, float view_dist, float view_angle,
-      float head_tilt = 0.0f, bool padding = false) const;
+      float head_angle = 0.0f, bool padding = false) const;
 
   NdArray<float> FlattenedVisibleState(const Object& src, float view_dist,
                                        float view_angle,
-                                       float head_tilt = 0.0f) const;
+                                       float head_angle = 0.0f) const;
 
   int64_t getMaxNumVisibleObjects() const { return max_visible_objects_; }
   int64_t getMaxNumVisibleRoadPoints() const {
@@ -261,11 +269,11 @@ class Scenario : public sf::Drawable {
              std::vector<const geometry::PointLike*>,
              std::vector<const ObjectBase*>, std::vector<const ObjectBase*>>
   VisibleObjects(const Object& src, float view_dist, float view_angle,
-                 float head_tilt = 0.0f) const;
+                 float head_angle = 0.0f) const;
 
   std::vector<const TrafficLight*> VisibleTrafficLights(
       const Object& src, float view_dist, float view_angle,
-      float head_tilt = 0.0f) const;
+      float head_angle = 0.0f) const;
 
   // Draws the objects contained in `drawables` on the render target `target`.
   // The view `view` is applied to the target before drawing the objects, and
@@ -294,6 +302,8 @@ class Scenario : public sf::Drawable {
 
   // Whether to use non vehicle objects.
   const bool allow_non_vehicles_ = true;
+  // Whether to spawn vehicles that are invalid in the first time step
+  const bool spawn_invalid_objects_ = false;
 
   // TODO(ev) hardcoding, this is the maximum number of vehicles that can be
   // returned in the state
