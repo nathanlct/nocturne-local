@@ -1,3 +1,7 @@
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 """Utils for converting TFRecords into Nocturne compatible JSON."""
 import argparse
 from pathlib import Path
@@ -57,8 +61,8 @@ def main():
                         help='If true, iterate through the whole dataset')
     parser.add_argument("--no_tl",
                         action='store_true',
-                        help="If true, do not generate JSON files \
-            that have a traffic light in them")
+                        help="If true, do not generate JSON files\
+             that have a traffic light in them")
     parser.add_argument(
         "--parallel",
         action='store_true',

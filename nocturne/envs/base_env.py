@@ -1,3 +1,7 @@
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 """Default environment for Nocturne."""
 from typing import Any, Dict, Sequence, Union
 
@@ -34,8 +38,10 @@ class BaseEnv(Env):
             self.files = list(self.valid_veh_dict.keys())
             # the user might not have all the files so check
             # if the files exists
-            self.files = [file for file in self.files if \
-                os.path.exists(os.path.join(cfg['scenario_path'], file))]
+            self.files = [
+                file for file in self.files
+                if os.path.exists(os.path.join(cfg['scenario_path'], file))
+            ]
             # sort the files so that we have a consistent order
             self.files = sorted(self.files)
         if cfg['num_files'] != -1:

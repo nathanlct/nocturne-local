@@ -1,3 +1,7 @@
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 """Find all cases where collisions are required to achieve the goal.
 
 Due to errors in Waymo labeling, some space that is crossable is mistakenly

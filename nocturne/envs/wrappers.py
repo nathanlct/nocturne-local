@@ -1,3 +1,7 @@
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 """Wrappers and env constructors for the environments."""
 from gym.spaces import Box, Discrete
 import numpy as np

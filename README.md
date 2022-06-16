@@ -72,13 +72,15 @@ Python tests can be ran with `pytest`.
 
 ### Downloading the dataset
 Two versions of the dataset are available:
-- a mini-one that is about 1 GB and consists of 1000 training files and 100 validation files at: [Link](https://drive.google.com/drive/folders/1URK27v78gKAVirvUahaXK_pT2KeJkBM3?usp=sharing)
-- the full dataset (100 GB TODO) and consistents of X training files and X validation files.
+- a mini-one that is about 1 GB and consists of 1000 training files and 100 validation files at: [Link](https://drive.google.com/drive/folders/1URK27v78gKAVirvUahaXK_pT2KeJkBM3?usp=sharing).
+- the full dataset (100 GB TODO) and consistents of  training files and X validation files.
+Place the dataset at a folder of your choosing, unzip the folders inside of it, and change the DATA_FOLDER in ```cfgs/config.py``` to point to where you have
+downloaded it.
 
 ### Constructing the Dataset
-If you do want to rebuild the dataset:
+If you do want to rebuild the dataset, download the Waymo Motion version 1.1 files.
 - Open ```nocturne_utils/config.py``` and change ```DATA_FOLDER``` to be the path to your Waymo motion files
-- Run ```python nocturne_utils/run_waymo_constructor.py --parallel --no_tl --all_files --datatype train valid```. This will construct, in parallel, a dataset of all the train, valid, and test files in the waymo motion data. It should take on the order of 5 minutes with 20 cpus.
+- Run ```python nocturne_utils/run_waymo_constructor.py --parallel --no_tl --all_files --datatype train valid```. This will construct, in parallel, a dataset of all the train and validation files in the waymo motion data. It should take on the order of 5 minutes with 20 cpus. If you want to include traffic lights scenes, remove the ```--no_tl``` flag.
 - To ensure that only files that have a guaranteed solution are included (for example, that there are no files where the agent goal is across an apparently uncrossable road edge), run ```python nocturne_utils/make_solvable_files.py --datatype train valid```.
 
 ## C++ build instructions

@@ -1,3 +1,7 @@
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 """Run a policy over the entire train set.
 
 TODO(ev) refactor, this is wildly similar to visualize_sample_factory

@@ -1,3 +1,7 @@
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 """Goal reaching rate and collision rate computation as a function of number of intersections in expert trajectory."""
 from pathlib import Path
 import numpy as np
