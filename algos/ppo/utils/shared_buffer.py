@@ -1,3 +1,8 @@
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+# Code modified from https://github.com/marlbenchmark/on-policy
 import torch
 import numpy as np
 from algos.ppo.utils.util import get_shape_from_obs_space, get_shape_from_act_space
