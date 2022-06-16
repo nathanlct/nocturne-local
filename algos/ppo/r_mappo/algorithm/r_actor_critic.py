@@ -1,8 +1,12 @@
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+# Code modified from https://github.com/marlbenchmark/on-policy
 import torch
 import torch.nn as nn
 from algos.ppo.ppo_utils.util import init, check
 from algos.ppo.ppo_utils.cnn import CNNBase
-# from algos.ppo.ppo_utils.encoder import EncoderBase
 from algos.ppo.ppo_utils.mlp import MLPBase
 from algos.ppo.ppo_utils.rnn import RNNLayer
 from algos.ppo.ppo_utils.act import ACTLayer
@@ -36,7 +40,6 @@ class R_Actor(nn.Module):
         self.tpdv = dict(dtype=torch.float32, device=device)
 
         obs_shape = get_shape_from_obs_space(obs_space)
-        # base = EncoderBase if len(obs_shape) == 3 else MLPBase
         base = MLPBase
         self.base = base(args, obs_shape)
 
@@ -154,7 +157,7 @@ class R_Critic(nn.Module):
                        nn.init.orthogonal_][self._use_orthogonal]
 
         cent_obs_shape = get_shape_from_obs_space(cent_obs_space)
-        base = EncoderBase if len(cent_obs_shape) == 3 else MLPBase
+        base = MLPBase
         self.base = base(args, cent_obs_shape)
 
         if self._use_naive_recurrent_policy or self._use_recurrent_policy:
