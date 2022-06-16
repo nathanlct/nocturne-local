@@ -99,9 +99,10 @@ make install
 Subsequently, the C++ tests can be ran with `./tests/nocturne_test` from within the `nocturne/cpp/build` directory.
 
 ## Examples of Nocturne Usage
-To get a sense of available functionality in Nocturne, we have provided a few examples of how to construct the env, how to construct particular observations, and how to render results.
+To get a sense of available functionality in Nocturne, we have provided a few examples  in the examples folder of how to construct the env (create_env.py), how to construct particular observations (nocturne_functions.py), and how to render results (rendering.py).
 
 ## Running the RL Algorithms
+---
 Nocturne by default comes with support for three versions of Proximal Policy Optimization:
 1. Sample Factory, a high throughput asynchronous PPO implementation (https://github.com/alex-petrenko/sample-factory)
 2. RLlib's PPO (https://github.com/ray-project/ray/tree/master/rllib)
@@ -136,6 +137,7 @@ Nocturne comes with a baseline implementation of behavioral cloning and a corres
 DataLoader. This can be run via ```python examples/imitation_learning/train.py```.
 
 ## Common installation errors
+---
 
 ### pybind11 installation errors
 
@@ -152,3 +154,7 @@ Make sure SFML/lib is included in LD_LIBRARY_PATH if you're on a linux machine
 ### ImportError: libudev.so.0: cannot open shared object file
 
 Do this really dumb thing. Make a folder, run ```ln -s /usr/lib/x86_64-linux-gnu/libudev.so.1 libudev.so.0``` then add that folder to the LD_LIBRARY_PATH
+
+## License
+---
+The majority of Nocturne is licensed under the MIT license, however portions of the project are available under separate license terms: the Waymo Motion Dataset License can be found at https://waymo.com/open/terms/.
