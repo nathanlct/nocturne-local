@@ -22,8 +22,8 @@ def test_state_subscribers():
     sim = Simulation(scenario_path=str(PROJECT_PATH /
                                        'tests/scenario_test.json'),
                      config=get_scenario_dict(cfg))
-    scenario = sim.getScenario()
-    vehs = scenario.getVehicles()
+    scenario = sim.scenario()
+    vehs = scenario.vehicles()
 
     # Test ego state getter
     state = scenario.ego_state(vehs[0])

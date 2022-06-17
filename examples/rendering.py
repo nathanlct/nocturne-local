@@ -21,7 +21,7 @@ def get_sim(cfg):
     sim = Simulation(scenario_path=str(PROJECT_PATH / 'examples' /
                                        'example_scenario.json'),
                      config=get_scenario_dict(cfg))
-    for obj in sim.getScenario().getObjectsThatMoved():
+    for obj in sim.scenario().moving_objects():
         obj.expert_control = True
     return sim
 
@@ -34,7 +34,7 @@ def make_movie(cfg,
                fps=10):
     """Make a movie from the scenario."""
     sim = get_sim(cfg)
-    scenario = sim.getScenario()
+    scenario = sim.scenario()
     movie_frames = []
     timestep = 0
     movie_frames.append(scenario_fn(scenario, timestep))
@@ -52,7 +52,7 @@ def make_movie(cfg,
 def make_image(cfg, scenario_fn, output_path='./img.png'):
     """Make a single image from the scenario."""
     sim = get_sim(cfg)
-    scenario = sim.getScenario()
+    scenario = sim.scenario()
     img = scenario_fn(scenario)
     dpi = 100
     height, width, depth = img.shape
@@ -78,7 +78,7 @@ def main(cfg):
     # movie of whole scenario
     make_movie(
         cfg,
-        scenario_fn=lambda scenario, _: scenario.getImage(
+        scenario_fn=lambda scenario, _: scenario.get_image(
             img_width=1600,
             img_height=1600,
             draw_target_positions=True,
@@ -91,12 +91,12 @@ def main(cfg):
     # movie around a vehicle
     make_movie(
         cfg,
-        scenario_fn=lambda scenario, _: scenario.getImage(
+        scenario_fn=lambda scenario, _: scenario.get_image(
             img_width=1600,
             img_height=1600,
             draw_target_positions=True,
             padding=50.0,
-            source=scenario.getVehicles()[3],
+            source=scenario.vehicles()[3],
             view_width=120,
             view_height=120,
             rotate_with_source=True,
@@ -108,12 +108,12 @@ def main(cfg):
     # movie around a vehicle (without rotating with source)
     make_movie(
         cfg,
-        scenario_fn=lambda scenario, _: scenario.getImage(
+        scenario_fn=lambda scenario, _: scenario.get_image(
             img_width=1600,
             img_height=1600,
             draw_target_positions=True,
             padding=50.0,
-            source=scenario.getObjectsThatMoved()[3],
+            source=scenario.moving_objects()[3],
             view_width=120,
             view_height=120,
             rotate_with_source=False,
@@ -125,8 +125,8 @@ def main(cfg):
     # movie of cone around vehicle
     make_movie(
         cfg,
-        scenario_fn=lambda scenario, _: scenario.getConeImage(
-            source=scenario.getObjectsThatMoved()[6],
+        scenario_fn=lambda scenario, _: scenario.get_cone_image(
+            source=scenario.moving_objects()[6],
             view_dist=80,
             view_angle=np.pi * (120 / 180),
             head_angle=0.0,
@@ -141,8 +141,8 @@ def main(cfg):
     # movie of cone around vehicle with varying head angle
     make_movie(
         cfg,
-        scenario_fn=lambda scenario, timestep: scenario.getConeImage(
-            source=scenario.getVehicles()[6],
+        scenario_fn=lambda scenario, timestep: scenario.get_cone_image(
+            source=scenario.vehicles()[6],
             view_dist=80.0,
             view_angle=np.pi * (120 / 180),
             head_angle=0.8 * np.sin(timestep / 10),
@@ -158,7 +158,7 @@ def main(cfg):
     # image of whole scenario
     make_image(
         cfg,
-        scenario_fn=lambda scenario: scenario.getImage(
+        scenario_fn=lambda scenario: scenario.get_image(
             img_width=2000,
             img_height=2000,
             padding=50.0,
@@ -170,8 +170,8 @@ def main(cfg):
     # image of cone
     make_image(
         cfg,
-        scenario_fn=lambda scenario: scenario.getConeImage(
-            source=scenario.getVehicles()[9],
+        scenario_fn=lambda scenario: scenario.get_cone_image(
+            source=scenario.vehicles()[9],
             view_dist=80,
             view_angle=np.pi * (120 / 180),
             head_angle=np.pi / 8.0,
@@ -187,8 +187,8 @@ def main(cfg):
     # image of visible state
     make_image(
         cfg,
-        scenario_fn=lambda scenario: scenario.getFeaturesImage(
-            source=scenario.getVehicles()[9],
+        scenario_fn=lambda scenario: scenario.get_features_image(
+            source=scenario.vehicles()[9],
             view_dist=80,
             view_angle=np.pi * (120 / 180),
             head_angle=np.pi / 8.0,

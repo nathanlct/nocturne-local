@@ -30,12 +30,15 @@ def test_rl_env():
     times = []
     _ = env.reset()
     # quick check that rendering works
-    _ = env.scenario.getConeImage(env.scenario.getVehicles()[0], 120.0,
-                                  1.99 * 3.14, 0.0, draw_target_position=False)
+    _ = env.scenario.get_cone_image(env.scenario.vehicles()[0],
+                                    120.0,
+                                    1.99 * 3.14,
+                                    0.0,
+                                    draw_target_position=False)
     for _ in range(90):
-        vehs = env.scenario.getObjectsThatMoved()
+        vehs = env.scenario.moving_objects()
         prev_position = {
-            veh.getID(): [veh.position.x, veh.position.y]
+            veh.id(): [veh.position.x, veh.position.y]
             for veh in vehs
         }
         t = time.perf_counter()
@@ -44,13 +47,17 @@ def test_rl_env():
              for veh in vehs})
         times.append(time.perf_counter() - t)
         for veh in vehs:
-            if veh in env.scenario.getObjectsThatMoved():
+            if veh in env.scenario.moving_objects():
                 new_position = [veh.position.x, veh.position.y]
-                assert prev_position[veh.getID(
-                )] != new_position, f'veh {veh.getID()} was in position \
-                    {prev_position[veh.getID()]} which is the \
+                assert prev_position[veh.id(
+                )] != new_position, f'veh {veh.id()} was in position \
+                    {prev_position[veh.id()]} which is the \
                         same as {new_position} but should have moved'
-    assert 1 / np.mean(times) > 1500, f'FPS should be greater than 1500 but is {1 / np.mean(times)}'
+
+    print(1 / np.mean(times))
+    assert 1 / np.mean(
+        times
+    ) > 1900, f'FPS should be greater than 1900 but is {1 / np.mean(times)}'
 
 
 if __name__ == '__main__':

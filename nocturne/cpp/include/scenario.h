@@ -111,7 +111,7 @@ class Scenario : public sf::Drawable {
 
   void Step(float dt);
 
-  // void removeVehicle(Vehicle* object);
+  // void remove_object(Vehicle* object);
   bool RemoveObject(const Object& object);
 
   // Returns expert position for obj at timestamp.

@@ -104,9 +104,9 @@ def _intesection_metrics_impl(trajectory_path, model, configs):
 
     # create model simulation
     sim = Simulation(str(trajectory_path), scenario_config)
-    scenario = sim.getScenario()
-    vehicles = scenario.getVehicles()
-    objects = scenario.getObjectsThatMoved()
+    scenario = sim.scenario()
+    vehicles = scenario.vehicles()
+    objects = scenario.moving_objects()
 
     # set all objects to be expert-controlled
     for obj in objects:
@@ -127,9 +127,8 @@ def _intesection_metrics_impl(trajectory_path, model, configs):
                 veh, view_dist=view_dist, view_angle=view_angle)
             state = np.concatenate(
                 (ego_state, visible_state)) / state_normalization
-            state_dict[veh.getID()] = np.roll(state_dict[veh.getID()],
-                                              len(state))
-            state_dict[veh.getID()][:len(state)] = state
+            state_dict[veh.id()] = np.roll(state_dict[veh.id()], len(state))
+            state_dict[veh.id()][:len(state)] = state
         sim.step(dt)
 
     for veh in controlled_vehicles:
@@ -154,10 +153,9 @@ def _intesection_metrics_impl(trajectory_path, model, configs):
                      veh, view_dist=view_dist,
                      view_angle=view_angle))) / state_normalization
             # stack state
-            state_dict[veh.getID()] = np.roll(state_dict[veh.getID()],
-                                              len(state))
-            state_dict[veh.getID()][:len(state)] = state
-            all_states.append(state_dict[veh.getID()])
+            state_dict[veh.id()] = np.roll(state_dict[veh.id()], len(state))
+            state_dict[veh.id()][:len(state)] = state
+            all_states.append(state_dict[veh.id()])
         all_states = torch.as_tensor(np.array(all_states), dtype=torch.float32)
 
         # compute vehicle actions
@@ -196,7 +194,7 @@ def _intesection_metrics_impl(trajectory_path, model, configs):
     goal_rates = np.zeros(4)
     counts = np.zeros(4)
     for i, veh in enumerate(controlled_vehicles):
-        n_intersections = min(intersection_data[veh.getID()], 3)
+        n_intersections = min(intersection_data[veh.id()], 3)
         counts[n_intersections] += 1
         if collisions[i]:
             collision_rates[n_intersections] += 1

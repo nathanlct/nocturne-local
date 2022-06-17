@@ -46,7 +46,7 @@ def is_file_valid(file_list, output_file, output_file_invalid, cfg, lock=None):
     cfg['allow_non_vehicles'] = False
     for i, file in enumerate(file_list):
         sim = Simulation(str(file), get_scenario_dict(cfg))
-        vehs = sim.scenario().getObjectsThatMoved()
+        vehs = sim.scenario().moving_objects()
         for veh in vehs:
             # we shrink the vehicle width and length to tiny values.
             # then, if a vehicle collides with a road edge, we know it had to

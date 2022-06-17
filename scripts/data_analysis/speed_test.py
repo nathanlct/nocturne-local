@@ -30,8 +30,8 @@ def run_speed_test(files, cfg):
     for file in files:
         sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file),
                          get_scenario_dict(cfg))
-        vehs = sim.scenario().getObjectsThatMoved()
-        scenario = sim.getScenario()
+        vehs = sim.scenario().moving_objects()
+        scenario = sim.scenario()
         veh = vehs[np.random.randint(len(vehs))]
         t = time.perf_counter()
         _ = scenario.flattened_visible_state(veh, 80, (180 / 180) * np.pi)

@@ -37,16 +37,16 @@ def _average_displacement_impl(arg):
 
     # create expert simulation
     sim_expert = Simulation(str(trajectory_path), scenario_config)
-    scenario_expert = sim_expert.getScenario()
-    vehicles_expert = scenario_expert.getVehicles()
-    objects_expert = scenario_expert.getObjectsThatMoved()
+    scenario_expert = sim_expert.scenario()
+    vehicles_expert = scenario_expert.vehicles()
+    objects_expert = scenario_expert.moving_objects()
     id2veh_expert = {veh.id: veh for veh in vehicles_expert}
 
     # create model simulation
     sim_model = Simulation(str(trajectory_path), scenario_config)
-    scenario_model = sim_model.getScenario()
-    vehicles_model = scenario_model.getVehicles()
-    objects_model = scenario_model.getObjectsThatMoved()
+    scenario_model = sim_model.scenario()
+    vehicles_model = scenario_model.vehicles()
+    objects_model = scenario_model.moving_objects()
 
     # set all objects to be expert-controlled
     for obj in objects_expert:
@@ -69,9 +69,8 @@ def _average_displacement_impl(arg):
                 veh, view_dist=view_dist, view_angle=view_angle)
             state = np.concatenate(
                 (ego_state, visible_state)) / state_normalization
-            state_dict[veh.getID()] = np.roll(state_dict[veh.getID()],
-                                              len(state))
-            state_dict[veh.getID()][:len(state)] = state
+            state_dict[veh.id()] = np.roll(state_dict[veh.id()], len(state))
+            state_dict[veh.id()][:len(state)] = state
         sim_model.step(dt)
         sim_expert.step(dt)
 
@@ -98,10 +97,9 @@ def _average_displacement_impl(arg):
                      veh, view_dist=view_dist,
                      view_angle=view_angle))) / state_normalization
             # stack state
-            state_dict[veh.getID()] = np.roll(state_dict[veh.getID()],
-                                              len(state))
-            state_dict[veh.getID()][:len(state)] = state
-            all_states.append(state_dict[veh.getID()])
+            state_dict[veh.id()] = np.roll(state_dict[veh.id()], len(state))
+            state_dict[veh.id()][:len(state)] = state
+            all_states.append(state_dict[veh.id()])
         all_states = torch.as_tensor(np.array(all_states), dtype=torch.float32)
 
         # compute vehicle actions

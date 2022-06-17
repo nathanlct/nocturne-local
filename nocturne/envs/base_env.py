@@ -51,8 +51,8 @@ class BaseEnv(Env):
                                                   self.file),
                                      config=get_scenario_dict(cfg))
 
-        self.scenario = self.simulation.getScenario()
-        self.controlled_vehicles = self.scenario.getObjectsThatMoved()
+        self.scenario = self.simulation.scenario()
+        self.controlled_vehicles = self.scenario.moving_objects()
         self.cfg = cfg
         self.n_frames_stacked = self.cfg['subscriber'].get(
             'n_frames_stacked', 1)
@@ -118,7 +118,7 @@ class BaseEnv(Env):
                                            int]]
     ) -> None:
         """Apply a dict of actions to the vehicle objects."""
-        for veh_obj in self.scenario.getObjectsThatMoved():
+        for veh_obj in self.scenario.moving_objects():
             action = action_dict.get(veh_obj.id, None)
             if action is None:
                 continue
@@ -154,7 +154,7 @@ class BaseEnv(Env):
         self.step_num += 1
         objs_to_remove = []
         for veh_obj in self.controlled_vehicles:
-            veh_id = veh_obj.getID()
+            veh_id = veh_obj.id()
             if veh_id in self.done_ids:
                 continue
             self.context_dict[veh_id].append(self.get_observation(veh_obj))
@@ -255,7 +255,7 @@ class BaseEnv(Env):
             if info_dict[veh_id]['goal_achieved'] and self.cfg.get(
                     'remove_at_goal', True):
                 done_dict[veh_id] = True
-            if veh_obj.getCollided():
+            if veh_obj.collided():
                 info_dict[veh_id]['collided'] = True
                 if int(veh_obj.collision_type) == 1:
                     info_dict[veh_id]['veh_veh_collision'] = True
@@ -276,7 +276,7 @@ class BaseEnv(Env):
                     objs_to_remove.append(veh_obj)
 
         for veh_obj in objs_to_remove:
-            self.scenario.removeVehicle(veh_obj)
+            self.scenario.remove_object(veh_obj)
 
         if self.cfg['rew_cfg']['shared_reward']:
             total_reward = np.sum([rew_dict[key] for key in rew_dict.keys()])
@@ -318,58 +318,57 @@ class BaseEnv(Env):
             self.simulation = Simulation(os.path.join(
                 self.cfg['scenario_path'], self.file),
                                          config=get_scenario_dict(self.cfg))
-            self.scenario = self.simulation.getScenario()
+            self.scenario = self.simulation.scenario()
             '''##################################################################
                 Construct context dictionary of observations that can be used to
                 warm up policies by stepping all vehicles as experts.
             #####################################################################'''
-            dead_obs = self.get_observation(self.scenario.getVehicles()[0])
+            dead_obs = self.get_observation(self.scenario.vehicles()[0])
             self.dead_feat = -np.ones(
                 dead_obs.shape[0] * self.n_frames_stacked)
             # step all the vehicles forward by one second and record their observations as context
             context_len = max(10, self.n_frames_stacked)
             self.context_dict = {
-                veh.getID():
-                deque([self.dead_feat for _ in range(context_len)],
-                      maxlen=context_len)
-                for veh in self.scenario.getObjectsThatMoved()
+                veh.id(): deque([self.dead_feat for _ in range(context_len)],
+                                maxlen=context_len)
+                for veh in self.scenario.moving_objects()
             }
-            for veh in self.scenario.getObjectsThatMoved():
+            for veh in self.scenario.moving_objects():
                 veh.expert_control = True
             for _ in range(10):
-                for veh in self.scenario.getObjectsThatMoved():
-                    self.context_dict[veh.getID()].append(
+                for veh in self.scenario.moving_objects():
+                    self.context_dict[veh.id()].append(
                         self.get_observation(veh))
                 self.simulation.step(self.cfg['dt'])
             # now hand back control to our actual controllers
-            for veh in self.scenario.getObjectsThatMoved():
+            for veh in self.scenario.moving_objects():
                 veh.expert_control = False
 
             # remove all the objects that are in collision or are already in goal dist
             # additionally set the objects that have infeasible goals to be experts
-            for veh_obj in self.simulation.getScenario().getObjectsThatMoved():
-                obj_pos = veh_obj.getPosition()
+            for veh_obj in self.simulation.scenario().moving_objects():
+                obj_pos = veh_obj.position()
                 obj_pos = np.array([obj_pos.x, obj_pos.y])
-                goal_pos = veh_obj.getGoalPosition()
+                goal_pos = veh_obj.target_position()
                 goal_pos = np.array([goal_pos.x, goal_pos.y])
                 '''############################################
                     Remove vehicles at goal
                 ############################################'''
                 norm = np.linalg.norm(goal_pos - obj_pos)
                 if norm < self.cfg['rew_cfg'][
-                        'goal_tolerance'] or veh_obj.getCollided():
-                    self.scenario.removeVehicle(veh_obj)
+                        'goal_tolerance'] or veh_obj.collided():
+                    self.scenario.remove_object(veh_obj)
                 '''############################################
                     Set all vehicles with unachievable goals to be experts
                 ############################################'''
-                if self.file in self.valid_veh_dict and veh_obj.getID(
+                if self.file in self.valid_veh_dict and veh_obj.id(
                 ) in self.valid_veh_dict[self.file]:
                     veh_obj.expert_control = True
             '''############################################
                 Pick out the vehicles that we are controlling
             ############################################'''
             # ensure that we have no more than max_num_vehicles are controlled
-            temp_vehicles = self.scenario.getObjectsThatMoved()
+            temp_vehicles = self.scenario.moving_objects()
             np.random.shuffle(temp_vehicles)
             curr_index = 0
             self.controlled_vehicles = []
@@ -389,14 +388,14 @@ class BaseEnv(Env):
                 else:
                     self.expert_controlled_vehicles.append(vehicle)
             self.all_vehicle_ids = [
-                veh.getID() for veh in self.controlled_vehicles
+                veh.id() for veh in self.controlled_vehicles
             ]
             # make all the vehicles that are in excess of max_num_vehicles controlled by an expert
             for veh in self.expert_controlled_vehicles:
                 veh.expert_control = True
             # remove vehicles that are currently at an invalid position
             for veh in self.vehicles_to_delete:
-                self.scenario.removeVehicle(veh)
+                self.scenario.remove_object(veh)
 
             # check that we have at least one vehicle or if we have just one file, exit anyways
             # or else we might be stuck in an infinite loop
@@ -411,9 +410,9 @@ class BaseEnv(Env):
         # self.files list to be length 1. Otherwise, the while loop above will repeat
         # until a file is found.
         if len(self.all_vehicle_ids) == 0:
-            self.controlled_vehicles = [self.scenario.getVehicles()[0]]
+            self.controlled_vehicles = [self.scenario.vehicles()[0]]
             self.all_vehicle_ids = [
-                veh.getID() for veh in self.controlled_vehicles
+                veh.id() for veh in self.controlled_vehicles
             ]
 
         # construct the observations and goal normalizers
@@ -421,11 +420,11 @@ class BaseEnv(Env):
         self.goal_dist_normalizers = {}
         max_goal_dist = -100
         for veh_obj in self.controlled_vehicles:
-            veh_id = veh_obj.getID()
+            veh_id = veh_obj.id()
             # store normalizers for each vehicle
-            obj_pos = veh_obj.getPosition()
+            obj_pos = veh_obj.position()
             obj_pos = np.array([obj_pos.x, obj_pos.y])
-            goal_pos = veh_obj.getGoalPosition()
+            goal_pos = veh_obj.target_position()
             goal_pos = np.array([goal_pos.x, goal_pos.y])
             dist = np.linalg.norm(obj_pos - goal_pos)
             self.goal_dist_normalizers[veh_id] = dist
@@ -488,20 +487,20 @@ class BaseEnv(Env):
 
     def make_all_vehicles_experts(self):
         """Force all vehicles to be experts."""
-        for veh in self.scenario.getVehicles():
+        for veh in self.scenario.vehicles():
             veh.expert_control = True
 
     def get_vehicles(self):
         """Return the vehicles."""
-        return self.scenario.getVehicles()
+        return self.scenario.vehicles()
 
     def get_objects_that_moved(self):
         """Return the objects that moved."""
-        return self.scenario.getObjectsThatMoved()
+        return self.scenario.moving_objects()
 
     def render(self, mode=None):
         """See superclass."""
-        return self.scenario.getImage(
+        return self.scenario.get_image(
             img_width=1600,
             img_height=1600,
             draw_target_positions=True,
@@ -510,10 +509,10 @@ class BaseEnv(Env):
 
     def render_ego(self, mode=None):
         """See superclass."""
-        if self.render_vehicle.getID() in self.done_ids:
+        if self.render_vehicle.id() in self.done_ids:
             return None
         else:
-            return self.scenario.getConeImage(
+            return self.scenario.get_cone_image(
                 source=self.render_vehicle,
                 view_dist=self.cfg['subscriber']['view_dist'],
                 view_angle=self.cfg['subscriber']['view_angle'],
@@ -526,10 +525,10 @@ class BaseEnv(Env):
 
     def render_features(self, mode=None):
         """See superclass."""
-        if self.render_vehicle.getID() in self.done_ids:
+        if self.render_vehicle.id() in self.done_ids:
             return None
         else:
-            return self.scenario.getFeaturesImage(
+            return self.scenario.get_features_image(
                 source=self.render_vehicle,
                 view_dist=self.cfg['subscriber']['view_dist'],
                 view_angle=self.cfg['subscriber']['view_angle'],

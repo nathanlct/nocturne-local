@@ -31,7 +31,7 @@ def run_analysis(cfg, files):
     for file_idx, file in enumerate(files):
         sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file),
                          get_scenario_dict(cfg))
-        vehs = sim.scenario().getObjectsThatMoved()
+        vehs = sim.scenario().moving_objects()
         # this checks if the vehicles has actually moved any distance at all
         valid_vehs = []
         prev_speeds = []
@@ -42,7 +42,7 @@ def run_analysis(cfg, files):
             if (obj_pos - goal_pos).norm() > 0.5:
                 valid_vehs.append(veh)
             if veh in valid_vehs:
-                veh_speed = sim.scenario().getExpertSpeeds(0, veh.id)
+                veh_speed = sim.scenario().expert_velocity(0, veh.id)
                 veh_speed = np.linalg.norm([veh_speed.x, veh_speed.y])
                 if not np.isclose(veh.position.x, -10000.0):
                     prev_speeds.append(
@@ -56,7 +56,7 @@ def run_analysis(cfg, files):
         for i in range(1, 90):
             for veh_index, veh in enumerate(valid_vehs):
                 # check if the vehicle is actually valid
-                veh_speed = sim.scenario().getExpertSpeeds(i, veh.id)
+                veh_speed = sim.scenario().expert_velocity(i, veh.id)
                 veh_speed = veh_speed.norm()
                 if np.isclose(veh.position.x, -10000.0):
                     prev_speeds[veh_index] = (veh_speed, False,

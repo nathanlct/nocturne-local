@@ -21,9 +21,9 @@ def _goal_reaching_rate_impl(trajectory_path,
     sim = Simulation(scenario_path=str(trajectory_path),
                      start_time=0,
                      allow_non_vehicles=sim_allow_non_vehicles)
-    scenario = sim.getScenario()
-    vehicles = scenario.getVehicles()
-    objects_that_moved = scenario.getObjectsThatMoved()
+    scenario = sim.scenario()
+    vehicles = scenario.vehicles()
+    objects_that_moved = scenario.moving_objects()
     vehicles_that_moved = [
         veh for veh in vehicles if veh in objects_that_moved
     ]

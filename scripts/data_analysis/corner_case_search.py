@@ -52,14 +52,14 @@ def main(cfg):
         edge_collision = False
         sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file),
                          get_scenario_dict(cfg))
-        vehs = sim.getScenario().getObjectsThatMoved()
+        vehs = sim.scenario().moving_objects()
         # this checks if the vehicles has actually moved any distance at all
         valid_vehs = []
         for veh in vehs:
             veh.expert_control = True
-            obj_pos = veh.getPosition()
+            obj_pos = veh.position()
             obj_pos = np.array([obj_pos.x, obj_pos.y])
-            goal_pos = veh.getGoalPosition()
+            goal_pos = veh.target_position()
             goal_pos = np.array([goal_pos.x, goal_pos.y])
             if np.linalg.norm(obj_pos - goal_pos) > 0.5:
                 valid_vehs.append(veh)
@@ -68,8 +68,8 @@ def main(cfg):
         initialized_collided = [False for _ in vehs]
         for time_index in range(90):
             for veh_index, veh in enumerate(valid_vehs):
-                collided = veh.getCollided()
-                if collided and not np.isclose(veh.getPosition().x, -10000.0):
+                collided = veh.collided()
+                if collided and not np.isclose(veh.position().x, -10000.0):
                     collide_counter[int(veh.collision_type) - 1,
                                     time_index] += 1
                     if int(veh.collision_type) == 2:
@@ -78,10 +78,10 @@ def main(cfg):
                         veh_veh_collided[veh_index] = True
                     if time_index == 0:
                         initialized_collided[veh_index] = True
-                if np.isclose(veh.getPosition().x, -10000.0):
+                if np.isclose(veh.position().x, -10000.0):
                     collided = False
                 if time_index == 0 and not found_collision and collided and SAVE_IMAGES:
-                    img = sim.getScenario().getImage(
+                    img = sim.scenario().get_image(
                         img_width=1600,
                         img_height=1600,
                         draw_target_positions=True,
@@ -122,12 +122,12 @@ def main(cfg):
             fig = plt.figure()
             sim = Simulation(os.path.join(PROCESSED_TRAIN_NO_TL, file),
                              get_scenario_dict(start_cfg))
-            vehs = sim.getScenario().getObjectsThatMoved()
+            vehs = sim.scenario().moving_objects()
             for veh in vehs:
                 veh.expert_control = True
             for time_index in range(89):
-                movie_frames.append(sim.getScenario().getImage(
-                    img_width=1600, img_height=1600))
+                movie_frames.append(sim.scenario().get_image(img_width=1600,
+                                                             img_height=1600))
                 sim.step(0.1)
             movie_frames = np.array(movie_frames)
             imageio.mimwrite(f'{output_path}/{os.path.basename(file)}.mp4',

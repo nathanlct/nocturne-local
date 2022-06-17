@@ -33,7 +33,7 @@ def test_custom_config():
     scenario_path = str(PROJECT_PATH / 'tests/large_file.json')
     sim = Simulation(scenario_path=scenario_path,
                      config=get_scenario_dict(cfg))
-    scenario = sim.getScenario()
+    scenario = sim.scenario()
     assert scenario.getMaxNumVisibleObjects() == 3
     assert scenario.getMaxNumVisibleRoadPoints() == 14
     assert scenario.getMaxNumVisibleTrafficLights() == 15

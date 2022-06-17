@@ -223,8 +223,8 @@ def run_rollouts(env,
                     rollout_traj_dict[veh.id][
                         env.step_num] = veh.position.numpy()
                 if int(veh.collision_type) == 1:
-                    if veh.getID() in env_id_to_agent_id_map.keys():
-                        agent_id = env_id_to_agent_id_map[veh.getID()]
+                    if veh.id() in env_id_to_agent_id_map.keys():
+                        agent_id = env_id_to_agent_id_map[veh.id()]
                         idx = valid_indices.index(agent_id)
                         veh_veh_collision_observed[idx] = 1
 

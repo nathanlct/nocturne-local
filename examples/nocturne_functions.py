@@ -37,8 +37,8 @@ def main(cfg):
     sim = Simulation(scenario_path=str(PROJECT_PATH / 'examples' /
                                        'example_scenario.json'),
                      config=get_scenario_dict(cfg))
-    scenario = sim.getScenario()
-    img = scenario.getImage(
+    scenario = sim.scenario()
+    img = scenario.get_image(
         img_width=2000,
         img_height=2000,
         padding=50.0,
@@ -47,10 +47,10 @@ def main(cfg):
     save_image(img,
                PROJECT_PATH / 'examples/rendering' / 'scene_with_no_peds.png')
     # grab all the vehicles
-    vehs = scenario.getVehicles()
+    vehs = scenario.vehicles()
     # grab all the vehicles that moved and show some things
     # we can do with them
-    vehs = scenario.getObjectsThatMoved()
+    vehs = scenario.moving_objects()
     vehs[0].highlight = True  # draw a circle around it on the rendered image
     # setting a vehicle to expert_control will cause
     # this agent will replay expert data starting frmo
@@ -98,14 +98,19 @@ def main(cfg):
                                           view_dist=80,
                                           view_angle=120 * (np.pi / 180),
                                           padding=False)
+    # step the scenario. By default we step at 0.1s.
+    # you can use any step you want, but, if you do so make sure
+    # not to make any vehicle an expert as the expert positions / speeds / headings
+    # are only available in increments of 0.1 seconds
+    sim.step(cfg['dt'])
 
     # load scenario, this time with pedestrians and cyclists
     cfg['scenario']['allow_non_vehicles'] = True
     sim = Simulation(scenario_path=str(PROJECT_PATH / 'examples' /
                                        'example_scenario.json'),
                      config=get_scenario_dict(cfg))
-    scenario = sim.getScenario()
-    img = scenario.getImage(
+    scenario = sim.scenario()
+    img = scenario.get_image(
         img_width=2000,
         img_height=2000,
         padding=50.0,
@@ -116,14 +121,14 @@ def main(cfg):
     # now we need to be slightly more careful about how we select objects
     # since getMovingObjects will return pedestrians and cyclists
     # and getVehicles will return vehicles that don't necessarily need to move
-    objects_that_moved = scenario.getObjectsThatMoved()
+    objects_that_moved = scenario.moving_objects()
     objects_of_interest = [
-        obj for obj in scenario.getVehicles() if obj in objects_that_moved
+        obj for obj in scenario.vehicles() if obj in objects_that_moved
     ]  # noqa: 841
-    vehicles = scenario.getVehicles()
-    cyclists = scenario.getCyclists()
-    pedestrians = scenario.getPedestrians()
-    all_objects = scenario.getObjects()
+    vehicles = scenario.vehicles()
+    cyclists = scenario.cyclists()
+    pedestrians = scenario.pedestrians()
+    all_objects = scenario.objects()
 
 
 if __name__ == '__main__':

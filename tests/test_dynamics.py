@@ -22,7 +22,7 @@ def _create_sim(file_path, expert_control):
     # create simulation
     sim = Simulation(scenario_path=file_path, config=get_scenario_dict(cfg))
     # get controlled objects
-    objects_that_moved = sim.getScenario().getObjectsThatMoved()
+    objects_that_moved = sim.scenario().moving_objects()
     for obj in objects_that_moved:
         obj.expert_control = expert_control
     return sim, objects_that_moved
@@ -38,7 +38,7 @@ def test_inverse_dynamics():
     id2obj_ground_truth = {obj.id: obj for obj in objects_ground_truth}
     # create a test sim that will replay actions from inverse dynamics
     sim_test, objects_test = _create_sim(file_path, expert_control=False)
-    scenario_test = sim_test.getScenario()
+    scenario_test = sim_test.scenario()
 
     # step simulation
     for time in range(SIM_N_STEPS):

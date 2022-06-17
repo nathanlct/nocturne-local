@@ -29,12 +29,7 @@ void DefineSimulation(py::module& m) {
       .def("render", &Simulation::Render)
       .def("scenario", &Simulation::GetScenario,
            py::return_value_policy::reference)
-      .def("save_screenshot", &Simulation::SaveScreenshot)
-
-      // TODO: Deprecate the legacy methods below.
-      .def("saveScreenshot", &Simulation::SaveScreenshot)
-      .def("getScenario", &Simulation::GetScenario,
-           py::return_value_policy::reference);
+      .def("save_screenshot", &Simulation::SaveScreenshot);
 }
 
 }  // namespace nocturne

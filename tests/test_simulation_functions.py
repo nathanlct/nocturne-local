@@ -27,42 +27,42 @@ def test_scenario_functions():
     # now lets test for collisions
     # grab a vehicle and place it on top of another vehicle
     sim = Simulation(scenario_path=file_path, config=get_scenario_dict(cfg))
-    scenario = sim.getScenario()
-    veh0 = scenario.getVehicles()[0]
-    veh1 = scenario.getVehicles()[1]
-    veh2 = scenario.getVehicles()[2]
+    scenario = sim.scenario()
+    veh0 = scenario.vehicles()[0]
+    veh1 = scenario.vehicles()[1]
+    veh2 = scenario.vehicles()[2]
     # TODO(ev this fails unless the shift is non-zero)
-    veh1.setPosition(veh0.getPosition().x + 0.001, veh0.getPosition().y)
+    veh1.set_position(veh0.position().x + 0.001, veh0.position().y)
     sim.step(0.000001)
-    assert veh1.getCollided(
+    assert veh1.collided(
     ), 'vehicle1 should have collided after being placed on vehicle 0'
-    assert veh0.getCollided(
+    assert veh0.collided(
     ), 'vehicle0 should have collided after vehicle 0 was placed on it'
-    assert not veh2.getCollided(), 'vehicle2 should not have collided'
+    assert not veh2.collided(), 'vehicle2 should not have collided'
 
     # confirm that this is still true a time-step later
     sim.step(0.000001)
-    assert veh1.getCollided(
+    assert veh1.collided(
     ), 'vehicle1 should have collided after being placed on vehicle 0'
-    assert veh0.getCollided(
+    assert veh0.collided(
     ), 'vehicle0 should have collided after vehicle 0 was placed on it'
-    assert not veh2.getCollided(), 'vehicle2 should not have collided'
+    assert not veh2.collided(), 'vehicle2 should not have collided'
 
     # now offset them slightly and do the same thing again
     sim = Simulation(scenario_path=file_path, config=get_scenario_dict(cfg))
-    scenario = sim.getScenario()
-    veh0 = scenario.getVehicles()[0]
-    veh1 = scenario.getVehicles()[1]
-    veh2 = scenario.getVehicles()[2]
-    veh0 = scenario.getVehicles()[0]
-    veh1 = scenario.getVehicles()[1]
-    veh1.setPosition(veh0.getPosition().x + 0.2, veh0.getPosition().y + 0.2)
+    scenario = sim.scenario()
+    veh0 = scenario.vehicles()[0]
+    veh1 = scenario.vehicles()[1]
+    veh2 = scenario.vehicles()[2]
+    veh0 = scenario.vehicles()[0]
+    veh1 = scenario.vehicles()[1]
+    veh1.set_position(veh0.position().x + 0.2, veh0.position().y + 0.2)
     sim.step(0.000001)
-    assert veh1.getCollided(
+    assert veh1.collided(
     ), 'vehicle1 should have collided after being placed overlapping vehicle 0'
-    assert veh0.getCollided(
+    assert veh0.collided(
     ), 'vehicle0 should have collided after vehicle 1 was placed on it'
-    assert not veh2.getCollided(), 'vehicle2 should not have collided'
+    assert not veh2.collided(), 'vehicle2 should not have collided'
 
     ################################
     # Road Collision checking
@@ -71,7 +71,7 @@ def test_scenario_functions():
     print('entering road line - vehicle collision checking')
     # find a road edge
     colliding_road_line = None
-    for roadline in scenario.getRoadLines():
+    for roadline in scenario.road_lines():
         if roadline.canCollide():
             colliding_road_line = roadline
             break
@@ -87,25 +87,25 @@ def test_scenario_functions():
 
     # place the vehicle so that the segment is contained inside of it
     new_center = start_point + 0.5 * road_segment_dir
-    veh0.setPosition(new_center[0], new_center[1])
+    veh0.set_position(new_center[0], new_center[1])
     sim.step(1e-6)
-    cone = scenario.getConeImage(veh0, view_angle=2 * np.pi, head_angle=0.0)
+    cone = scenario.get_cone_image(veh0, view_angle=2 * np.pi, head_angle=0.0)
     plt.figure()
     plt.imshow(cone)
     plt.savefig('line_veh_check.png')
-    assert veh0.getCollided(
+    assert veh0.collided(
     ), 'vehicle0 should have collided after a road edge is placed inside it'
 
     # place the vehicle on one of the points so that the road segment intersects with a vehicle edge
     sim.reset()
-    scenario = sim.getScenario()
-    veh0 = scenario.getVehicles()[0]
+    scenario = sim.scenario()
+    veh0 = scenario.vehicles()[0]
     veh0.setHeading(road_segment_angle)
     veh_length = veh0.length
     new_center += veh_length / 2 * road_segment_dir
-    veh0.setPosition(new_center[0], new_center[1])
+    veh0.set_position(new_center[0], new_center[1])
     sim.step(1e-6)
-    assert veh0.getCollided(
+    assert veh0.collided(
     ), 'vehicle0 should have collided since a road edge intersects it'
 
     ######################
@@ -115,19 +115,19 @@ def test_scenario_functions():
     # image
     cfg['scenario'].update({'start_time': 20})
     sim = Simulation(scenario_path=file_path, config=get_scenario_dict(cfg))
-    scenario = sim.getScenario()
+    scenario = sim.scenario()
 
-    img1 = scenario.getConeImage(scenario.getVehicles()[4], 120.0, 2 * np.pi,
-                                 0.0)
+    img1 = scenario.get_cone_image(scenario.vehicles()[4], 120.0, 2 * np.pi,
+                                   0.0)
 
     # check that initializing things with and without pedestrians leads to a different
     # image
     cfg['scenario'].update({'start_time': 20, 'allow_non_vehicles': False})
     sim = Simulation(scenario_path=file_path, config=get_scenario_dict(cfg))
-    scenario = sim.getScenario()
+    scenario = sim.scenario()
 
-    img2 = scenario.getConeImage(scenario.getVehicles()[4], 120.0, 2 * np.pi,
-                                 0.0)
+    img2 = scenario.get_cone_image(scenario.vehicles()[4], 120.0, 2 * np.pi,
+                                   0.0)
     assert not np.isclose(np.sum(img1 - img2),
                           0.0), 'adding pedestrians should change the image'
 

@@ -71,19 +71,8 @@ void DefineScenario(py::module& m) {
       .def("expert_pos_shift", &Scenario::ExpertPosShift)
       .def("expert_heading_shift", &Scenario::ExpertHeadingShift)
 
-      // TODO: Deprecate the legacy interfaces below.
-      .def("getVehicles", &Scenario::vehicles,
-           py::return_value_policy::reference)
-      .def("getPedestrians", &Scenario::pedestrians,
-           py::return_value_policy::reference)
-      .def("getCyclists", &Scenario::cyclists,
-           py::return_value_policy::reference)
-      .def("getObjectsThatMoved", &Scenario::moving_objects,
-           py::return_value_policy::reference)
-      .def("getObjects", &Scenario::objects, py::return_value_policy::reference)
-      .def("getRoadLines", &Scenario::road_lines)
       .def(
-          "getImage",
+          "get_image",
           [](Scenario& scenario, uint64_t img_height, uint64_t img_width,
              bool draw_target_positions, float padding, Object* source,
              uint64_t view_height, uint64_t view_width,
@@ -99,7 +88,7 @@ void DefineScenario(py::module& m) {
           py::arg("source") = nullptr, py::arg("view_height") = 200,
           py::arg("view_width") = 200, py::arg("rotate_with_source") = true)
       .def(
-          "getFeaturesImage",
+          "get_features_image",
           [](Scenario& scenario, const Object& source, float view_dist,
              float view_angle, float head_angle, uint64_t img_height,
              uint64_t img_width, float padding, bool draw_target_position) {
@@ -116,7 +105,7 @@ void DefineScenario(py::module& m) {
           py::arg("img_width") = 1000, py::arg("padding") = 0.0f,
           py::arg("draw_target_position") = true)
       .def(
-          "getConeImage",
+          "get_cone_image",
           [](Scenario& scenario, const Object& source, float view_dist,
              float view_angle, float head_angle, uint64_t img_height,
              uint64_t img_width, float padding, bool draw_target_position) {
@@ -132,9 +121,6 @@ void DefineScenario(py::module& m) {
           py::arg("head_angle") = 0.0f, py::arg("img_height") = 1000,
           py::arg("img_width") = 1000, py::arg("padding") = 0.0f,
           py::arg("draw_target_position") = true)
-      .def("removeVehicle", &Scenario::RemoveObject)
-      .def("getExpertAction", &Scenario::ExpertAction)
-      .def("getExpertSpeeds", &Scenario::ExpertVelocity)
       .def("getMaxNumVisibleObjects", &Scenario::getMaxNumVisibleObjects)
       .def("getMaxNumVisibleRoadPoints", &Scenario::getMaxNumVisibleRoadPoints)
       .def("getMaxNumVisibleStopSigns", &Scenario::getMaxNumVisibleStopSigns)

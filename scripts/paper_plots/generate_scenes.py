@@ -20,7 +20,7 @@ def get_sim(scenario_file, cfg):
     cfg['scenario']['allow_non_vehicles'] = False
     sim = Simulation(scenario_path=str(scenario_file),
                      config=get_scenario_dict(cfg))
-    for obj in sim.getScenario().getObjectsThatMoved():
+    for obj in sim.scenario().moving_objects():
         obj.expert_control = True
     return sim
 
@@ -32,7 +32,7 @@ def make_movie(sim,
                steps=90,
                fps=10):
     """Make a movie from the scenario."""
-    scenario = sim.getScenario()
+    scenario = sim.scenario()
     movie_frames = []
     timestep = 0
     movie_frames.append(scenario_fn(scenario, timestep))
@@ -49,7 +49,7 @@ def make_movie(sim,
 
 def make_image(sim, scenario_file, scenario_fn, output_path='./img.png'):
     """Make a single image from the scenario."""
-    scenario = sim.getScenario()
+    scenario = sim.scenario()
     img = scenario_fn(scenario)
     dpi = 100
     height, width, depth = img.shape
@@ -84,7 +84,7 @@ def main(cfg):
             # make_image(
             #     sim,
             #     file,
-            #     scenario_fn=lambda scenario: scenario.getImage(
+            #     scenario_fn=lambda scenario: scenario.get_image(
             #         img_width=2000,
             #         img_height=2000,
             #         padding=50.0,
@@ -99,12 +99,12 @@ def main(cfg):
             make_image(
                 sim,
                 file,
-                scenario_fn=lambda scenario: scenario.getImage(
+                scenario_fn=lambda scenario: scenario.get_image(
                     img_height=1600,
                     img_width=1600,
                     draw_target_positions=True,
                     padding=0.0,
-                    source=scenario.getVehicles()[veh_index],
+                    source=scenario.vehicles()[veh_index],
                     view_height=80,
                     view_width=80,
                     rotate_with_source=True,
@@ -116,8 +116,8 @@ def main(cfg):
             make_image(
                 sim,
                 file,
-                scenario_fn=lambda scenario: scenario.getConeImage(
-                    source=scenario.getVehicles()[veh_index],
+                scenario_fn=lambda scenario: scenario.get_cone_image(
+                    source=scenario.vehicles()[veh_index],
                     view_dist=cfg['subscriber']['view_dist'],
                     view_angle=cfg['subscriber']['view_angle'],
                     head_angle=0.0,
@@ -133,8 +133,8 @@ def main(cfg):
             make_image(
                 sim,
                 file,
-                scenario_fn=lambda scenario: scenario.getFeaturesImage(
-                    source=scenario.getVehicles()[veh_index],
+                scenario_fn=lambda scenario: scenario.get_features_image(
+                    source=scenario.vehicles()[veh_index],
                     view_dist=cfg['subscriber']['view_dist'],
                     view_angle=cfg['subscriber']['view_angle'],
                     head_angle=0.0,

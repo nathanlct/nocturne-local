@@ -18,8 +18,8 @@ def create_rl_env(cfg):
     env = create_env(cfg)
     _ = env.reset()
     # quick check that rendering works
-    _ = env.scenario.getConeImage(
-        env.scenario.getVehicles()[0],
+    _ = env.scenario.get_cone_image(
+        env.scenario.vehicles()[0],
         # how far the agent can see
         view_dist=cfg['subscriber']['view_dist'],
         # the angle formed by the view cone
@@ -31,7 +31,7 @@ def create_rl_env(cfg):
     for _ in range(80):
         # grab the list of vehicles that actually need to
         # move some distance to get to their goal
-        moving_vehs = env.scenario.getObjectsThatMoved()
+        moving_vehs = env.scenario.moving_objects()
         # obs, rew, done, info
         # each of these objects is a dict keyed by the vehicle ID
         # info[veh_id] contains the following useful keys:

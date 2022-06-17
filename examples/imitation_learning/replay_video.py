@@ -63,18 +63,18 @@ if __name__ == '__main__':
             ]:
                 frames = []
                 sim.reset()
-                scenario = sim.getScenario()
+                scenario = sim.scenario()
 
                 objects_of_interest = [
-                    obj for obj in scenario.getVehicles()
-                    if obj in scenario.getObjectsThatMoved()
+                    obj for obj in scenario.vehicles()
+                    if obj in scenario.moving_objects()
                 ]
 
                 for obj in objects_of_interest:
                     obj.expert_control = True
 
                 relevant_obj_ids = [
-                    obj.getID() for obj in objects_of_interest[0:2]
+                    obj.id() for obj in objects_of_interest[0:2]
                 ]
 
                 view_dist = configs['dataloader_cfg']['view_dist']
@@ -96,13 +96,13 @@ if __name__ == '__main__':
                             veh, view_dist=view_dist, view_angle=view_angle)
                         state = np.concatenate(
                             (ego_state, visible_state)) / state_normalization
-                        state_dict[veh.getID()] = np.roll(
-                            state_dict[veh.getID()], len(state))
-                        state_dict[veh.getID()][:len(state)] = state
+                        state_dict[veh.id()] = np.roll(state_dict[veh.id()],
+                                                       len(state))
+                        state_dict[veh.id()][:len(state)] = state
 
                     sim.step(dt)
 
-                for obj in scenario.getObjectsThatMoved():
+                for obj in scenario.moving_objects():
                     obj.expert_control = True
                 # we only actually want to take control once the vehicle
                 # has been placed into the network
@@ -110,7 +110,7 @@ if __name__ == '__main__':
                     if np.isclose(veh.position.x, -10000.0):
                         veh.expert_control = True
                     else:
-                        if veh.getID() in relevant_obj_ids:
+                        if veh.id() in relevant_obj_ids:
                             veh.expert_control = expert_control_vehicles
                             veh.highlight = True
 
@@ -124,13 +124,13 @@ if __name__ == '__main__':
                         if np.isclose(veh.position.x, -10000.0):
                             veh.expert_control = True
                         else:
-                            if veh.getID() in relevant_obj_ids:
+                            if veh.id() in relevant_obj_ids:
                                 veh.expert_control = expert_control_vehicles
                                 veh.highlight = True
                     print(
                         f'...{i+1}/{90 - n_stacked_states} ({traj_path} ; {mp4_name})'
                     )
-                    img = scenario.getImage(
+                    img = scenario.get_image(
                         img_width=1600,
                         img_height=1600,
                         draw_target_positions=True,
@@ -150,10 +150,10 @@ if __name__ == '__main__':
                             veh, view_dist=view_dist, view_angle=view_angle)
                         state = np.concatenate(
                             (ego_state, visible_state)) / state_normalization
-                        state_dict[veh.getID()] = np.roll(
-                            state_dict[veh.getID()], len(state))
-                        state_dict[veh.getID()][:len(state)] = state
-                        action = policy(state_dict[veh.getID()])
+                        state_dict[veh.id()] = np.roll(state_dict[veh.id()],
+                                                       len(state))
+                        state_dict[veh.id()][:len(state)] = state
+                        action = policy(state_dict[veh.id()])
                         if dataloader_config['expert_position']:
                             if configs['model_cfg']['discrete']:
                                 pos_diff = np.array([
@@ -170,10 +170,10 @@ if __name__ == '__main__':
                             veh.acceleration = action[0].cpu().numpy()
                             veh.steering = action[1].cpu().numpy()
                     sim.step(dt)
-                    for veh in scenario.getObjectsThatMoved():
+                    for veh in scenario.moving_objects():
                         if (veh.position -
                                 veh.target_position).norm() < GOAL_TOLERANCE:
-                            scenario.removeVehicle(veh)
+                            scenario.remove_object(veh)
                 imageio.mimsave(mp4_name, np.stack(frames, axis=0), fps=30)
                 print(f'> {mp4_name}')
 

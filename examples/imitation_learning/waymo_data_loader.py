@@ -37,16 +37,16 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
 
         # create simulation
         sim = Simulation(str(scenario_path), scenario_config)
-        scenario = sim.getScenario()
+        scenario = sim.scenario()
 
         # set objects to be expert-controlled
-        for obj in scenario.getObjects():
+        for obj in scenario.objects():
             obj.expert_control = True
 
         # we are interested in imitating vehicles that moved
-        objects_that_moved = scenario.getObjectsThatMoved()
+        objects_that_moved = scenario.moving_objects()
         objects_of_interest = [
-            obj for obj in scenario.getVehicles() if obj in objects_that_moved
+            obj for obj in scenario.vehicles() if obj in objects_that_moved
         ]
 
         # initialize values if stacking states
@@ -70,12 +70,13 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
 
                 # stack state
                 if n_stacked_states > 1:
-                    if stacked_state[obj.getID()] is None:
-                        stacked_state[obj.getID()] = np.zeros(
-                            len(state) * n_stacked_states, dtype=state.dtype)
-                    stacked_state[obj.getID()] = np.roll(
-                        stacked_state[obj.getID()], len(state))
-                    stacked_state[obj.getID()][:len(state)] = state
+                    if stacked_state[obj.id()] is None:
+                        stacked_state[obj.id()] = np.zeros(len(state) *
+                                                           n_stacked_states,
+                                                           dtype=state.dtype)
+                    stacked_state[obj.id()] = np.roll(stacked_state[obj.id()],
+                                                      len(state))
+                    stacked_state[obj.id()][:len(state)] = state
 
                 if np.isclose(obj.position.x, ERR_VAL):
                     continue
@@ -116,9 +117,9 @@ def _get_waymo_iterator(paths, dataloader_config, scenario_config):
                         (expert_pos_shift, [expert_heading_shift]))
 
                 # yield state and expert action
-                if stacked_state[obj.getID()] is not None:
+                if stacked_state[obj.id()] is not None:
                     if initial_warmup <= 0:  # warmup to wait for stacked state to be filled up
-                        state_list.append(stacked_state[obj.getID()])
+                        state_list.append(stacked_state[obj.id()])
                         action_list.append(expert_action)
                 else:
                     state_list.append(state)

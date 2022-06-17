@@ -63,33 +63,16 @@ void DefineObject(py::module& m) {
       // Methods.
       .def("velocity", &Object::Velocity)
       .def("set_position",
+           py::overload_cast<const geometry::Vector2D&>(&Object::set_position))
+      .def("set_position",
            py::overload_cast<float, float>(&Object::set_position))
+      .def("set_target_position", py::overload_cast<const geometry::Vector2D&>(
+                                      &Object::set_target_position))
       .def("set_target_position",
            py::overload_cast<float, float>(&Object::set_target_position))
       .def("apply_action", &Object::ApplyAction)
       .def("_scale_shape", &Object::ScaleShape, py::arg("length_scale") = 1.0,
-           py::arg("width_scale") = 1.0)
-
-      // TODO: Deprecate the legacy interfaces below.
-      .def("getWidth", &Object::width)
-      .def("getLength", &Object::length)
-      .def("getPosition", &Object::position)
-      .def("getGoalPosition", &Object::target_position)
-      .def("getSpeed", &Object::speed)
-      .def("getHeading", &Object::heading)
-      .def("getID", &Object::id)
-      .def("getType", &Object::Type)
-      .def("getCollided", &Object::collided)
-      .def("setPosition",
-           py::overload_cast<const geometry::Vector2D&>(&Object::set_position))
-      .def("setPosition",
-           py::overload_cast<float, float>(&Object::set_position))
-      .def("setGoalPosition", py::overload_cast<const geometry::Vector2D&>(
-                                  &Object::set_target_position))
-      .def("setGoalPosition",
-           py::overload_cast<float, float>(&Object::set_target_position))
-      .def("setHeading", &Object::set_heading)
-      .def("setSpeed", &Object::set_speed);
+           py::arg("width_scale") = 1.0);
 }
 
 }  // namespace nocturne
