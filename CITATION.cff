@@ -34,9 +34,4 @@ preferred-citation:
   title: "Nocturne: a scalable driving benchmark for bringing multi-agent learning one step closer to the real world"
   version: 1.0.0
   license: MIT
-  license-url: https://github.com/facebookresearch/nocturne/blob/main/LICENSE
-  identifiers:
-    - type: other
-      value: "arXiv:2206.09889"
-      description: The ArXiv preprint of the paper
-
+  journal: "arXiv:2206.09889"
