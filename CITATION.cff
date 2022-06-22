@@ -34,7 +34,3 @@ license: MIT
 license-url: https://github.com/facebookresearch/nocturne/blob/main/LICENSE
 repository-code: "https://github.com/facebookresearch/nocturne"
 url: "https://arxiv.org/abs/2206.09889"
-preferred-citation:
-  type: article
-  year: 2022
-  url: "https://arxiv.org/abs/2206.09889"
