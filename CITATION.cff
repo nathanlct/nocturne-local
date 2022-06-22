@@ -2,7 +2,6 @@ cff-version: 1.2.0
 title: "Nocturne: a scalable driving benchmark for bringing multi-agent learning one step closer to the real world"
 version: 1.0.0
 date-released: 2022-06-20
-preferred-citation: "article"
 message: "If you use Nocturne, please cite the Nocturne paper as below."
 authors:
 - family-names: Vinitsky
